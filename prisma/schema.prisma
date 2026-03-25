@@ -1,0 +1,549 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Group {
+  id        String    @id @default(cuid())
+  name      String
+  slug      String    @unique
+  companies Company[]
+  collaborators Collaborator[]
+  municipalities MunicipalityAccount[]
+  fundebConsultingProjects FundebConsultingProject[]
+  users     User[]
+  settings  Json?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Company {
+  id                String      @id @default(cuid())
+  groupId           String
+  group             Group       @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  name              String
+  tradingName       String
+  cnpj              String      @unique
+  stateRegistration String?
+  cityRegistration  String?
+  foundedAt         DateTime?
+  logo              String?
+  color             String?
+  zipCode           String?
+  street            String?
+  number            String?
+  complement        String?
+  neighborhood      String?
+  city              String?
+  state             String?
+  phone             String?
+  phoneSecondary    String?
+  email             String?
+  website           String?
+  contactName       String?
+  contactPosition   String?
+  contactEmail      String?
+  contactPhone      String?
+  segment           String
+  description       String?
+  size              String?
+  taxRegime         String?
+  status            String      @default("active")
+  enabledModules    String[]
+  employees         Employee[]
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  @@index([groupId])
+}
+
+model User {
+  id        String     @id @default(cuid())
+  email     String     @unique
+  name      String
+  groupId   String
+  group     Group      @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  groupRole String     @default("member")
+  employees Employee[]
+  ownedMunicipalities MunicipalityAccount[] @relation("MunicipalityOwner")
+  ownedOpportunities MunicipalityOpportunity[] @relation("OpportunityOwner")
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  @@index([groupId])
+}
+
+model Employee {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyId String
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name      String
+  email     String
+  position  String
+  role      String
+  status    String   @default("active")
+  hireDate  DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, companyId])
+  @@index([companyId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  action    String
+  userId    String
+  companyId String?
+  targetId  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([companyId, createdAt])
+}
+
+model CaseSucessoFundeb {
+  id        String   @id @default(cuid())
+  municipio String
+  uf        String?
+  ano       Int
+  vaaf      Float    @default(0)
+  vaat      Float    @default(0)
+  vaar      Float    @default(0)
+  total     Float    @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([municipio, ano])
+  @@index([municipio])
+}
+
+enum CollaboratorType {
+  internal_consultant
+  external_partner
+  municipal_articulator
+  introducer
+  strategic_advisor
+  implementation_support
+  executive_sponsor
+  hybrid
+}
+
+enum PartnershipStatus {
+  prospect
+  active
+  paused
+  blocked
+  inactive
+}
+
+enum MunicipalityStage {
+  mapping
+  first_contact
+  institutional_validation
+  technical_diagnosis
+  proposal_presented
+  negotiation
+  verbally_approved
+  contractual
+  implementation
+  assisted_operation
+  fidelized
+  paused
+  lost
+}
+
+enum OpportunityForecastCategory {
+  pipeline
+  best_case
+  commit
+  active_recurring
+  fidelized_recurring
+  lost_or_paused
+}
+
+enum CommissionBaseType {
+  gross_revenue
+  gross_margin
+  recurring_profit_pre_commission
+  operational_profit_pre_commission
+  net_profit
+}
+
+enum CommissionTriggerType {
+  on_signature
+  on_go_live
+  on_fidelization
+  monthly_recurring_after_fidelization
+  milestone_based
+}
+
+enum ParticipationType {
+  sourced_opportunity
+  opened_doors
+  institutional_introduction
+  political_support
+  technical_validation
+  commercial_negotiation
+  implementation_support
+  account_maintenance
+}
+
+enum FidelityStatus {
+  not_started
+  tracking
+  eligible
+  approved
+  blocked
+  revoked
+}
+
+enum AccrualStatus {
+  draft
+  calculated
+  under_review
+  approved
+  blocked
+  paid
+}
+
+enum PayoutStatus {
+  scheduled
+  processing
+  paid
+  disputed
+  cancelled
+}
+
+model Collaborator {
+  id                        String                @id @default(cuid())
+  groupId                   String
+  group                     Group                 @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  fullName                  String
+  shortName                 String?
+  email                     String?
+  phone                     String?
+  whatsapp                  String?
+  cpfOrDocument             String?
+  city                      String?
+  state                     String?
+  companyOrOrganization     String?
+  title                     String?
+  bio                       String?
+  collaboratorType          CollaboratorType
+  primaryRole               String
+  partnershipStatus         PartnershipStatus     @default(active)
+  source                    String?
+  referredBy                String?
+  primaryState              String?
+  primaryRegion             String?
+  trustLevel                Int?
+  averageInfluenceScore     Int?
+  defaultCommissionPercent  Decimal?              @db.Decimal(8, 4)
+  defaultProfitBaseType     CommissionBaseType?
+  defaultTriggerType        CommissionTriggerType?
+  payoutCycle               String?
+  payoutMethod              String?
+  onboardingDate            DateTime?
+  lastActivityDate          DateTime?
+  partnerScore              Int?
+  notes                     String?
+  confidentialNotes         String?
+  participations            CollaboratorParticipation[]
+  commissionRules           CommissionRule[]
+  commissionAccruals        CommissionAccrual[]
+  commissionPayouts         CommissionPayout[]
+  fundebConsultingProjects  FundebConsultingProject[]
+  createdAt                 DateTime              @default(now())
+  updatedAt                 DateTime              @updatedAt
+
+  @@index([groupId, partnershipStatus])
+  @@index([groupId, collaboratorType])
+  @@index([state])
+}
+
+model MunicipalityAccount {
+  id                        String                @id @default(cuid())
+  groupId                   String
+  group                     Group                 @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  municipalityName          String
+  state                     String
+  ibgeCode                  String?
+  accountStatus             String                @default("active")
+  ownerUserId               String?
+  ownerUser                 User?                 @relation("MunicipalityOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  currentStage              MunicipalityStage     @default(mapping)
+  sourceType                String?
+  sourceDescription         String?
+  mayorName                 String?
+  educationSecretaryName    String?
+  procurementLeadName       String?
+  warmthLevel               Int?
+  technicalFitScore         Int?
+  urgencyScore              Int?
+  estimatedAnnualRevenue    Decimal?              @db.Decimal(14, 2)
+  estimatedAnnualCost       Decimal?              @db.Decimal(14, 2)
+  estimatedAnnualProfit     Decimal?              @db.Decimal(14, 2)
+  expectedStartDate         DateTime?
+  expectedFidelizationDate  DateTime?
+  forecastProbability       Decimal?              @db.Decimal(8, 4)
+  dependencyOnSingleContact Boolean               @default(false)
+  implementationRiskScore   Int?
+  legalRiskScore            Int?
+  churnRiskScore            Int?
+  opportunities             MunicipalityOpportunity[]
+  participations            CollaboratorParticipation[]
+  implementations           ServiceImplementation[]
+  profitSnapshots           ProfitSnapshot[]
+  commissionRules           CommissionRule[]
+  commissionAccruals        CommissionAccrual[]
+  forecasts                 ForecastSnapshot[]
+  fundebConsultingProjects  FundebConsultingProject[]
+  createdAt                 DateTime              @default(now())
+  updatedAt                 DateTime              @updatedAt
+
+  @@unique([groupId, municipalityName, state])
+  @@index([groupId, currentStage])
+  @@index([state])
+}
+
+model MunicipalityOpportunity {
+  id                        String                      @id @default(cuid())
+  municipalityAccountId     String
+  municipalityAccount       MunicipalityAccount         @relation(fields: [municipalityAccountId], references: [id], onDelete: Cascade)
+  ownerUserId               String?
+  ownerUser                 User?                       @relation("OpportunityOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  title                     String
+  serviceType               String
+  stage                     MunicipalityStage           @default(mapping)
+  forecastCategory          OpportunityForecastCategory @default(pipeline)
+  probability               Decimal                     @db.Decimal(8, 4)
+  estimatedAnnualRevenue    Decimal?                    @db.Decimal(14, 2)
+  estimatedAnnualCost       Decimal?                    @db.Decimal(14, 2)
+  estimatedAnnualProfit     Decimal?                    @db.Decimal(14, 2)
+  expectedCloseDate         DateTime?
+  expectedStartDate         DateTime?
+  expectedFidelizationDate  DateTime?
+  nextStep                  String?
+  nextStepDueAt             DateTime?
+  lostReason                String?
+  openedAt                  DateTime?
+  closedAt                  DateTime?
+  participations            CollaboratorParticipation[]
+  implementations           ServiceImplementation[]
+  forecasts                 ForecastSnapshot[]
+  commissionRules           CommissionRule[]
+  createdAt                 DateTime                    @default(now())
+  updatedAt                 DateTime                    @updatedAt
+
+  @@index([municipalityAccountId, stage])
+  @@index([ownerUserId, stage])
+}
+
+model CollaboratorParticipation {
+  id                        String                   @id @default(cuid())
+  collaboratorId            String
+  collaborator              Collaborator             @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
+  municipalityAccountId     String
+  municipalityAccount       MunicipalityAccount      @relation(fields: [municipalityAccountId], references: [id], onDelete: Cascade)
+  opportunityId             String?
+  opportunity               MunicipalityOpportunity? @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
+  participationType         ParticipationType
+  influenceLevel            Int?
+  sourcingWeight            Int?
+  negotiationWeight         Int?
+  implementationWeight      Int?
+  agreedCommissionPercent   Decimal?                 @db.Decimal(8, 4)
+  agreedCommissionFlatValue Decimal?                 @db.Decimal(14, 2)
+  commissionBaseType        CommissionBaseType?
+  commissionTriggerType     CommissionTriggerType?
+  startDate                 DateTime?
+  endDate                   DateTime?
+  isPrimarySource           Boolean                  @default(false)
+  isPrimaryRelationship     Boolean                  @default(false)
+  approvedByUserId          String?
+  approvedAt                DateTime?
+  proofNotes                String?
+  createdAt                 DateTime                 @default(now())
+  updatedAt                 DateTime                 @updatedAt
+
+  @@index([collaboratorId, municipalityAccountId])
+  @@index([opportunityId])
+}
+
+model ServiceImplementation {
+  id                          String                   @id @default(cuid())
+  municipalityAccountId       String
+  municipalityAccount         MunicipalityAccount      @relation(fields: [municipalityAccountId], references: [id], onDelete: Cascade)
+  opportunityId               String?
+  opportunity                 MunicipalityOpportunity? @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
+  kickoffDate                 DateTime?
+  progressPercent             Int                      @default(0)
+  currentMilestoneKey         String?
+  blockedReason               String?
+  expectedGoLiveDate          DateTime?
+  actualGoLiveDate            DateTime?
+  firstRevenueRecognitionDate DateTime?
+  fidelityEligibleAt          DateTime?
+  fidelityApprovedAt          DateTime?
+  fidelityApprovedByUserId    String?
+  fidelityStatus              FidelityStatus           @default(not_started)
+  createdAt                   DateTime                 @default(now())
+  updatedAt                   DateTime                 @updatedAt
+
+  @@index([municipalityAccountId, fidelityStatus])
+}
+
+model ProfitSnapshot {
+  id                          String              @id @default(cuid())
+  municipalityAccountId       String
+  municipalityAccount         MunicipalityAccount @relation(fields: [municipalityAccountId], references: [id], onDelete: Cascade)
+  year                        Int
+  month                       Int
+  recognizedRevenue           Decimal             @db.Decimal(14, 2)
+  directCost                  Decimal             @db.Decimal(14, 2)
+  implementationCostAllocated Decimal             @db.Decimal(14, 2)
+  taxes                       Decimal             @db.Decimal(14, 2)
+  profitBase                  Decimal             @db.Decimal(14, 2)
+  notes                       String?
+  createdAt                   DateTime            @default(now())
+  updatedAt                   DateTime            @updatedAt
+
+  @@unique([municipalityAccountId, year, month])
+}
+
+model CommissionRule {
+  id                      String                   @id @default(cuid())
+  collaboratorId          String
+  collaborator            Collaborator             @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
+  municipalityAccountId   String?
+  municipalityAccount     MunicipalityAccount?     @relation(fields: [municipalityAccountId], references: [id], onDelete: Cascade)
+  opportunityId           String?
+  opportunity             MunicipalityOpportunity? @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
+  percent                 Decimal?                 @db.Decimal(8, 4)
+  flatValue               Decimal?                 @db.Decimal(14, 2)
+  baseType                CommissionBaseType
+  triggerType             CommissionTriggerType
+  startsAfterFidelization Boolean                  @default(true)
+  startsAtMonth           Int?
+  endsAtMonth             Int?
+  minimumProfitThreshold  Decimal?                 @db.Decimal(14, 2)
+  isActive                Boolean                  @default(true)
+  approvedByUserId        String?
+  approvedAt              DateTime?
+  notes                   String?
+  accruals                CommissionAccrual[]
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+
+  @@index([collaboratorId, isActive])
+}
+
+model CommissionAccrual {
+  id                    String              @id @default(cuid())
+  commissionRuleId      String?
+  commissionRule        CommissionRule?     @relation(fields: [commissionRuleId], references: [id], onDelete: SetNull)
+  collaboratorId        String
+  collaborator          Collaborator        @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
+  municipalityAccountId String
+  municipalityAccount   MunicipalityAccount @relation(fields: [municipalityAccountId], references: [id], onDelete: Cascade)
+  year                  Int
+  month                 Int
+  municipalityRevenue   Decimal             @db.Decimal(14, 2)
+  municipalityCost      Decimal             @db.Decimal(14, 2)
+  profitBase            Decimal             @db.Decimal(14, 2)
+  appliedPercent        Decimal?            @db.Decimal(8, 4)
+  accruedAmount         Decimal             @db.Decimal(14, 2)
+  status                AccrualStatus       @default(draft)
+  recognizedAt          DateTime?
+  notes                 String?
+  payoutId              String?
+  payout                CommissionPayout?   @relation(fields: [payoutId], references: [id], onDelete: SetNull)
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  @@index([collaboratorId, year, month])
+  @@index([municipalityAccountId, year, month])
+}
+
+model CommissionPayout {
+  id             String             @id @default(cuid())
+  collaboratorId String
+  collaborator   Collaborator       @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
+  periodStart    DateTime
+  periodEnd      DateTime
+  totalAccrued   Decimal            @db.Decimal(14, 2)
+  totalApproved  Decimal            @db.Decimal(14, 2)
+  totalPaid      Decimal            @db.Decimal(14, 2)
+  paymentDate    DateTime?
+  paymentMethod  String?
+  proofUrl       String?
+  status         PayoutStatus       @default(scheduled)
+  notes          String?
+  accruals       CommissionAccrual[]
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@index([collaboratorId, status])
+}
+
+model ForecastSnapshot {
+  id                    String                      @id @default(cuid())
+  municipalityAccountId String
+  municipalityAccount   MunicipalityAccount         @relation(fields: [municipalityAccountId], references: [id], onDelete: Cascade)
+  opportunityId         String?
+  opportunity           MunicipalityOpportunity?    @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
+  year                  Int
+  month                 Int?
+  category              OpportunityForecastCategory
+  estimatedRevenue      Decimal?                    @db.Decimal(14, 2)
+  estimatedProfit       Decimal?                    @db.Decimal(14, 2)
+  probability           Decimal                     @db.Decimal(8, 4)
+  timingFactor          Decimal?                    @db.Decimal(8, 4)
+  weightedRevenue       Decimal?                    @db.Decimal(14, 2)
+  weightedProfit        Decimal?                    @db.Decimal(14, 2)
+  generatedAt           DateTime                    @default(now())
+
+  @@index([year, month, category])
+  @@index([municipalityAccountId, year])
+}
+
+model FundebConsultingProject {
+  id                        String              @id @default(cuid())
+  groupId                   String
+  group                     Group               @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  municipalityAccountId     String
+  municipalityAccount       MunicipalityAccount @relation(fields: [municipalityAccountId], references: [id], onDelete: Cascade)
+  collaboratorId            String
+  collaborator              Collaborator        @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
+  serviceLabel              String              @default("Consultoria FUNDEB")
+  baseYear                  Int
+  commissionBase            String              @default("profit")
+  commissionPercent         Decimal             @db.Decimal(8, 4)
+  projectedMonthlyRevenue   Decimal             @db.Decimal(14, 2)
+  projectedMonthlyCost      Decimal             @db.Decimal(14, 2)
+  projectedMonthlyProfit    Decimal             @db.Decimal(14, 2)
+  projectedMonths           Int                 @default(12)
+  projectedAnnualRevenue    Decimal             @db.Decimal(14, 2)
+  projectedAnnualProfit     Decimal             @db.Decimal(14, 2)
+  projectedCommissionAmount Decimal             @db.Decimal(14, 2)
+  expectedStartDate         DateTime?
+  sourceLabel               String?
+  projectionNotes           String?
+  status                    String              @default("draft")
+  createdByUserId           String?
+  createdAt                 DateTime            @default(now())
+  updatedAt                 DateTime            @updatedAt
+
+  @@index([groupId, baseYear])
+  @@index([municipalityAccountId, collaboratorId])
+  @@index([collaboratorId, baseYear])
+}
