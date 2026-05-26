@@ -1,0 +1,489 @@
+Launching lib/main.dart on motorola edge 60 pro in debug mode...
+Running Gradle task 'assembleDebug'...                              9,2s
+✓ Built build/app/outputs/flutter-apk/app-debug.apk
+Installing build/app/outputs/flutter-apk/app-debug.apk...           4,9s
+D/FlutterJNI(23159): Beginning load of flutter...
+D/FlutterJNI(23159): flutter (null) was loaded normally!
+I/flutter (23159): [IMPORTANT:flutter/shell/platform/android/android_context_vk_impeller.cc(62)] Using the Impeller rendering backend (Vulkan).
+Syncing files to device motorola edge 60 pro...                    134ms
+
+Flutter run key commands.
+r Hot reload. 🔥🔥🔥
+R Hot restart.
+h List all available interactive commands.
+d Detach (terminate "flutter run" but leave application running).
+c Clear the screen
+q Quit (terminate the application on the device).
+
+A Dart VM Service on motorola edge 60 pro is available at: http://127.0.0.1:39621/jS5Na6Ys4X0=/
+The Flutter DevTools debugger and profiler on motorola edge 60 pro is available at: http://127.0.0.1:39621/jS5Na6Ys4X0=/devtools/?uri=ws://127.0.0.1:39621/jS5Na6Ys4X0=/ws
+I/GrallocExtra(23159): gralloc_extra_query:is_SW3D 0
+D/BLASTBufferQueue(23159): [13b4039 SurfaceView[com.adrie.sync.sync_flutter/com.adrie.sync.sync_flutter.MainActivity]#1](f:0,a:1) acquireNextBufferLocked size=1220x2712 mFrameNumber=1 applyTransaction=true mTimestamp=194803960689994(auto) mPendingTransactions.size=0 graphicBufferId=99467147608074 transform=0
+D/LibMBrainProxy(23159): Init Paramters
+W/ServiceManagerCppClient(23159): Failed to get isDeclared for vendor.mediatek.hardware.mbrain.IMBrain/default: Status(-1, EX_SECURITY): 'SELinux denied for service.'
+I/Choreographer(23159): Skipped 59 frames!  The application may be doing too much work on its main thread.
+D/WindowLayoutComponentImpl(23159): Register WindowLayoutInfoListener on Context=com.adrie.sync.sync_flutter.MainActivity@4e76c2c, of which baseContext=android.app.ContextImpl@4bf90eb
+E/HWUI    (23159): fbcNotifySbeRescue error: undefined symbol: fbcNotifySbeRescue
+E/HWUI    (23159): fbcNotifyHintFrame error: undefined symbol: fbcNotifyHintFrame
+E/HWUI    (23159): updateSbeFeatureOption error: undefined symbol: updateSbeFeatureOption
+D/BLASTBufferQueue(23159): [VRI[MainActivity]#0](f:0,a:1) acquireNextBufferLocked size=1220x2712 mFrameNumber=1 applyTransaction=true mTimestamp=194804078690302(auto) mPendingTransactions.size=0 graphicBufferId=99467147608082 transform=0
+D/InsetsController(23159): hide(ime(), fromIme=false)
+I/ImeTracker(23159): com.adrie.sync.sync_flutter:5d260638: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+D/ProfileInstaller(23159): Installing profile for com.adrie.sync.sync_flutter
+D/InsetsController(23159): hide(ime(), fromIme=false)
+I/ImeTracker(23159): com.adrie.sync.sync_flutter:f2993e25: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+I/ImeTracker(23159): com.adrie.sync.sync_flutter:8a45df26: onRequestShow at ORIGIN_CLIENT reason SHOW_SOFT_INPUT fromUser false
+D/InsetsController(23159): show(ime(), fromIme=false)
+D/InsetsController(23159): Setting requestedVisibleTypes to -1 (was -9)
+I/AssistStructure(23159): Flattened final assist data: 532 bytes, containing 1 windows, 3 views
+D/InputConnectionAdaptor(23159): The input method toggled cursor monitoring on
+W/InteractionJankMonitor(23159): Initializing without READ_DEVICE_CONFIG permission. enabled=true, interval=10, missedFrameThreshold=-1, frameTimeThreshold=-1, package=com.adrie.sync.sync_flutter
+I/ImeTracker(23159): com.adrie.sync.sync_flutter:8a45df26: onShown
+I/ImeTracker(23159): com.adrie.sync.sync_flutter:874e4efd: onRequestHide at ORIGIN_CLIENT reason HIDE_SOFT_INPUT fromUser false
+D/InsetsController(23159): hide(ime(), fromIme=false)
+W/WindowOnBackDispatcher(23159): sendCancelIfRunning: isInProgress=false callback=android.view.ImeBackAnimationController@e44a847
+D/InsetsController(23159): Setting requestedVisibleTypes to -9 (was -1)
+D/CompatChangeReporter(23159): Compat change id reported: 395521150; UID 10496; state: ENABLED
+W/RemoteInputConnectionImpl(23159): getSurroundingText on inactive InputConnection
+W/RemoteInputConnectionImpl(23159): getTextBeforeCursor on inactive InputConnection
+I/ImeTracker(23159): system_server:57103952: onCancelled at PHASE_CLIENT_ON_CONTROLS_CHANGED
+W/RemoteInputConnectionImpl(23159): requestCursorUpdates on inactive InputConnection
+W/SystemServiceRegistry(23159): No service published for: moto_perf
+
+══╡ EXCEPTION CAUGHT BY RENDERING LIBRARY ╞═════════════════════════════════════════════════════════
+The following assertion was thrown during performLayout():
+RenderFlex children have non-zero flex but incoming height constraints are unbounded.
+When a column is in a parent that does not provide a finite height constraint, for example if it is
+in a vertical scrollable, it will try to shrink-wrap its children along the vertical axis. Setting a
+flex on a child (e.g. using Expanded) indicates that the child is to expand to fill the remaining
+space in the vertical direction.
+These two directives are mutually exclusive. If a parent is to shrink-wrap its child, the child
+cannot simultaneously expand to fit its parent.
+Consider setting mainAxisSize to MainAxisSize.min and using FlexFit.loose fits for the flexible
+children (using Flexible rather than Expanded). This will allow the flexible children to size
+themselves to less than the infinite remaining space they would otherwise be forced to take, and
+then will cause the RenderFlex to shrink-wrap the children rather than expanding to fit the maximum
+constraints provided by the parent.
+If this message did not help you determine the problem, consider using debugDumpRenderTree():
+  https://flutter.dev/to/debug-render-layer
+  https://api.flutter.dev/flutter/rendering/debugDumpRenderTree.html
+The affected RenderFlex is:
+  RenderFlex#badca relayoutBoundary=up26 NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE(creator: Column ← Padding ← Stack ← Padding ← Padding ← DecoratedBox ← Container ← SyncSurfaceCard ← SyncMetricCard ← SizedBox ← Wrap ← Column ← ⋯, parentData: offset=Offset(0.0, 0.0) (can use size), constraints: BoxConstraints(0.0<=w<=343.8, 0.0<=h<=Infinity), size: MISSING, direction: vertical, mainAxisAlignment: start, mainAxisSize: max, crossAxisAlignment: start, textDirection: ltr, verticalDirection: down, spacing: 0.0)
+The creator information is set to:
+  Column ← Padding ← Stack ← Padding ← Padding ← DecoratedBox ← Container ← SyncSurfaceCard ←
+  SyncMetricCard ← SizedBox ← Wrap ← Column ← ⋯
+The nearest ancestor providing an unbounded width constraint is: _RenderSingleChildViewport#7f1ab relayoutBoundary=up14 NEEDS-LAYOUT NEEDS-PAINT:
+  needs compositing
+  creator: _SingleChildViewport ← IgnorePointer-[GlobalKey#efb98] ← Semantics ← Listener ←
+    _GestureSemantics ← RawGestureDetector-[LabeledGlobalKey<RawGestureDetectorState>#d4492] ←
+    Listener ← _ScrollableScope ← _ScrollSemantics-[GlobalKey#5b2d6] ←
+    NotificationListener<ScrollMetricsNotification> ← CustomPaint ← ImageFiltered ← ⋯
+  parentData: <none> (can use size)
+  constraints: BoxConstraints(0.0<=w<=433.8, h=801.8)
+  layer: OffsetLayer#b69c4
+  size: Size(433.8, 801.8)
+  offset: Offset(0.0, -131.0)
+See also: https://flutter.dev/unbounded-constraints
+If none of the above helps enough to fix this problem, please don't hesitate to file a bug:
+  https://github.com/flutter/flutter/issues/new?template=02_bug.yml
+
+The relevant error-causing widget was:
+  Column
+  Column:file:///home/AdrielT87/%C3%81rea%20de%20trabalho/sync_flutter/lib/src/features/shared/presentation/shared_widgets.dart:153:20
+
+When the exception was thrown, this was the stack:
+#0      RenderFlex.performLayout.<anonymous closure> (package:flutter/src/rendering/flex.dart:1252:9)
+#1      RenderFlex.performLayout (package:flutter/src/rendering/flex.dart:1255:6)
+#2      RenderObject.layout (package:flutter/src/rendering/object.dart:2775:7)
+#3      RenderPadding.performLayout (package:flutter/src/rendering/shifted_box.dart:243:12)
+#4      RenderObject.layout (package:flutter/src/rendering/object.dart:2775:7)
+#5      ChildLayoutHelper.layoutChild (package:flutter/src/rendering/layout_helper.dart:62:11)
+#6      RenderStack._computeSize (package:flutter/src/rendering/stack.dart:645:43)
+#7      RenderStack.performLayout (package:flutter/src/rendering/stack.dart:680:12)
+#8      RenderObject.layout (package:flutter/src/rendering/object.dart:2775:7)
+#9      RenderPadding.performLayout (package:flutter/src/rendering/shifted_box.dart:243:12)
+#10     RenderObject.layout (package:flutter/src/rendering/object.dart:2775:7)
+#11     RenderPadding.performLayout (package:flutter/src/rendering/shifted_box.dart:243:12)
+#12     RenderObject.layout (package:flutter/src/rendering/object.dart:2775:7)
+#13     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:115:18)
+#14     RenderObject.layout (package:flutter/src/rendering/object.dart:2775:7)
+#15     RenderConstrainedBox.performLayout (package:flutter/src/rendering/proxy_box.dart:293:14)
+#16     RenderObject.layout (package:flutter/src/rendering/object.dart:2775:7)
+#17     ChildLayoutHelper.layoutChild (package:flutter/src/rendering/layout_helper.dart:62:11)
+#18     RenderWrap._computeRuns (package:flutter/src/rendering/wrap.dart:752:26)
+#19     RenderWrap.performLayout (package:flutter/src/rendering/wrap.dart:717:72)
+#20     RenderObject.layout (package:flutter/src/rendering/object.dart:2775:7)
+#21     ChildLayoutHelper.layoutChild (package:flutter/src/rendering/layout_helper.dart:62:11)
+#22     RenderFlex._computeSizes (package:flutter/src/rendering/flex.dart:1161:28)
+#23     RenderFlex.performLayout (package:flutter/src/rendering/flex.dart:1257:32)
+#24     RenderObject.layout (package:flutter/src/rendering/object.dart:2775:7)
+#25     _RenderLayoutBuilder.performLayout (package:flutter/src/widgets/layout_builder.dart:450:14)
+#26     RenderObject.layout (package:flutter/src/rendering/object.dart:2775:7)
+#27     ChildLayoutHelper.layoutChild (package:flutter/src/rendering/layout_helper.dart:62:11)
+#28     RenderFlex._computeSizes (package:flutter/src/rendering/flex.dart:1161:28)
+#29     RenderFlex.performLayout (package:flutter/src/rendering/flex.dart:1257:32)
+#30     RenderObject.layout (package:flutter/src/rendering/object.dart:2775:7)
+#31     RenderPadding.performLayout (package:flutter/src/rendering/shifted_box.dart:243:12)
+#32     RenderObject.layout (package:flutter/src/rendering/object.dart:2775:7)
+#33     _RenderSingleChildViewport.performLayout (package:flutter/src/widgets/single_child_scroll_view.dart:502:14)
+#34     RenderObject.layout (package:flutter/src/rendering/object.dart:2775:7)
+#35     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:115:18)
+#36     RenderObject.layout (package:flutter/src/rendering/object.dart:2775:7)
+#37     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:115:18)
+#38     RenderObject.layout (package:flutter/src/rendering/object.dart:2775:7)
+#39     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:115:18)
+#40     RenderObject.layout (package:flutter/src/rendering/object.dart:2775:7)
+#41     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:115:18)
+#42     RenderObject.layout (package:flutter/src/rendering/object.dart:2775:7)
+#43     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:115:18)
+#44     RenderObject.layout (package:flutter/src/rendering/object.dart:2775:7)
+#45     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:115:18)
+#46     RenderObject.layout (package:flutter/src/rendering/object.dart:2775:7)
+#47     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:115:18)
+#48     RenderCustomPaint.performLayout (package:flutter/src/rendering/custom_paint.dart:574:11)
+#49     RenderObject.layout (package:flutter/src/rendering/object.dart:2775:7)
+#50     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:115:18)
+#51     RenderObject.layout (package:flutter/src/rendering/object.dart:2775:7)
+#52     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:115:18)
+#53     _RenderCustomClip.performLayout (package:flutter/src/rendering/proxy_box.dart:1481:11)
+#54     RenderObject.layout (package:flutter/src/rendering/object.dart:2775:7)
+#55     RenderProxyBoxMixin.performLayout (package:flutter/src/rendering/proxy_box.dart:115:18)
+#56     RenderObject.layout (package:flutter/src/rendering/object.dart:2775:7)
+#57     ChildLayoutHelper.layoutChild (package:flutter/src/rendering/layout_helper.dart:62:11)
+#58     RenderFlex._computeSizes (package:flutter/src/rendering/flex.dart:1203:26)
+#59     RenderFlex.performLayout (package:flutter/src/rendering/flex.dart:1257:32)
+#60     RenderObject.layout (package:flutter/src/rendering/object.dart:2775:7)
+#61     ChildLayoutHelper.layoutChild (package:flutter/src/rendering/layout_helper.dart:62:11)
+#62     RenderFlex._computeSizes (package:flutter/src/rendering/flex.dart:1203:26)
+#63     RenderFlex.performLayout (package:flutter/src/rendering/flex.dart:1257:32)
+#64     RenderObject.layout (package:flutter/src/rendering/object.dart:2775:7)
+#65     RenderPadding.performLayout (package:flutter/src/rendering/shifted_box.dart:243:12)
+#66     RenderObject.layout (package:flutter/src/rendering/object.dart:2775:7)
+#67     MultiChildLayoutDelegate.layoutChild (package:flutter/src/rendering/custom_layout.dart:180:12)
+#68     _ScaffoldLayout.performLayout (package:flutter/src/material/scaffold.dart:1112:7)
+#69     MultiChildLayoutDelegate._callPerformLayout (package:flutter/src/rendering/custom_layout.dart:249:7)
+#70     RenderCustomMultiChildLayoutBox.performLayout (package:flutter/src/rendering/custom_layout.dart:420:14)
+#71     RenderObject._layoutWithoutResize (package:flutter/src/rendering/object.dart:2623:7)
+#72     PipelineOwner.flushLayout (package:flutter/src/rendering/object.dart:1170:18)
+#73     PipelineOwner.flushLayout (package:flutter/src/rendering/object.dart:1183:15)
+#74     RendererBinding.drawFrame (package:flutter/src/rendering/binding.dart:629:23)
+#75     WidgetsBinding.drawFrame (package:flutter/src/widgets/binding.dart:1264:13)
+#76     RendererBinding._handlePersistentFrameCallback (package:flutter/src/rendering/binding.dart:495:5)
+#77     SchedulerBinding._invokeFrameCallback (package:flutter/src/scheduler/binding.dart:1434:15)
+#78     SchedulerBinding.handleDrawFrame (package:flutter/src/scheduler/binding.dart:1347:9)
+#79     SchedulerBinding._handleDrawFrame (package:flutter/src/scheduler/binding.dart:1200:5)
+#80     _invoke (dart:ui/hooks.dart:356:13)
+#81     PlatformDispatcher._drawFrame (dart:ui/platform_dispatcher.dart:444:5)
+#82     _drawFrame (dart:ui/hooks.dart:328:31)
+
+The following RenderObject was being processed when the exception was fired: RenderFlex#badca relayoutBoundary=up26 NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE:
+  creator: Column ← Padding ← Stack ← Padding ← Padding ← DecoratedBox ← Container ← SyncSurfaceCard ←
+    SyncMetricCard ← SizedBox ← Wrap ← Column ← ⋯
+  parentData: offset=Offset(0.0, 0.0) (can use size)
+  constraints: BoxConstraints(0.0<=w<=343.8, 0.0<=h<=Infinity)
+  size: MISSING
+  direction: vertical
+  mainAxisAlignment: start
+  mainAxisSize: max
+  crossAxisAlignment: start
+  textDirection: ltr
+  verticalDirection: down
+  spacing: 0.0
+This RenderObject had the following descendants (showing up to depth 5):
+    child 1: RenderFlex#d692b NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+      child 1: RenderParagraph#38d62 NEEDS-LAYOUT NEEDS-PAINT
+        text: TextSpan
+      child 2: RenderConstrainedBox#06507 NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+        child: RenderDecoratedBox#7f5f3 NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+          child: RenderPadding#fae8e NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+            child: RenderPositionedBox#551ce NEEDS-LAYOUT NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+    child 2: RenderConstrainedBox#2e769 NEEDS-LAYOUT NEEDS-PAINT
+    child 3: RenderParagraph#e2f41 NEEDS-LAYOUT NEEDS-PAINT
+      text: TextSpan
+    child 4: RenderConstrainedBox#50b1d NEEDS-LAYOUT NEEDS-PAINT
+    child 5: RenderParagraph#54d08 NEEDS-LAYOUT NEEDS-PAINT
+      text: TextSpan
+════════════════════════════════════════════════════════════════════════════════════════════════════
+
+Another exception was thrown: RenderBox was not laid out: RenderFlex#badca relayoutBoundary=up26 NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+Another exception was thrown: RenderBox was not laid out: RenderPadding#9288d relayoutBoundary=up25 NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+Another exception was thrown: RenderBox was not laid out: RenderStack#6b226 relayoutBoundary=up24 NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+Another exception was thrown: RenderBox was not laid out: RenderPadding#a8422 relayoutBoundary=up23 NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+Another exception was thrown: RenderBox was not laid out: RenderPadding#1be9d relayoutBoundary=up22 NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21 NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+Another exception was thrown: RenderBox was not laid out: RenderConstrainedBox#d3543 relayoutBoundary=up20 NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+Another exception was thrown: RenderBox was not laid out: RenderWrap#a952e relayoutBoundary=up19 NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+Another exception was thrown: RenderBox was not laid out: RenderFlex#b41d9 relayoutBoundary=up18 NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+Another exception was thrown: RenderBox was not laid out: _RenderLayoutBuilder#ad1b3 relayoutBoundary=up17 NEEDS-PAINT NEEDS-COMPOSITING-BITS-UPDATE
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: _RenderLayoutBuilder#ad1b3 relayoutBoundary=up17
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: 'package:flutter/src/rendering/object.dart': Failed assertion: line 2709 pos 12: '!_debugDoingThisLayout': is not true.
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: Cannot hit test a render box that has never been laid out.
+Another exception was thrown: Cannot hit test a render box that has never been laid out.
+Another exception was thrown: Cannot hit test a render box that has never been laid out.
+Another exception was thrown: Cannot hit test a render box that has never been laid out.
+Another exception was thrown: Cannot hit test a render box that has never been laid out.
+Another exception was thrown: Cannot hit test a render box that has never been laid out.
+Another exception was thrown: Cannot hit test a render box that has never been laid out.
+Another exception was thrown: Cannot hit test a render box that has never been laid out.
+Another exception was thrown: Cannot hit test a render box that has never been laid out.
+Another exception was thrown: Cannot hit test a render box that has never been laid out.
+Another exception was thrown: Cannot hit test a render box that has never been laid out.
+Another exception was thrown: Cannot hit test a render box that has never been laid out.
+Another exception was thrown: Cannot hit test a render box that has never been laid out.
+Another exception was thrown: Cannot hit test a render box that has never been laid out.
+Another exception was thrown: Cannot hit test a render box that has never been laid out.
+Another exception was thrown: Cannot hit test a render box that has never been laid out.
+Another exception was thrown: Cannot hit test a render box that has never been laid out.
+Another exception was thrown: Cannot hit test a render box that has never been laid out.
+Another exception was thrown: Cannot hit test a render box that has never been laid out.
+Another exception was thrown: Cannot hit test a render box that has never been laid out.
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: Cannot hit test a render box that has never been laid out.
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: Cannot hit test a render box that has never been laid out.
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+Another exception was thrown: Cannot hit test a render box that has never been laid out.
+Another exception was thrown: Cannot hit test a render box that has never been laid out.
+Another exception was thrown: Cannot hit test a render box that has never been laid out.
+Another exception was thrown: Cannot hit test a render box that has never been laid out.
+Another exception was thrown: Cannot hit test a render box that has never been laid out.
+Another exception was thrown: Cannot hit test a render box that has never been laid out.
+Another exception was thrown: Cannot hit test a render box that has never been laid out.
+Another exception was thrown: Cannot hit test a render box that has never been laid out.
+Another exception was thrown: Cannot hit test a render box that has never been laid out.
+Another exception was thrown: Cannot hit test a render box that has never been laid out.
+Another exception was thrown: Cannot hit test a render box that has never been laid out.
+Another exception was thrown: Cannot hit test a render box that has never been laid out.
+Another exception was thrown: Cannot hit test a render box that has never been laid out.
+Another exception was thrown: Cannot hit test a render box that has never been laid out.
+Another exception was thrown: Cannot hit test a render box that has never been laid out.
+Another exception was thrown: 'package:flutter/src/rendering/object.dart': Failed assertion: line 2709 pos 12: '!_debugDoingThisLayout': is not true.
+Another exception was thrown: RenderBox was not laid out: RenderDecoratedBox#29890 relayoutBoundary=up21
+D/VRI[MainActivity](23159): visibilityChanged oldVisibility=true newVisibility=false
+D/Surface (23159): Surface::disconnect
+D/Surface (23159): Surface::disconnect
+D/BLASTBufferQueue(23159): [13b4039 SurfaceView[com.adrie.sync.sync_flutter/com.adrie.sync.sync_flutter.MainActivity]#1](f:0,a:3) destructor()
+D/BufferQueueConsumer(23159): [13b4039 SurfaceView[com.adrie.sync.sync_flutter/com.adrie.sync.sync_flutter.MainActivity](BLAST)#88522(BLAST Consumer)pid:23159](id:5a7700000001,api:0,p:-1,c:23159) disconnect
+I/AutofillManager(23159): onInvisibleForAutofill(): expiringResponse
+W/WindowOnBackDispatcher(23159): sendCancelIfRunning: isInProgress=false callback=android.app.Activity$$ExternalSyntheticLambda0@bce7a15
+D/Surface (23159): Surface::disconnect
+D/BLASTBufferQueue(23159): [VRI[MainActivity]#0](f:0,a:3) destructor()
+D/BufferQueueConsumer(23159): [com.adrie.sync.sync_flutter/com.adrie.sync.sync_flutter.MainActivity#88517(BLAST Consumer)pid:23159](id:5a7700000000,api:0,p:-1,c:23159) disconnect
+D/ViewRootImpl(23159): Skipping stats log for color mode
+I/HWUI    (23159): setGrContext validptr-->nullptr
+I/HWUI    (23159): setGrContext nullptr-->validptr
+I/flutter (23159): [IMPORTANT:flutter/shell/platform/android/android_context_vk_impeller.cc(62)] Using the Impeller rendering backend (Vulkan).
+D/BufferQueueConsumer(23159): [](id:5a7700000002,api:0,p:-1,c:23159) connect: controlledByApp=false
+D/BLASTBufferQueue(23159): [VRI[MainActivity]#2](f:0,a:0) constructor()
+D/BLASTBufferQueue(23159): [VRI[MainActivity]#2](f:0,a:0) update width=1220 height=2712 format=-3 mTransformHint=0
+D/BufferQueueConsumer(23159): [](id:5a7700000003,api:0,p:-1,c:23159) connect: controlledByApp=false
+D/BLASTBufferQueue(23159): [85ce35d SurfaceView[com.adrie.sync.sync_flutter/com.adrie.sync.sync_flutter.MainActivity]#3](f:0,a:0) constructor()
+D/BLASTBufferQueue(23159): [85ce35d SurfaceView[com.adrie.sync.sync_flutter/com.adrie.sync.sync_flutter.MainActivity]#3](f:0,a:0) update width=1220 height=2712 format=4 mTransformHint=0
+E/nc.sync_flutter(23159): Usage not permitted! format = 0x38, permitted usage bits = 0x53ff,usage = 0xb00, invalid usage bits: 0x800
+E/mali_gralloc(23159): ERROR: Unrecognized and/or unsupported format 0x38 and usage 0xb00
+E/nc.sync_flutter(23159): Usage not permitted! format = 0x3b, permitted usage bits = 0x101d7f7ff,usage = 0xb00, invalid usage bits: 0x800
+E/mali_gralloc(23159): ERROR: Unrecognized and/or unsupported format 0x3b and usage 0xb00
+E/nc.sync_flutter(23159): Usage not permitted! format = 0x38, permitted usage bits = 0x53ff,usage = 0xb00, invalid usage bits: 0x800
+E/mali_gralloc(23159): ERROR: Unrecognized and/or unsupported format 0x38 and usage 0xb00
+E/nc.sync_flutter(23159): Usage not permitted! format = 0x3b, permitted usage bits = 0x101d7f7ff,usage = 0xb00, invalid usage bits: 0x800
+E/mali_gralloc(23159): ERROR: Unrecognized and/or unsupported format 0x3b and usage 0xb00
+D/BLASTBufferQueue(23159): [85ce35d SurfaceView[com.adrie.sync.sync_flutter/com.adrie.sync.sync_flutter.MainActivity]#3](f:0,a:1) acquireNextBufferLocked size=1220x2712 mFrameNumber=1 applyTransaction=true mTimestamp=194896448340385(auto) mPendingTransactions.size=0 graphicBufferId=99467147608098 transform=0
+I/Choreographer(23159): Skipped 77 frames!  The application may be doing too much work on its main thread.
+D/BLASTBufferQueue(23159): [VRI[MainActivity]#2](f:0,a:1) acquireNextBufferLocked size=1220x2712 mFrameNumber=1 applyTransaction=true mTimestamp=194896634396154(auto) mPendingTransactions.size=0 graphicBufferId=99467147608106 transform=0
+I/HWUI    (23159): Davey! duration=874ms; Flags=1, FrameTimelineVsyncId=95368967, IntendedVsync=194895763117756, Vsync=194896619130221, InputEventId=0, HandleInputStart=194896626254000, AnimationStart=194896626255538, PerformTraversalsStart=194896626256769, DrawStart=194896631192461, FrameDeadline=194895783228866, FrameStartTime=194896625710923, FrameInterval=11117045, WorkloadTarget=20111110, SyncQueued=194896631372461, SyncStart=194896631435231, IssueDrawCommandsStart=194896631535461, SwapBuffers=194896634008692, FrameCompleted=194896638072154, DequeueBufferDuration=1059307, QueueBufferDuration=284692, GpuCompleted=194896638072154, SwapBuffersCompleted=194896634788154, DisplayPresentTime=468151468993, CommandSubmissionCompleted=194896634008692, 
+D/WindowLayoutComponentImpl(23159): Register WindowLayoutInfoListener on Context=com.adrie.sync.sync_flutter.MainActivity@c1234a0, of which baseContext=android.app.ContextImpl@b5a7985
+D/InsetsController(23159): hide(ime(), fromIme=false)
+I/ImeTracker(23159): com.adrie.sync.sync_flutter:ccb433db: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+
+Performing hot restart...                                       
+lib/src/features/modules/presentation/levantamento_fundeb_screen.dart:1247:31: Error: Can't find ')' to match '('.
+        return SyncSurfaceCard(
+                              ^
+lib/src/features/modules/presentation/levantamento_fundeb_screen.dart:1396:7: Error: Expected ';' after this.
+      ),
+      ^
+lib/src/features/modules/presentation/levantamento_fundeb_screen.dart:1396:8: Error: Expected an identifier, but got ','.
+Try inserting an identifier before ','.
+      ),
+       ^
+lib/src/features/modules/presentation/levantamento_fundeb_screen.dart:1396:8: Error: Unexpected token ';'.
+      ),
+       ^
+lib/src/features/modules/presentation/levantamento_fundeb_screen.dart:1397:5: Error: Expected an identifier, but got ')'.
+Try inserting an identifier before ')'.
+    );
+    ^
+lib/src/features/modules/presentation/levantamento_fundeb_screen.dart:1396:8: Error: Expected ';' after this.
+      ),
+       ^
+lib/src/features/modules/presentation/levantamento_fundeb_screen.dart:1397:5: Error: Unexpected token ';'.
+    );
+    ^
+Restarted application in 238ms.
+Try again after fixing the above error(s).
+
+Performing hot restart...                                       
+Restarted application in 2.599ms.
+I/Choreographer(23159): Skipped 78 frames!  The application may be doing too much work on its main thread.
+D/InsetsController(23159): hide(ime(), fromIme=false)
+I/ImeTracker(23159): com.adrie.sync.sync_flutter:1b331c27: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN

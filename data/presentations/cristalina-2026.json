@@ -1,0 +1,238 @@
+{
+  "material_date": "26/03/2026",
+  "municipio": "Cristalina",
+  "uf": "GO",
+  "exercicio": 2026,
+  "hero": {
+    "headline": "Cristalina tem uma oportunidade técnica relevante no FUNDEB.",
+    "description": "Material executivo estruturado para reunião com foco em serviço, racional técnico e potencial de resultado para o município.",
+    "points": "Base municipal robusta, receita 2026 100% ancorada na contribuição própria, avanço em educação especial e espaço claro para estruturação técnica."
+  },
+  "guide_panels": {
+    "message": {
+      "title": "COMO CONDUZIR",
+      "lines": [
+        "Abrir com porte da rede e relevância financeira.",
+        "Enfatizar ausência atual de VAAF, VAAT e VAAR.",
+        "Levar a conversa para oportunidade de captura."
+      ]
+    },
+    "scope": {
+      "title": "CHAVE DA FALA",
+      "lines": [
+        "Vender método, não promessa vaga.",
+        "Mostrar que a Rocha Prime entra em execução.",
+        "Reforçar acompanhamento e disciplina de agenda."
+      ]
+    },
+    "base": {
+      "title": "PONTO DE APOIO",
+      "lines": [
+        "Usar esta página para dar lastro técnico.",
+        "Rede grande, sistemas ativos e base organizada.",
+        "Serve para sustentar credibilidade na fala."
+      ]
+    },
+    "projection": {
+      "title": "TESE OFENSIVA",
+      "lines": [
+        "Apresentar como alavanca ofertável.",
+        "Integral com multiplicador de 2,5x.",
+        "EJA com potencial de até 5x via incentivos."
+      ]
+    },
+    "comparison": {
+      "title": "LEITURA CRÍTICA",
+      "lines": [
+        "Mostrar que base educacional se moveu.",
+        "Receita não capturou essa evolução.",
+        "Abrir espaço para agenda corretiva."
+      ]
+    },
+    "financial": {
+      "title": "MENSAGEM-CHAVE",
+      "lines": [
+        "Receita forte, porém concentrada.",
+        "Hoje não há monetização federal capturada.",
+        "O ganho vem de reestruturação e defesa técnica."
+      ]
+    },
+    "method": {
+      "title": "PASSAR SEGURANÇA",
+      "lines": [
+        "Falar de rito, governança e execução.",
+        "Equipe técnica e honorário por êxito.",
+        "Tirar sensação de risco do gestor."
+      ]
+    },
+    "closing": {
+      "title": "PEDIDO FINAL",
+      "lines": [
+        "Fechar pedindo mesa técnica.",
+        "Levar para próximos passos concretos.",
+        "Sair da reunião com abertura operacional."
+      ]
+    }
+  },
+  "metrics": {
+    "receita_2025": 76823318.55,
+    "receita_prevista": 71764844.93,
+    "receita_com_rocha_prime": 121308502.58,
+    "ganho_estimado": 49543657.65,
+    "matriculas_qedu": 12680,
+    "crescimento_receita_pct": -6.58,
+    "vaar_atual": 0
+  },
+  "network_summary": {
+    "escolas_publicas": 34,
+    "escolas_municipais": 26,
+    "matriculas_publicas": 12609,
+    "integral_publica": 1782,
+    "eja_publica": 227
+  },
+  "executive_message": {
+    "eyebrow": "Por que Cristalina justifica uma agenda mais robusta",
+    "title": "Leitura executiva do caso",
+    "body": "A tese de abertura da reunião é objetiva: Cristalina tem porte de rede, mas o resultado financeiro piorou de 2025 para 2026. O município saiu de R$ 76,8 milhões para R$ 71,8 milhões e segue sem captura em VAAF, VAAT e VAAR. A Rocha Prime entra para inverter essa lógica e fazer o município voltar a crescer com método e defesa técnica.",
+    "deliverables": [
+      "Leitura clara do que a Rocha Prime faz e onde ela agrega valor.",
+      "Tradução executiva dos números de Cristalina para contexto de decisão.",
+      "Conexão entre rede, repasse, elegibilidade e agenda técnica."
+    ]
+  },
+  "scope": {
+    "title": "O que a Rocha Prime faz na prática",
+    "subtitle": "Serviços centrais da entrega",
+    "cards": [
+      {
+        "title": "Levantamento completo",
+        "description": "Coleta e organização das bases educacionais, financeiras, cadastrais e operacionais do município."
+      },
+      {
+        "title": "Cruzamento técnico",
+        "description": "Leitura integrada entre MEC, FNDE, INEP, QEdu e sistemas locais para localizar incoerências e oportunidades."
+      },
+      {
+        "title": "Correções priorizadas",
+        "description": "Apoio técnico para saneamento, habilitação e medidas com maior impacto sobre elegibilidade e repasse."
+      },
+      {
+        "title": "Monitoramento executivo",
+        "description": "Acompanhamento da agenda e dos efeitos sobre receita, conformidade e evolução do caso."
+      }
+    ],
+    "closing": "A mensagem desta página deve ser objetiva: a Rocha Prime não vende relatório; vende execução, correção priorizada e acompanhamento até o resultado."
+  },
+  "base": {
+    "intro": "A base disponível confirma uma rede pública relevante, com 34 escolas, 12.680 matrículas e 502 matrículas em educação especial. Somado a isso, os principais sistemas MEC/FNDE estão ativos, o que favorece uma agenda rápida de saneamento e monitoramento.",
+    "qedu": [
+      ["Escolas", "34"],
+      ["Matrículas totais", "12.680"],
+      ["Docentes", "519"],
+      ["Creche", "633"],
+      ["Pré-escola", "1.409"],
+      ["Anos iniciais", "4.902"],
+      ["Anos finais", "3.190"],
+      ["Ensino médio", "1.817"],
+      ["EJA", "227"],
+      ["Educação especial", "502"]
+    ],
+    "systems": [
+      ["MEC", "SIMEC", "Senha ativa"],
+      ["FNDE", "Habilita", "Habilitado"],
+      ["FNDE", "SIGARPWEB", "Senha ativa"],
+      ["FNDE", "SIGPC", "Senha ativa"]
+    ],
+    "reading": "Esta é a página de sustentação técnica da conversa: rede ampla, sistemas ativos, avanço recente em frentes sensíveis e ausência de complementação federal. O caso tem base para uma abordagem firme e profissional."
+  },
+  "comparison": {
+    "title": "O que mudou na base considerada pelo Fundeb",
+    "subtitle": "Matrículas e implicações executivas",
+    "rows": [
+      ["Tempo integral pública", "+639", "Expansão relevante em modalidade com maior peso técnico."],
+      ["Educação especial pública", "+86", "Crescimento material em frente sensível para financiamento."],
+      ["Matrículas públicas totais", "+168", "Rede ganha escala mesmo com pressão sobre a receita prevista."],
+      ["EJA pública", "-20", "Queda que merece busca ativa e reorganização da oferta."]
+    ],
+    "matricula_base_1": 12441,
+    "matricula_base_2": 12609,
+    "critical_title": "LEITURA CRÍTICA",
+    "critical_label": "Cristalina perdeu receita de 2025 para 2026 e segue com VAAR zerado",
+    "critical_text": "Mesmo com movimento na base educacional, o município recuou financeiramente e permaneceu sem captura federal. Essa é a prova mais forte de que a estrutura atual não está convertendo potencial em resultado.",
+    "summary": "A leitura para reunião precisa ser firme: a rede se moveu, mas o município perdeu recurso. Com a Rocha Prime, a conversa deixa de ser estagnação e passa a ser recuperação de resultado."
+  },
+  "projection": {
+    "title": "Tese de expansão orientada da rede",
+    "subtitle": "Leitura comercial para reunião com base na rede municipal atual",
+    "assumption_text": "A proposta comercial pode ser conduzida com uma tese objetiva de expansão: na rede municipal atual, a Rocha Prime pode defender uma alavanca de 2,5x para o tempo integral e potencial de até 5x para a EJA, apoiada por incentivos, programas, busca ativa e reorganização de oferta.",
+    "integral": {
+      "escolas_priorizadas": 13,
+      "media_por_escola": 90,
+      "alunos_adicionais": 1172,
+      "base_atual": 781,
+      "base_projetada": 1953,
+      "percentual_atual": 9.6,
+      "percentual_projetado": 24.1
+    },
+    "eja": {
+      "escolas_priorizadas": 10,
+      "media_por_escola": 45,
+      "alunos_adicionais": 452,
+      "base_atual": 113,
+      "base_projetada": 565,
+      "percentual_atual": 1.4,
+      "percentual_projetado": 7.0
+    },
+    "closing": "Na condução comercial, a mensagem é clara: hoje Cristalina opera abaixo do potencial. Com a Rocha Prime, o município pode migrar de 781 para 1.953 matrículas em tempo integral e de 113 para 565 matrículas em EJA, transformando base fraca em base ofensiva."
+  },
+  "financial": {
+    "current_rows": [
+      ["Contribuição municipal", 71764844.93, "100,0%"],
+      ["Complementação VAAF", 0, "0,0%"],
+      ["Complementação VAAT", 0, "0,0%"],
+      ["Complementação VAAR", 0, "0,0%"],
+      ["Total previsto 2026", 71764844.93, "100,0%"]
+    ],
+    "projection_rows": [
+      ["VAAF", 0, 0, 0],
+      ["VAAT", 0, 0, 0],
+      ["VAAR", 0, 0, 0],
+      ["Total geral", 71764844.93, 121308502.58, 49543657.65]
+    ],
+    "highlight_title": "POTENCIAL ESTRUTURADO DE GANHO",
+    "highlight_value": 49543657.65,
+    "narrative": "Na fala do gestor, esta lâmina precisa fechar o raciocínio com contraste: Cristalina caiu de 2025 para 2026 e hoje opera sem captura federal relevante. Com a Rocha Prime, o município sai de R$ 71,8 milhões para R$ 121,3 milhões em leitura projetada, recolocando a receita em trajetória forte de crescimento."
+  },
+  "method": {
+    "title": "Como a Rocha Prime conduz a agenda",
+    "subtitle": "Fluxo de trabalho e diferenciais executivos",
+    "steps": [
+      ["Levantamento", "Organização das bases e documentação."],
+      ["Cruzamento", "Leitura integrada de rede, receita e sistemas."],
+      ["Correção", "Foco nas medidas que mais alteram resultado."],
+      ["Monitoramento", "Rito técnico com acompanhamento executivo."]
+    ],
+    "differentials": [
+      "Especialização em FUNDEB, Censo Escolar e sistemas FNDE.",
+      "Leitura integrada entre rede, receita, habilitação e evidências.",
+      "Honorários condicionados ao resultado efetivo, sem custo fixo inicial.",
+      "Linguagem executiva para decisão do gestor e acompanhamento técnico."
+    ]
+  },
+  "closing": {
+    "agenda": [
+      ["Apresentação executiva ao gestor", "Alinhamento do racional técnico e da oportunidade."],
+      ["Abertura da mesa técnica", "Secretaria de Educação, equipe financeira e responsáveis operacionais."],
+      ["Plano de ação Rocha Prime", "Cronograma, acessos, priorização e acompanhamento."]
+    ],
+    "title": "CRISTALINA | OPORTUNIDADE EXECUTIVA",
+    "body": "Cristalina já tem porte e base para justificar uma agenda técnica séria. A proposta da Rocha Prime é assumir essa frente com método, segurança de execução e foco direto em resultado mensurável."
+  },
+  "contact": {
+    "company": "Rocha Prime Serviços Especializados",
+    "email": "contato@rochaprimedigital.com.br",
+    "phone": "(61) 99866-7834",
+    "cnpj": "29.342.691/0001-93",
+    "tagline": "Inteligência e Estratégia para Gestão Pública"
+  }
+}

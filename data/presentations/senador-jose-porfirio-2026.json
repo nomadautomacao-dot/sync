@@ -1,0 +1,280 @@
+{
+  "material_date": "26/03/2026",
+  "municipio": "Senador Jose Porfirio",
+  "uf": "PA",
+  "exercicio": 2026,
+  "hero": {
+    "headline": "Senador Jose Porfirio já tem uma base forte no FUNDEB, mas ainda pode acelerar muito mais.",
+    "description": "Material executivo estruturado para reunião com foco em serviço, racional técnico e potencial de crescimento para o município.",
+    "points": "Município já capturando VAAF e VAAT, rede com massa crítica, tempo integral expressivo e espaço técnico evidente para ampliar resultado."
+  },
+  "guide_panels": {
+    "message": {
+      "title": "COMO CONDUZIR",
+      "lines": [
+        "Abrir mostrando que o município já tem base boa.",
+        "Não vender crise; vender aceleração de resultado.",
+        "Levar a conversa para teto ainda não capturado."
+      ]
+    },
+    "history": {
+      "title": "LEITURA DE SERIE",
+      "lines": [
+        "Mostrar se a curva vem crescendo ou nao.",
+        "Separar evolucao organica de teto ainda nao capturado.",
+        "Usar a base legal para dar seguranca na fala."
+      ]
+    },
+    "scope": {
+      "title": "CHAVE DA FALA",
+      "lines": [
+        "Mostrar que a Rocha Prime entra em execução.",
+        "Vender método, correção e acompanhamento.",
+        "Reforçar segurança operacional para o gestor."
+      ]
+    },
+    "base": {
+      "title": "PONTO DE APOIO",
+      "lines": [
+        "Usar esta página para dar sustentação técnica.",
+        "Rede relevante, tempo integral forte e base viva.",
+        "Mesmo sem sistemas detalhados, o caso é robusto."
+      ]
+    },
+    "projection": {
+      "title": "TESE OFENSIVA",
+      "lines": [
+        "Município já performa e pode acelerar.",
+        "Integral como alavanca de escala e peso técnico.",
+        "EJA como frente ofensiva de expansão."
+      ]
+    },
+    "comparison": {
+      "title": "LEITURA CRÍTICA",
+      "lines": [
+        "Mostrar que a base já cresceu.",
+        "Mesmo assim o município ainda não chegou no teto.",
+        "Abrir espaço para aceleração com a Rocha Prime."
+      ]
+    },
+    "financial": {
+      "title": "MENSAGEM-CHAVE",
+      "lines": [
+        "Município já cresceu, mas ainda deixou valor na mesa.",
+        "VAAR segue zerado e o teto ainda não foi capturado.",
+        "Com Rocha Prime, a evolução muda de escala."
+      ]
+    },
+    "method": {
+      "title": "PASSAR SEGURANÇA",
+      "lines": [
+        "Falar de rito, equipe e execução.",
+        "Honorário por êxito e acompanhamento técnico.",
+        "Tirar sensação de improviso do processo."
+      ]
+    },
+    "closing": {
+      "title": "PEDIDO FINAL",
+      "lines": [
+        "Fechar pedindo abertura da mesa técnica.",
+        "Levar para próximos passos concretos.",
+        "Sair da reunião com agenda operacional iniciada."
+      ]
+    }
+  },
+  "metrics": {
+    "receita_2025": 76982128.47,
+    "receita_prevista": 92036104.79,
+    "receita_com_rocha_prime": 142915981.33,
+    "ganho_estimado": 50879876.54,
+    "matriculas_qedu": 7014,
+    "crescimento_receita_pct": 19.56,
+    "vaar_atual": 0
+  },
+  "network_summary": {
+    "escolas_publicas": 35,
+    "escolas_municipais": 33,
+    "matriculas_publicas": 6861,
+    "integral_publica": 3949,
+    "eja_publica": 367
+  },
+  "executive_message": {
+    "eyebrow": "Por que Senador Jose Porfirio justifica uma agenda mais robusta",
+    "title": "Leitura executiva do caso",
+    "body": "A tese de abertura da reunião é simples: Senador Jose Porfirio já provou aderência relevante ao FUNDEB, cresceu de R$ 77,0 milhões para R$ 92,0 milhões de 2025 para 2026 e já captura VAAF e VAAT. O ponto agora não é explicar um município fraco; é mostrar que, mesmo com essa base boa, ainda existe muito valor fora da mesa e a Rocha Prime entra para acelerar esse resultado.",
+    "deliverables": [
+      "Leitura clara do que a Rocha Prime faz e onde ela amplia valor.",
+      "Tradução executiva dos números do município para decisão do gestor.",
+      "Conexão entre base da rede, complementação federal e agenda de aceleração."
+    ]
+  },
+  "history": {
+    "title": "Panorama historico 2022-2026",
+    "subtitle": "Serie oficial da receita Fundeb para medir evolucao real do municipio",
+    "intro": "Antes de falar de aceleracao, esta pagina mostra a curva oficial do municipio. Ela ajuda o gestor a separar tres coisas: crescimento historico, mudancas de patamar e espaco tecnico ainda nao capturado.",
+    "series": [
+      [
+        2022,
+        32417684.82
+      ],
+      [
+        2023,
+        36230833.99
+      ],
+      [
+        2024,
+        66782407.36
+      ],
+      [
+        2025,
+        76982128.47
+      ],
+      [
+        2026,
+        92036104.79
+      ]
+    ],
+    "legal_sources": [
+      "Lei n 14.113/2020, que regula o novo Fundeb e as modalidades de complementacao.",
+      "FNDE / MEC / Fazenda: portarias interministeriais e demonstrativos oficiais por exercicio.",
+      "Receitas 2024, 2025 e 2026 validadas na base oficial local do projeto e relatorios oficiais do Fundeb.",
+      "Censo Escolar / INEP e QEdu usados como base educacional complementar da leitura."
+    ],
+    "reading": "A serie mostra alta consistente desde 2022, com virada forte em 2024 e novo avanco em 2026."
+  },
+  "scope": {
+    "title": "O que a Rocha Prime faz na prática",
+    "subtitle": "Serviços centrais da entrega",
+    "cards": [
+      {
+        "title": "Levantamento completo",
+        "description": "Coleta e organização das bases educacionais, financeiras, cadastrais e operacionais do município."
+      },
+      {
+        "title": "Cruzamento técnico",
+        "description": "Leitura integrada entre MEC, FNDE, INEP, QEdu e sistemas locais para localizar incoerências e oportunidades."
+      },
+      {
+        "title": "Correções priorizadas",
+        "description": "Apoio técnico para saneamento, habilitação e medidas com maior impacto sobre elegibilidade e repasse."
+      },
+      {
+        "title": "Monitoramento executivo",
+        "description": "Acompanhamento da agenda e dos efeitos sobre receita, conformidade e evolução do caso."
+      }
+    ],
+    "closing": "A mensagem desta página deve ser objetiva: a Rocha Prime não entra para manter o que já existe; entra para corrigir, ampliar e acompanhar até o próximo patamar de resultado."
+  },
+  "base": {
+    "intro": "A base disponível confirma uma rede pública relevante, com 35 escolas, 7.014 matrículas e 3.949 matrículas em tempo integral. Mesmo com indisponibilidade de parte dos sistemas operacionais no relatório original, o desenho educacional do município já demonstra musculatura para uma agenda forte de expansão e monetização.",
+    "qedu": [
+      ["Escolas", "35"],
+      ["Matrículas totais", "7.014"],
+      ["Docentes", "265"],
+      ["Creche", "462"],
+      ["Pré-escola", "831"],
+      ["Anos iniciais", "2.821"],
+      ["Anos finais", "1.718"],
+      ["Ensino médio", "662"],
+      ["EJA", "367"],
+      ["Educação especial", "153"]
+    ],
+    "systems": [
+      ["MEC", "SIMEC", "Dados não disponíveis"],
+      ["FNDE", "Habilita", "Dados não disponíveis"],
+      ["FNDE", "SIGARPWEB", "Dados não disponíveis"],
+      ["FNDE", "SIGPC", "Dados não disponíveis"]
+    ],
+    "reading": "Esta é a página de sustentação técnica da conversa: rede relevante, tempo integral expressivo, VAAF e VAAT já presentes e uma base que demonstra potencial real de aceleração. O caso não é de fragilidade; é de expansão bem orientada."
+  },
+  "comparison": {
+    "title": "O que mudou na base considerada pelo Fundeb",
+    "subtitle": "Matrículas e implicações executivas",
+    "rows": [
+      ["Tempo integral pública", "+572", "Expansão muito relevante em modalidade com alto peso técnico."],
+      ["Matrículas públicas totais", "+207", "A rede ganhou escala entre uma rodada e outra."],
+      ["EJA pública", "+42", "Frente que já reage e ainda pode crescer mais."],
+      ["Educação especial pública", "+32", "Crescimento importante em modalidade sensível para financiamento."]
+    ],
+    "matricula_base_1": 6654,
+    "matricula_base_2": 6861,
+    "critical_title": "LEITURA CRÍTICA",
+    "critical_label": "O município cresceu, mas VAAR segue zerado e o teto ainda não foi capturado",
+    "critical_text": "Senador Jose Porfirio já mostrou aderência forte ao FUNDEB, mas ainda não transformou essa boa base em captura máxima. Crescer sozinho não significa estar no teto técnico-financeiro.",
+    "summary": "A leitura para reunião deve ser firme: o município já subiu de patamar, mas ainda deixou valor relevante na mesa. Com a Rocha Prime, a conversa deixa de ser continuidade e passa a ser aceleração."
+  },
+  "projection": {
+    "title": "Tese de aceleração da base",
+    "subtitle": "Leitura comercial sobre uma base municipal que já performa",
+    "assumption_text": "A proposta comercial parte de um ponto importante: Senador Jose Porfirio já possui massa crítica em tempo integral e complementações relevantes. A Rocha Prime entra para transformar uma base boa em uma base agressiva, ampliando integral, consolidando EJA e defendendo uma monetização superior.",
+    "integral": {
+      "escolas_priorizadas": 14,
+      "media_por_escola": 57,
+      "alunos_adicionais": 792,
+      "base_atual": 3946,
+      "base_projetada": 4738,
+      "percentual_atual": 64.6,
+      "percentual_projetado": 77.6
+    },
+    "eja": {
+      "escolas_priorizadas": 12,
+      "media_por_escola": 46,
+      "alunos_adicionais": 552,
+      "base_atual": 276,
+      "base_projetada": 828,
+      "percentual_atual": 4.5,
+      "percentual_projetado": 13.6
+    },
+    "closing": "Na condução comercial, a mensagem é clara: Senador Jose Porfirio já tem base para jogar grande. Com a Rocha Prime, essa base deixa de ser apenas boa e passa a operar em ritmo agressivo de expansão."
+  },
+  "financial": {
+    "current_rows": [
+      ["Contribuição municipal", 38907289.45, "42,3%"],
+      ["Complementação VAAF", 19855536.75, "21,6%"],
+      ["Complementação VAAT", 33273278.59, "36,2%"],
+      ["Complementação VAAR", 0, "0,0%"],
+      ["Total previsto 2026", 92036104.79, "100,0%"]
+    ],
+    "projection_rows": [
+      ["VAAF", 19855536.75, 27797751.45, 7942214.70],
+      ["VAAT", 33273278.59, 43255262.17, 9981983.58],
+      ["VAAR", 0, 0, 0],
+      ["Total geral", 92036104.79, 142915981.33, 50879876.54]
+    ],
+    "highlight_title": "POTENCIAL ESTRUTURADO DE GANHO",
+    "highlight_value": 50879876.54,
+    "narrative": "Na fala do gestor, esta lâmina precisa fechar o raciocínio com contraste: Senador Jose Porfirio já cresceu de 2025 para 2026, mas ainda não capturou o teto técnico do FUNDEB. Com a Rocha Prime, o município sai de R$ 92,0 milhões para R$ 142,9 milhões em leitura projetada, mudando de uma boa base para uma base de escala superior."
+  },
+  "method": {
+    "title": "Como a Rocha Prime conduz a agenda",
+    "subtitle": "Fluxo de trabalho e diferenciais executivos",
+    "steps": [
+      ["Levantamento", "Organização das bases e documentação."],
+      ["Cruzamento", "Leitura integrada de rede, receita e sistemas."],
+      ["Correção", "Foco nas medidas que mais alteram resultado."],
+      ["Monitoramento", "Rito técnico com acompanhamento executivo."]
+    ],
+    "differentials": [
+      "Especialização em FUNDEB, Censo Escolar e sistemas FNDE.",
+      "Leitura integrada entre rede, receita, habilitação e evidências.",
+      "Honorários condicionados ao resultado efetivo, sem custo fixo inicial.",
+      "Linguagem executiva para decisão do gestor e acompanhamento técnico."
+    ]
+  },
+  "closing": {
+    "agenda": [
+      ["Apresentação executiva ao gestor", "Alinhamento do racional técnico e da oportunidade."],
+      ["Abertura da mesa técnica", "Secretaria de Educação, equipe financeira e responsáveis operacionais."],
+      ["Plano de ação Rocha Prime", "Cronograma, acessos, priorização e acompanhamento."]
+    ],
+    "title": "SENADOR JOSE PORFIRIO | OPORTUNIDADE EXECUTIVA",
+    "body": "Senador Jose Porfirio já provou que tem aderência ao FUNDEB. A proposta da Rocha Prime é acelerar esse desempenho, ampliar captura e defender o que ainda ficou fora da mesa."
+  },
+  "contact": {
+    "company": "Rocha Prime Serviços Especializados",
+    "email": "contato@rochaprimedigital.com.br",
+    "phone": "(61) 99866-7834",
+    "cnpj": "29.342.691/0001-93",
+    "tagline": "Inteligência e Estratégia para Gestão Pública"
+  }
+}

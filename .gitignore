@@ -1,5 +1,3 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
 # dependencies
 /node_modules
 /.pnp
@@ -9,9 +7,6 @@
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
-
-# testing
-/coverage
 
 # next.js
 /.next/
@@ -30,12 +25,44 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files
 .env*
-
-# vercel
-.vercel
+cloudrun.env.yaml
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
+
+# Large data files
+*.xlsx
+*.csv
+*.db
+*.sqlite
+*.zip
+*.tmp
+
+# Temporary files
+temp_doc_analysis/
+output/
+tmp_*
+scratch/
+
+# Flutter build artifacts (kept in sync_flutter/.gitignore)
+sync_flutter/build/
+sync_flutter/.dart_tool/
+
+# Python cache
+__pycache__/
+*.pyc
+BIT4AFD.tmp
+tmp_sinopse_educacao_basica_2025.zip
+tmp_sinopse_educacao_basica_2025.xlsx
+tmp_sinopse_educacao_basica_2023.xlsx
+tmp_sinopse_educacao_basica_2024.xlsx
+tmp_microdados_censo_2025.zip
+*.tmp
+tmp_sinopse_*
+tmp_microdados_*
+tmp_sinopse_*
+tmp_microdados_*
+*.tmp
+documents/*.zip

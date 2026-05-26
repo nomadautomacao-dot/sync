@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(where gcloud:*)",
+      "Bash(docker:*)",
+      "Bash(gcloud:*)",
+      "Bash(winget install:*)",
+      "Bash([ -f .env.local ])",
+      "Bash(npm run:*)",
+      "Bash(find app:*)",
+      "Bash(ls -lh *.json *.xlsx)",
+      "Bash(curl -s \"https://sync-app-621901234263.us-central1.run.app/api/health\")",
+      "Bash(curl -s \"https://sync-app-n7cfomhaaq-uc.a.run.app/\")",
+      "Bash(curl -I \"https://sync-app-n7cfomhaaq-uc.a.run.app/\")",
+      "Bash(npx prisma:*)",
+      "Bash(ls -la data/*.json)",
+      "Bash(grep -r \"from.*@/data/\" core/lib/*.ts)",
+      "Bash(ls -lh data/*.json)",
+      "Bash(node:*)"
+    ]
+  }
+}

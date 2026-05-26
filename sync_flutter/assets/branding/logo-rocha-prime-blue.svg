@@ -1,0 +1,8 @@
+<svg width="300" height="210" viewBox="110 10 300 210" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(180 24)">
+    <path d="M64 0L122 40V102L64 142V102L92 81L64 64V0Z" fill="#071D34"/>
+    <path d="M64 34L92 54L64 75V34Z" fill="#FFFFFF"/>
+    <path d="M64 142L28 116V80L64 55V90L42 105L64 121V142Z" fill="#071D34"/>
+  </g>
+  <text x="260" y="206" fill="#071D34" font-family="Montserrat, Helvetica, Arial, sans-serif" font-size="42" font-weight="700" text-anchor="middle">Rocha Prime</text>
+</svg>

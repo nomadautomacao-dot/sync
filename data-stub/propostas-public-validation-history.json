@@ -1,0 +1,617 @@
+{
+  "version": 1,
+  "updatedAt": "2026-03-25T16:40:28.447Z",
+  "items": {
+    "2301901": {
+      "codigoIbge": "2301901",
+      "municipioNome": "Barbalha",
+      "municipioUf": "CE",
+      "estadoNome": "Ceará",
+      "validatedAt": "2026-03-25T16:30:35.047Z",
+      "model": "gemini-2.5-flash",
+      "summary": "Dados institucionais do município de Barbalha/CE foram validados, incluindo o CNPJ, endereço e CEP da prefeitura. O nome oficial e a sigla do Fundo Municipal de Educação foram identificados. No entanto, o CNPJ específico do Fundo Municipal de Educação de Barbalha/CE não foi encontrado em fontes públicas.",
+      "searchQueries": [
+        "CNPJ Prefeitura de Barbalha",
+        "Prefeitura de Barbalha endereço",
+        "CEP Prefeitura de Barbalha",
+        "Fundo Municipal de Educação Barbalha CNPJ",
+        "Fundo Municipal de Educação Barbalha nome oficial",
+        "FME Barbalha CNPJ",
+        "FME Barbalha nome oficial"
+      ],
+      "warnings": [
+        "CNPJ do Fundo Municipal de Educação de Barbalha/CE não foi encontrado em fontes públicas."
+      ],
+      "pendingManual": [
+        "cpfAutoridade",
+        "rgAutoridade"
+      ],
+      "fields": {
+        "cnpjMunicipio": {
+          "key": "cnpjMunicipio",
+          "label": "CNPJ do municipio",
+          "value": "06.740.278/0001-81",
+          "confidence": 100,
+          "status": "validated",
+          "sourceUrl": "https://www.barbalha.ce.gov.br/institucional",
+          "sourceLabel": "Prefeitura de Barbalha - Institucional",
+          "notes": ""
+        },
+        "enderecoMunicipio": {
+          "key": "enderecoMunicipio",
+          "label": "Endereco institucional",
+          "value": "Av. Domingos Sampaio de Miranda, 715 - Jardim dos Ipês",
+          "confidence": 100,
+          "status": "validated",
+          "sourceUrl": "https://www.barbalha.ce.gov.br/institucional",
+          "sourceLabel": "Prefeitura de Barbalha - Institucional",
+          "notes": ""
+        },
+        "cepMunicipio": {
+          "key": "cepMunicipio",
+          "label": "CEP",
+          "value": "63092-394",
+          "confidence": 100,
+          "status": "validated",
+          "sourceUrl": "https://www.barbalha.ce.gov.br/institucional",
+          "sourceLabel": "Prefeitura de Barbalha - Institucional",
+          "notes": ""
+        },
+        "nomeFundoEducacao": {
+          "key": "nomeFundoEducacao",
+          "label": "Nome do fundo de educacao",
+          "value": "FUNDO MUNICIPAL DE EDUCACAO",
+          "confidence": 90,
+          "status": "validated",
+          "sourceUrl": "https://www.camaradebarbalha.ce.gov.br//receitas/2022-",
+          "sourceLabel": "Câmara Municipal de Barbalha - Receitas",
+          "notes": "Nome consistentemente encontrado em documentos oficiais e portais de transparência."
+        },
+        "siglaFundoEducacao": {
+          "key": "siglaFundoEducacao",
+          "label": "Sigla do fundo",
+          "value": "FME",
+          "confidence": 90,
+          "status": "validated",
+          "sourceUrl": "https://www.camaradebarbalha.ce.gov.br//receitas/2022-",
+          "sourceLabel": "Câmara Municipal de Barbalha - Receitas",
+          "notes": "Sigla consistentemente encontrada em documentos oficiais e portais de transparência."
+        },
+        "cnpjFundoEducacao": {
+          "key": "cnpjFundoEducacao",
+          "label": "CNPJ do fundo",
+          "value": "",
+          "confidence": 0,
+          "status": "not_found",
+          "sourceUrl": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEy6xhDmWAIVrFEyAxTRG-5YG2YoJneRotiE60ZS5n3MV3m_6ZNxuSK4326vLb4lQlInM5LqzDPMpdl8pns7cjmKq0gorhJYcefJkGaGRUdDcnMt-OutDf3Gt4W2ObeYbJBxIX_iYg0dDKGTRlm90c61ROSXZqfYMDl3erg8tQjvsY=",
+          "sourceLabel": "camaradebarbalha.ce.gov.br",
+          "notes": "Não foi encontrado um CNPJ específico para o Fundo Municipal de Educação de Barbalha/CE em fontes públicas, distinto do CNPJ da prefeitura ou de fundos de outros municípios."
+        }
+      }
+    },
+    "2305506": {
+      "codigoIbge": "2305506",
+      "municipioNome": "Iguatu",
+      "municipioUf": "CE",
+      "estadoNome": "Ceará",
+      "validatedAt": "2026-03-25T16:32:34.834Z",
+      "model": "gemini-2.5-flash",
+      "summary": "Dados públicos institucionais do município de Iguatu/CE validados com sucesso.",
+      "searchQueries": [
+        "Prefeitura de Iguatu CNPJ",
+        "site oficial Prefeitura de Iguatu",
+        "Portal da Transparência Iguatu",
+        "endereço Prefeitura de Iguatu",
+        "CEP Prefeitura de Iguatu",
+        "Fundo Municipal de Educação Iguatu",
+        "FME Iguatu CNPJ",
+        "Conselho Municipal de Educação Iguatu"
+      ],
+      "warnings": [],
+      "pendingManual": [
+        "cpfAutoridade",
+        "rgAutoridade"
+      ],
+      "fields": {
+        "cnpjMunicipio": {
+          "key": "cnpjMunicipio",
+          "label": "CNPJ do municipio",
+          "value": "07.810.468/0001-90",
+          "confidence": 100,
+          "status": "validated",
+          "sourceUrl": "https://www.portaltransparencia.gov.br/pessoa-juridica/municipio-de-iguatu/07810468000190",
+          "sourceLabel": "Portal da Transparência do Governo Federal",
+          "notes": ""
+        },
+        "enderecoMunicipio": {
+          "key": "enderecoMunicipio",
+          "label": "Endereco institucional",
+          "value": "R. Cel. Virgílio Correia, 496 - Centro, Iguatu - CE",
+          "confidence": 100,
+          "status": "validated",
+          "sourceUrl": "https://iguatu.ce.gov.br/",
+          "sourceLabel": "Prefeitura de Iguatu (Site Oficial)",
+          "notes": ""
+        },
+        "cepMunicipio": {
+          "key": "cepMunicipio",
+          "label": "CEP",
+          "value": "63500-152",
+          "confidence": 100,
+          "status": "validated",
+          "sourceUrl": "https://iguatu.ce.gov.br/",
+          "sourceLabel": "Prefeitura de Iguatu (Site Oficial)",
+          "notes": ""
+        },
+        "nomeFundoEducacao": {
+          "key": "nomeFundoEducacao",
+          "label": "Nome do fundo de educacao",
+          "value": "Fundo Municipal de Educação",
+          "confidence": 100,
+          "status": "validated",
+          "sourceUrl": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQH_w39X2ajkGLA9Sd848gZLg7M5IwmFUVySAc_QafhfXJUiy9P2IunC1V99iHaMF1M6sa-5P7UaENKQLtBBWQSNmJijVrvUincK8ro_kGsYWSMtT5-vihTkudHjK_P-6XsoYGxAI2J4frBmE-t6FZexNyM2wHCWMhBjmRkQ4HHvJwMr6U9PjVDlPy_6qsIaSORgZj4b3eeN00R9wWNCwTgjA5MRDL28f0-Q19-Z",
+          "sourceLabel": "Diário Oficial (Lei de Criação do Fundo)",
+          "notes": "Criado pela Lei Municipal em 1995."
+        },
+        "siglaFundoEducacao": {
+          "key": "siglaFundoEducacao",
+          "label": "Sigla do fundo",
+          "value": "",
+          "confidence": 0,
+          "status": "not_found",
+          "sourceUrl": "",
+          "sourceLabel": "",
+          "notes": "Não foi encontrada uma sigla oficial robusta para o Fundo Municipal de Educação de Iguatu/CE em fontes públicas e atuais."
+        },
+        "cnpjFundoEducacao": {
+          "key": "cnpjFundoEducacao",
+          "label": "CNPJ do fundo",
+          "value": "",
+          "confidence": 0,
+          "status": "not_found",
+          "sourceUrl": "",
+          "sourceLabel": "",
+          "notes": "Não foi encontrado o CNPJ específico do Fundo Municipal de Educação de Iguatu/CE em fontes públicas e atuais."
+        }
+      }
+    },
+    "2602100": {
+      "codigoIbge": "2602100",
+      "municipioNome": "Bom Conselho",
+      "municipioUf": "PE",
+      "estadoNome": "Pernambuco",
+      "validatedAt": "2026-03-25T16:38:59.356Z",
+      "model": "gemini-2.5-flash",
+      "summary": "Dados públicos institucionais do município de Bom Conselho/PE foram validados com base em informações encontradas em sites oficiais da prefeitura, portais de transparência e registros de CNPJ.",
+      "searchQueries": [
+        "CNPJ Prefeitura Bom Conselho PE",
+        "Prefeitura Bom Conselho PE site oficial",
+        "Portal da Transparência Bom Conselho PE CNPJ",
+        "Endereço Prefeitura Bom Conselho PE",
+        "CEP Prefeitura Bom Conselho PE",
+        "Fundo Municipal de Educação Bom Conselho PE",
+        "FME Bom Conselho PE",
+        "CNPJ Fundo Municipal de Educação Bom Conselho PE",
+        "Secretaria de Educação Bom Conselho PE",
+        "site oficial Bom Conselho PE"
+      ],
+      "warnings": [],
+      "pendingManual": [
+        "cpfAutoridade",
+        "rgAutoridade"
+      ],
+      "fields": {
+        "cnpjMunicipio": {
+          "key": "cnpjMunicipio",
+          "label": "CNPJ do municipio",
+          "value": "11.285.954/0001-04",
+          "confidence": 100,
+          "status": "validated",
+          "sourceUrl": "https://www.serasaexperian.com.br/cnpj/municipio-de-bom-conselho/11285954000104",
+          "sourceLabel": "Serasa Experian",
+          "notes": "CNPJ institucional da Prefeitura Municipal de Bom Conselho."
+        },
+        "enderecoMunicipio": {
+          "key": "enderecoMunicipio",
+          "label": "Endereco institucional",
+          "value": "Rua Vidal de Negreiros, 43, Centro, Bom Conselho / PE",
+          "confidence": 100,
+          "status": "validated",
+          "sourceUrl": "https://bomconselho.pe.gov.br/telefones-e-endereco/",
+          "sourceLabel": "Prefeitura Municipal de Bom Conselho",
+          "notes": "Endereço institucional da prefeitura."
+        },
+        "cepMunicipio": {
+          "key": "cepMunicipio",
+          "label": "CEP",
+          "value": "55330-000",
+          "confidence": 100,
+          "status": "validated",
+          "sourceUrl": "https://bomconselho.pe.gov.br/telefones-e-endereco/",
+          "sourceLabel": "Prefeitura Municipal de Bom Conselho",
+          "notes": "CEP correspondente ao endereço institucional da prefeitura."
+        },
+        "nomeFundoEducacao": {
+          "key": "nomeFundoEducacao",
+          "label": "Nome do fundo de educacao",
+          "value": "Fundo Municipal de Educação de Bom Conselho",
+          "confidence": 90,
+          "status": "validated",
+          "sourceUrl": "https://www.listarcnpj.com.br/cnpj/secretaria-municipal-de-educacao-30995947000140",
+          "sourceLabel": "ListarCNPJ.com.br",
+          "notes": "Nome fantasia 'FUNDO MUNICIPAL DE EDUCACAO - FME' associado à Secretaria Municipal de Educação."
+        },
+        "siglaFundoEducacao": {
+          "key": "siglaFundoEducacao",
+          "label": "Sigla do fundo",
+          "value": "FME",
+          "confidence": 100,
+          "status": "validated",
+          "sourceUrl": "https://www.listarcnpj.com.br/cnpj/secretaria-municipal-de-educacao-30995947000140",
+          "sourceLabel": "ListarCNPJ.com.br",
+          "notes": "Sigla 'FME' explicitamente mencionada para o Fundo Municipal de Educação."
+        },
+        "cnpjFundoEducacao": {
+          "key": "cnpjFundoEducacao",
+          "label": "CNPJ do fundo",
+          "value": "30.995.947/0001-40",
+          "confidence": 95,
+          "status": "validated",
+          "sourceUrl": "https://www.listarcnpj.com.br/cnpj/secretaria-municipal-de-educacao-30995947000140",
+          "sourceLabel": "ListarCNPJ.com.br",
+          "notes": "CNPJ da Secretaria Municipal de Educação, que possui o Fundo Municipal de Educação como nome fantasia."
+        }
+      }
+    },
+    "3142106": {
+      "codigoIbge": "3142106",
+      "municipioNome": "Miradouro",
+      "municipioUf": "MG",
+      "estadoNome": "Minas Gerais",
+      "validatedAt": "2026-03-25T15:46:37.585Z",
+      "model": "gemini-2.5-flash",
+      "summary": "Dados públicos institucionais do município de Miradouro/MG foram validados com base em informações encontradas na web. O CNPJ, endereço e CEP da prefeitura foram confirmados por múltiplas fontes oficiais. O nome e a sigla do Fundo de Educação foram identificados, mas o CNPJ específico do fundo municipal não foi encontrado em fontes públicas robustas.",
+      "searchQueries": [
+        "CNPJ Prefeitura Miradouro MG",
+        "Prefeitura Municipal de Miradouro MG CNPJ",
+        "Endereço Prefeitura Miradouro MG",
+        "Prefeitura Municipal de Miradouro MG endereço",
+        "CEP Prefeitura Miradouro MG",
+        "Prefeitura Municipal de Miradouro MG CEP",
+        "Fundo Municipal de Educação Miradouro MG nome",
+        "Fundo de Manutenção e Desenvolvimento da Educação Básica Miradouro MG",
+        "Fundo Municipal de Educação Miradouro MG sigla",
+        "FME Miradouro MG",
+        "CNPJ Fundo Municipal de Educação Miradouro MG",
+        "Fundo Municipal de Educação Miradouro MG CNPJ"
+      ],
+      "warnings": [],
+      "pendingManual": [
+        "cpfAutoridade",
+        "rgAutoridade"
+      ],
+      "fields": {
+        "cnpjMunicipio": {
+          "key": "cnpjMunicipio",
+          "label": "CNPJ do municipio",
+          "value": "17.947.623/0001-79",
+          "confidence": 100,
+          "status": "validated",
+          "sourceUrl": "https://www.simbolosmunicipais.com.br/mg/miradouro",
+          "sourceLabel": "Símbolos Municipais",
+          "notes": "CNPJ institucional da Prefeitura Municipal de Miradouro/MG."
+        },
+        "enderecoMunicipio": {
+          "key": "enderecoMunicipio",
+          "label": "Endereco institucional",
+          "value": "Praça Santa Rita de Cássia, 288, Centro, Miradouro, Minas Gerais",
+          "confidence": 100,
+          "status": "validated",
+          "sourceUrl": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEnI_En7M1rPGKa-z2giINUCzTUIJYhCG6cVJcbMGHtWPg0WdyxiOzHucygLgqbL6f3WU9GGA8Pg8I-KIIYdu7FVCNttFElarRSpCQVVJkcrFXIuKoik6uBJPL7VR1b8_BQH3sgQ0SS7TRoOGarvhzQ0Lq25W4iszrTWx5_",
+          "sourceLabel": "Prefeitura Miradouro - Portal da Transparência",
+          "notes": "Endereço institucional da Prefeitura Municipal de Miradouro/MG."
+        },
+        "cepMunicipio": {
+          "key": "cepMunicipio",
+          "label": "CEP",
+          "value": "36893-000",
+          "confidence": 100,
+          "status": "validated",
+          "sourceUrl": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEnI_En7M1rPGKa-z2giINUCzTUIJYhCG6cVJcbMGHtWPg0WdyxiOzHucygLgqbL6f3WU9GGA8Pg8I-KIIYdu7FVCNttFElarRSpCQVVJkcrFXIuKoik6uBJPL7VR1b8_BQH3sgQ0SS7TRoOGarvhzQ0Lq25W4iszrTWx5_",
+          "sourceLabel": "Prefeitura Miradouro - Portal da Transparência",
+          "notes": "CEP correspondente ao endereço institucional da Prefeitura Municipal de Miradouro/MG."
+        },
+        "nomeFundoEducacao": {
+          "key": "nomeFundoEducacao",
+          "label": "Nome do fundo de educacao",
+          "value": "Fundo de Manutenção e Desenvolvimento da Educação Básica e de Valorização dos Profissionais da Educação",
+          "confidence": 90,
+          "status": "validated",
+          "sourceUrl": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEU81CVbGi5J5EcJMbDudnyWitM3Y17XpDkylnt5B3IPLrM71wt4hp2iAU5jmnycbm4ozL0VGSSPTbTDopJvkBrE60-sjio_5ZaaM5RvF19EXmIqUwyCfnpOF3HSH5VbsrFEvLt3_3E9leCL_PnzUpsgdIfLOfBfo4iHPIsR3a9Lm0unn9-lOeFUsZckC56WXq4",
+          "sourceLabel": "Quadro Demonstrativo das Receitas e Despesas com o Fundo de Manutenção e Desenvolvimento da Educação Básica - Miradouro-MG",
+          "notes": "Nome oficial do Fundo de Manutenção e Desenvolvimento da Educação Básica (FUNDEB) no contexto municipal."
+        },
+        "siglaFundoEducacao": {
+          "key": "siglaFundoEducacao",
+          "label": "Sigla do fundo",
+          "value": "FUNDEB",
+          "confidence": 90,
+          "status": "validated",
+          "sourceUrl": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEU81CVbGi5J5EcJMbDudnyWitM3Y17XpDkylnt5B3IPLrM71wt4hp2iAU5jmnycbm4ozL0VGSSPTbTDopJvkBrE60-sjio_5ZaaM5RvF19EXmIqUwyCfnpOF3HSH5VbsrFEvLt3_3E9leCL_PnzUpsgdIfLOfBfo4iHPIsR3a9Lm0unn9-lOeFUsZckC56WXq4",
+          "sourceLabel": "Quadro Demonstrativo das Receitas e Despesas com o Fundo de Manutenção e Desenvolvimento da Educação Básica - Miradouro-MG",
+          "notes": "Sigla comumente utilizada para o Fundo de Manutenção e Desenvolvimento da Educação Básica e de Valorização dos Profissionais da Educação."
+        },
+        "cnpjFundoEducacao": {
+          "key": "cnpjFundoEducacao",
+          "label": "CNPJ do fundo",
+          "value": "",
+          "confidence": 0,
+          "status": "not_found",
+          "sourceUrl": "",
+          "sourceLabel": "",
+          "notes": "Não foi encontrado um CNPJ específico e robustamente atribuído ao Fundo Municipal de Educação de Miradouro/MG em fontes públicas."
+        }
+      }
+    },
+    "5101704": {
+      "codigoIbge": "5101704",
+      "municipioNome": "Barra do Bugres",
+      "municipioUf": "MT",
+      "estadoNome": "Mato Grosso",
+      "validatedAt": "2026-03-25T15:23:28.485Z",
+      "model": "gemini-2.5-flash",
+      "summary": "Dados institucionais do município de Barra do Bugres/MT foram validados. O CNPJ e o endereço institucional da prefeitura, juntamente com o CEP, foram encontrados e confirmados em múltiplas fontes oficiais. Não foi possível encontrar informações robustas e oficiais sobre o nome, sigla e CNPJ do Fundo Municipal de Educação de Barra do Bugres/MT.",
+      "searchQueries": [
+        "CNPJ Prefeitura Barra do Bugres MT",
+        "endereço Prefeitura Barra do Bugres MT",
+        "CEP Prefeitura Barra do Bugres MT",
+        "Fundo Municipal de Educação Barra do Bugres MT nome",
+        "Fundo Municipal de Educação Barra do Bugres MT sigla",
+        "CNPJ Fundo Municipal de Educação Barra do Bugres MT",
+        "site oficial prefeitura Barra do Bugres MT",
+        "portal da transparencia Barra do Bugres MT"
+      ],
+      "warnings": [
+        "Não foi possível encontrar o nome oficial, a sigla e o CNPJ do Fundo Municipal de Educação de Barra do Bugres/MT em fontes públicas e atuais."
+      ],
+      "pendingManual": [
+        "cpfAutoridade",
+        "rgAutoridade"
+      ],
+      "fields": {
+        "cnpjMunicipio": {
+          "key": "cnpjMunicipio",
+          "label": "CNPJ do municipio",
+          "value": "03.507.522/0001-72",
+          "confidence": 100,
+          "status": "validated",
+          "sourceUrl": "https://www.serasaexperian.com.br/consultar-cnpj/municipio-de-barra-do-bugres-03507522000172",
+          "sourceLabel": "Serasa Experian",
+          "notes": "CNPJ institucional da Prefeitura Municipal de Barra do Bugres/MT."
+        },
+        "enderecoMunicipio": {
+          "key": "enderecoMunicipio",
+          "label": "Endereco institucional",
+          "value": "Praça Felipe Ferreira Mendes, 1000 - Centro, Barra do Bugres - MT",
+          "confidence": 90,
+          "status": "validated",
+          "sourceUrl": "https://www.portaltransparencia.gov.br/pessoa-juridica/municipio-de-barra-do-bugres/03507522000172",
+          "sourceLabel": "Portal da Transparência do Governo Federal",
+          "notes": "Endereço institucional da Prefeitura Municipal de Barra do Bugres/MT. Houve uma pequena inconsistência entre 'Praça Ângelo Masson' e 'Praça Felipe Ferreira Mendes' em algumas fontes, mas 'Praça Felipe Ferreira Mendes' foi mais consistentemente citada em portais de transparência e documentos oficiais mais recentes."
+        },
+        "cepMunicipio": {
+          "key": "cepMunicipio",
+          "label": "CEP",
+          "value": "78390-000",
+          "confidence": 100,
+          "status": "validated",
+          "sourceUrl": "https://www.cep.org.br/cep/barra-do-bugres-mt-78390-000/",
+          "sourceLabel": "CEP Barra do Bugres/MT - Brasil",
+          "notes": "CEP único para a cidade de Barra do Bugres/MT."
+        },
+        "nomeFundoEducacao": {
+          "key": "nomeFundoEducacao",
+          "label": "Nome do fundo de educacao",
+          "value": "",
+          "confidence": 0,
+          "status": "not_found",
+          "sourceUrl": "",
+          "sourceLabel": "",
+          "notes": "Não foram encontrados indícios públicos robustos do nome oficial do Fundo Municipal de Educação de Barra do Bugres/MT."
+        },
+        "siglaFundoEducacao": {
+          "key": "siglaFundoEducacao",
+          "label": "Sigla do fundo",
+          "value": "",
+          "confidence": 0,
+          "status": "not_found",
+          "sourceUrl": "",
+          "sourceLabel": "",
+          "notes": "Não foram encontrados indícios públicos robustos da sigla do Fundo Municipal de Educação de Barra do Bugres/MT."
+        },
+        "cnpjFundoEducacao": {
+          "key": "cnpjFundoEducacao",
+          "label": "CNPJ do fundo",
+          "value": "",
+          "confidence": 0,
+          "status": "not_found",
+          "sourceUrl": "",
+          "sourceLabel": "",
+          "notes": "Não foram encontrados indícios públicos robustos do CNPJ do Fundo Municipal de Educação de Barra do Bugres/MT. O CNPJ da Secretaria Municipal de Educação e Cultura foi encontrado, mas não corresponde a um fundo."
+        }
+      }
+    },
+    "5107859": {
+      "codigoIbge": "5107859",
+      "municipioNome": "São Félix do Araguaia",
+      "municipioUf": "MT",
+      "estadoNome": "Mato Grosso",
+      "validatedAt": "2026-03-25T16:40:28.440Z",
+      "model": "gemini-2.5-flash",
+      "summary": "Os dados públicos institucionais do município de São Félix do Araguaia/MT foram validados. O CNPJ, endereço e CEP do município foram confirmados por múltiplas fontes oficiais. O nome e a sigla do Fundo Municipal de Educação foram identificados em legislação municipal. No entanto, um CNPJ específico para o Fundo Municipal de Educação, distinto do CNPJ da Secretaria Municipal de Educação ou do próprio município, não foi encontrado.",
+      "searchQueries": [
+        "CNPJ Prefeitura São Félix do Araguaia MT",
+        "Endereço Prefeitura São Félix do Araguaia MT",
+        "CEP Prefeitura São Félix do Araguaia MT",
+        "Fundo Municipal de Educação São Félix do Araguaia MT",
+        "CNPJ Fundo Municipal de Educação São Félix do Araguaia MT",
+        "site oficial Prefeitura São Félix do Araguaia MT",
+        "portal da transparência São Félix do Araguaia MT"
+      ],
+      "warnings": [
+        "O CNPJ do Fundo Municipal de Educação não foi encontrado como uma entidade separada do CNPJ da Secretaria Municipal de Educação ou do Município."
+      ],
+      "pendingManual": [
+        "cpfAutoridade",
+        "rgAutoridade"
+      ],
+      "fields": {
+        "cnpjMunicipio": {
+          "key": "cnpjMunicipio",
+          "label": "CNPJ do municipio",
+          "value": "03.918.869/0001-08",
+          "confidence": 100,
+          "status": "validated",
+          "sourceUrl": "https://www.portaldatransparencia.gov.br/pessoa-juridica/03918869000108",
+          "sourceLabel": "Portal da Transparência do Governo Federal",
+          "notes": ""
+        },
+        "enderecoMunicipio": {
+          "key": "enderecoMunicipio",
+          "label": "Endereco institucional",
+          "value": "Avenida Araguaia, 248, Centro, São Félix do Araguaia/MT",
+          "confidence": 95,
+          "status": "validated",
+          "sourceUrl": "https://www.portaldatransparencia.gov.br/pessoa-juridica/03918869000108",
+          "sourceLabel": "Portal da Transparência do Governo Federal",
+          "notes": ""
+        },
+        "cepMunicipio": {
+          "key": "cepMunicipio",
+          "label": "CEP",
+          "value": "78670-000",
+          "confidence": 100,
+          "status": "validated",
+          "sourceUrl": "https://www.portaldatransparencia.gov.br/pessoa-juridica/03918869000108",
+          "sourceLabel": "Portal da Transparência do Governo Federal",
+          "notes": ""
+        },
+        "nomeFundoEducacao": {
+          "key": "nomeFundoEducacao",
+          "label": "Nome do fundo de educacao",
+          "value": "Fundo Municipal de Gestão Íntegra e Co-operada da Educação",
+          "confidence": 90,
+          "status": "validated",
+          "sourceUrl": "https://www.saofelixdoaraguaia.mt.gov.br/arquivos/LC-050-2006---CRIACAO-DO-FUMGICED---FUNDO-DE-EDUCACAO-1681745436.pdf",
+          "sourceLabel": "Prefeitura de São Félix do Araguaia (Diário Oficial/Legislação)",
+          "notes": ""
+        },
+        "siglaFundoEducacao": {
+          "key": "siglaFundoEducacao",
+          "label": "Sigla do fundo",
+          "value": "FUMGICED",
+          "confidence": 90,
+          "status": "validated",
+          "sourceUrl": "https://www.saofelixdoaraguaia.mt.gov.br/arquivos/LC-050-2006---CRIACAO-DO-FUMGICED---FUNDO-DE-EDUCACAO-1681745436.pdf",
+          "sourceLabel": "Prefeitura de São Félix do Araguaia (Diário Oficial/Legislação)",
+          "notes": ""
+        },
+        "cnpjFundoEducacao": {
+          "key": "cnpjFundoEducacao",
+          "label": "CNPJ do fundo",
+          "value": "",
+          "confidence": 0,
+          "status": "not_found",
+          "sourceUrl": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQEfYBt9s5oX5fAc2lvx-xtw0zWQIXHdULzlcK0EZJvVRmlJ_iCqoZhBM8eLoQqMTCwPGne2Ryi9EzeJOlNnlva1ORXSlv5FL4m06KaL6a8r43QHc689KTdFpypilIEn8Z0trG_c4opRlBiRI6IUWRInRFqEr7nZ-3NC1QuiSnzoDlGXbHkOjNXukf7IeYhfvoZS60mxcplM4B-KzLBXaTa--DrjL_QUDKbSlWVtJp14YtLtGGgA5DxmTK8=",
+          "sourceLabel": "serasaexperian.com.br",
+          "notes": "O CNPJ encontrado (06.075.053/0001-58) pertence à Secretaria Municipal de Educação de São Félix do Araguaia, não explicitamente ao Fundo Municipal de Gestão Íntegra e Co-operada da Educação (FUMGICED). A Lei Complementar que cria o fundo não fornece um CNPJ separado para ele."
+        }
+      }
+    },
+    "5209457": {
+      "codigoIbge": "5209457",
+      "municipioNome": "Guarinos",
+      "municipioUf": "GO",
+      "estadoNome": "Goiás",
+      "validatedAt": "2026-03-25T15:40:00.494Z",
+      "model": "gemini-2.5-flash",
+      "summary": "Dados públicos institucionais do município de Guarinos/GO foram validados com base em informações encontradas na web. O CNPJ e o endereço institucional da prefeitura foram confirmados. O CEP foi validado, com uma nota sobre a unicidade do CEP para a cidade. O nome do Fundo Municipal de Educação foi identificado, mas sua sigla e CNPJ específicos não foram encontrados com evidências robustas.",
+      "searchQueries": [
+        "Prefeitura Guarinos GO site oficial",
+        "Guarinos GO portal da transparência",
+        "CNPJ Prefeitura Guarinos GO",
+        "Endereço Prefeitura Guarinos GO",
+        "CEP Prefeitura Guarinos GO",
+        "Fundo Municipal de Educação Guarinos GO",
+        "CNPJ Fundo Municipal de Educação Guarinos GO"
+      ],
+      "warnings": [],
+      "pendingManual": [
+        "cpfAutoridade",
+        "rgAutoridade"
+      ],
+      "fields": {
+        "cnpjMunicipio": {
+          "key": "cnpjMunicipio",
+          "label": "CNPJ do municipio",
+          "value": "01.494.178/0001-07",
+          "confidence": 100,
+          "status": "validated",
+          "sourceUrl": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGILGmtiO3BKz2KDIFHXkoJxjMWiHjRXhxrlKRlyRe8qeIB0PUbIuxzz4kcZyldlQS4AzV7EfQW5R81_4YeWDG0OFq2S6P3ExtUYsuJ4mZwZSaKhKv-EP8JGIUaQIkrGIg6--vu1EGqIN1fKUE4d2lW-Zxxeb7kchwu3yzi86txkD3i3oqcizPuKXKHS6LsbBhmLzoSDahAYJS14AE4hBlWMu4bTGGEOgnqW2wwJRnJk_F1SALvGcd5S6JinHA_Y3YQdl_D",
+          "sourceLabel": "PREFEITURA MUNICIPAL DE GUARINOS - TOMADA DE PREÇOS",
+          "notes": "CNPJ institucional da Prefeitura Municipal de Guarinos."
+        },
+        "enderecoMunicipio": {
+          "key": "enderecoMunicipio",
+          "label": "Endereco institucional",
+          "value": "Av. Josélio Rodrigues do Nascimento, nº 32, Centro, Guarinos – GO",
+          "confidence": 100,
+          "status": "validated",
+          "sourceUrl": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQHQuTSvSErOqnRcl29TSDk-i4F-Jejz9V4MLOjMNz_80MZArk6X8nDaJeR9xcpYQJTmjT8Jn1-bcpno3jhBvyiSqPQ_yhkfc_ne34pfqozZ7eBT_S-R",
+          "sourceLabel": "Prefeitura Municipal de Guarinos - Site Oficial",
+          "notes": "Endereço institucional da prefeitura."
+        },
+        "cepMunicipio": {
+          "key": "cepMunicipio",
+          "label": "CEP",
+          "value": "76374-000",
+          "confidence": 90,
+          "status": "validated",
+          "sourceUrl": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGC4eZOB4UoK7JOkRUQODM0ZAaiQNmxwrXqWqlFBycmX3lFweh4Yo3QDRIY_LwDiZ9L-2ZxtImjQTQhVFupxYPpAgqK9Ty4bpJmZ7lWWebemI1tY0T2f8uImOYE16pO8hF89wKSW0qrUJVLNQE6",
+          "sourceLabel": "CEP Guarinos/GO - Brasil",
+          "notes": "O CEP 76374-000 é o CEP único para a cidade de Guarinos/GO, conforme informações dos Correios e outros portais."
+        },
+        "nomeFundoEducacao": {
+          "key": "nomeFundoEducacao",
+          "label": "Nome do fundo de educacao",
+          "value": "Fundo Municipal de Educação de Guarinos",
+          "confidence": 90,
+          "status": "validated",
+          "sourceUrl": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQFDMyD-2eOdVtI6dKeenp4bRaO5Pb7QVaLI_zX2XrCoGlFqqv-10eEXoX2rBCUG2OTKbdXloO577iwXIb1rd9GcOJEGflAtBYR3j_Q84cZeoK9s1wXv0hIgdX8yS3LPbayxnRhYhNJS0KTU6zaFYtWQ-Ep6yTRX_JtHB0dPnkoGUddPlAnGAD8TEQ",
+          "sourceLabel": "FUNDO MUNICIPAL DE EDUCAÇÃO DE GUARINOS/GO TERMO DE REFERÊNCIA",
+          "notes": "Nome oficial do Fundo Municipal de Educação encontrado em documentos públicos."
+        },
+        "siglaFundoEducacao": {
+          "key": "siglaFundoEducacao",
+          "label": "Sigla do fundo",
+          "value": "",
+          "confidence": 0,
+          "status": "not_found",
+          "sourceUrl": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGC4eZOB4UoK7JOkRUQODM0ZAaiQNmxwrXqWqlFBycmX3lFweh4Yo3QDRIY_LwDiZ9L-2ZxtImjQTQhVFupxYPpAgqK9Ty4bpJmZ7lWWebemI1tY0T2f8uImOYE16pO8hF89wKSW0qrUJVLNQE6",
+          "sourceLabel": "codigo-postal.org",
+          "notes": "Não foi encontrada uma sigla oficial robusta para o Fundo Municipal de Educação de Guarinos."
+        },
+        "cnpjFundoEducacao": {
+          "key": "cnpjFundoEducacao",
+          "label": "CNPJ do fundo",
+          "value": "",
+          "confidence": 0,
+          "status": "not_found",
+          "sourceUrl": "https://vertexaisearch.cloud.google.com/grounding-api-redirect/AUZIYQGC4eZOB4UoK7JOkRUQODM0ZAaiQNmxwrXqWqlFBycmX3lFweh4Yo3QDRIY_LwDiZ9L-2ZxtImjQTQhVFupxYPpAgqK9Ty4bpJmZ7lWWebemI1tY0T2f8uImOYE16pO8hF89wKSW0qrUJVLNQE6",
+          "sourceLabel": "codigo-postal.org",
+          "notes": "Não foi encontrado um CNPJ específico para o Fundo Municipal de Educação de Guarinos. O CNPJ encontrado para a Secretaria Municipal de Educação não corresponde ao fundo."
+        }
+      }
+    }
+  }
+}

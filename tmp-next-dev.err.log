@@ -1,0 +1,77 @@
+
+[2m[1535.39ms][22m [@tailwindcss/postcss] app\globals.css
+[2m[   0.57ms][22m  [2m ↳ [22mQuick bail check
+[2m[ 157.78ms][22m  [2m ↳ [22mSetup compiler
+[2m[   3.44ms][22m    [2m ↳ [22mPostCSS AST -> Tailwind CSS AST
+[2m[ 154.17ms][22m    [2m ↳ [22mCreate compiler
+[2m[   1.24ms][22m  [2m ↳ [22mRegister full rebuild paths
+[2m[  10.52ms][22m  [2m ↳ [22mSetup scanner
+[2m[ 528.70ms][22m  [2m ↳ [22mScan for candidates
+[2m[ 312.94ms][22m  [2m ↳ [22mRegister dependency messages
+[2m[ 451.56ms][22m  [2m ↳ [22mBuild utilities
+[2m[  41.15ms][22m  [2m ↳ [22mTransform Tailwind CSS AST into PostCSS AST
+[2m[  25.31ms][22m  [2m ↳ [22mUpdate PostCSS AST
+
+Erro no endpoint municipio/completo: TypeError: terminated
+    at ignore-listed frames {
+  [cause]: Error: read ECONNRESET
+      at ignore-listed frames {
+    errno: -4077,
+    code: 'ECONNRESET',
+    syscall: 'read'
+  }
+}
+
+[2m[2258.11ms][22m [@tailwindcss/postcss] app\globals.css
+[2m[   0.06ms][22m  [2m ↳ [22mQuick bail check
+[2m[   6.75ms][22m  [2m ↳ [22mRegister full rebuild paths
+[2m[2079.72ms][22m  [2m ↳ [22mScan for candidates
+[2m[  32.81ms][22m  [2m ↳ [22mRegister dependency messages
+[2m[  91.79ms][22m  [2m ↳ [22mBuild utilities
+[2m[  42.69ms][22m  [2m ↳ [22mUpdate PostCSS AST
+
+
+[2m[895.38ms][22m [@tailwindcss/postcss] app\globals.css
+[2m[  0.01ms][22m  [2m ↳ [22mQuick bail check
+[2m[  1.42ms][22m  [2m ↳ [22mRegister full rebuild paths
+[2m[807.39ms][22m  [2m ↳ [22mScan for candidates
+[2m[ 32.12ms][22m  [2m ↳ [22mRegister dependency messages
+[2m[ 37.98ms][22m  [2m ↳ [22mBuild utilities
+[2m[ 10.15ms][22m  [2m ↳ [22mUpdate PostCSS AST
+
+
+[2m[1247.75ms][22m [@tailwindcss/postcss] app\globals.css
+[2m[   0.03ms][22m  [2m ↳ [22mQuick bail check
+[2m[   4.98ms][22m  [2m ↳ [22mRegister full rebuild paths
+[2m[1099.45ms][22m  [2m ↳ [22mScan for candidates
+[2m[  17.59ms][22m  [2m ↳ [22mRegister dependency messages
+[2m[  76.29ms][22m  [2m ↳ [22mBuild utilities
+[2m[  49.00ms][22m  [2m ↳ [22mUpdate PostCSS AST
+
+
+[2m[1038.68ms][22m [@tailwindcss/postcss] app\globals.css
+[2m[   0.02ms][22m  [2m ↳ [22mQuick bail check
+[2m[   1.93ms][22m  [2m ↳ [22mRegister full rebuild paths
+[2m[ 923.34ms][22m  [2m ↳ [22mScan for candidates
+[2m[  33.77ms][22m  [2m ↳ [22mRegister dependency messages
+[2m[  63.37ms][22m  [2m ↳ [22mBuild utilities
+[2m[  15.74ms][22m  [2m ↳ [22mUpdate PostCSS AST
+
+
+[2m[755.25ms][22m [@tailwindcss/postcss] app\globals.css
+[2m[  0.01ms][22m  [2m ↳ [22mQuick bail check
+[2m[  5.71ms][22m  [2m ↳ [22mRegister full rebuild paths
+[2m[644.21ms][22m  [2m ↳ [22mScan for candidates
+[2m[ 19.22ms][22m  [2m ↳ [22mRegister dependency messages
+[2m[ 68.59ms][22m  [2m ↳ [22mBuild utilities
+[2m[ 17.08ms][22m  [2m ↳ [22mUpdate PostCSS AST
+
+
+[2m[1133.89ms][22m [@tailwindcss/postcss] app\globals.css
+[2m[   0.03ms][22m  [2m ↳ [22mQuick bail check
+[2m[   4.81ms][22m  [2m ↳ [22mRegister full rebuild paths
+[2m[ 982.20ms][22m  [2m ↳ [22mScan for candidates
+[2m[  32.54ms][22m  [2m ↳ [22mRegister dependency messages
+[2m[  69.94ms][22m  [2m ↳ [22mBuild utilities
+[2m[  43.99ms][22m  [2m ↳ [22mUpdate PostCSS AST
+

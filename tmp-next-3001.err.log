@@ -1,0 +1,5 @@
+⚠ Invalid next.config.ts options detected: 
+⚠     Unrecognized key(s) in object: 'serverComponentsExternalPackages' at "experimental"
+⚠ See more info here: https://nextjs.org/docs/messages/invalid-next-config
+⚠ `experimental.serverComponentsExternalPackages` has been moved to `serverExternalPackages`. Please update your next.config.ts file accordingly.
+⨯ Unable to acquire lock at C:\Users\Adrie\Desktop\Sync\.next\dev\lock, is another instance of next dev running?

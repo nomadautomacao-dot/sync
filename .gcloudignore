@@ -1,0 +1,88 @@
+# Dependencies
+node_modules
+**/node_modules
+npm-debug.log
+yarn-error.log
+
+# Reviews and old versions
+review_v*
+projetoapi/GovIA_React/node_modules
+expo-app
+sync_flutter
+
+# Next.js
+.next
+out
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Testing
+coverage
+.nyc_output
+
+# Misc
+.DS_Store
+*.pem
+
+# Debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local files
+.git
+.gitignore
+README.md
+.gitlab-ci.yml
+.travis.yml
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# OS
+Thumbs.db
+
+# Build artifacts
+dist
+build
+
+# Documentation
+docs
+*.md
+!README.md
+
+# Scripts not needed in production
+scripts/
+temp_doc_analysis/
+output/
+
+# Test files
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+__tests__/
+
+# Large data files and databases
+data/*.xlsx
+tmp_*
+*.xlsx
+*.csv
+*.db
+*.sqlite
+*.zip
+*.7z
+*.rar
+*.pdf
+BIT4AFD.tmp
+outputs/
+pdf_extracts/
+kit_padrao_pdf_rocha_prime/__pycache__/
+**/__pycache__/

@@ -1,0 +1,40 @@
+name: sync_flutter
+description: Base Flutter para espelhar o sistema Sync hoje implementado em TSX.
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.10.7
+
+dependencies:
+  archive: ^4.0.9
+  file_picker: ^3.0.4
+  fl_chart: ^1.2.0
+  flutter:
+    sdk: flutter
+  flutter_svg: ^2.2.1
+  http: ^1.2.2
+  intl: ^0.20.2
+  lucide_icons_flutter: ^3.1.12
+  path_provider: ^2.1.5
+  pdf: ^3.11.3
+  printing: ^5.14.2
+  share_plus: ^13.1.0
+  shared_preferences: ^2.3.2
+  url_launcher: ^6.3.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/branding/
+    - assets/censo_matriculas.json
+    - assets/ideb_historico.json
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/InterVariable.ttf

@@ -1,0 +1,39 @@
+Relatorio Case de Sucesso FUNDEB
+Municipio: SAO FELIX DO CORIBE
+Periodo analisado: 2025 -> 2026
+Gerado em: 05/03/2026, 15:14:35
+Resumo executivo
+Comparativo de resultados do municipio entre 2025 e 2026 com foco nas componentes da
+complementacao da Uniao.
+Indicador
+Valor 2025
+Valor 2026
+Variacao
+Total da Complementacao
+R$ 17.278.067,50
+R$ 27.704.466,50
++60,34%
+VAAF
+R$ 5.791.192,72
+R$ 7.759.656,35
++33,99%
+VAAT
+R$ 10.155.347,42
+R$ 17.584.528,97
++73,16%
+VAAR
+R$ 1.331.527,36
+R$ 2.360.281,18
++77,26%
+Destaques de evolucao
+Componente
+Evolucao
+VAAR
++77,26%
+VAAT
++73,16%
+Total da Complementacao
++60,34%
+VAAF
++33,99%
+SYNC Platform | Relatorio gerado automaticamente
