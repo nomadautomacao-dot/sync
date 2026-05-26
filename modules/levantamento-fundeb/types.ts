@@ -202,3 +202,73 @@ export interface LevantamentoFundebPayload {
   relatorio: RelatorioFundeb;
   fontes: FonteColetaStatus[];
 }
+
+// ── Directed Report Types ──────────────────────────────────────────────────
+export interface RelatorioDirigidoContextoPolitico {
+  prefeitoAtual: string;
+  partidoAtual: string;
+  eleicaoAtual: string;
+  inicioMandato: number;
+  fimMandato: number;
+  classificacaoMandato: "primeiro_mandato" | "segundo_mandato" | "indefinido";
+  detalheMandato: string;
+  estrategiaComercial: string;
+  resumoComparativoGestao: string;
+}
+
+export interface RelatorioDirigidoHistorico {
+  anos: Array<{
+    ano: number;
+    anoBaseCenso: number | null;
+    totalReceitasFundeb: number | null;
+    contribuicaoMunicipal: number | null;
+    complementacaoVAAF: number | null;
+    complementacaoVAAT: number | null;
+    complementacaoVAAR: number | null;
+    totalMatriculas: number | null;
+    totalEscolas: number | null;
+    eja: number | null;
+    tempoIntegral: number | null;
+    educacaoEspecial: number | null;
+  }>;
+  resumo: string;
+}
+
+export interface RelatorioDirigidoMunicipioComparavel {
+  municipio: string;
+  uf: string;
+  codigoIbge: string;
+  criterioRegional: string;
+  populacao: number | null;
+  mesmaFaixaPopulacional: boolean;
+  totalReceitasFundeb: number | null;
+  totalMatriculas: number | null;
+  complementacaoUniaoTotal: number | null;
+  vantagemReceita: number | null;
+  vantagemComplementacao: number | null;
+  insight: string;
+}
+
+export interface RelatorioDirigidoBenchmarkRegional {
+  criterio: string;
+  resumo: string;
+  municipios: RelatorioDirigidoMunicipioComparavel[];
+}
+
+export interface RelatorioDirigidoMunicipio {
+  identificacao: MunicipioIdentificacao;
+  relatorio: RelatorioFundeb;
+  contextoPolitico: RelatorioDirigidoContextoPolitico;
+  historico: RelatorioDirigidoHistorico;
+  benchmarkRegional: RelatorioDirigidoBenchmarkRegional;
+  itens: Array<{
+    id: string;
+    titulo: string;
+    status: string;
+    prioridade: string;
+    descricao: string;
+    recomendacao: string;
+  }>;
+  resumoExecutivo: string;
+  dataGeracao: string;
+}
