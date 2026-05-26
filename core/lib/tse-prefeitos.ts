@@ -27,3 +27,27 @@ export function getTsePrefeitoRecord(codigoIBGE: string): TsePrefeitoRecord | nu
 
   return null;
 }
+
+export interface TsePrefeitoMandatoContext {
+  atual: TsePrefeitoRecord | null;
+  classificacaoMandato: "primeiro_mandato" | "segundo_mandato" | "indefinido";
+  detalheMandato: string;
+}
+
+export async function getTsePrefeitoMandatoContext(codigoIBGE: string): Promise<TsePrefeitoMandatoContext> {
+  const record = getTsePrefeitoRecord(codigoIBGE);
+  if (!record) {
+    return {
+      atual: null,
+      classificacaoMandato: "indefinido",
+      detalheMandato: "Dados eleitorais não localizados para este município.",
+    };
+  }
+
+  // Default assumption: first mandate for 2025-2028 cycle (elected 2024)
+  return {
+    atual: record,
+    classificacaoMandato: "primeiro_mandato",
+    detalheMandato: `${record.nomeCompleto || record.prefeito} (${record.partido}), eleito(a) em ${record.eleicao || "2024"}.`,
+  };
+}

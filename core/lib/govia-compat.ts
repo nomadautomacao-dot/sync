@@ -188,6 +188,50 @@ export async function searchGoviaMunicipios(query: string, uf?: string): Promise
     }));
 }
 
+export interface GoviaMunicipioRegionalParams {
+  uf: string;
+  excludeCodigoIbge?: string;
+  regiaoIntermediaria?: string;
+  microrregiao?: string;
+  mesorregiao?: string;
+}
+
+export async function listGoviaMunicipiosByRegionalContext(params: GoviaMunicipioRegionalParams): Promise<GoviaMunicipioSuggestion[]> {
+  const municipios = await fetchAllIbgeMunicipios();
+  const targetUf = params.uf.trim().toUpperCase();
+  const excludeCode = params.excludeCodigoIbge?.replace(/\D/g, "") ?? "";
+
+  return municipios
+    .filter((municipio) => {
+      const uf = getMunicipioUf(municipio).toUpperCase();
+      if (uf !== targetUf) return false;
+      if (String(municipio.id) === excludeCode) return false;
+
+      // Prefer same intermediate region if available
+      if (params.regiaoIntermediaria && params.regiaoIntermediaria !== "Não informado") {
+        const regiaoInt = municipio["regiao-imediata"]?.["regiao-intermediaria"]?.nome ?? "";
+        if (regiaoInt === params.regiaoIntermediaria) return true;
+      }
+
+      // Fallback to same mesorregion
+      if (params.mesorregiao && params.mesorregiao !== "Não informado") {
+        const meso = municipio.microrregiao?.mesorregiao?.nome ?? "";
+        if (meso === params.mesorregiao) return true;
+      }
+
+      // Same state is already a valid match
+      return true;
+    })
+    .slice(0, 20)
+    .map((municipio) => ({
+      codigo_ibge: String(municipio.id),
+      nome: municipio.nome,
+      uf: getMunicipioUf(municipio),
+      regiao: getMunicipioRegiao(municipio),
+      regiaoIntermediaria: municipio["regiao-imediata"]?.["regiao-intermediaria"]?.nome ?? "Não informado",
+    }));
+}
+
 export async function findGoviaMunicipio(params: GoviaBuscarMunicipioParams): Promise<IbgeMunicipioResponse | null> {
   if (params.codigo_ibge) {
     const digits = params.codigo_ibge.replace(/\D/g, "");
