@@ -277,3 +277,35 @@ class WorkspaceSettings {
   final String slug;
   final Map<String, dynamic> rawSettings;
 }
+
+class CityAccount {
+  const CityAccount({
+    required this.id,
+    required this.name,
+    required this.uf,
+    this.codigoIbge = '',
+    this.status = 'ativo',
+  });
+
+  final String id;
+  final String name;
+  final String uf;
+  final String codigoIbge;
+  final String status;
+
+  factory CityAccount.fromJson(Map<String, dynamic> json) => CityAccount(
+    id: json['id']?.toString() ?? '',
+    name: json['name']?.toString() ?? json['nome']?.toString() ?? '',
+    uf: json['uf']?.toString() ?? '',
+    codigoIbge: json['codigoIbge']?.toString() ?? json['codigo_ibge']?.toString() ?? '',
+    status: json['status']?.toString() ?? 'ativo',
+  );
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'uf': uf,
+    'codigoIbge': codigoIbge,
+    'status': status,
+  };
+}
