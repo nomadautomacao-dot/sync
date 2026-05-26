@@ -91,3 +91,40 @@ export interface ContratoFundebCampoMeta {
   fonte: string;
   valor: string;
 }
+
+/**
+ * Flat payload sent from Flutter with all 45+ template variables
+ * Used by contrato-docx-generator to fill DOCX templates
+ */
+export interface ContratosFundebData {
+  [key: string]: any;
+  municipioNome: string;
+  municipioUF: string;
+  empresaRazaoSocial: string;
+  valorMensal?: number;
+  valorGlobal?: number;
+  valorGlobalExtenso?: string;
+  quantidadeMeses?: number;
+  dataAssinatura?: string;
+  dataSolicitacao?: string;
+  dataParecerJuridico?: string;
+  dataRatificacao?: string;
+  dataHomologacao?: string;
+  municipioCNPJ?: string;
+  municipioEndereco?: string;
+  empresaCNPJ?: string;
+  empresaEndereco?: string;
+  prefeitoNome?: string;
+  prefeitoRG?: string;
+  prefeitoCPF?: string;
+  prefeitoEndereco?: string;
+  secretarioNome?: string;
+  fiscalNome?: string;
+  processoNumero?: string;
+  inexigibilidadeNumero?: string;
+  contratoNumero?: string;
+  foroComarca?: string;
+  foroUF?: string;
+  fundoCNPJ?: string;
+  exercicio?: string;
+}
