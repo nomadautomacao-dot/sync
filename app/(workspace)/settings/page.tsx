@@ -2,6 +2,8 @@ import { PageHeader } from "@/components/shared/page-header";
 import { getWorkspaceSettings } from "./settings-actions";
 import { SettingsForm } from "./settings-form";
 
+export const dynamic = "force-dynamic";
+
 export default async function SettingsPage() {
   const initialData = await getWorkspaceSettings();
 
