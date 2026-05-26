@@ -256,8 +256,10 @@ export interface RelatorioDirigidoBenchmarkRegional {
 }
 
 export interface RelatorioDirigidoMunicipio {
+  [key: string]: any;
   identificacao: MunicipioIdentificacao;
   relatorio: RelatorioFundeb;
+  municipio?: string;
   contextoPolitico: RelatorioDirigidoContextoPolitico;
   historico: RelatorioDirigidoHistorico;
   benchmarkRegional: RelatorioDirigidoBenchmarkRegional;
