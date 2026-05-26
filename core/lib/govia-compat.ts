@@ -102,6 +102,7 @@ export interface GoviaMunicipioSuggestion {
   nome: string;
   uf: string;
   regiao: string;
+  regiaoIntermediaria?: string;
 }
 
 export interface GoviaBuscarMunicipioParams {
