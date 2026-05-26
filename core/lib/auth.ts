@@ -34,7 +34,7 @@ async function ensureDefaultGroup() {
   });
 }
 
-async function upsertSessionUser(email: string, name?: string | null): Promise<SessionUser> {
+export async function upsertSessionUser(email: string, name?: string | null): Promise<SessionUser> {
   const cleanEmail = email.trim().toLowerCase();
   const fallbackName = name?.trim() || cleanEmail.split("@")[0] || "Usuario";
   const group = await ensureDefaultGroup();
