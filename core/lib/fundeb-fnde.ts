@@ -147,8 +147,18 @@ async function fetchCsv(url: string, localFallback?: string) {
   }
 }
 
-async function fetchPdfText(url: string) {
-  const { PDFParse } = await import("pdf-parse");
+async function fetchPdfText(url: string): Promise<string> {
+  let PDFParse: any;
+  try {
+    // Use eval to bypass Next.js static module analysis — pdf-parse requires DOMMatrix
+    // which is unavailable in serverless. This ensures the module is only loaded at call time.
+    const dynamicRequire = eval("require") as NodeRequire;
+    const mod = dynamicRequire("pdf-parse");
+    PDFParse = mod.PDFParse ?? mod.default ?? mod;
+  } catch (e) {
+    throw new Error(`pdf-parse unavailable: ${e instanceof Error ? e.message : e}`);
+  }
+
   const response = await fetch(url, {
     headers: {
       Accept: "application/pdf,*/*",
@@ -156,6 +166,7 @@ async function fetchPdfText(url: string) {
       Referer: "https://www.gov.br/fnde/pt-br/acesso-a-informacao/acoes-e-programas/financiamento/fundeb/",
     },
     cache: "no-store",
+    signal: AbortSignal.timeout(15000),
   });
 
   if (!response.ok) {
