@@ -626,10 +626,17 @@ class RemoteSyncRepository implements SyncRepository {
 
     return LevantamentoFundebBundle(
       relatorio: relatorio,
-      fontes: const [
-        FonteColetaStatus(id: 'siconfi', label: 'SICONFI/Tesouro Nacional', status: 'ok', descricao: 'Receitas FUNDEB reais'),
-        FonteColetaStatus(id: 'ibge', label: 'IBGE Localidades', status: 'ok', descricao: 'Dados geograficos reais'),
-        FonteColetaStatus(id: 'fnde', label: 'FNDE/SIGEF', status: 'indisponivel', descricao: 'Servidor temporariamente fora do ar'),
+      fontes: [
+        const FonteColetaStatus(id: 'ibge', label: 'IBGE', status: 'automatico', descricao: 'Busca territorial e identificacao municipal resolvidas automaticamente.'),
+        const FonteColetaStatus(id: 'fnde-siconfi', label: 'FNDE / SICONFI', status: 'automatico', descricao: 'Base fiscal consolidada automaticamente com suporte do SICONFI/Tesouro.'),
+        const FonteColetaStatus(id: 'simec', label: 'MEC / FNDE operacional', status: 'manual', descricao: 'Fluxo operacional ainda depende de fechamento assistido.'),
+        FonteColetaStatus(id: 'inep-qedu', label: 'INEP / QEdu',
+          status: censoInepData != null ? 'automatico' : 'manual',
+          descricao: censoInepData != null
+              ? 'Censo escolar carregado automaticamente pela base interna.'
+              : 'Indicadores educacionais ainda sem automacao suficiente.',
+        ),
+        const FonteColetaStatus(id: 'pdde-fnde', label: 'PDDE / FNDE', status: 'manual', descricao: 'PDDE ainda sem consolidacao automatica neste recorte.'),
       ],
       relatorioDirigidoBase: dirigido,
       ibgePerfil: ibgePerfil,

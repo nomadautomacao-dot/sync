@@ -798,7 +798,12 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
 
   const municipioUf = getMunicipioUf(municipio) || "UF";
 
-  const receitasOficiais = await getFundebReceitasOficiais(String(municipio.id), exercicio);
+  let receitasOficiais: Awaited<ReturnType<typeof getFundebReceitasOficiais>> = null;
+  try {
+    receitasOficiais = await getFundebReceitasOficiais(String(municipio.id), exercicio);
+  } catch (e) {
+    console.warn(`[govia] FNDE receitas fetch failed for ${exercicio}:`, e instanceof Error ? e.message : e);
+  }
   const [vaatContext, ibgeIndicators, inepRecord, fndePublic, qeduIndicators, siconfiFiscal, simecObras] =
     await Promise.all([
     getFundebVaatContext(String(municipio.id), exercicio),
