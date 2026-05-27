@@ -5,6 +5,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../core/models/slide_models.dart';
 import '../../../core/models/sync_models.dart';
+import '../../../core/models/levantamento_fundeb_models.dart';
 import '../../../core/repositories/sync_repository.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../shared/presentation/shared_widgets.dart';

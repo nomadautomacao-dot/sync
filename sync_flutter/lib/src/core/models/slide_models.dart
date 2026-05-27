@@ -43,9 +43,9 @@ class SlideTemplate {
 
   static IconData _iconForTemplate(String id) => switch (id) {
     'institucional' => LucideIcons.presentation,
-    'proposta-fundeb' => LucideIcons.fileBarChart,
-    'resumo-executivo' => LucideIcons.barChart3,
-    _ => LucideIcons.slideshow,
+    'proposta-fundeb' => LucideIcons.chartLine,
+    'resumo-executivo' => LucideIcons.chartSpline,
+    _ => LucideIcons.presentation,
   };
 
   static Color _colorForTemplate(String id) => switch (id) {
@@ -73,7 +73,7 @@ const defaultSlideTemplates = <SlideTemplate>[
     description: 'Apresentacao com dados reais de receita FUNDEB, censo escolar e projecoes.',
     slideCount: 12,
     requiresMunicipio: true,
-    icon: LucideIcons.fileBarChart,
+    icon: LucideIcons.chartLine,
     color: Color(0xFF2F6BFF),
   ),
   SlideTemplate(
@@ -82,7 +82,7 @@ const defaultSlideTemplates = <SlideTemplate>[
     description: 'Versao compacta com indicadores-chave e projecao financeira.',
     slideCount: 7,
     requiresMunicipio: true,
-    icon: LucideIcons.barChart3,
+    icon: LucideIcons.chartSpline,
     color: Color(0xFF0D9488),
   ),
 ];

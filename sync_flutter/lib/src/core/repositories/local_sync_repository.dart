@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import '../models/levantamento_fundeb_models.dart';
+import '../models/slide_models.dart';
 import '../models/sync_models.dart';
 import '../network/api_exception.dart';
 import '../network/session_storage.dart';
@@ -470,6 +471,21 @@ class LocalSyncRepository implements SyncRepository {
     Map<String, List<({String nome, Uint8List bytes})>> anexos,
   ) async {
     return MockSyncRepository().gerarKitContratosFundebComAnexos(data, anexos);
+  }
+
+  // ── Slides module ──
+
+  @override
+  Future<List<SlideTemplate>> getSlideTemplates() async {
+    return defaultSlideTemplates;
+  }
+
+  @override
+  Future<Uint8List> generateSlidesPdf(
+    String templateId, {
+    String? codigoIbge,
+  }) async {
+    return Uint8List(0);
   }
 
   Future<void> cacheCompanies(List<CompanySummary> companies) {

@@ -1,4 +1,5 @@
 import '../models/levantamento_fundeb_models.dart';
+import '../models/slide_models.dart';
 import '../models/sync_models.dart';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
@@ -329,6 +330,27 @@ class HybridSyncRepository implements SyncRepository {
       return _remote.gerarKitContratosFundebComAnexos(data, anexos);
     }
     return _local.gerarKitContratosFundebComAnexos(data, anexos);
+  }
+
+  // ── Slides module ──
+
+  @override
+  Future<List<SlideTemplate>> getSlideTemplates() async {
+    if (_mustUseRemote) {
+      return _remote.getSlideTemplates();
+    }
+    return _local.getSlideTemplates();
+  }
+
+  @override
+  Future<Uint8List> generateSlidesPdf(
+    String templateId, {
+    String? codigoIbge,
+  }) async {
+    if (_mustUseRemote) {
+      return _remote.generateSlidesPdf(templateId, codigoIbge: codigoIbge);
+    }
+    return _local.generateSlidesPdf(templateId, codigoIbge: codigoIbge);
   }
 
   Future<T?> _safeCall<T>(Future<T> Function() action) async {
