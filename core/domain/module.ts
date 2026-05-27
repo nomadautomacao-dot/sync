@@ -13,6 +13,7 @@ export const moduleKeys = [
   "case-de-sucesso",
   "kit-documental",
   "propostas",
+  "slides",
 ] as const;
 
 
@@ -99,5 +100,11 @@ export const moduleCatalog: ModuleDefinition[] = [
     label: "Propostas Comerciais",
     description: "Criacao e padronizacao de propostas de servicos.",
     color: "var(--sync-status-active)",
+  },
+  {
+    key: "slides",
+    label: "Slides",
+    description: "Apresentacoes corporativas com dados reais do municipio.",
+    color: "var(--sync-status-purple)",
   },
 ];

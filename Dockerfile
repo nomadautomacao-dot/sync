@@ -67,6 +67,7 @@ COPY --from=builder /app/node_modules/pdf-parse ./node_modules/pdf-parse
 
 # Copy Python PDF generators and supporting modules (not included in Next.js standalone)
 COPY --from=builder /app/app/api/modulos/levantamento-fundeb/pdf ./app/api/modulos/levantamento-fundeb/pdf
+COPY --from=builder /app/app/api/modulos/slides/pdf ./app/api/modulos/slides/pdf
 COPY --from=builder /app/kit_padrao_pdf_rocha_prime ./kit_padrao_pdf_rocha_prime
 
 # Set permissions
