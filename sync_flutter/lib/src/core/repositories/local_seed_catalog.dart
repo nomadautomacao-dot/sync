@@ -102,4 +102,16 @@ const List<ModuleDefinition> localSeedModules = <ModuleDefinition>[
     icon: Icons.memory_outlined,
     mappedFlows: ['Inventario interno', 'Roadmap tecnico'],
   ),
+  ModuleDefinition(
+    key: 'slides',
+    label: 'Slides',
+    description: 'Apresentacoes corporativas com dados reais do municipio.',
+    color: Color(0xFF7C3AED),
+    icon: Icons.slideshow_outlined,
+    mappedFlows: [
+      'Templates institucionais',
+      'Proposta FUNDEB',
+      'Resumo executivo',
+    ],
+  ),
 ];

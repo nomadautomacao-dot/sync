@@ -2,6 +2,9 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:printing/printing.dart';
+
+import '../application/slides_institucional_pdf_builder.dart';
 
 import '../../../core/models/slide_models.dart';
 import '../../../core/models/sync_models.dart';
@@ -91,10 +94,18 @@ class _SlidesScreenState extends State<SlidesScreen> {
     });
 
     try {
-      final pdf = await widget.repository.generateSlidesPdf(
-        _selectedTemplate!.id,
-        codigoIbge: _selectedMunicipio?.codigoIbge,
-      );
+      Uint8List pdf;
+
+      // For 'institucional', generate locally (no backend needed)
+      if (_selectedTemplate!.id == 'institucional') {
+        pdf = await SlidesInstitucionalPdfBuilder.build();
+      } else {
+        pdf = await widget.repository.generateSlidesPdf(
+          _selectedTemplate!.id,
+          codigoIbge: _selectedMunicipio?.codigoIbge,
+        );
+      }
+
       if (mounted) {
         setState(() {
           _generatedPdf = pdf;
@@ -105,7 +116,9 @@ class _SlidesScreenState extends State<SlidesScreen> {
       if (mounted) {
         setState(() {
           _errorMessage = 'Falha ao gerar apresentacao: $e';
-          _step = _SlidesStep.configure;
+          _step = _selectedTemplate!.requiresMunicipio
+              ? _SlidesStep.configure
+              : _SlidesStep.gallery;
         });
       }
     }
@@ -588,12 +601,12 @@ class _SlidesScreenState extends State<SlidesScreen> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: ElevatedButton.icon(
-                              onPressed: () {
-                                // TODO: integrate with Printing.sharePdf
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Download em construcao.'),
-                                  ),
+                              onPressed: () async {
+                                final name = _selectedTemplate?.id ?? 'slides';
+                                final filename = 'rocha-prime-$name.pdf';
+                                await Printing.sharePdf(
+                                  bytes: _generatedPdf!,
+                                  filename: filename,
                                 );
                               },
                               icon: const Icon(LucideIcons.download, size: 16),
