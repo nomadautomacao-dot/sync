@@ -1,5 +1,7 @@
 import { normalizarIBGE } from "@/modules/levantamento-fundeb/utils/calculos";
 import type { ReceitasFundeb } from "@/modules/levantamento-fundeb/types";
+import { readFileSync } from "fs";
+import { join } from "path";
 
 export interface FndeFundebReceitas extends ReceitasFundeb {
   codigoIBGE: string;
@@ -60,6 +62,15 @@ const FNDE_VAAT_HABILITACAO_URLS: Record<number, string> = {
     "https://www.gov.br/fnde/pt-br/acesso-a-informacao/acoes-e-programas/financiamento/fundeb/vaat/lista-dos-entes-habilitados-e-inabilitados-ao-vaat-2026-posicao-final-com-ajuste-de-decisao-judicial-edit-csv.csv/@@download/file",
 };
 
+// Local CSV fallback files bundled in the project
+const FNDE_LOCAL_RECEITAS: Record<number, string> = {
+  2026: "data/fnde/receitas-2026.csv",
+};
+
+const FNDE_LOCAL_VAAT: Record<number, string> = {
+  2026: "data/fnde/vaat-2026.csv",
+};
+
 const receitasCache = new Map<number, Promise<Map<string, FndeFundebReceitas>>>();
 const vaatCache = new Map<number, Promise<Map<string, Omit<FndeVaatContext, "habilitacao" | "pendencia">>>>();
 const habilitacaoCache = new Map<number, Promise<Map<string, Pick<FndeVaatContext, "habilitacao" | "pendencia">>>>();
@@ -88,25 +99,52 @@ function parsePercent(value: string) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-async function fetchCsv(url: string) {
-  const response = await fetch(url, {
-    headers: {
-      Accept: "text/csv,application/octet-stream,*/*",
-      "User-Agent": "Mozilla/5.0",
-      Referer: "https://www.gov.br/fnde/pt-br/acesso-a-informacao/acoes-e-programas/financiamento/fundeb/",
-    },
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    throw new Error(`Falha ao carregar CSV oficial do FNDE (${response.status}).`);
+function readLocalCsv(relativePath: string): string | null {
+  try {
+    const fullPath = join(process.cwd(), relativePath);
+    const bytes = readFileSync(fullPath);
+    const utf8Text = new TextDecoder("utf-8").decode(bytes);
+    if (utf8Text.includes("UF") || utf8Text.includes("IBGE") || utf8Text.includes("ANEXO")) {
+      return utf8Text;
+    }
+    return new TextDecoder("latin1").decode(bytes);
+  } catch {
+    return null;
   }
+}
 
-  const bytes = new Uint8Array(await response.arrayBuffer());
-  const utf8Text = new TextDecoder("utf-8").decode(bytes);
-  return utf8Text.includes("UF;") && utf8Text.includes("IBGE")
-    ? utf8Text
-    : new TextDecoder("latin1").decode(bytes);
+async function fetchCsv(url: string, localFallback?: string) {
+  try {
+    const response = await fetch(url, {
+      headers: {
+        Accept: "text/csv,application/octet-stream,*/*",
+        "User-Agent": "Mozilla/5.0",
+        Referer: "https://www.gov.br/fnde/pt-br/acesso-a-informacao/acoes-e-programas/financiamento/fundeb/",
+      },
+      cache: "no-store",
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (!response.ok) {
+      throw new Error(`FNDE HTTP ${response.status}`);
+    }
+
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    const utf8Text = new TextDecoder("utf-8").decode(bytes);
+    return utf8Text.includes("UF;") && utf8Text.includes("IBGE")
+      ? utf8Text
+      : new TextDecoder("latin1").decode(bytes);
+  } catch (e) {
+    // Try local bundled CSV as fallback
+    if (localFallback) {
+      const local = readLocalCsv(localFallback);
+      if (local) {
+        console.warn(`[FNDE] Remote fetch failed, using local fallback: ${localFallback}`);
+        return local;
+      }
+    }
+    throw e;
+  }
 }
 
 async function fetchPdfText(url: string) {
@@ -269,7 +307,7 @@ async function loadFundebReceitasByYear(exercicio: number) {
   const promise = (async () => {
     try {
       if (source.kind === "csv") {
-        return parseFundebReceitasCsv(await fetchCsv(source.url), source.sourceLabel);
+        return parseFundebReceitasCsv(await fetchCsv(source.url, FNDE_LOCAL_RECEITAS[exercicio]), source.sourceLabel);
       }
 
       return parseFundebReceitasPdf(await fetchPdfText(source.url), source.sourceLabel);
@@ -296,7 +334,7 @@ async function loadVaatByYear(exercicio: number) {
 
   const promise = (async () => {
     try {
-      return parseVaatCsv(await fetchCsv(url));
+      return parseVaatCsv(await fetchCsv(url, FNDE_LOCAL_VAAT[exercicio]));
     } catch (error) {
       vaatCache.delete(exercicio);
       throw error;
@@ -320,7 +358,7 @@ async function loadHabilitacaoByYear(exercicio: number) {
 
   const promise = (async () => {
     try {
-      return parseHabilitacaoCsv(await fetchCsv(url));
+      return parseHabilitacaoCsv(await fetchCsv(url, FNDE_LOCAL_VAAT[exercicio]));
     } catch (error) {
       habilitacaoCache.delete(exercicio);
       throw error;

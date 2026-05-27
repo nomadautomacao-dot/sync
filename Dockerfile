@@ -70,6 +70,8 @@ COPY --from=builder /app/app/api/modulos/levantamento-fundeb/pdf ./app/api/modul
 COPY --from=builder /app/app/api/modulos/slides/pdf ./app/api/modulos/slides/pdf
 COPY --from=builder /app/kit_padrao_pdf_rocha_prime ./kit_padrao_pdf_rocha_prime
 
+# Copy bundled FNDE CSV data (fallback when gov.br blocks Cloud Run IPs)
+COPY --from=builder /app/data/fnde ./data/fnde
 # Set permissions
 RUN chown -R nextjs:nodejs /app
 

@@ -23,6 +23,7 @@ cloudrun.env.yaml
 # ── Large data files ──
 *.xlsx
 *.csv
+!data/fnde/*.csv
 *.db
 *.sqlite
 *.zip
