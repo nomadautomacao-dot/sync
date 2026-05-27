@@ -1,4 +1,4 @@
-# dependencies
+# ── Dependencies ──
 /node_modules
 /.pnp
 .pnp.*
@@ -8,31 +8,19 @@
 !.yarn/releases
 !.yarn/versions
 
-# next.js
+# ── Next.js ──
 /.next/
 /out/
-
-# production
 /build
 
-# misc
-.DS_Store
-*.pem
-
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# env files
+# ── Environment ──
 .env*
 cloudrun.env.yaml
 
-# typescript
+# ── TypeScript ──
 *.tsbuildinfo
 
-# Large data files
+# ── Large data files ──
 *.xlsx
 *.csv
 *.db
@@ -40,29 +28,32 @@ cloudrun.env.yaml
 *.zip
 *.tmp
 
-# Temporary files
-temp_doc_analysis/
-output/
+# ── Temporary files ──
 tmp_*
+output/
 scratch/
 
-# Flutter build artifacts (kept in sync_flutter/.gitignore)
+# ── Flutter build artifacts ──
 sync_flutter/build/
 sync_flutter/.dart_tool/
 
-# Python cache
+# ── Python cache ──
 __pycache__/
 *.pyc
-BIT4AFD.tmp
-tmp_sinopse_educacao_basica_2025.zip
-tmp_sinopse_educacao_basica_2025.xlsx
-tmp_sinopse_educacao_basica_2023.xlsx
-tmp_sinopse_educacao_basica_2024.xlsx
-tmp_microdados_censo_2025.zip
-*.tmp
-tmp_sinopse_*
-tmp_microdados_*
-tmp_sinopse_*
-tmp_microdados_*
-*.tmp
+
+# ── OS / IDE ──
+.DS_Store
+*.pem
+*.swp
+*.swo
+*~
+Thumbs.db
+
+# ── Debug logs ──
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ── Documents ──
 documents/*.zip

@@ -1,16 +1,47 @@
-# sync_flutter
+# Sync Flutter
 
-A new Flutter project.
+Frontend multiplataforma do **PrimeOS / Sync** — consultoria FUNDEB.
 
-## Getting Started
+## Plataformas
 
-This project is a starting point for a Flutter application.
+| Plataforma | Comando | Uso |
+|-----------|---------|-----|
+| **Linux** | `flutter run -d linux` | Desenvolvimento local |
+| **Web** | `flutter build web --release --base-href /flutter-web/` | Produção (embutido no Next.js) |
+| **Android** | `flutter run -d <device>` | App mobile |
 
-A few resources to get you started if this is your first Flutter project:
+## Executar localmente
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+```bash
+# Da raiz do projeto (sobe Next.js + Flutter Linux juntos)
+./run-local.sh
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Arquitetura
+
+```
+lib/
+  main.dart                       # Entry point
+  src/
+    core/
+      models/                     # Data models (Levantamento, Company, etc.)
+      repositories/               # Data access (remote, local, hybrid, mock)
+      services/                   # API client, auth service
+      theme/                      # Material 3 design tokens
+      utils/                      # File saver, helpers
+    features/
+      auth/                       # Login screen
+      dashboard/                  # Home dashboard
+      cities/                     # Municipality management
+      modules/                    # FUNDEB modules (levantamento, contratos)
+      people/                     # Collaborator management
+      shared/                     # Shared widgets
+      shell/                      # App shell (sidebar, navigation)
+```
+
+## Design System
+
+- **Material 3** com seed color `#2F6BFF`
+- Sidebar escura (`#1B2A4A`) + conteúdo claro
+- Font: Inter Variable
+- Ícones: Lucide Icons
