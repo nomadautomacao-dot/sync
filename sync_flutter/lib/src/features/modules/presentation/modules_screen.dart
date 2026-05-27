@@ -9,6 +9,7 @@ import 'contrato_capa_capa_screen.dart';
 import 'kit_documental_screen.dart';
 import 'levantamento_fundeb_lite_screen.dart';
 import 'levantamento_fundeb_screen.dart';
+import 'slides_screen.dart';
 
 class ModulesScreen extends StatefulWidget {
   const ModulesScreen({
@@ -70,6 +71,11 @@ class _ModulesScreenState extends State<ModulesScreen> {
           module: selected,
           onBack: () => widget.onSelectModule(''),
         ),
+      'slides' => SlidesScreen(
+          repository: widget.repository,
+          module: selected,
+          onBack: () => widget.onSelectModule(''),
+        ),
       _ => null,
     };
   }
@@ -111,6 +117,12 @@ class _ModulesScreenState extends State<ModulesScreen> {
 // Catalog — The main modules grid, grouped by category
 // ─────────────────────────────────────────────────────────────
 
+/// Modules hidden from the catalog (not ready for production)
+const _hiddenKeys = {
+  'consultoria',
+  'fundeb',
+};
+
 /// Which modules are considered "core FUNDEB tools"
 const _fundebKeys = {
   'levantamento-fundeb',
@@ -118,8 +130,7 @@ const _fundebKeys = {
   'contrato-fundeb',
   'case-de-sucesso',
   'kit-documental',
-  'fundeb',
-  'consultoria',
+  'slides',
 };
 
 /// Modules that have actual working screens
@@ -129,8 +140,7 @@ const _implementedKeys = {
   'contrato-fundeb',
   'case-de-sucesso',
   'kit-documental',
-  'consultoria',
-  'fundeb',
+  'slides',
   'propostas',
 };
 
@@ -147,8 +157,9 @@ class _ModulesCatalog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fundeb = modules.where((m) => _fundebKeys.contains(m.key)).toList();
-    final others = modules.where((m) => !_fundebKeys.contains(m.key)).toList();
+    final visible = modules.where((m) => !_hiddenKeys.contains(m.key)).toList();
+    final fundeb = visible.where((m) => _fundebKeys.contains(m.key)).toList();
+    final others = visible.where((m) => !_fundebKeys.contains(m.key)).toList();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 48),

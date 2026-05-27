@@ -1,5 +1,6 @@
 import '../models/sync_models.dart';
 import '../models/levantamento_fundeb_models.dart';
+import '../models/slide_models.dart';
 import 'dart:typed_data';
 
 abstract class SyncRepository {
@@ -97,4 +98,15 @@ abstract class SyncRepository {
     Map<String, dynamic> data,
     Map<String, List<({String nome, Uint8List bytes})>> anexos,
   );
+
+  // ── Slides module ──
+
+  /// Retorna os templates de apresentação disponíveis.
+  Future<List<SlideTemplate>> getSlideTemplates();
+
+  /// Gera uma apresentação em PDF a partir do template e dados do município.
+  Future<Uint8List> generateSlidesPdf(
+    String templateId, {
+    String? codigoIbge,
+  });
 }

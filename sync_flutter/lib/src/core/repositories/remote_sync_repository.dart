@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 
 import '../models/levantamento_fundeb_models.dart';
+import '../models/slide_models.dart';
 import '../models/sync_models.dart';
 import '../network/api_exception.dart';
 import '../network/session_storage.dart';
@@ -1826,6 +1827,39 @@ class RemoteSyncRepository implements SyncRepository {
 
     final bytes = await streamedResponse.stream.toBytes();
     return Uint8List.fromList(bytes);
+  }
+
+  // ── Slides module ──
+
+  @override
+  Future<List<SlideTemplate>> getSlideTemplates() async {
+    _assertConfigured();
+    try {
+      final list = await _apiClient.getList('/api/modulos/slides');
+      return list
+          .whereType<Map<String, dynamic>>()
+          .map(SlideTemplate.fromJson)
+          .toList();
+    } catch (_) {
+      // Fallback to built-in templates when API is unavailable
+      return defaultSlideTemplates;
+    }
+  }
+
+  @override
+  Future<Uint8List> generateSlidesPdf(
+    String templateId, {
+    String? codigoIbge,
+  }) async {
+    _assertConfigured();
+    return _apiClient.postBytes(
+      '/api/modulos/slides/gerar',
+      body: {
+        'templateId': templateId,
+        if (codigoIbge != null) 'codigoIbge': codigoIbge,
+      },
+      timeout: const Duration(seconds: 180),
+    );
   }
 }
 

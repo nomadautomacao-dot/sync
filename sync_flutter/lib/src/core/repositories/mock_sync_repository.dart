@@ -3,6 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'dart:typed_data';
 
 import '../models/levantamento_fundeb_models.dart';
+import '../models/slide_models.dart';
 import '../models/sync_models.dart';
 import '../../features/modules/application/fundeb_levantamento_pdf_builder.dart';
 import 'sync_repository.dart';
@@ -708,6 +709,18 @@ class MockSyncRepository implements SyncRepository {
         icon: LucideIcons.blocks,
         mappedFlows: ['Inventario interno', 'Roadmap tecnico'],
       ),
+      ModuleDefinition(
+        key: 'slides',
+        label: 'Slides',
+        description: 'Apresentacoes corporativas com dados reais do municipio.',
+        color: const Color(0xFF7C3AED),
+        icon: LucideIcons.presentation,
+        mappedFlows: [
+          'Templates institucionais',
+          'Proposta FUNDEB',
+          'Resumo executivo',
+        ],
+      ),
     ];
   }
 
@@ -1163,5 +1176,21 @@ class MockSyncRepository implements SyncRepository {
       ],
       relatorioDirigidoBase: dirigido,
     );
+  }
+
+  // ── Slides module ──
+
+  @override
+  Future<List<SlideTemplate>> getSlideTemplates() async {
+    return defaultSlideTemplates;
+  }
+
+  @override
+  Future<Uint8List> generateSlidesPdf(
+    String templateId, {
+    String? codigoIbge,
+  }) async {
+    // Mock returns empty bytes; real impl calls backend
+    return Uint8List(0);
   }
 }
