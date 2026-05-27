@@ -24,6 +24,11 @@ abstract final class SaaSTokens {
   static const success = Color(0xFF10B981);
   static const warning = Color(0xFFF59E0B);
   static const error   = Color(0xFFEF4444);
+
+  // Premium Gold Accent
+  static const gold      = Color(0xFFD4A853);
+  static const goldLight = Color(0xFFFAF3E3);
+  static const goldDim   = Color(0xFFB8943F);
 }
 
 class AppTheme {

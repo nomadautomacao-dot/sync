@@ -16,7 +16,7 @@ interface TemplateConfig {
 }
 
 const TEMPLATES_MAP: TemplateConfig[] = [
-  { filename: "00 - PROPOSTA TECNICA COMERCIAL.docx", docIndex: "00", outputName: "00 - Proposta Técnica e Comercial" },
+  // Proposta removida do Kit ZIP — gerada separadamente para assinatura
   { filename: "01 - CAPA DO PROCESSO.docx", docIndex: "01", outputName: "01 - Capa do Processo" },
   { filename: "02.1 DFD Administração.docx", docIndex: "02.1", outputName: "02.1 - Documento de Formalização da Demanda (DFD)" },
   { filename: "02.2 ETP.docx", docIndex: "02.2", outputName: "02.2 - Estudo Técnico Preliminar (ETP)" },
@@ -33,6 +33,13 @@ const TEMPLATES_MAP: TemplateConfig[] = [
   { filename: "10 - MINUTA - 000 - 00.00.2026 - CONTRATO ASSESSORIA - ROCHA PRIME - INEX 001.docx", docIndex: "10", outputName: "10 - Minuta do Contrato de Assessoria" },
 ];
 
+/** Template da Proposta Técnica — gerada separadamente para assinatura */
+const PROPOSTA_TEMPLATE: TemplateConfig = {
+  filename: "00 - PROPOSTA TECNICA COMERCIAL.docx",
+  docIndex: "00",
+  outputName: "Proposta Técnica e Comercial",
+};
+
 /**
  * Gera um arquivo ZIP contendo todos os documentos reais no formato .docx, mantendo formatação
  * e preenchendo as tags via docxtemplater.
@@ -44,6 +51,20 @@ export async function gerarKitContratoZip(data: ContratosFundebData): Promise<Bu
   const estadoNome = estadoBySigla(data.municipioUF);
 
   const formatNumberStr = (n: number) => n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  // ── Cálculo proporcional da Planilha Orçamentária da Proposta ──
+  // Os 6 itens mantêm proporções fixas em relação ao valor mensal total.
+  // Proporções originais baseadas no template base (total = R$ 15.000):
+  //   Item 1: 2.700 (18%), Item 2: 2.400 (16%), Item 3: 2.800 (18.67%)
+  //   Item 4: 2.450 (16.33%), Item 5: 2.250 (15%), Item 6: 2.400 (16%)
+  const valorMensalNum = data.valorMensal || 0;
+  const qtdMeses = data.quantidadeMeses || 12;
+  const PROPORCOES = [0.18, 0.16, 0.1867, 0.1633, 0.15, 0.16];
+  const itemValues = PROPORCOES.map(prop => {
+    const unitario = Math.round(valorMensalNum * prop * 100) / 100;
+    const total = Math.round(unitario * qtdMeses * 100) / 100;
+    return { unitario, total };
+  });
 
   const templateData = {
     ...data,
@@ -69,27 +90,23 @@ export async function gerarKitContratoZip(data: ContratosFundebData): Promise<Bu
     valorGlobalFormatado: formatNumberStr(data.valorGlobal || 0),
     valorGlobalExtenso: data.valorGlobalExtenso || '',
     cidadeAssinatura: data.municipioNome || '',
-    diaAssinatura: (() => {
-      const d = data.dataAssinatura;
-      if (!d) return new Date().getDate().toString();
-      const match = d.match(/(\d{1,2})/);
-      return match ? match[1] : new Date().getDate().toString();
-    })(),
-    mesAssinatura: (() => {
-      const meses = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
-      const d = data.dataAssinatura;
-      if (!d) return meses[new Date().getMonth()];
-      // Try DD/MM/YYYY format
-      const match = d.match(/\/(\d{1,2})\//);
-      if (match) return meses[parseInt(match[1]) - 1] || meses[new Date().getMonth()];
-      return meses[new Date().getMonth()];
-    })(),
-    anoAssinatura: (() => {
-      const d = data.dataAssinatura;
-      if (!d) return new Date().getFullYear().toString();
-      const match = d.match(/(\d{4})/);
-      return match ? match[1] : new Date().getFullYear().toString();
-    })(),
+    // ── Planilha Orçamentária — valores proporcionais ──
+    item1Unit: formatNumberStr(itemValues[0].unitario),
+    item1Total: formatNumberStr(itemValues[0].total),
+    item2Unit: formatNumberStr(itemValues[1].unitario),
+    item2Total: formatNumberStr(itemValues[1].total),
+    item3Unit: formatNumberStr(itemValues[2].unitario),
+    item3Total: formatNumberStr(itemValues[2].total),
+    item4Unit: formatNumberStr(itemValues[3].unitario),
+    item4Total: formatNumberStr(itemValues[3].total),
+    item5Unit: formatNumberStr(itemValues[4].unitario),
+    item5Total: formatNumberStr(itemValues[4].total),
+    item6Unit: formatNumberStr(itemValues[5].unitario),
+    item6Total: formatNumberStr(itemValues[5].total),
+    // ── Data — sempre usa data atual para a proposta ──
+    diaAssinatura: new Date().getDate().toString(),
+    mesAssinatura: (['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'])[new Date().getMonth()],
+    anoAssinatura: new Date().getFullYear().toString(),
   };
 
   for (const item of TEMPLATES_MAP) {
@@ -249,4 +266,98 @@ export async function gerarKitContratoComAnexosZip(
   });
 
   return zipBuffer;
+}
+
+/**
+ * Gera apenas a Proposta Técnica e Comercial como DOCX standalone.
+ * Separada do ZIP para que possa ser assinada individualmente.
+ */
+export async function gerarPropostaDocx(data: ContratosFundebData): Promise<{ buffer: Buffer; filename: string }> {
+  const templatesDir = path.join(process.cwd(), "contratos", "Anexos_DOCX");
+  const templatePath = path.join(templatesDir, PROPOSTA_TEMPLATE.filename);
+
+  if (!fs.existsSync(templatePath)) {
+    throw new Error(`Template da proposta não encontrada: ${PROPOSTA_TEMPLATE.filename}`);
+  }
+
+  const estadoNome = estadoBySigla(data.municipioUF);
+  const formatNumberStr = (n: number) => n.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  // ── Planilha proporcional ──
+  const valorMensalNum = data.valorMensal || 0;
+  const qtdMeses = data.quantidadeMeses || 12;
+  const PROPORCOES = [0.18, 0.16, 0.1867, 0.1633, 0.15, 0.16];
+  const itemValues = PROPORCOES.map(prop => {
+    const unitario = Math.round(valorMensalNum * prop * 100) / 100;
+    const total = Math.round(unitario * qtdMeses * 100) / 100;
+    return { unitario, total };
+  });
+
+  const templateData = {
+    ...data,
+    municipioNomeUpper: data.municipioNome ? data.municipioNome.toUpperCase() : "",
+    empresaRazaoSocialUpper: data.empresaRazaoSocial ? data.empresaRazaoSocial.toUpperCase() : "",
+    municipioEstado: estadoNome,
+    municipioEstadoUpper: estadoNome.toUpperCase(),
+    valorMensal: formatNumberStr(data.valorMensal || 0),
+    valorGlobal: formatNumberStr(data.valorGlobal || 0),
+    quantidadeMesesExtenso: data.quantidadeMeses === 12 ? 'doze' : data.quantidadeMeses === 8 ? 'oito' : data.quantidadeMeses === 7 ? 'sete' : data.quantidadeMeses === 6 ? 'seis' : String(data.quantidadeMeses),
+    quantidadeMeses: String(data.quantidadeMeses || 12),
+    secretarioCargo: 'Secretário(a) Municipal de Educação',
+    fundoCNPJ: data.fundoCNPJ || 'A ser informado',
+    municipioCNPJ: data.municipioCNPJ || 'A ser informado',
+    municipioEndereco: data.municipioEndereco || 'A ser informado',
+    prefeitoRG: data.prefeitoRG || 'A ser informado',
+    prefeitoCPF: data.prefeitoCPF || 'A ser informado',
+    prefeitoEndereco: data.prefeitoEndereco || 'A ser informado',
+    fiscalNome: data.fiscalNome || 'A definir',
+    valorMensalFormatado: formatNumberStr(data.valorMensal || 0),
+    valorGlobalFormatado: formatNumberStr(data.valorGlobal || 0),
+    valorGlobalExtenso: data.valorGlobalExtenso || '',
+    cidadeAssinatura: data.municipioNome || '',
+    // ── Planilha Orçamentária — valores proporcionais ──
+    item1Unit: formatNumberStr(itemValues[0].unitario),
+    item1Total: formatNumberStr(itemValues[0].total),
+    item2Unit: formatNumberStr(itemValues[1].unitario),
+    item2Total: formatNumberStr(itemValues[1].total),
+    item3Unit: formatNumberStr(itemValues[2].unitario),
+    item3Total: formatNumberStr(itemValues[2].total),
+    item4Unit: formatNumberStr(itemValues[3].unitario),
+    item4Total: formatNumberStr(itemValues[3].total),
+    item5Unit: formatNumberStr(itemValues[4].unitario),
+    item5Total: formatNumberStr(itemValues[4].total),
+    item6Unit: formatNumberStr(itemValues[5].unitario),
+    item6Total: formatNumberStr(itemValues[5].total),
+    // ── Data — sempre usa data atual ──
+    diaAssinatura: new Date().getDate().toString(),
+    mesAssinatura: (['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'])[new Date().getMonth()],
+    anoAssinatura: new Date().getFullYear().toString(),
+    dataDocumento: data.dataAssinatura || "",
+  };
+
+  const content = fs.readFileSync(templatePath, "binary");
+  const zip = new PizZip(content);
+  const doc = new Docxtemplater(zip, {
+    paragraphLoop: true,
+    linebreaks: true,
+    nullGetter: () => "",
+  });
+
+  doc.render(templateData);
+
+  const buffer = doc.getZip().generate({
+    type: "nodebuffer",
+    compression: "DEFLATE",
+  });
+
+  // Gerar nome do arquivo com slug do município
+  const slug = (data.municipioNome || "municipio")
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+  const filename = `Proposta_Tecnica_Comercial_${slug}.docx`;
+
+  return { buffer, filename };
 }

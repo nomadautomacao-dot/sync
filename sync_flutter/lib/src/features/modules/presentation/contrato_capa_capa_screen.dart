@@ -547,13 +547,30 @@ class _ContratoCapaCapaScreenState extends State<ContratoCapaCapaScreen> with Si
       
       if (response['success'] == true && response['contrato'] != null) {
         final contratoJson = response['contrato'] as Map<String, dynamic>;
-        _applyContractJson(contratoJson);
         
-        // Extrair estatísticas do agente se disponíveis
+        // Flatten nested structure → flat keys for _applyContractJson
+        final flat = _flattenContratoResponse(contratoJson);
+        _applyContractJson(flat);
+        
+        // Use agent stats if available, otherwise compute from metas
         final stats = response['stats'] as Map<String, dynamic>?;
         final warnings = (response['warnings'] as List<dynamic>?) ?? [];
-        final pct = stats?['percentualPreenchido'] ?? 0;
-        final viaIA = stats?['preenchidoIA'] ?? 0;
+        
+        int pct;
+        int viaIA;
+        if (stats != null) {
+          pct = (stats['percentualPreenchido'] as num?)?.toInt() ?? 0;
+          viaIA = (stats['preenchidoIA'] as num?)?.toInt() ?? 0;
+        } else {
+          final metasList = (response['metas'] as List<dynamic>?) ?? [];
+          final totalCampos = metasList.length;
+          final preenchidos = metasList.where((m) {
+            final st = (m as Map<String, dynamic>)['status']?.toString() ?? '';
+            return st.startsWith('preenchido') || st == 'auto-inferido' || st == 'auto-calculado';
+          }).length;
+          pct = totalCampos > 0 ? ((preenchidos / totalCampos) * 100).round() : 0;
+          viaIA = 0;
+        }
         
         final msg = viaIA > 0
             ? '🤖 Agente IA preencheu $pct% dos campos ($viaIA via Gemini + Google Search)'
@@ -598,6 +615,131 @@ class _ContratoCapaCapaScreenState extends State<ContratoCapaCapaScreen> with Si
         setState(() => isAutofilling = false);
       }
     }
+  }
+
+  /// Flatten the nested ContratoFundebDados structure into flat keys
+  /// that _applyContractJson expects.
+  /// Backend returns: { identificacao: {...}, contratante: {...}, contratado: {...}, valor: {...}, foro: {...} }
+  /// Flutter expects: { municipioNome: "...", prefeitoNome: "...", ... }
+  Map<String, dynamic> _flattenContratoResponse(Map<String, dynamic> nested) {
+    final flat = <String, dynamic>{};
+
+    // Identificacao
+    final ident = nested['identificacao'] as Map<String, dynamic>?;
+    if (ident != null) {
+      flat['contratoNumero'] = ident['contratoNumero'];
+      // Backend dates use dd.MM.yyyy format, convert to dd/MM/yyyy
+      flat['dataAssinatura'] = _convertDotDate(ident['dataAssinatura']?.toString());
+      flat['vigenciaInicio'] = _convertDotDate(ident['vigenciaInicio']?.toString());
+      flat['vigenciaFim'] = _convertDotDate(ident['vigenciaFim']?.toString());
+      flat['processoNumero'] = ident['processoNumero'];
+    }
+
+    // Contratante
+    final contratante = nested['contratante'] as Map<String, dynamic>?;
+    if (contratante != null) {
+      flat['municipioNome'] = contratante['municipioNome'];
+      // Backend sends full state name (e.g. "Mato Grosso") via estadoBySigla()
+      // but Flutter form expects the 2-letter sigla ("MT").
+      final rawEstado = contratante['municipioEstado']?.toString() ?? '';
+      flat['municipioUF'] = _estadoToSigla(rawEstado);
+      flat['municipioCNPJ'] = contratante['municipioCNPJ'];
+      flat['municipioEndereco'] = contratante['municipioEndereco'];
+      flat['municipioCEP'] = contratante['municipioCEP'];
+      flat['prefeitoNome'] = contratante['prefeitoNome'];
+      flat['prefeitoNacionalidade'] = contratante['prefeitoNacionalidade'];
+      flat['prefeitoRG'] = contratante['prefeitoRG'];
+      flat['prefeitoCPF'] = contratante['prefeitoCPF'];
+      flat['prefeitoEstadoCivil'] = null; // not in backend yet
+      flat['prefeitoEndereco'] = contratante['prefeitoEndereco'];
+      flat['fundoCNPJ'] = contratante['fundoMunicipalCNPJ'];
+      flat['fundoNome'] = contratante['fundoMunicipalNome'];
+    }
+
+    // Contratado
+    final contratado = nested['contratado'] as Map<String, dynamic>?;
+    if (contratado != null) {
+      flat['empresaRazaoSocial'] = contratado['empresaRazaoSocial'];
+      flat['empresaCNPJ'] = contratado['empresaCNPJ'];
+      flat['empresaEndereco'] = contratado['empresaEndereco'];
+      flat['empresaCidade'] = contratado['empresaCidade'];
+      flat['empresaUF'] = null; // extract from address
+      flat['empresaCEP'] = contratado['empresaCEP'];
+      flat['representanteNome'] = contratado['representanteNome'];
+      flat['representanteCPF'] = contratado['representanteCPF'];
+      flat['representanteQualificacao'] = contratado['representanteQualificacao'];
+    }
+
+    // Valor
+    final valor = nested['valor'] as Map<String, dynamic>?;
+    if (valor != null) {
+      flat['valorMensal'] = valor['valorMensal']?.toString();
+      flat['quantidadeMeses'] = valor['quantidadeMeses']?.toString();
+    }
+
+    // Foro
+    final foro = nested['foro'] as Map<String, dynamic>?;
+    if (foro != null) {
+      flat['foroComarca'] = foro['comarca'];
+      flat['foroUF'] = foro['estado'];
+    }
+
+    // Dotacao (if present)
+    final dotacao = nested['dotacaoOrcamentaria'] as Map<String, dynamic>?;
+    if (dotacao != null) {
+      final unidades = dotacao['unidadesExecutoras'] as List<dynamic>?;
+      if (unidades != null && unidades.isNotEmpty) {
+        flat['dotacaoUnidade'] = unidades.first;
+      }
+      final funcionais = dotacao['funcionais'] as List<dynamic>?;
+      if (funcionais != null && funcionais.isNotEmpty) {
+        flat['dotacaoAtividade'] = funcionais.first;
+      }
+      flat['dotacaoElemento'] = dotacao['elementoDespesa'];
+      final fontes = dotacao['fontesRecursos'] as List<dynamic>?;
+      if (fontes != null && fontes.isNotEmpty) {
+        flat['dotacaoFonte'] = fontes.first;
+      }
+    }
+
+    // If flat keys are missing, also try reading flat keys directly (in case
+    // backend sends flat response from AI agent route)
+    for (final key in nested.keys) {
+      if (!flat.containsKey(key) && nested[key] is! Map && nested[key] is! List) {
+        flat[key] = nested[key];
+      }
+    }
+
+    return flat;
+  }
+
+  /// Reverse-map full state name (e.g. "Mato Grosso") to sigla ("MT").
+  /// If the input is already a 2-letter code, returns it as-is.
+  static String _estadoToSigla(String estado) {
+    if (estado.length <= 2) return estado.toUpperCase();
+    const mapa = <String, String>{
+      'acre': 'AC', 'alagoas': 'AL', 'amazonas': 'AM', 'amapá': 'AP',
+      'bahia': 'BA', 'ceará': 'CE', 'distrito federal': 'DF',
+      'espírito santo': 'ES', 'goiás': 'GO', 'maranhão': 'MA',
+      'minas gerais': 'MG', 'mato grosso do sul': 'MS', 'mato grosso': 'MT',
+      'pará': 'PA', 'paraíba': 'PB', 'pernambuco': 'PE', 'piauí': 'PI',
+      'paraná': 'PR', 'rio de janeiro': 'RJ', 'rio grande do norte': 'RN',
+      'rondônia': 'RO', 'roraima': 'RR', 'rio grande do sul': 'RS',
+      'santa catarina': 'SC', 'sergipe': 'SE', 'são paulo': 'SP',
+      'tocantins': 'TO',
+    };
+    return mapa[estado.toLowerCase()] ?? estado;
+  }
+
+  /// Convert backend date format "dd.MM.yyyy" → "dd/MM/yyyy".
+  /// If already in slash format or null, returns as-is.
+  static String? _convertDotDate(String? date) {
+    if (date == null || date.isEmpty) return null;
+    // dd.MM.yyyy → dd/MM/yyyy
+    if (date.contains('.') && !date.contains('/')) {
+      return date.replaceAll('.', '/');
+    }
+    return date;
   }
 
   void _applyContractJson(Map<String, dynamic> c) {
@@ -724,36 +866,55 @@ class _ContratoCapaCapaScreenState extends State<ContratoCapaCapaScreen> with Si
 
     setState(() {
       isGeneratingKit = true;
-      generationProgressMessage = 'Compilando variáveis e gerando Kit Completo (16 DOCXs + 55 Habilitação)...';
+      generationProgressMessage = 'Compilando Kit Completo (14 DOCXs + 55 Habilitação)...';
     });
 
     // Compile everything into ContratosFundebData payload
     final data = _compilePayload();
 
+    final slug = muni
+        .toLowerCase()
+        .replaceAll(RegExp(r'[áàâãä]'), 'a')
+        .replaceAll(RegExp(r'[éèêë]'), 'e')
+        .replaceAll(RegExp(r'[íìîï]'), 'i')
+        .replaceAll(RegExp(r'[óòôõö]'), 'o')
+        .replaceAll(RegExp(r'[úùûü]'), 'u')
+        .replaceAll(RegExp(r'[ç]'), 'c')
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
+        .replaceAll(RegExp(r'^-+|-+$'), '');
+
     try {
-      // O backend automaticamente inclui toda a Habilitacao_PRIME no ZIP
+      // 1. Gerar Kit ZIP (sem proposta)
       final zipBytes = await widget.repository.gerarKitContratosFundeb(data);
-      
+
       setState(() {
-        generationProgressMessage = 'Kit completo gerado com sucesso! Iniciando download...';
+        generationProgressMessage = 'Kit gerado! Gerando Proposta separada para assinatura...';
       });
 
-      final slug = muni
-          .toLowerCase()
-          .replaceAll(RegExp(r'[áàâãä]'), 'a')
-          .replaceAll(RegExp(r'[éèêë]'), 'e')
-          .replaceAll(RegExp(r'[íìîï]'), 'i')
-          .replaceAll(RegExp(r'[óòôõö]'), 'o')
-          .replaceAll(RegExp(r'[úùûü]'), 'u')
-          .replaceAll(RegExp(r'[ç]'), 'c')
-          .replaceAll(RegExp(r'[^a-z0-9]+'), '-')
-          .replaceAll(RegExp(r'^-+|-+$'), '');
+      // 2. Gerar Proposta DOCX separada
+      Uint8List? propostaBytes;
+      try {
+        propostaBytes = await widget.repository.gerarPropostaDocx(data);
+      } catch (e) {
+        debugPrint('Aviso: Não foi possível gerar a proposta separada: $e');
+      }
 
-      final filename = 'Kit_Inexigibilidade_FUNDEB_$slug.zip';
+      setState(() {
+        generationProgressMessage = 'Downloads prontos! Salvando arquivos...';
+      });
 
-      await saveFile(zipBytes, filename);
+      // 3. Salvar o ZIP
+      final zipFilename = 'Kit_Inexigibilidade_FUNDEB_$slug.zip';
+      await saveFile(zipBytes, zipFilename);
 
-      _showSnackBar('Kit Completo (.ZIP) — 16 DOCXs + 55 docs habilitatórios baixado com sucesso!');
+      // 4. Salvar a Proposta separada (se gerou)
+      if (propostaBytes != null && propostaBytes.isNotEmpty) {
+        final propostaFilename = 'Proposta_Tecnica_Comercial_$slug.docx';
+        await saveFile(propostaBytes, propostaFilename);
+        _showSnackBar('✅ 2 arquivos baixados: Kit ZIP (14 DOCXs + 55 docs) + Proposta DOCX (para assinatura)');
+      } else {
+        _showSnackBar('✅ Kit ZIP baixado (14 DOCXs + 55 docs). Proposta não disponível — gere manualmente.');
+      }
     } catch (e) {
       debugPrint('Erro ao compilar kit: $e');
       _showSnackBar('Falha na geração do lote do Kit: $e');
@@ -1617,20 +1778,35 @@ class _ContratoCapaCapaScreenState extends State<ContratoCapaCapaScreen> with Si
                 return Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
-                    color: SyncPalette.bgSurface.withValues(alpha: 0.5),
-                    border: Border.all(color: cat.cor.withValues(alpha: 0.3)),
-                    borderRadius: BorderRadius.circular(10),
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        cat.cor.withValues(alpha: 0.08),
+                        cat.cor.withValues(alpha: 0.03),
+                      ],
+                    ),
+                    border: Border.all(color: cat.cor.withValues(alpha: 0.25), width: 1.2),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
                     children: [
                       Container(
-                        width: 30,
-                        height: 30,
+                        width: 34,
+                        height: 34,
                         decoration: BoxDecoration(
-                          color: cat.cor.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(7),
+                          gradient: LinearGradient(
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                            colors: [
+                              cat.cor.withValues(alpha: 0.22),
+                              cat.cor.withValues(alpha: 0.10),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(9),
+                          border: Border.all(color: cat.cor.withValues(alpha: 0.15)),
                         ),
-                        child: Icon(cat.icon, size: 15, color: cat.cor),
+                        child: Icon(cat.icon, size: 16, color: cat.cor),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -1640,13 +1816,19 @@ class _ContratoCapaCapaScreenState extends State<ContratoCapaCapaScreen> with Si
                           children: [
                             Text(
                               cat.titulo,
-                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: cat.cor.withValues(alpha: 0.9),
+                                letterSpacing: -0.2,
+                              ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
+                            const SizedBox(height: 1),
                             Text(
                               cat.subtitulo,
-                              style: TextStyle(fontSize: 9, color: SyncPalette.textSecondary),
+                              style: TextStyle(fontSize: 9.5, color: Colors.grey.shade600),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -1654,10 +1836,11 @@ class _ContratoCapaCapaScreenState extends State<ContratoCapaCapaScreen> with Si
                         ),
                       ),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                         decoration: BoxDecoration(
-                          color: cat.cor.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(12),
+                          color: cat.cor.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: cat.cor.withValues(alpha: 0.2)),
                         ),
                         child: Text(
                           '${cat.qtd} docs',

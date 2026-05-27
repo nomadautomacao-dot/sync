@@ -4,11 +4,14 @@ export const moduleKeys = [
   "consultoria",
   "fundeb",
   "levantamento-fundeb",
+  "levantamento-lite-fundeb",
+  "contrato-fundeb",
   "terceirizacao",
   "formacao",
   "atas-registro-preco",
   "tecnologia",
   "case-de-sucesso",
+  "kit-documental",
   "propostas",
 ] as const;
 
@@ -72,6 +75,24 @@ export const moduleCatalog: ModuleDefinition[] = [
     label: "Case de Sucesso",
     description: "Analise dinamica da evolucao do FUNDEB (2024-2025).",
     color: "var(--sync-accent-hover)",
+  },
+  {
+    key: "contrato-fundeb",
+    label: "Contrato FUNDEB",
+    description: "Geracao modular de processo administrativo e contrato (15 anexos) sob a Lei 14.133/21.",
+    color: "var(--sync-status-active)",
+  },
+  {
+    key: "levantamento-lite-fundeb",
+    label: "Levantamento Lite FUNDEB",
+    description: "Resumo infografico de ate duas paginas com indicadores-chave do FUNDEB.",
+    color: "var(--sync-accent)",
+  },
+  {
+    key: "kit-documental",
+    label: "Kit Documental",
+    description: "Organizacao e gestao de documentos de habilitacao, certidoes e contratos.",
+    color: "var(--sync-status-info)",
   },
   {
     key: "propostas",

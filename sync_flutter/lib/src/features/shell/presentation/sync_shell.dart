@@ -78,7 +78,29 @@ class _SyncShellState extends State<SyncShell> {
                     onToggleContextPanel: _toggleContextPanel,
                     isContextPanelOpen: _isContextPanelOpen,
                   ),
-                  Expanded(child: _buildContent()),
+                  Expanded(
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 250),
+                      switchInCurve: Curves.easeOutQuart,
+                      switchOutCurve: Curves.easeInQuart,
+                      transitionBuilder: (child, animation) {
+                        return FadeTransition(
+                          opacity: animation,
+                          child: SlideTransition(
+                            position: Tween<Offset>(
+                              begin: const Offset(0, 0.015),
+                              end: Offset.zero,
+                            ).animate(animation),
+                            child: child,
+                          ),
+                        );
+                      },
+                      child: KeyedSubtree(
+                        key: ValueKey(widget.controller.currentSection),
+                        child: _buildContent(),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -341,7 +363,7 @@ class _ShellSidebar extends StatelessWidget {
   }
 }
 
-class _SidebarButton extends StatelessWidget {
+class _SidebarButton extends StatefulWidget {
   const _SidebarButton({
     required this.icon,
     required this.label,
@@ -355,38 +377,89 @@ class _SidebarButton extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    final fg = selected ? SaaSTokens.textTitle : SaaSTokens.textMuted;
+  State<_SidebarButton> createState() => _SidebarButtonState();
+}
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        height: 44,
-        padding: const EdgeInsets.symmetric(horizontal: 14),
-        decoration: BoxDecoration(
-          color: selected ? SaaSTokens.primaryLight : Colors.transparent,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 22,
-              height: 22,
-              child: Icon(icon, size: 18, color: fg),
-            ),
-            const SizedBox(width: 12),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 14,
-                color: fg,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                letterSpacing: -0.2,
+class _SidebarButtonState extends State<_SidebarButton> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final active = widget.selected;
+    final hover = _hovered && !active;
+    final fg = active
+        ? SaaSTokens.primary
+        : hover
+            ? SaaSTokens.textTitle
+            : SaaSTokens.textMuted;
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _hovered = true),
+      onExit: (_) => setState(() => _hovered = false),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOutQuart,
+          height: 44,
+          decoration: BoxDecoration(
+            color: active
+                ? SaaSTokens.primaryLight
+                : hover
+                    ? SaaSTokens.scaffold
+                    : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            children: [
+              // Animated left accent bar
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeOutQuart,
+                width: 3,
+                height: active ? 24 : 0,
+                decoration: BoxDecoration(
+                  color: active ? SaaSTokens.primary : Colors.transparent,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-            ),
-          ],
+              SizedBox(width: active ? 11 : 14),
+              SizedBox(
+                width: 22,
+                height: 22,
+                child: Icon(widget.icon, size: 18, color: fg),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  widget.label,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: fg,
+                    fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+                    letterSpacing: -0.2,
+                  ),
+                ),
+              ),
+              // Subtle badge dot for active
+              if (active)
+                Container(
+                  width: 6,
+                  height: 6,
+                  margin: const EdgeInsets.only(right: 14),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: SaaSTokens.success,
+                    boxShadow: [
+                      BoxShadow(
+                        color: SaaSTokens.success.withValues(alpha: 0.4),
+                        blurRadius: 6,
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );

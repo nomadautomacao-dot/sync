@@ -121,7 +121,7 @@ class MockSyncRepository implements SyncRepository {
           value: 'R\$ 1,1 mi',
           helper: 'resultado operacional acumulado',
           icon: LucideIcons.handCoins,
-          color: SyncPalette.statusWarning,
+          color: const Color(0xFFD4A853), // SaaSTokens.gold
           sparkData: const [80, 120, 180, 310, 450, 620, 780, 950, 1100],
         ),
         KpiMetric(
@@ -129,7 +129,7 @@ class MockSyncRepository implements SyncRepository {
           value: 'R\$ 412 mil',
           helper: 'base recorrente do ano',
           icon: LucideIcons.badgeDollarSign,
-          color: SyncPalette.statusPurple,
+          color: const Color(0xFFB8943F), // SaaSTokens.goldDim
           sparkData: const [30, 55, 90, 140, 200, 260, 320, 370, 412],
         ),
         KpiMetric(
@@ -535,6 +535,11 @@ class MockSyncRepository implements SyncRepository {
 
   @override
   Future<Uint8List> gerarKitContratosFundeb(Map<String, dynamic> data) async {
+    return Uint8List(0);
+  }
+
+  @override
+  Future<Uint8List> gerarPropostaDocx(Map<String, dynamic> data) async {
     return Uint8List(0);
   }
 
@@ -1039,7 +1044,7 @@ class MockSyncRepository implements SyncRepository {
             complementacaoVAAF: 2100000,
             complementacaoVAAT: 980000,
             complementacaoVAAR: 220000,
-            totalMatriculas: 7080,
+            totalMatriculasMunicipais: 7080,
             totalEscolas: 40,
             eja: 340,
             tempoIntegral: 720,
@@ -1053,7 +1058,7 @@ class MockSyncRepository implements SyncRepository {
             complementacaoVAAF: 2470000,
             complementacaoVAAT: 1090000,
             complementacaoVAAR: 240000,
-            totalMatriculas: 7210,
+            totalMatriculasMunicipais: 7210,
             totalEscolas: 41,
             eja: 350,
             tempoIntegral: 810,
@@ -1067,7 +1072,7 @@ class MockSyncRepository implements SyncRepository {
             complementacaoVAAF: 2840000,
             complementacaoVAAT: 1190000,
             complementacaoVAAR: 240000,
-            totalMatriculas: 7340,
+            totalMatriculasMunicipais: 7340,
             totalEscolas: 41,
             eja: 370,
             tempoIntegral: 930,

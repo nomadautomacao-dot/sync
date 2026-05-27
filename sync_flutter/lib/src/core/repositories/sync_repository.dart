@@ -87,6 +87,9 @@ abstract class SyncRepository {
 
   Future<Uint8List> gerarKitContratosFundeb(Map<String, dynamic> data);
 
+  /// Gera a Proposta Técnica e Comercial como DOCX standalone para assinatura.
+  Future<Uint8List> gerarPropostaDocx(Map<String, dynamic> data);
+
   /// Gera o Kit Documental completo com anexos habilitatórios via multipart.
   /// [data] - Dados do contrato (ContratosFundebData serializado)
   /// [anexos] - Map de categoria -> lista de (nomeArquivo, bytes)

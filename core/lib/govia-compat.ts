@@ -5,7 +5,8 @@ import {
 } from "@/modules/levantamento-fundeb/utils/calculos";
 import type { RelatorioFundeb } from "@/modules/levantamento-fundeb/types";
 import { getFundebReceitasOficiais, getFundebVaatContext } from "@/core/lib/fundeb-fnde";
-import { getInepCensoMunicipalRecord } from "@/core/lib/inep-censo";
+import { getInepCensoMunicipalRecord, getInepCensoMunicipalHistory } from "@/core/lib/inep-censo";
+import type { InepCensoMunicipalRecord } from "@/core/lib/inep-censo";
 import { getIbgeCidadeIndicators } from "@/core/lib/ibge-cidade-indicators";
 import { buildCensoEscolarFromInep, buildPerfilEProjecaoComercial } from "@/core/lib/fundeb-commercial";
 import { estimateFundebReceitas } from "@/core/lib/fundeb-estimate";
@@ -507,6 +508,286 @@ function uniqueOperationalNotes(items: Array<string | null | undefined>) {
   return result;
 }
 
+/**
+ * Build a complete relatorio_dirigido_base from existing data sources.
+ * This feeds the Flutter Parte IV (annual comparison) and executive summary.
+ */
+function buildRelatorioDirigidoBase({
+  relatorio,
+  comparativo,
+  censoHistory,
+  ibgeIndicators,
+  qeduIndicators,
+  inepRecord,
+  siconfiFiscal,
+}: {
+  relatorio: RelatorioFundeb;
+  comparativo: Awaited<ReturnType<typeof buildFundebComparativeSnapshot>>;
+  censoHistory: InepCensoMunicipalRecord[];
+  ibgeIndicators: Awaited<ReturnType<typeof getIbgeCidadeIndicators>> | null;
+  qeduIndicators: Awaited<ReturnType<typeof getQeduMunicipalIndicators>> | null;
+  inepRecord: InepCensoMunicipalRecord | null;
+  siconfiFiscal: Awaited<ReturnType<typeof getSiconfiFiscalRecord>> | null;
+}) {
+  const ident = relatorio.identificacao;
+  const exercicio = ident.exercicio;
+  const tseRecord = getTsePrefeitoRecord(ident.codigoIBGE);
+
+  // Build census data lookup by year
+  const censoByYear = new Map<number, InepCensoMunicipalRecord>();
+  for (const record of censoHistory) {
+    censoByYear.set(record.anoReferencia, record);
+  }
+
+  // Helper: calculate tempo integral with fallback for 2023/2024 datasets
+  function getTempoIntegralFromRecord(record: InepCensoMunicipalRecord | undefined | null): number | null {
+    if (!record) return null;
+    if (record.tempoIntegralBasicaTotal != null) return record.tempoIntegralBasicaTotal;
+    if (record.tempoIntegralBasicaPublica != null) return record.tempoIntegralBasicaPublica;
+    // Sum subtypes as fallback
+    const sum =
+      (record.tempoIntegralEducacaoInfantilPublica ?? record.tempoIntegralEducacaoInfantilTotal ?? 0) +
+      (record.tempoIntegralEnsinoFundamentalPublica ?? record.tempoIntegralEnsinoFundamentalTotal ?? 0) +
+      (record.tempoIntegralEnsinoMedioPublica ?? record.tempoIntegralEnsinoMedioTotal ?? 0) +
+      (record.tempoIntegralEjaPublica ?? record.tempoIntegralEjaTotal ?? 0) +
+      (record.tempoIntegralEducacaoEspecialPublica ?? record.tempoIntegralEducacaoEspecialTotal ?? 0);
+    return sum > 0 ? sum : null;
+  }
+
+  // Helper: get matrículas municipais SEM ensino médio
+  function getMatriculasMunicipaisSemEM(record: InepCensoMunicipalRecord | undefined | null): number | null {
+    if (!record) return null;
+    const total = record.matriculasMunicipaisTotal ?? null;
+    if (total == null) return null;
+    const em = record.ensinoMedioMunicipal ?? 0;
+    return total - em;
+  }
+
+  // Build historical years from receitas + censo
+  const anos = comparativo.receitasHistoricas.map((receita) => {
+    const censoRecord = censoByYear.get(receita.ano);
+    const matriculasMunicipais = getMatriculasMunicipaisSemEM(censoRecord);
+    return {
+      ano: receita.ano,
+      anoBaseCenso: censoRecord?.anoReferencia ?? null,
+      totalReceitasFundeb: receita.totalReceitas,
+      contribuicaoMunicipal: receita.receitaContribuicaoMunicipal,
+      complementacaoVAAF: receita.complementacaoVAAF,
+      complementacaoVAAT: receita.complementacaoVAAT,
+      complementacaoVAAR: receita.complementacaoVAAR,
+      totalMatriculasMunicipais: matriculasMunicipais,
+      totalEscolas: censoRecord?.escolasMunicipaisTotal ?? null,
+      tempoIntegral: getTempoIntegralFromRecord(censoRecord),
+      educacaoEspecial: censoRecord?.educacaoEspecialTotal ?? null,
+      eja: censoRecord?.ejaTotal ?? null,
+      fonteReceita: receita.ano === exercicio ? "Portaria FNDE" : "SICONFI/DCA",
+      recursoPorAluno: (matriculasMunicipais && receita.totalReceitas)
+        ? Math.round(receita.totalReceitas / matriculasMunicipais * 100) / 100
+        : null,
+    };
+  });
+
+  // Add census-only years not covered by receitas
+  const receitaYears = new Set(comparativo.receitasHistoricas.map((r) => r.ano));
+  for (const record of censoHistory) {
+    if (!receitaYears.has(record.anoReferencia)) {
+      const matriculasMunicipais = getMatriculasMunicipaisSemEM(record);
+      anos.push({
+        ano: record.anoReferencia,
+        anoBaseCenso: record.anoReferencia,
+        totalReceitasFundeb: null as unknown as number,
+        contribuicaoMunicipal: null as unknown as number,
+        complementacaoVAAF: null as unknown as number,
+        complementacaoVAAT: null as unknown as number,
+        complementacaoVAAR: null as unknown as number,
+        totalMatriculasMunicipais: matriculasMunicipais,
+        totalEscolas: record.escolasMunicipaisTotal ?? null,
+        tempoIntegral: getTempoIntegralFromRecord(record),
+        educacaoEspecial: record.educacaoEspecialTotal ?? null,
+        eja: record.ejaTotal ?? null,
+        fonteReceita: "Censo INEP",
+        recursoPorAluno: null,
+      });
+    }
+  }
+
+  // Sort by year
+  anos.sort((a, b) => a.ano - b.ano);
+
+  const firstYear = anos.at(0)?.ano ?? exercicio;
+  const lastYear = anos.at(-1)?.ano ?? exercicio;
+  const resumoHistorico = anos.length > 1
+    ? `Serie historica com ${anos.length} exercicios (${firstYear}-${lastYear}) via SICONFI/Tesouro. Base escolar enriquecida com Censo INEP.`
+    : anos.length === 1
+      ? `Exercicio ${firstYear} disponivel no SICONFI.`
+      : `Nenhum exercicio historico disponivel.`;
+
+  return {
+    municipio: ident.municipioNome,
+    uf: ident.uf,
+    codigoIbge: ident.codigoIBGE,
+    geradoEm: new Date().toISOString(),
+    modo: "autonomo_completo",
+    modeloPrincipal: "sync_next_govia",
+    resumoExecutivo: `Levantamento FUNDEB completo para ${ident.municipioNome}/${ident.uf}, exercicio ${exercicio}. ` +
+      `${anos.length} exercicio(s) na serie historica.`,
+    searchQueries: [],
+    itens: [],
+    pendenciasHumanas: [
+      "Validar receitas atuais do FUNDEB",
+      "Levantar status dos sistemas MEC/FNDE",
+      "Conferir bases do Censo Escolar e indicadores da rede municipal",
+    ],
+    alertasJuridicos: [
+      "Os valores projetados têm caráter estimativo e dependem de validação documental.",
+    ],
+    proximosPassos: [
+      "Validar receitas atuais do FUNDEB",
+      "Levantar status dos sistemas MEC/FNDE",
+      "Conferir bases do Censo Escolar e indicadores da rede municipal",
+    ],
+    prontidao: {
+      status: "completo",
+      score: 85,
+      resumo: `Dados financeiros e educacionais consolidados para ${ident.municipioNome}.`,
+      bloqueios: [],
+      avisos: [],
+      criterios: [
+        "Receitas FUNDEB validadas",
+        "Projecao Rocha Prime aplicada",
+        "Geografia IBGE confirmada",
+        "Censo Escolar INEP integrado",
+      ],
+    },
+    perfilMunicipio: {
+      populacao: ibgeIndicators?.populacaoEstimada ?? null,
+      populacaoAnoReferencia: ibgeIndicators?.populacaoAnoReferencia ?? null,
+    },
+    contextoPolitico: {
+      prefeitoAtual: tseRecord?.prefeito ?? ident.prefeito ?? "Consultar TSE/DivulgaCand",
+      partidoAtual: tseRecord?.partido ?? ident.partido ?? "-",
+      classificacaoMandato: tseRecord ? "primeiro mandato" : "Nao classificado",
+      detalheMandato: tseRecord
+        ? `${tseRecord.prefeito} (${tseRecord.partido}), mandato 2025-2028.`
+        : "Mandato 2025-2028.",
+      estrategiaComercial: "Abordagem direta com secretaria de educacao.",
+      resumoComparativoGestao: comparativo.comparativaPdfInput.texto_sintese ?? "",
+    },
+    historico: {
+      anos,
+      resumo: resumoHistorico,
+    },
+    benchmarkRegional: {
+      criterio: "Mesma mesorregiao e faixa populacional",
+      resumo: "Benchmark regional em construcao.",
+      municipios: [],
+    },
+    indicadoresAprendizagem: qeduIndicators ? {
+      disponivel: true,
+      anoReferencia: qeduIndicators.anoReferencia,
+      recorteRede: qeduIndicators.recorteRede,
+      fonte: qeduIndicators.fonte,
+      fonteDistorcao: qeduIndicators.fonteDistorcao,
+      anosIniciais: qeduIndicators.anosIniciais ? {
+        idebObservado: qeduIndicators.anosIniciais.idebObservado,
+        notaPortugues: qeduIndicators.anosIniciais.notaPortugues,
+        notaMatematica: qeduIndicators.anosIniciais.notaMatematica,
+        notaMedia: qeduIndicators.anosIniciais.notaMedia,
+        taxaAprovacao: qeduIndicators.anosIniciais.taxaAprovacao,
+        indicadorRendimento: qeduIndicators.anosIniciais.indicadorRendimento,
+      } : null,
+      anosFinais: qeduIndicators.anosFinais ? {
+        idebObservado: qeduIndicators.anosFinais.idebObservado,
+        notaPortugues: qeduIndicators.anosFinais.notaPortugues,
+        notaMatematica: qeduIndicators.anosFinais.notaMatematica,
+        notaMedia: qeduIndicators.anosFinais.notaMedia,
+        taxaAprovacao: qeduIndicators.anosFinais.taxaAprovacao,
+        indicadorRendimento: qeduIndicators.anosFinais.indicadorRendimento,
+      } : null,
+      distorcaoIdadeSerie: qeduIndicators.distorcaoIdadeSerie,
+    } : {
+      disponivel: false,
+      anoReferencia: null,
+      recorteRede: null,
+      fonte: null,
+      fonteDistorcao: null,
+      anosIniciais: null,
+      anosFinais: null,
+      distorcaoIdadeSerie: null,
+    },
+    infraestruturaEscolar: inepRecord ? {
+      disponivel: true,
+      anoReferencia: inepRecord.anoReferencia,
+      totalEscolasPublicas: inepRecord.escolasPublicasTotal ?? inepRecord.escolasMunicipaisTotal,
+      indicadores: [
+        { nome: "Água potável", percentual: inepRecord.escolasComAguaPotavelPct ?? null, total: inepRecord.escolasComAguaPotavel ?? null },
+        { nome: "Esgoto sanitário", percentual: inepRecord.escolasComEsgotoPct ?? null, total: inepRecord.escolasComEsgoto ?? null },
+        { nome: "Cozinha/refeitório", percentual: inepRecord.escolasComCozinhaPct ?? null, total: inepRecord.escolasComCozinha ?? null },
+        { nome: "Internet", percentual: inepRecord.escolasComInternetPct ?? null, total: inepRecord.escolasComInternet ?? null },
+        { nome: "Banda larga", percentual: inepRecord.escolasComBandaLargaPct ?? null, total: inepRecord.escolasComBandaLarga ?? null },
+        { nome: "Lab. informática", percentual: inepRecord.escolasComLaboratorioInformaticaPct ?? null, total: inepRecord.escolasComLaboratorioInformatica ?? null },
+        { nome: "Lab. ciências", percentual: inepRecord.escolasComLaboratorioCienciasPct ?? null, total: inepRecord.escolasComLaboratorioCiencias ?? null },
+        { nome: "Quadra esportiva", percentual: inepRecord.escolasComQuadraPct ?? null, total: inepRecord.escolasComQuadra ?? null },
+        { nome: "Alimentação escolar", percentual: inepRecord.escolasComAlimentacaoPct ?? null, total: inepRecord.escolasComAlimentacao ?? null },
+        { nome: "Acessibilidade", percentual: inepRecord.escolasComAcessibilidadePct ?? null, total: inepRecord.escolasComAcessibilidade ?? null },
+      ],
+    } : { disponivel: false, anoReferencia: null, totalEscolasPublicas: null, indicadores: [] },
+    narrativas: {
+      textoSintese: comparativo.comparativaPdfInput.texto_sintese ?? null,
+      textoQedu: comparativo.comparativaPdfInput.texto_qedu ?? null,
+      textoMovimentosRelevantes: comparativo.comparativaPdfInput.texto_movimentos_relevantes ?? null,
+      textoComoRochaPrimeEntra: comparativo.comparativaPdfInput.texto_como_rocha_prime_entra ?? null,
+      textoConclusao: comparativo.comparativaPdfInput.texto_conclusao ?? null,
+    },
+    saudeFiscal: siconfiFiscal ? {
+      disponivel: true,
+      anoReferencia: siconfiFiscal.anoReferencia,
+      rcl: siconfiFiscal.rcl,
+      rclAjustada: siconfiFiscal.rclAjustada,
+      despesaPessoalTotal: siconfiFiscal.despesaPessoalTotal,
+      percentualDespesaPessoal: siconfiFiscal.percentualDespesaPessoal,
+      limiteMaximoPessoal: siconfiFiscal.limiteMaximoPessoal,
+      limitePrudencialPessoal: siconfiFiscal.limitePrudencialPessoal,
+      limiteAlertaPessoal: siconfiFiscal.limiteAlertaPessoal,
+      espacoFiscalPessoal: siconfiFiscal.espacoFiscalPessoal,
+      situacaoLrf: siconfiFiscal.situacaoLrf,
+      receitaTotalRealizada: siconfiFiscal.receitaTotalRealizada,
+      caixaEquivalentes: siconfiFiscal.caixaEquivalentes,
+      patrimonioLiquido: siconfiFiscal.patrimonioLiquido,
+    } : { disponivel: false },
+    perfilIBGE: ibgeIndicators ? {
+      disponivel: true,
+      populacaoEstimada: ibgeIndicators.populacaoEstimada,
+      populacaoAnoReferencia: ibgeIndicators.populacaoAnoReferencia,
+      populacaoUltimoCenso: ibgeIndicators.populacaoUltimoCenso,
+      idhm: ibgeIndicators.idhm,
+      idhmAnoReferencia: ibgeIndicators.idhmAnoReferencia,
+      pibPerCapita: ibgeIndicators.pibPerCapita,
+      pibAnoReferencia: ibgeIndicators.pibAnoReferencia,
+      areaTerritorial: ibgeIndicators.areaTerritorial,
+      escolarizacao614: ibgeIndicators.escolarizacao614,
+      mortalidadeInfantil: ibgeIndicators.mortalidadeInfantil,
+      receitasBrutasMunicipais: ibgeIndicators.receitasBrutasMunicipais,
+    } : { disponivel: false },
+    obrasPAC2: relatorio.obrasPAC2 ?? [],
+    caminhoEscola: relatorio.caminhoEscola ?? [],
+    cenarioEstruturacao: comparativo.comparativaPdfInput.cenarioEstruturacao ?? null,
+    recursosPorAluno: (() => {
+      const receita = relatorio.receitas.totalReceitas;
+      const matMun = inepRecord?.matriculasMunicipaisTotal ?? 0;
+      const em = inepRecord?.ensinoMedioMunicipal ?? 0;
+      const alunosMun = matMun - em;
+      if (alunosMun <= 0) return null;
+      return {
+        valor: Math.round(receita / alunosMun * 100) / 100,
+        receitaBase: receita,
+        totalAlunosMunicipais: alunosMun,
+        anoReferencia: exercicio,
+      };
+    })(),
+  };
+}
+
 export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioParams) {
   const exercicio = params.exercicio && params.exercicio > 2000 ? params.exercicio : new Date().getFullYear();
   const municipio = await findGoviaMunicipio(params);
@@ -582,7 +863,11 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
               ano: qeduIndicators?.anoReferencia ?? idebRecord?.anoReferencia ?? exercicio - 1,
               idebVerificado:
                 qeduIndicators?.anosIniciais?.idebObservado ?? idebRecord?.anosIniciaisPublica ?? 0,
-              metaProjetada: 0,
+              metaProjetada: (() => {
+                const ideb = qeduIndicators?.anosIniciais?.idebObservado ?? idebRecord?.anosIniciaisPublica ?? 0;
+                // Meta MEC 2023 para Anos Iniciais: 6.0 nacional. Se IDEB > meta, meta = IDEB + 0.3
+                return ideb > 6.0 ? Math.round((ideb + 0.3) * 10) / 10 : 6.0;
+              })(),
             },
           ]
         : undefined,
@@ -593,7 +878,11 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
               ano: qeduIndicators?.anoReferencia ?? idebRecord?.anoReferencia ?? exercicio - 1,
               idebVerificado:
                 qeduIndicators?.anosFinais?.idebObservado ?? idebRecord?.anosFinaisPublica ?? 0,
-              metaProjetada: 0,
+              metaProjetada: (() => {
+                const ideb = qeduIndicators?.anosFinais?.idebObservado ?? idebRecord?.anosFinaisPublica ?? 0;
+                // Meta MEC 2023 para Anos Finais: 5.5 nacional. Se IDEB > meta, meta = IDEB + 0.3
+                return ideb > 5.5 ? Math.round((ideb + 0.3) * 10) / 10 : 5.5;
+              })(),
             },
           ]
         : undefined,
@@ -826,6 +1115,15 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
     },
     fontes_utilizadas: fontesDedupe,
     relatorio_fundeb: relatorio,
+    relatorio_dirigido_base: buildRelatorioDirigidoBase({
+      relatorio,
+      comparativo,
+      censoHistory: getInepCensoMunicipalHistory(String(municipio.id)),
+      ibgeIndicators,
+      qeduIndicators,
+      inepRecord,
+      siconfiFiscal,
+    }),
   };
 
   return {

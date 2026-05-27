@@ -1,6 +1,7 @@
 import censoMunicipal2025 from "@/data/inep-censo-municipal-2025.json";
 import censoMunicipal2024 from "@/data/inep-censo-municipal-2024.json";
 import censoMunicipal2023 from "@/data/inep-censo-municipal-2023.json";
+import censoMunicipal2022 from "@/data/inep-censo-municipal-2022.json";
 
 export interface InepCensoMunicipalRecord {
   anoReferencia: number;
@@ -107,15 +108,17 @@ export interface InepCensoMunicipalRecord {
 const dataset2025 = censoMunicipal2025 as Record<string, Omit<InepCensoMunicipalRecord, "anoReferencia">>;
 const dataset2024 = censoMunicipal2024 as Record<string, Omit<InepCensoMunicipalRecord, "anoReferencia">>;
 const dataset2023 = censoMunicipal2023 as Record<string, Omit<InepCensoMunicipalRecord, "anoReferencia">>;
+const dataset2022 = censoMunicipal2022 as Record<string, Omit<InepCensoMunicipalRecord, "anoReferencia">>;
 const datasetsByYear = {
   2025: dataset2025,
   2024: dataset2024,
   2023: dataset2023,
+  2022: dataset2022,
 } as const;
 
 export function getInepCensoMunicipalRecordByYear(
   codigoIBGE: string,
-  anoReferencia: 2023 | 2024 | 2025,
+  anoReferencia: 2022 | 2023 | 2024 | 2025,
 ): InepCensoMunicipalRecord | null {
   const digits = codigoIBGE.replace(/\D/g, "");
   const dataset = datasetsByYear[anoReferencia];
@@ -132,7 +135,7 @@ export function getInepCensoMunicipalRecordByYear(
 }
 
 export function getInepCensoMunicipalHistory(codigoIBGE: string) {
-  return ([2023, 2024, 2025] as const)
+  return ([2022, 2023, 2024, 2025] as const)
     .map((anoReferencia) => getInepCensoMunicipalRecordByYear(codigoIBGE, anoReferencia))
     .filter((item): item is InepCensoMunicipalRecord => item !== null);
 }

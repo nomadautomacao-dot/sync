@@ -19,7 +19,10 @@
     "supabase:check": "node scripts/supabase-check.mjs",
     "supabase:bootstrap": "node scripts/supabase-bootstrap.mjs",
     "supabase:clean": "node scripts/supabase-clean.mjs",
-    "supabase:reset": "npm run supabase:bootstrap && npm run supabase:clean"
+    "supabase:reset": "npm run supabase:bootstrap && npm run supabase:clean",
+    "dev:flutter:linux": "cd sync_flutter && /home/AdrielT87/sync_tooling/flutter/bin/flutter run -d linux",
+    "dev:flutter:web": "cd sync_flutter && /home/AdrielT87/sync_tooling/flutter/bin/flutter run -d chrome",
+    "build:flutter:web": "cd sync_flutter && /home/AdrielT87/sync_tooling/flutter/bin/flutter build web --release --base-href /flutter-web/ && cp -r build/web ../public/flutter-web"
   },
   "prisma": {
     "seed": "node prisma/seed.mjs"

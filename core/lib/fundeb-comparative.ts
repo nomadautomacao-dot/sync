@@ -290,7 +290,7 @@ export async function buildFundebComparativeSnapshot(relatorio: RelatorioFundeb)
   const censoHistory = getInepCensoMunicipalHistory(codigoIBGE).sort((a, b) => a.anoReferencia - b.anoReferencia);
   const [receitasHistoricas, qeduIndicators] = await Promise.all([
     getFundebReceitasHistoricas(codigoIBGE, exercicio, {
-      anosRetroativos: 2,
+      anosRetroativos: 4,
       atualOverride: {
         codigoIBGE,
         municipio: relatorio.identificacao.municipioNome,

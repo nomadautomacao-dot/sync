@@ -905,11 +905,13 @@ class RelatorioDirigidoSerieHistoricaAno {
     this.complementacaoVAAF,
     this.complementacaoVAAT,
     this.complementacaoVAAR,
-    this.totalMatriculas,
+    this.totalMatriculasMunicipais,
     this.totalEscolas,
     this.eja,
     this.tempoIntegral,
     this.educacaoEspecial,
+    this.fonteReceita,
+    this.recursoPorAluno,
   });
 
   final int ano;
@@ -919,11 +921,13 @@ class RelatorioDirigidoSerieHistoricaAno {
   final double? complementacaoVAAF;
   final double? complementacaoVAAT;
   final double? complementacaoVAAR;
-  final int? totalMatriculas;
+  final int? totalMatriculasMunicipais;
   final int? totalEscolas;
   final int? eja;
   final int? tempoIntegral;
   final int? educacaoEspecial;
+  final String? fonteReceita;
+  final double? recursoPorAluno;
 
   factory RelatorioDirigidoSerieHistoricaAno.fromJson(
     Map<String, dynamic> json,
@@ -936,11 +940,15 @@ class RelatorioDirigidoSerieHistoricaAno {
       complementacaoVAAF: _readNullableDouble(json['complementacaoVAAF']),
       complementacaoVAAT: _readNullableDouble(json['complementacaoVAAT']),
       complementacaoVAAR: _readNullableDouble(json['complementacaoVAAR']),
-      totalMatriculas: _readNullableInt(json['totalMatriculas']),
+      totalMatriculasMunicipais: _readNullableInt(
+        json['totalMatriculasMunicipais'] ?? json['totalMatriculas'],
+      ),
       totalEscolas: _readNullableInt(json['totalEscolas']),
       eja: _readNullableInt(json['eja']),
       tempoIntegral: _readNullableInt(json['tempoIntegral']),
       educacaoEspecial: _readNullableInt(json['educacaoEspecial']),
+      fonteReceita: _readNullableString(json, 'fonteReceita'),
+      recursoPorAluno: _readNullableDouble(json['recursoPorAluno']),
     );
   }
 }
@@ -1040,6 +1048,239 @@ class RelatorioDirigidoBenchmarkRegional {
   }
 }
 
+class SaudeFiscal {
+  const SaudeFiscal({
+    required this.disponivel,
+    this.anoReferencia,
+    this.rcl,
+    this.rclAjustada,
+    this.despesaPessoalTotal,
+    this.percentualDespesaPessoal,
+    this.limiteMaximoPessoal,
+    this.limitePrudencialPessoal,
+    this.limiteAlertaPessoal,
+    this.espacoFiscalPessoal,
+    this.situacaoLrf,
+    this.receitaTotalRealizada,
+    this.caixaEquivalentes,
+    this.patrimonioLiquido,
+  });
+
+  final bool disponivel;
+  final int? anoReferencia;
+  final double? rcl;
+  final double? rclAjustada;
+  final double? despesaPessoalTotal;
+  final double? percentualDespesaPessoal;
+  final double? limiteMaximoPessoal;
+  final double? limitePrudencialPessoal;
+  final double? limiteAlertaPessoal;
+  final double? espacoFiscalPessoal;
+  final String? situacaoLrf;
+  final double? receitaTotalRealizada;
+  final double? caixaEquivalentes;
+  final double? patrimonioLiquido;
+
+  factory SaudeFiscal.fromJson(Map<String, dynamic> json) {
+    return SaudeFiscal(
+      disponivel: _readBool(json, 'disponivel'),
+      anoReferencia: _readNullableInt(json['anoReferencia']),
+      rcl: _readNullableDouble(json['rcl']),
+      rclAjustada: _readNullableDouble(json['rclAjustada']),
+      despesaPessoalTotal: _readNullableDouble(json['despesaPessoalTotal']),
+      percentualDespesaPessoal: _readNullableDouble(
+        json['percentualDespesaPessoal'],
+      ),
+      limiteMaximoPessoal: _readNullableDouble(json['limiteMaximoPessoal']),
+      limitePrudencialPessoal: _readNullableDouble(
+        json['limitePrudencialPessoal'],
+      ),
+      limiteAlertaPessoal: _readNullableDouble(json['limiteAlertaPessoal']),
+      espacoFiscalPessoal: _readNullableDouble(json['espacoFiscalPessoal']),
+      situacaoLrf: _readNullableString(json, 'situacaoLrf'),
+      receitaTotalRealizada: _readNullableDouble(
+        json['receitaTotalRealizada'],
+      ),
+      caixaEquivalentes: _readNullableDouble(json['caixaEquivalentes']),
+      patrimonioLiquido: _readNullableDouble(json['patrimonioLiquido']),
+    );
+  }
+}
+
+class PerfilIBGE {
+  const PerfilIBGE({
+    required this.disponivel,
+    this.populacaoEstimada,
+    this.populacaoAnoReferencia,
+    this.populacaoUltimoCenso,
+    this.idhm,
+    this.idhmAnoReferencia,
+    this.pibPerCapita,
+    this.pibAnoReferencia,
+    this.areaTerritorial,
+    this.escolarizacao614,
+    this.mortalidadeInfantil,
+    this.receitasBrutasMunicipais,
+  });
+
+  final bool disponivel;
+  final double? populacaoEstimada;
+  final String? populacaoAnoReferencia;
+  final double? populacaoUltimoCenso;
+  final double? idhm;
+  final String? idhmAnoReferencia;
+  final double? pibPerCapita;
+  final String? pibAnoReferencia;
+  final double? areaTerritorial;
+  final double? escolarizacao614;
+  final double? mortalidadeInfantil;
+  final double? receitasBrutasMunicipais;
+
+  factory PerfilIBGE.fromJson(Map<String, dynamic> json) {
+    return PerfilIBGE(
+      disponivel: _readBool(json, 'disponivel'),
+      populacaoEstimada: _readNullableDouble(json['populacaoEstimada']),
+      populacaoAnoReferencia: _readNullableString(
+        json,
+        'populacaoAnoReferencia',
+      ),
+      populacaoUltimoCenso: _readNullableDouble(json['populacaoUltimoCenso']),
+      idhm: _readNullableDouble(json['idhm']),
+      idhmAnoReferencia: _readNullableString(json, 'idhmAnoReferencia'),
+      pibPerCapita: _readNullableDouble(json['pibPerCapita']),
+      pibAnoReferencia: _readNullableString(json, 'pibAnoReferencia'),
+      areaTerritorial: _readNullableDouble(json['areaTerritorial']),
+      escolarizacao614: _readNullableDouble(json['escolarizacao614']),
+      mortalidadeInfantil: _readNullableDouble(json['mortalidadeInfantil']),
+      receitasBrutasMunicipais: _readNullableDouble(
+        json['receitasBrutasMunicipais'],
+      ),
+    );
+  }
+}
+
+class CenarioMetas {
+  const CenarioMetas({
+    required this.eja,
+    required this.integral,
+    required this.educacaoEspecial,
+  });
+
+  final int eja;
+  final int integral;
+  final int educacaoEspecial;
+
+  factory CenarioMetas.fromJson(Map<String, dynamic> json) {
+    return CenarioMetas(
+      eja: _readInt(json, 'eja'),
+      integral: _readInt(json, 'integral'),
+      educacaoEspecial: _readInt(json, 'educacaoEspecial'),
+    );
+  }
+}
+
+class CenarioImpactoFinanceiro {
+  const CenarioImpactoFinanceiro({
+    required this.minimo,
+    required this.maximo,
+    required this.basePorMatricula,
+  });
+
+  final double minimo;
+  final double maximo;
+  final double basePorMatricula;
+
+  factory CenarioImpactoFinanceiro.fromJson(Map<String, dynamic> json) {
+    return CenarioImpactoFinanceiro(
+      minimo: _readDouble(json, 'minimo'),
+      maximo: _readDouble(json, 'maximo'),
+      basePorMatricula: _readDouble(json, 'basePorMatricula'),
+    );
+  }
+}
+
+class CenarioGanhosMatriculas {
+  const CenarioGanhosMatriculas({
+    required this.eja,
+    required this.integral,
+    required this.educacaoEspecial,
+    required this.total,
+  });
+
+  final int eja;
+  final int integral;
+  final int educacaoEspecial;
+  final int total;
+
+  factory CenarioGanhosMatriculas.fromJson(Map<String, dynamic> json) {
+    return CenarioGanhosMatriculas(
+      eja: _readInt(json, 'eja'),
+      integral: _readInt(json, 'integral'),
+      educacaoEspecial: _readInt(json, 'educacaoEspecial'),
+      total: _readInt(json, 'total'),
+    );
+  }
+}
+
+class CenarioEstruturacao {
+  const CenarioEstruturacao({
+    required this.anoAlvo,
+    required this.baseAtual,
+    required this.metas,
+    required this.ganhosMatriculas,
+    required this.impactoFinanceiroIndicativo,
+    this.leituraExecutiva,
+    required this.frentes,
+  });
+
+  final int anoAlvo;
+  final CenarioMetas baseAtual;
+  final CenarioMetas metas;
+  final CenarioGanhosMatriculas ganhosMatriculas;
+  final CenarioImpactoFinanceiro impactoFinanceiroIndicativo;
+  final String? leituraExecutiva;
+  final List<String> frentes;
+
+  factory CenarioEstruturacao.fromJson(Map<String, dynamic> json) {
+    return CenarioEstruturacao(
+      anoAlvo: _readInt(json, 'anoAlvo'),
+      baseAtual: CenarioMetas.fromJson(_readMap(json, 'baseAtual')),
+      metas: CenarioMetas.fromJson(_readMap(json, 'metas')),
+      ganhosMatriculas: CenarioGanhosMatriculas.fromJson(
+        _readMap(json, 'ganhosMatriculas'),
+      ),
+      impactoFinanceiroIndicativo: CenarioImpactoFinanceiro.fromJson(
+        _readMap(json, 'impactoFinanceiroIndicativo'),
+      ),
+      leituraExecutiva: _readNullableString(json, 'leituraExecutiva'),
+      frentes: _readStringList(json['frentes']),
+    );
+  }
+}
+
+class RecursosPorAluno {
+  const RecursosPorAluno({
+    required this.valor,
+    required this.receitaBase,
+    required this.totalAlunosMunicipais,
+    required this.anoReferencia,
+  });
+
+  final double valor;
+  final double receitaBase;
+  final int totalAlunosMunicipais;
+  final int anoReferencia;
+
+  factory RecursosPorAluno.fromJson(Map<String, dynamic> json) {
+    return RecursosPorAluno(
+      valor: _readDouble(json, 'valor'),
+      receitaBase: _readDouble(json, 'receitaBase'),
+      totalAlunosMunicipais: _readInt(json, 'totalAlunosMunicipais'),
+      anoReferencia: _readInt(json, 'anoReferencia'),
+    );
+  }
+}
+
 class RelatorioDirigidoMunicipio {
   const RelatorioDirigidoMunicipio({
     required this.municipio,
@@ -1060,6 +1301,15 @@ class RelatorioDirigidoMunicipio {
     required this.benchmarkRegional,
     this.modeloAuxiliar,
     this.perfilMunicipio,
+    this.indicadoresAprendizagem,
+    this.infraestruturaEscolar,
+    this.narrativas,
+    this.saudeFiscal,
+    this.perfilIBGE,
+    this.obrasPAC2 = const [],
+    this.caminhoEscola = const [],
+    this.cenarioEstruturacao,
+    this.recursosPorAluno,
   });
 
   final String municipio;
@@ -1077,6 +1327,15 @@ class RelatorioDirigidoMunicipio {
   final List<String> proximosPassos;
   final RelatorioDirigidoProntidao prontidao;
   final RelatorioDirigidoPerfilMunicipio? perfilMunicipio;
+  final IndicadoresAprendizagem? indicadoresAprendizagem;
+  final InfraestruturaEscolar? infraestruturaEscolar;
+  final NarrativasRelatorio? narrativas;
+  final SaudeFiscal? saudeFiscal;
+  final PerfilIBGE? perfilIBGE;
+  final List<ObraPAC2> obrasPAC2;
+  final List<VeiculoCaminhoEscola> caminhoEscola;
+  final CenarioEstruturacao? cenarioEstruturacao;
+  final RecursosPorAluno? recursosPorAluno;
   final RelatorioDirigidoContextoPolitico contextoPolitico;
   final RelatorioDirigidoHistorico historico;
   final RelatorioDirigidoBenchmarkRegional benchmarkRegional;
@@ -1103,6 +1362,39 @@ class RelatorioDirigidoMunicipio {
         json['perfilMunicipio'],
         RelatorioDirigidoPerfilMunicipio.fromJson,
       ),
+      indicadoresAprendizagem: _mapOrNull(
+        json['indicadoresAprendizagem'],
+        IndicadoresAprendizagem.fromJson,
+      ),
+      infraestruturaEscolar: _mapOrNull(
+        json['infraestruturaEscolar'],
+        InfraestruturaEscolar.fromJson,
+      ),
+      narrativas: _mapOrNull(
+        json['narrativas'],
+        NarrativasRelatorio.fromJson,
+      ),
+      saudeFiscal: _mapOrNull(
+        json['saudeFiscal'],
+        SaudeFiscal.fromJson,
+      ),
+      perfilIBGE: _mapOrNull(
+        json['perfilIBGE'],
+        PerfilIBGE.fromJson,
+      ),
+      obrasPAC2: _readList(json['obrasPAC2'], ObraPAC2.fromJson),
+      caminhoEscola: _readList(
+        json['caminhoEscola'],
+        VeiculoCaminhoEscola.fromJson,
+      ),
+      cenarioEstruturacao: _mapOrNull(
+        json['cenarioEstruturacao'],
+        CenarioEstruturacao.fromJson,
+      ),
+      recursosPorAluno: _mapOrNull(
+        json['recursosPorAluno'],
+        RecursosPorAluno.fromJson,
+      ),
       contextoPolitico: RelatorioDirigidoContextoPolitico.fromJson(
         _readMap(json, 'contextoPolitico'),
       ),
@@ -1112,6 +1404,177 @@ class RelatorioDirigidoMunicipio {
       benchmarkRegional: RelatorioDirigidoBenchmarkRegional.fromJson(
         _readMap(json, 'benchmarkRegional'),
       ),
+    );
+  }
+}
+
+class AprendizagemEtapa {
+  const AprendizagemEtapa({
+    this.idebObservado,
+    this.notaPortugues,
+    this.notaMatematica,
+    this.notaMedia,
+    this.taxaAprovacao,
+    this.indicadorRendimento,
+  });
+
+  final double? idebObservado;
+  final double? notaPortugues;
+  final double? notaMatematica;
+  final double? notaMedia;
+  final double? taxaAprovacao;
+  final double? indicadorRendimento;
+
+  factory AprendizagemEtapa.fromJson(Map<String, dynamic> json) {
+    return AprendizagemEtapa(
+      idebObservado: _readNullableDouble(json['idebObservado']),
+      notaPortugues: _readNullableDouble(json['notaPortugues']),
+      notaMatematica: _readNullableDouble(json['notaMatematica']),
+      notaMedia: _readNullableDouble(json['notaMedia']),
+      taxaAprovacao: _readNullableDouble(json['taxaAprovacao']),
+      indicadorRendimento: _readNullableDouble(json['indicadorRendimento']),
+    );
+  }
+}
+
+class DistorcaoIdadeSerie {
+  const DistorcaoIdadeSerie({
+    this.fundamentalTotal,
+    this.anosIniciais,
+    this.anosFinais,
+  });
+
+  final double? fundamentalTotal;
+  final double? anosIniciais;
+  final double? anosFinais;
+
+  factory DistorcaoIdadeSerie.fromJson(Map<String, dynamic> json) {
+    return DistorcaoIdadeSerie(
+      fundamentalTotal: _readNullableDouble(json['fundamentalTotal']),
+      anosIniciais: _readNullableDouble(json['anosIniciais']),
+      anosFinais: _readNullableDouble(json['anosFinais']),
+    );
+  }
+}
+
+class IndicadoresAprendizagem {
+  const IndicadoresAprendizagem({
+    required this.disponivel,
+    this.anoReferencia,
+    this.recorteRede,
+    this.fonte,
+    this.fonteDistorcao,
+    this.anosIniciais,
+    this.anosFinais,
+    this.distorcaoIdadeSerie,
+  });
+
+  final bool disponivel;
+  final int? anoReferencia;
+  final String? recorteRede;
+  final String? fonte;
+  final String? fonteDistorcao;
+  final AprendizagemEtapa? anosIniciais;
+  final AprendizagemEtapa? anosFinais;
+  final DistorcaoIdadeSerie? distorcaoIdadeSerie;
+
+  factory IndicadoresAprendizagem.fromJson(Map<String, dynamic> json) {
+    return IndicadoresAprendizagem(
+      disponivel: _readBool(json, 'disponivel'),
+      anoReferencia: _readNullableInt(json['anoReferencia']),
+      recorteRede: _readNullableString(json, 'recorteRede'),
+      fonte: _readNullableString(json, 'fonte'),
+      fonteDistorcao: _readNullableString(json, 'fonteDistorcao'),
+      anosIniciais: _mapOrNull(
+        json['anosIniciais'],
+        AprendizagemEtapa.fromJson,
+      ),
+      anosFinais: _mapOrNull(
+        json['anosFinais'],
+        AprendizagemEtapa.fromJson,
+      ),
+      distorcaoIdadeSerie: _mapOrNull(
+        json['distorcaoIdadeSerie'],
+        DistorcaoIdadeSerie.fromJson,
+      ),
+    );
+  }
+}
+
+class InfraestruturaIndicador {
+  const InfraestruturaIndicador({
+    required this.nome,
+    this.percentual,
+    this.total,
+  });
+
+  final String nome;
+  final double? percentual;
+  final int? total;
+
+  factory InfraestruturaIndicador.fromJson(Map<String, dynamic> json) {
+    return InfraestruturaIndicador(
+      nome: _readString(json, 'nome'),
+      percentual: _readNullableDouble(json['percentual']),
+      total: _readNullableInt(json['total']),
+    );
+  }
+}
+
+class InfraestruturaEscolar {
+  const InfraestruturaEscolar({
+    required this.disponivel,
+    this.anoReferencia,
+    this.totalEscolasPublicas,
+    required this.indicadores,
+  });
+
+  final bool disponivel;
+  final int? anoReferencia;
+  final int? totalEscolasPublicas;
+  final List<InfraestruturaIndicador> indicadores;
+
+  factory InfraestruturaEscolar.fromJson(Map<String, dynamic> json) {
+    return InfraestruturaEscolar(
+      disponivel: _readBool(json, 'disponivel'),
+      anoReferencia: _readNullableInt(json['anoReferencia']),
+      totalEscolasPublicas: _readNullableInt(json['totalEscolasPublicas']),
+      indicadores: _readList(
+        json['indicadores'],
+        InfraestruturaIndicador.fromJson,
+      ),
+    );
+  }
+}
+
+class NarrativasRelatorio {
+  const NarrativasRelatorio({
+    this.textoSintese,
+    this.textoQedu,
+    this.textoMovimentosRelevantes,
+    this.textoComoRochaPrimeEntra,
+    this.textoConclusao,
+  });
+
+  final String? textoSintese;
+  final String? textoQedu;
+  final String? textoMovimentosRelevantes;
+  final String? textoComoRochaPrimeEntra;
+  final String? textoConclusao;
+
+  factory NarrativasRelatorio.fromJson(Map<String, dynamic> json) {
+    return NarrativasRelatorio(
+      textoSintese: _readNullableString(json, 'textoSintese'),
+      textoQedu: _readNullableString(json, 'textoQedu'),
+      textoMovimentosRelevantes: _readNullableString(
+        json,
+        'textoMovimentosRelevantes',
+      ),
+      textoComoRochaPrimeEntra: _readNullableString(
+        json,
+        'textoComoRochaPrimeEntra',
+      ),
+      textoConclusao: _readNullableString(json, 'textoConclusao'),
     );
   }
 }

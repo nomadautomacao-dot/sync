@@ -186,7 +186,7 @@ class FundebLevantamentoPdfBuilder {
           rochaLogoSvg: rochaLogoSvg,
           contentFont: contentFont,
         ),
-        build: (context) => _buildTechnicalAnnexPage(relatorio),
+        build: (context) => _buildTechnicalAnnexPage(relatorio, report: report),
       ),
     );
     pdf.addPage(
@@ -218,7 +218,7 @@ class FundebLevantamentoPdfBuilder {
           rochaLogoSvg: rochaLogoSvg,
           contentFont: contentFont,
         ),
-        build: (context) => _buildEducationalBasePage(relatorio),
+        build: (context) => _buildEducationalBasePage(relatorio, report: report),
       ),
     );
     if (_tempoIntegralRows(relatorio).isNotEmpty) {
@@ -243,6 +243,66 @@ class FundebLevantamentoPdfBuilder {
         build: (context) => _buildIdebPage(relatorio),
       ),
     );
+    if (report?.indicadoresAprendizagem?.disponivel == true) {
+      pdf.addPage(
+        pw.MultiPage(
+          pageTheme: _contentTheme(
+            relatorio,
+            rochaLogoSvg: rochaLogoSvg,
+            contentFont: contentFont,
+          ),
+          build: (context) => _buildIndicadoresAprendizagemPage(report!),
+        ),
+      );
+    }
+    if (report?.infraestruturaEscolar?.disponivel == true) {
+      pdf.addPage(
+        pw.MultiPage(
+          pageTheme: _contentTheme(
+            relatorio,
+            rochaLogoSvg: rochaLogoSvg,
+            contentFont: contentFont,
+          ),
+          build: (context) => _buildInfraestruturaEscolarPage(report!),
+        ),
+      );
+    }
+    if (report?.narrativas != null) {
+      pdf.addPage(
+        pw.MultiPage(
+          pageTheme: _contentTheme(
+            relatorio,
+            rochaLogoSvg: rochaLogoSvg,
+            contentFont: contentFont,
+          ),
+          build: (context) => _buildNarrativasPage(report!),
+        ),
+      );
+    }
+    if (report?.saudeFiscal?.disponivel == true) {
+      pdf.addPage(
+        pw.MultiPage(
+          pageTheme: _contentTheme(
+            relatorio,
+            rochaLogoSvg: rochaLogoSvg,
+            contentFont: contentFont,
+          ),
+          build: (context) => _buildSaudeFiscalPage(report!),
+        ),
+      );
+    }
+    if (report?.cenarioEstruturacao != null) {
+      pdf.addPage(
+        pw.MultiPage(
+          pageTheme: _contentTheme(
+            relatorio,
+            rochaLogoSvg: rochaLogoSvg,
+            contentFont: contentFont,
+          ),
+          build: (context) => _buildCenarioEstruturacaoPage(report!),
+        ),
+      );
+    }
     if (report != null) {
       pdf.addPage(
         pw.MultiPage(
@@ -1307,7 +1367,10 @@ class FundebLevantamentoPdfBuilder {
     ];
   }
 
-  static List<pw.Widget> _buildTechnicalAnnexPage(RelatorioFundeb relatorio) {
+  static List<pw.Widget> _buildTechnicalAnnexPage(
+    RelatorioFundeb relatorio, {
+    RelatorioDirigidoMunicipio? report,
+  }) {
     final ident = relatorio.identificacao;
     final perfil = relatorio.perfilComercial;
     final proj = _projection(relatorio);
@@ -1407,6 +1470,7 @@ class FundebLevantamentoPdfBuilder {
       _sectionHeading('5.1', 'Fundamentação dos Indicadores'),
       pw.SizedBox(height: 12),
       _bulletBox('Análise Técnica', bullets),
+      if (report != null) ..._buildPerfilIBGEGrid(report),
     ];
   }
 
@@ -1529,6 +1593,8 @@ class FundebLevantamentoPdfBuilder {
           background: _softOrange,
         ),
       ],
+      ..._buildObrasPAC2Section(relatorio),
+      ..._buildCaminhoEscolaSection(relatorio),
     ];
   }
 
@@ -1550,7 +1616,10 @@ class FundebLevantamentoPdfBuilder {
     ];
   }
 
-  static List<pw.Widget> _buildEducationalBasePage(RelatorioFundeb relatorio) {
+  static List<pw.Widget> _buildEducationalBasePage(
+    RelatorioFundeb relatorio, {
+    RelatorioDirigidoMunicipio? report,
+  }) {
     final censo = relatorio.censoEscolar;
     if (censo == null) {
       return [
@@ -1584,7 +1653,7 @@ class FundebLevantamentoPdfBuilder {
           pw.SizedBox(width: 10),
           pw.Expanded(
             child: _metricCard(
-              'TOTAL DE MATRICULAS',
+              'MATRÍCULAS MUNICIPAIS',
               _integer(censo.totalMatriculas),
               null,
               background: _softBlue,
@@ -1599,6 +1668,18 @@ class FundebLevantamentoPdfBuilder {
               background: _softBlue,
             ),
           ),
+          if (report?.recursosPorAluno?.valor != null) ...[
+            pw.SizedBox(width: 10),
+            pw.Expanded(
+              child: _metricCard(
+                'RECURSO POR ALUNO MUNICIPAL',
+                _money(report!.recursosPorAluno!.valor!),
+                null,
+                background: _softGreen,
+                valueColor: _green,
+              ),
+            ),
+          ],
         ],
       ),
       pw.SizedBox(height: 18),
@@ -1709,6 +1790,200 @@ class FundebLevantamentoPdfBuilder {
     ];
   }
 
+  static List<pw.Widget> _buildIndicadoresAprendizagemPage(
+    RelatorioDirigidoMunicipio report,
+  ) {
+    final ind = report.indicadoresAprendizagem;
+    if (ind == null || !ind.disponivel) {
+      return [
+        _pageTitle('PARTE III - INDICADORES EDUCACIONAIS'),
+        pw.SizedBox(height: 12),
+        _callout(
+          'Os indicadores de aprendizagem ainda não estão disponíveis para este município.',
+          accent: _orange,
+          background: _softOrange,
+        ),
+      ];
+    }
+
+    final anoLabel = ind.anoReferencia != null
+        ? ' (SAEB ${ind.anoReferencia})'
+        : '';
+
+    List<List<String>> etapaRows(AprendizagemEtapa? etapa) {
+      if (etapa == null) return const <List<String>>[];
+      return [
+        ['IDEB Observado', _nullableNumber(etapa.idebObservado)],
+        ['Nota Português', _nullableNumber(etapa.notaPortugues)],
+        ['Nota Matemática', _nullableNumber(etapa.notaMatematica)],
+        ['Nota Média', _nullableNumber(etapa.notaMedia)],
+        ['Taxa de Aprovação', _nullableNumber(etapa.taxaAprovacao)],
+        ['Ind. Rendimento', _nullableNumber(etapa.indicadorRendimento)],
+      ];
+    }
+
+    return [
+      _pageTitle('PARTE III - INDICADORES EDUCACIONAIS'),
+      pw.SizedBox(height: 10),
+      _sectionHeading('11.1', 'Indicadores de Aprendizagem$anoLabel'),
+      pw.SizedBox(height: 12),
+      _sectionHeading('11.1a', 'Anos Iniciais'),
+      pw.SizedBox(height: 8),
+      _table(
+        headers: const ['Indicador', 'Valor'],
+        rows: etapaRows(ind.anosIniciais),
+        widths: const {0: pw.FlexColumnWidth(60), 1: pw.FlexColumnWidth(40)},
+      ),
+      pw.SizedBox(height: 14),
+      _sectionHeading('11.1b', 'Anos Finais'),
+      pw.SizedBox(height: 8),
+      _table(
+        headers: const ['Indicador', 'Valor'],
+        rows: etapaRows(ind.anosFinais),
+        widths: const {0: pw.FlexColumnWidth(60), 1: pw.FlexColumnWidth(40)},
+      ),
+      if (ind.distorcaoIdadeSerie != null) ...[
+        pw.SizedBox(height: 14),
+        _sectionHeading('11.1c', 'Distorção Idade-Série'),
+        pw.SizedBox(height: 8),
+        _table(
+          headers: const ['Recorte', 'Taxa (%)'],
+          rows: [
+            [
+              'Ensino Fundamental',
+              _nullableNumber(ind.distorcaoIdadeSerie!.fundamentalTotal),
+            ],
+            [
+              'Anos Iniciais',
+              _nullableNumber(ind.distorcaoIdadeSerie!.anosIniciais),
+            ],
+            [
+              'Anos Finais',
+              _nullableNumber(ind.distorcaoIdadeSerie!.anosFinais),
+            ],
+          ],
+          widths: const {
+            0: pw.FlexColumnWidth(60),
+            1: pw.FlexColumnWidth(40),
+          },
+        ),
+      ],
+      pw.SizedBox(height: 12),
+      if (ind.fonte != null)
+        _mutedText('Fonte: ${ind.fonte}'),
+      if (ind.fonteDistorcao != null) ...[
+        pw.SizedBox(height: 4),
+        _mutedText('Fonte distorção: ${ind.fonteDistorcao}'),
+      ],
+    ];
+  }
+
+  static List<pw.Widget> _buildInfraestruturaEscolarPage(
+    RelatorioDirigidoMunicipio report,
+  ) {
+    final infra = report.infraestruturaEscolar;
+    if (infra == null || !infra.disponivel) {
+      return [
+        _pageTitle('PARTE III - INDICADORES EDUCACIONAIS'),
+        pw.SizedBox(height: 12),
+        _callout(
+          'Os dados de infraestrutura escolar ainda não estão disponíveis para este município.',
+          accent: _orange,
+          background: _softOrange,
+        ),
+      ];
+    }
+
+    final anoLabel = infra.anoReferencia != null
+        ? ' - ${infra.anoReferencia}'
+        : '';
+
+    return [
+      _pageTitle('PARTE III - INDICADORES EDUCACIONAIS'),
+      pw.SizedBox(height: 10),
+      _sectionHeading('11.2', 'Infraestrutura da Rede Pública$anoLabel'),
+      pw.SizedBox(height: 12),
+      _callout(
+        'Total de escolas públicas: ${_integerNullable(infra.totalEscolasPublicas)}'
+        '${infra.anoReferencia != null ? '  |  Ano de referência: ${infra.anoReferencia}' : ''}',
+        accent: _blue,
+        background: _softBlue,
+      ),
+      pw.SizedBox(height: 12),
+      _table(
+        headers: const ['Indicador', 'Escolas', 'Cobertura (%)'],
+        rows: infra.indicadores
+            .map(
+              (item) => [
+                _safe(item.nome),
+                _integerNullable(item.total),
+                _nullableNumber(item.percentual),
+              ],
+            )
+            .toList(),
+        widths: const {
+          0: pw.FlexColumnWidth(50),
+          1: pw.FlexColumnWidth(24),
+          2: pw.FlexColumnWidth(26),
+        },
+      ),
+    ];
+  }
+
+  static List<pw.Widget> _buildNarrativasPage(
+    RelatorioDirigidoMunicipio report,
+  ) {
+    final narrativas = report.narrativas;
+    if (narrativas == null) {
+      return const <pw.Widget>[];
+    }
+
+    final sections = <({String titulo, String? texto})>[
+      (titulo: 'Síntese', texto: narrativas.textoSintese),
+      (titulo: 'Indicadores de qualidade', texto: narrativas.textoQedu),
+      (
+        titulo: 'Movimentos relevantes',
+        texto: narrativas.textoMovimentosRelevantes,
+      ),
+      (
+        titulo: 'Como a Rocha Prime pode atuar',
+        texto: narrativas.textoComoRochaPrimeEntra,
+      ),
+      (titulo: 'Conclusão', texto: narrativas.textoConclusao),
+    ].where((item) => item.texto != null && item.texto!.isNotEmpty).toList();
+
+    if (sections.isEmpty) return const <pw.Widget>[];
+
+    return [
+      _pageTitle('PARTE IV - ANÁLISE ESTRATÉGICA'),
+      pw.SizedBox(height: 10),
+      _sectionHeading('12', 'Análise Estratégica'),
+      pw.SizedBox(height: 12),
+      ...sections.expand(
+        (item) => [
+          pw.Text(
+            _safe(item.titulo),
+            style: pw.TextStyle(
+              color: _navy,
+              fontSize: 9.5,
+              fontWeight: pw.FontWeight.bold,
+            ),
+          ),
+          pw.SizedBox(height: 6),
+          pw.Text(
+            _safe(item.texto),
+            style: const pw.TextStyle(
+              color: _text,
+              fontSize: 8.3,
+              lineSpacing: 1.8,
+            ),
+          ),
+          pw.SizedBox(height: 14),
+        ],
+      ),
+    ];
+  }
+
   static List<pw.Widget> _buildDirectedExecutivePart1(
     RelatorioDirigidoMunicipio report,
   ) {
@@ -1790,7 +2065,7 @@ class FundebLevantamentoPdfBuilder {
           (item) => <String>[
             '${item.year}',
             _moneyNullable(item.totalReceitasFundeb),
-            _integerNullable(item.totalMatriculas),
+            _integerNullable(item.totalMatriculasMunicipais),
             _integerNullable(item.tempoIntegral),
             item.status,
           ],
@@ -1885,7 +2160,7 @@ class FundebLevantamentoPdfBuilder {
         ? comparison.current
         : revenueSeries.last;
     final schoolSeries = comparison.series
-        .where((item) => item.totalMatriculas != null)
+        .where((item) => item.totalMatriculasMunicipais != null)
         .toList();
     final schoolStart = schoolSeries.isEmpty ? null : schoolSeries.first;
     final schoolEnd = schoolSeries.isEmpty ? null : schoolSeries.last;
@@ -1893,7 +2168,7 @@ class FundebLevantamentoPdfBuilder {
     final overviewText =
         'O panorama abaixo acompanha a evolução de $rangeLabel. A receita do FUNDEB vai de ${_moneyNullable(revenueStart.totalReceitasFundeb)} em ${revenueStart.ano} para ${_moneyNullable(revenueEnd.totalReceitasFundeb)} em ${revenueEnd.ano}, '
         'com variação de ${_deltaPercentLabel(revenueStart.totalReceitasFundeb, revenueEnd.totalReceitasFundeb)}. '
-        '${schoolStart == null || schoolEnd == null ? 'A base escolar ainda não trouxe dados suficientes para o mesmo recorte.' : 'Na base escolar, as matrículas vão de ${_integerNullable(schoolStart.totalMatriculas)} em ${schoolStart.ano} para ${_integerNullable(schoolEnd.totalMatriculas)} em ${schoolEnd.ano}, e o tempo integral vai de ${_integerNullable(schoolStart.tempoIntegral)} para ${_integerNullable(schoolEnd.tempoIntegral)}.'}';
+        '${schoolStart == null || schoolEnd == null ? 'A base escolar ainda não trouxe dados suficientes para o mesmo recorte.' : 'Na base escolar, as matrículas vão de ${_integerNullable(schoolStart.totalMatriculasMunicipais)} em ${schoolStart.ano} para ${_integerNullable(schoolEnd.totalMatriculasMunicipais)} em ${schoolEnd.ano}, e o tempo integral vai de ${_integerNullable(schoolStart.tempoIntegral)} para ${_integerNullable(schoolEnd.tempoIntegral)}.'}';
 
     return [
       _pageTitle('Parte IV - Comparativo por Ano'),
@@ -1925,10 +2200,10 @@ class FundebLevantamentoPdfBuilder {
             child: _metricCard(
               'Matrículas $rangeLabel',
               _signedIntLabel(
-                schoolStart?.totalMatriculas,
-                schoolEnd?.totalMatriculas,
+                schoolStart?.totalMatriculasMunicipais,
+                schoolEnd?.totalMatriculasMunicipais,
               ),
-              'de ${_integerNullable(schoolStart?.totalMatriculas)} para ${_integerNullable(schoolEnd?.totalMatriculas)}',
+              'de ${_integerNullable(schoolStart?.totalMatriculasMunicipais)} para ${_integerNullable(schoolEnd?.totalMatriculasMunicipais)}',
               background: _softGreen,
             ),
           ),
@@ -2018,14 +2293,22 @@ class FundebLevantamentoPdfBuilder {
     }
 
     final baseRows = annualRows
+        .where(
+          (row) =>
+              row.totalMatriculasMunicipais != null ||
+              row.tempoIntegral != null ||
+              row.educacaoEspecial != null ||
+              row.eja != null,
+        )
         .map(
           (row) => <String>[
             '${row.year}',
             row.schoolBaseLabel,
             _integerNullable(row.totalEscolas),
-            _integerNullable(row.totalMatriculas),
+            _integerNullable(row.totalMatriculasMunicipais),
             _integerNullable(row.tempoIntegral),
             _integerNullable(row.educacaoEspecial),
+            _integerNullable(row.eja),
           ],
         )
         .toList();
@@ -2069,23 +2352,25 @@ class FundebLevantamentoPdfBuilder {
           'Matrículas',
           'Tempo integral',
           'Ed. especial',
+          'EJA',
         ],
         rows: baseRows,
         widths: const {
-          0: pw.FlexColumnWidth(9),
-          1: pw.FlexColumnWidth(16),
-          2: pw.FlexColumnWidth(15),
-          3: pw.FlexColumnWidth(20),
-          4: pw.FlexColumnWidth(20),
-          5: pw.FlexColumnWidth(20),
+          0: pw.FlexColumnWidth(8),
+          1: pw.FlexColumnWidth(14),
+          2: pw.FlexColumnWidth(13),
+          3: pw.FlexColumnWidth(17),
+          4: pw.FlexColumnWidth(17),
+          5: pw.FlexColumnWidth(17),
+          6: pw.FlexColumnWidth(14),
         },
       ),
       pw.SizedBox(height: 16),
       _bulletBox('Leitura simples', [
         'A evolução financeira mostra todos os exercícios de 2022 a ${_comparisonEndYear(relatorio)}, inclusive anos pendentes.',
         'A variação compara cada ano preenchido com o último ano anterior que também tinha valor.',
-        'A base escolar segue o mesmo recorte anual para dar visão de escolas, matrículas, tempo integral e educação especial.',
-        'Anos marcados como "Censo não publicado" referem-se ao exercício corrente cujo Censo Escolar ainda está em fase de coleta pelo INEP.',
+        'A base escolar segue o mesmo recorte anual para dar visão de escolas, matrículas, tempo integral, educação especial e EJA.',
+        'Anos sem nenhum dado de censo publicado são omitidos da tabela escolar.',
       ]),
     ];
   }
@@ -3006,7 +3291,7 @@ class FundebLevantamentoPdfBuilder {
     final educationalSeries = [
       for (final item in series)
         if ((item.anoBaseCenso ?? item.ano) > 0 &&
-            (item.totalMatriculas != null ||
+            (item.totalMatriculasMunicipais != null ||
                 item.totalEscolas != null ||
                 item.eja != null ||
                 item.tempoIntegral != null ||
@@ -3059,7 +3344,7 @@ class FundebLevantamentoPdfBuilder {
         complementacaoVAAF: relatorio.receitas.complementacaoVAAF,
         complementacaoVAAT: relatorio.receitas.complementacaoVAAT,
         complementacaoVAAR: relatorio.receitas.complementacaoVAAR,
-        totalMatriculas: censo?.totalMatriculas,
+        totalMatriculasMunicipais: censo?.totalMatriculas,
         totalEscolas: censo?.totalEscolas,
         eja: censo?.matriculasEtapa.eja,
         tempoIntegral: censo?.tempoIntegral.total,
@@ -3086,7 +3371,7 @@ class FundebLevantamentoPdfBuilder {
     for (var year = startYear; year <= endYear; year++) {
       final historical = historyByYear[year];
       if (historical != null) {
-        rows.add(_AnnualFundebRow.fromHistorical(historical, 'Histórico'));
+        rows.add(_AnnualFundebRow.fromHistorical(historical, historical.fonteReceita ?? 'Histórico'));
         continue;
       }
       if (year == relatorio.identificacao.exercicio) {
@@ -3575,7 +3860,7 @@ class FundebLevantamentoPdfBuilder {
   }
 
   static bool _looksUtf8Repaired(String original, String repaired) {
-    const brokenMarkers = ['Ã', 'â', '�'];
+    const brokenMarkers = ['Ã', 'â', ''];
     final originalLooksBroken = brokenMarkers.any(original.contains);
     final repairedLooksCleaner = !brokenMarkers.any(repaired.contains);
     return originalLooksBroken && repairedLooksCleaner;
@@ -3749,6 +4034,315 @@ class FundebLevantamentoPdfBuilder {
         )
         .toList();
   }
+
+  // ──────────────────────────────────────────────────────
+  // v2.0 pages
+  // ──────────────────────────────────────────────────────
+
+  static List<pw.Widget> _buildSaudeFiscalPage(
+    RelatorioDirigidoMunicipio report,
+  ) {
+    final sf = report.saudeFiscal;
+    if (sf == null || !sf.disponivel) {
+      return const <pw.Widget>[];
+    }
+
+    PdfColor statusColor;
+    switch (sf.situacaoLrf?.toLowerCase() ?? '') {
+      case 'verde':
+      case 'ok':
+      case 'abaixo do limite de alerta':
+        statusColor = _green;
+        break;
+      case 'amarelo':
+      case 'alerta':
+      case 'acima do limite de alerta':
+        statusColor = _orange;
+        break;
+      default:
+        statusColor = const PdfColor.fromInt(0xFFDC2626);
+    }
+
+    return [
+      _pageTitle('SAÚDE FISCAL'),
+      pw.SizedBox(height: 10),
+      _sectionHeading('§', 'Saúde Fiscal do Município'),
+      pw.SizedBox(height: 12),
+      pw.Container(
+        padding: const pw.EdgeInsets.all(14),
+        decoration: pw.BoxDecoration(
+          color: _white,
+          border: pw.Border.all(color: statusColor, width: 1.2),
+          borderRadius: pw.BorderRadius.circular(10),
+        ),
+        child: pw.Row(
+          children: [
+            pw.Container(
+              width: 10,
+              height: 10,
+              decoration: pw.BoxDecoration(
+                color: statusColor,
+                shape: pw.BoxShape.circle,
+              ),
+            ),
+            pw.SizedBox(width: 10),
+            pw.Text(
+              'Status LRF: ${sf.situacaoLrf ?? 'Não informado'}',
+              style: pw.TextStyle(
+                color: statusColor,
+                fontSize: 10,
+                fontWeight: pw.FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ),
+      pw.SizedBox(height: 14),
+      _table(
+        headers: const ['Indicador', 'Valor'],
+        rows: [
+          ['Receita Corrente Líquida (RCL)', _moneyNullable(sf.rcl)],
+          ['RCL Ajustada', _moneyNullable(sf.rclAjustada)],
+          ['Despesa com Pessoal', _moneyNullable(sf.despesaPessoalTotal)],
+          ['% Despesa Pessoal / RCL', sf.percentualDespesaPessoal == null ? '-' : '${sf.percentualDespesaPessoal!.toStringAsFixed(2)}%'],
+          ['Limite Máximo LRF (54%)', sf.limiteMaximoPessoal == null ? '-' : '${sf.limiteMaximoPessoal!.toStringAsFixed(2)}%'],
+          ['Limite Prudencial LRF (51,3%)', sf.limitePrudencialPessoal == null ? '-' : '${sf.limitePrudencialPessoal!.toStringAsFixed(2)}%'],
+          ['Espaço Fiscal', _moneyNullable(sf.espacoFiscalPessoal)],
+          ['Caixa e Equivalentes', _moneyNullable(sf.caixaEquivalentes)],
+          ['Patrimônio Líquido', _moneyNullable(sf.patrimonioLiquido)],
+        ],
+        widths: const {0: pw.FlexColumnWidth(55), 1: pw.FlexColumnWidth(45)},
+      ),
+    ];
+  }
+
+  static List<pw.Widget> _buildObrasPAC2Section(RelatorioFundeb relatorio) {
+    if (relatorio.obrasPAC2.isEmpty) return const <pw.Widget>[];
+    return [
+      pw.SizedBox(height: 18),
+      _sectionHeading('7.1', 'Obras PAC2 / Pacto de Retomada'),
+      pw.SizedBox(height: 10),
+      _table(
+        headers: const [
+          'Tipo',
+          'Aprovadas',
+          'Em Execução',
+          'Canceladas',
+          'Concluídas',
+          'Total',
+        ],
+        rows: relatorio.obrasPAC2
+            .map(
+              (item) => [
+                _safe(item.tipo),
+                _integerNullable(item.aprovadas),
+                _integerNullable(item.execucao),
+                _integerNullable(item.canceladas),
+                _integerNullable(item.concluidas),
+                _integerNullable(item.total),
+              ],
+            )
+            .toList(),
+        widths: const {
+          0: pw.FlexColumnWidth(30),
+          1: pw.FlexColumnWidth(14),
+          2: pw.FlexColumnWidth(14),
+          3: pw.FlexColumnWidth(14),
+          4: pw.FlexColumnWidth(14),
+          5: pw.FlexColumnWidth(14),
+        },
+      ),
+    ];
+  }
+
+  static List<pw.Widget> _buildCaminhoEscolaSection(RelatorioFundeb relatorio) {
+    if (relatorio.caminhoEscola.isEmpty) return const <pw.Widget>[];
+    return [
+      pw.SizedBox(height: 18),
+      _sectionHeading('7.2', 'Frota Caminho da Escola'),
+      pw.SizedBox(height: 10),
+      _table(
+        headers: const ['Tipo', 'Quantidade', 'Valor (R\$)'],
+        rows: relatorio.caminhoEscola
+            .map(
+              (item) => [
+                _safe(item.tipo),
+                _integerNullable(item.quantidade),
+                _moneyNullable(item.valor),
+              ],
+            )
+            .toList(),
+        widths: const {
+          0: pw.FlexColumnWidth(40),
+          1: pw.FlexColumnWidth(25),
+          2: pw.FlexColumnWidth(35),
+        },
+      ),
+    ];
+  }
+
+  static List<pw.Widget> _buildCenarioEstruturacaoPage(
+    RelatorioDirigidoMunicipio report,
+  ) {
+    final ce = report.cenarioEstruturacao;
+    if (ce == null) return const <pw.Widget>[];
+
+    return [
+      _pageTitle('CENÁRIO DE ESTRUTURAÇÃO'),
+      pw.SizedBox(height: 10),
+      _sectionHeading('CE', 'Cenário de Estruturação ${ce.anoAlvo}'),
+      pw.SizedBox(height: 12),
+      _table(
+        headers: const [
+          'Modalidade',
+          'Base Atual',
+          'Meta',
+          'Ganho de Matrículas',
+        ],
+        rows: [
+          [
+            'EJA',
+            _integerNullable(ce.baseAtual?.eja),
+            _integerNullable(ce.metas?.eja),
+            _integerNullable(ce.ganhosMatriculas?.eja),
+          ],
+          [
+            'Tempo Integral',
+            _integerNullable(ce.baseAtual?.integral),
+            _integerNullable(ce.metas?.integral),
+            _integerNullable(ce.ganhosMatriculas?.integral),
+          ],
+          [
+            'Ed. Especial',
+            _integerNullable(ce.baseAtual?.educacaoEspecial),
+            _integerNullable(ce.metas?.educacaoEspecial),
+            _integerNullable(ce.ganhosMatriculas?.educacaoEspecial),
+          ],
+          [
+            'TOTAL',
+            '-',
+            '-',
+            _integerNullable(ce.ganhosMatriculas?.total),
+          ],
+        ],
+        widths: const {
+          0: pw.FlexColumnWidth(28),
+          1: pw.FlexColumnWidth(24),
+          2: pw.FlexColumnWidth(24),
+          3: pw.FlexColumnWidth(24),
+        },
+      ),
+      pw.SizedBox(height: 14),
+      _highlightBox(
+        'IMPACTO FINANCEIRO INDICATIVO',
+        '${_moneyNullable(ce.impactoFinanceiroIndicativo?.minimo)} — ${_moneyNullable(ce.impactoFinanceiroIndicativo?.maximo)}',
+        ce.impactoFinanceiroIndicativo?.basePorMatricula == null
+            ? 'Faixa estimada de impacto anual'
+            : 'Base: ${_moneyNullable(ce.impactoFinanceiroIndicativo?.basePorMatricula)} por matrícula',
+      ),
+      if (ce.leituraExecutiva != null && ce.leituraExecutiva!.isNotEmpty) ...[
+        pw.SizedBox(height: 14),
+        _callout(
+          ce.leituraExecutiva!,
+          title: 'Leitura executiva',
+          accent: _blue,
+          background: _softBlue,
+        ),
+      ],
+      if (ce.frentes != null && ce.frentes!.isNotEmpty) ...[
+        pw.SizedBox(height: 14),
+        _bulletBox('Frentes de atuação', ce.frentes!),
+      ],
+    ];
+  }
+
+  static List<pw.Widget> _buildPerfilIBGEGrid(
+    RelatorioDirigidoMunicipio report,
+  ) {
+    final perfil = report.perfilIBGE;
+    if (perfil == null || !perfil.disponivel) return const <pw.Widget>[];
+
+    return [
+      pw.SizedBox(height: 18),
+      _sectionHeading('5.2', 'Perfil IBGE do Município'),
+      pw.SizedBox(height: 12),
+      pw.Row(
+        children: [
+          pw.Expanded(
+            child: _metricCard(
+              'POPULAÇÃO',
+              _integerNullable(perfil.populacaoEstimada?.toInt()),
+              perfil.populacaoAnoReferencia != null
+                  ? 'Estimativa ${perfil.populacaoAnoReferencia}'
+                  : null,
+              background: _softBlue,
+            ),
+          ),
+          pw.SizedBox(width: 8),
+          pw.Expanded(
+            child: _metricCard(
+              'IDHM',
+              perfil.idhm == null
+                  ? '-'
+                  : perfil.idhm!.toStringAsFixed(3),
+              perfil.idhmAnoReferencia != null
+                  ? 'Ref. ${perfil.idhmAnoReferencia}'
+                  : null,
+              background: _softBlue,
+            ),
+          ),
+          pw.SizedBox(width: 8),
+          pw.Expanded(
+            child: _metricCard(
+              'PIB PER CAPITA',
+              _moneyNullable(perfil.pibPerCapita),
+              perfil.pibAnoReferencia != null
+                  ? 'Ref. ${perfil.pibAnoReferencia}'
+                  : null,
+              background: _softGreen,
+            ),
+          ),
+        ],
+      ),
+      pw.SizedBox(height: 8),
+      pw.Row(
+        children: [
+          pw.Expanded(
+            child: _metricCard(
+              'ÁREA TERRITORIAL',
+              perfil.areaTerritorial == null
+                  ? '-'
+                  : '${perfil.areaTerritorial!.toStringAsFixed(1)} km²',
+              null,
+              background: _softBlue,
+            ),
+          ),
+          pw.SizedBox(width: 8),
+          pw.Expanded(
+            child: _metricCard(
+              'ESCOLARIZAÇÃO 6-14',
+              perfil.escolarizacao614 == null
+                  ? '-'
+                  : '${perfil.escolarizacao614!.toStringAsFixed(1)}%',
+              null,
+              background: _softGreen,
+            ),
+          ),
+          pw.SizedBox(width: 8),
+          pw.Expanded(
+            child: _metricCard(
+              'MORTALIDADE INFANTIL',
+              perfil.mortalidadeInfantil == null
+                  ? '-'
+                  : '${perfil.mortalidadeInfantil!.toStringAsFixed(1)} ‰',
+              null,
+              background: _softOrange,
+            ),
+          ),
+        ],
+      ),
+    ];
+  }
 }
 
 class _LiteSegment {
@@ -3768,7 +4362,7 @@ class _AnnualFundebRow {
     this.contribuicaoMunicipal,
     this.unionComplementation,
     this.totalEscolas,
-    this.totalMatriculas,
+    this.totalMatriculasMunicipais,
     this.eja,
     this.tempoIntegral,
     this.educacaoEspecial,
@@ -3782,9 +4376,18 @@ class _AnnualFundebRow {
     // the row year. Prevents repeating a previous year's numbers.
     final schoolDataValid =
         item.anoBaseCenso == null || item.anoBaseCenso == item.ano;
+    final hasAnyCensusData = schoolDataValid &&
+        (item.totalMatriculasMunicipais != null ||
+            item.tempoIntegral != null ||
+            item.educacaoEspecial != null ||
+            item.eja != null);
+    final effectiveStatus = !hasAnyCensusData &&
+            item.totalReceitasFundeb == null
+        ? 'Censo não publicado'
+        : status;
     return _AnnualFundebRow(
       year: item.ano,
-      status: status,
+      status: effectiveStatus,
       schoolBaseYear: schoolDataValid ? item.anoBaseCenso : null,
       totalReceitasFundeb: item.totalReceitasFundeb,
       contribuicaoMunicipal: item.contribuicaoMunicipal,
@@ -3792,7 +4395,7 @@ class _AnnualFundebRow {
         item,
       ),
       totalEscolas: schoolDataValid ? item.totalEscolas : null,
-      totalMatriculas: schoolDataValid ? item.totalMatriculas : null,
+      totalMatriculasMunicipais: schoolDataValid ? item.totalMatriculasMunicipais : null,
       eja: schoolDataValid ? item.eja : null,
       tempoIntegral: schoolDataValid ? item.tempoIntegral : null,
       educacaoEspecial: schoolDataValid ? item.educacaoEspecial : null,
@@ -3818,7 +4421,7 @@ class _AnnualFundebRow {
           relatorio.receitas.complementacaoVAAT +
           relatorio.receitas.complementacaoVAAR,
       totalEscolas: censoMatchesYear ? censo.totalEscolas : null,
-      totalMatriculas: censoMatchesYear ? censo.totalMatriculas : null,
+      totalMatriculasMunicipais: censoMatchesYear ? censo.totalMatriculas : null,
       eja: censoMatchesYear ? censo.matriculasEtapa.eja : null,
       tempoIntegral: censoMatchesYear ? censo.tempoIntegral.total : null,
       educacaoEspecial: censoMatchesYear ? censo.matriculasEtapa.educacaoEspecial : null,
@@ -3840,7 +4443,7 @@ class _AnnualFundebRow {
   final double? contribuicaoMunicipal;
   final double? unionComplementation;
   final int? totalEscolas;
-  final int? totalMatriculas;
+  final int? totalMatriculasMunicipais;
   final int? eja;
   final int? tempoIntegral;
   final int? educacaoEspecial;
@@ -3850,7 +4453,7 @@ class _AnnualFundebRow {
       contribuicaoMunicipal != null ||
       unionComplementation != null ||
       totalEscolas != null ||
-      totalMatriculas != null ||
+      totalMatriculasMunicipais != null ||
       eja != null ||
       tempoIntegral != null ||
       educacaoEspecial != null;

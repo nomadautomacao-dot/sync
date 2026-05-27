@@ -460,6 +460,11 @@ class LocalSyncRepository implements SyncRepository {
   }
 
   @override
+  Future<Uint8List> gerarPropostaDocx(Map<String, dynamic> data) async {
+    return MockSyncRepository().gerarPropostaDocx(data);
+  }
+
+  @override
   Future<Uint8List> gerarKitContratosFundebComAnexos(
     Map<String, dynamic> data,
     Map<String, List<({String nome, Uint8List bytes})>> anexos,

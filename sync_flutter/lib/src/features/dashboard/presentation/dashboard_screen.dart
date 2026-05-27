@@ -50,7 +50,66 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return r;
   }
 
-  void _reload() => setState(() => future = _fetchDashboard());
+  void _reload() {
+    final f = _fetchDashboard();
+    setState(() { future = f; });
+  }
+
+  Widget _buildSkeletonDashboard() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Header skeleton
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SyncShimmer(width: 200, height: 24, borderRadius: 6),
+                    const SizedBox(height: 8),
+                    const SyncShimmer(width: 160, height: 14, borderRadius: 4),
+                  ],
+                ),
+              ),
+              const SyncShimmer(width: 120, height: 40, borderRadius: 10),
+            ],
+          ),
+          const SizedBox(height: 28),
+          // KPI cards skeleton
+          LayoutBuilder(builder: (context, constraints) {
+            final cols = constraints.maxWidth >= 1320 ? 4 : (constraints.maxWidth >= 920 ? 3 : 2);
+            return Wrap(
+              spacing: 16,
+              runSpacing: 16,
+              children: List.generate(4, (_) {
+                final cardWidth = (constraints.maxWidth - (cols - 1) * 16) / cols;
+                return SizedBox(
+                  width: cardWidth,
+                  child: const SyncSkeletonCard(lines: 2),
+                );
+              }),
+            );
+          }),
+          const SizedBox(height: 24),
+          // Chart area skeleton
+          SyncSurfaceCard(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SyncShimmer(width: 180, height: 18, borderRadius: 4),
+                const SizedBox(height: 24),
+                const SyncShimmer(height: 200, borderRadius: 8),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -58,7 +117,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       future: future,
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return _buildSkeletonDashboard();
         }
         if (snap.hasError) {
           return Center(

@@ -1,7 +1,9 @@
 import { getServerSession, type NextAuthOptions } from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
+import { cookies } from "next/headers";
 import type { GroupRole } from "@/core/domain/rbac";
 import { prisma } from "@/core/lib/prisma";
+import { getSession as getCustomSession } from "@/lib/auth";
 
 const DEFAULT_GROUP_SLUG = process.env.SYNC_GROUP_SLUG?.trim() || "sync-default";
 const DEFAULT_GROUP_NAME = process.env.SYNC_GROUP_NAME?.trim() || "Sync Holdings";
@@ -138,20 +140,34 @@ export const authOptions: NextAuthOptions = {
 };
 
 export async function getSessionUser(): Promise<SessionUser | null> {
+  // 1. Try NextAuth JWT session (Google OAuth)
   const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return null;
+  if (session?.user?.email) {
+    if (session.user.id && session.user.groupId && session.user.groupRole) {
+      return {
+        id: session.user.id,
+        name: session.user.name ?? session.user.email,
+        email: session.user.email,
+        groupId: session.user.groupId,
+        groupRole: session.user.groupRole,
+      };
+    }
+    return upsertSessionUser(session.user.email, session.user.name);
   }
 
-  if (session.user.id && session.user.groupId && session.user.groupRole) {
-    return {
-      id: session.user.id,
-      name: session.user.name ?? session.user.email,
-      email: session.user.email,
-      groupId: session.user.groupId,
-      groupRole: session.user.groupRole,
-    };
+  // 2. Fallback: check custom session_token cookie (Flutter / direct login)
+  try {
+    const cookieStore = await cookies();
+    const tokenCookie = cookieStore.get("session_token");
+    if (tokenCookie?.value) {
+      const customSession = await getCustomSession(tokenCookie.value);
+      if (customSession?.user?.email) {
+        return upsertSessionUser(customSession.user.email, customSession.user.name);
+      }
+    }
+  } catch {
+    // cookies() may fail in some contexts — gracefully degrade
   }
 
-  return upsertSessionUser(session.user.email, session.user.name);
+  return null;
 }

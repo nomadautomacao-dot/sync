@@ -102,12 +102,11 @@ class HybridSyncRepository implements SyncRepository {
   Future<List<ModuleDefinition>> getModules() async {
     if (_mustUseRemote) {
       final remoteModules = await _remote.getModules();
-      final localLiteModules = _local.loadModules().where(
-        (module) => module.key == 'levantamento-lite-fundeb',
-      );
+      // Merge any local-only modules that the backend doesn't know about yet
+      final localModules = _local.loadModules();
       return [
         ...remoteModules,
-        ...localLiteModules.where(
+        ...localModules.where(
           (local) => !remoteModules.any((remote) => remote.key == local.key),
         ),
       ];
@@ -311,6 +310,14 @@ class HybridSyncRepository implements SyncRepository {
       return _remote.gerarKitContratosFundeb(data);
     }
     return _local.gerarKitContratosFundeb(data);
+  }
+
+  @override
+  Future<Uint8List> gerarPropostaDocx(Map<String, dynamic> data) async {
+    if (_mustUseRemote) {
+      return _remote.gerarPropostaDocx(data);
+    }
+    return _local.gerarPropostaDocx(data);
   }
 
   @override

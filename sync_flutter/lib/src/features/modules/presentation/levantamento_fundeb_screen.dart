@@ -14,6 +14,7 @@ import '../../../core/repositories/mock_sync_repository.dart';
 import '../../../core/repositories/sync_repository.dart';
 import '../../../core/theme/app_theme.dart';
 import '../application/fundeb_levantamento_pdf_builder.dart';
+import '../application/fundeb_comercial_pdf_builder.dart';
 import '../../shared/presentation/shared_widgets.dart';
 
 class LevantamentoFundebScreen extends StatefulWidget {
@@ -1363,7 +1364,7 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
                           Wrap(spacing: 12, runSpacing: 12, children: [
                             SizedBox(width: compact ? width : (width - 72) / 4, child: _RevenueItem(label: 'Receita FUNDEB', value: _nullableCurrency(year.totalReceitasFundeb), color: const Color(0xFF3B82F6))),
                             SizedBox(width: compact ? width : (width - 72) / 4, child: _RevenueItem(label: 'Contribuição', value: _nullableCurrency(year.contribuicaoMunicipal), color: const Color(0xFF10B981))),
-                            SizedBox(width: compact ? width : (width - 72) / 4, child: _RevenueItem(label: 'Matrículas', value: _nullableInteger(year.totalMatriculas), color: const Color(0xFF8B5CF6))),
+                            SizedBox(width: compact ? width : (width - 72) / 4, child: _RevenueItem(label: 'Matrículas', value: _nullableInteger(year.totalMatriculasMunicipais), color: const Color(0xFF8B5CF6))),
                             SizedBox(width: compact ? width : (width - 72) / 4, child: _RevenueItem(label: 'Tempo integral', value: _nullableInteger(year.tempoIntegral), color: const Color(0xFF14B8A6))),
                           ]),
                           const SizedBox(height: 14),
@@ -1557,7 +1558,15 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
         directedReport: report,
       );
 
+      // Generate commercial PDF too
+      final comercialBytes = await FundebComercialPdfBuilder.buildFromBundle(
+        bundle!,
+        directedReport: report,
+      );
+      final comercialFilename = _comercialPdfFilename(relatorio);
+
       await Printing.sharePdf(bytes: pdfBytes, filename: filename);
+      await Printing.sharePdf(bytes: comercialBytes, filename: comercialFilename);
     } catch (error) {
       _showSnackBar('Falha ao gerar o PDF: ${_cleanErrorMessage(error)}');
     } finally {
@@ -1712,6 +1721,15 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
         final filename = _singlePdfFilename(batchBundle.relatorio);
         final archiveFile = ArchiveFile(filename, pdfBytes.length, pdfBytes);
         archive.addFile(archiveFile);
+
+        // Also add commercial PDF to the zip
+        final comercialBytes = await FundebComercialPdfBuilder.buildFromBundle(
+          batchBundle,
+          directedReport: report,
+        );
+        final comercialFilename = _comercialPdfFilename(batchBundle.relatorio);
+        final comercialArchiveFile = ArchiveFile(comercialFilename, comercialBytes.length, comercialBytes);
+        archive.addFile(comercialArchiveFile);
       }
 
       final zipData = zipEncoder.encode(archive);
@@ -1762,6 +1780,17 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
     final uf = _sanitizeFilenameSegment(ident.uf.isEmpty ? ufController.text : ident.uf)
         .toUpperCase();
     return 'LEVANTAMENTO_$city - ${uf.isEmpty ? 'UF' : uf}.pdf';
+  }
+
+  String _comercialPdfFilename(RelatorioFundeb relatorio) {
+    final ident = relatorio.identificacao;
+    final rawCity = ident.municipioNome.isEmpty
+        ? municipioController.text.trim()
+        : ident.municipioNome;
+    final city = _sanitizeFilenameSegment(rawCity.isEmpty ? 'Municipio' : rawCity);
+    final uf = _sanitizeFilenameSegment(ident.uf.isEmpty ? ufController.text : ident.uf)
+        .toUpperCase();
+    return 'DIAGNOSTICO_$city - ${uf.isEmpty ? 'UF' : uf}.pdf';
   }
 
   String _sanitizeFilenameSegment(String value) {

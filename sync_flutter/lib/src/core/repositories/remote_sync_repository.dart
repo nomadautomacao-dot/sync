@@ -363,6 +363,22 @@ class RemoteSyncRepository implements SyncRepository {
   }
 
   /// Build a complete FUNDEB report from SICONFI + IBGE, skipping FNDE data.
+  /// Fetches INEP/Censo data from the backend local dataset via the censo-inep endpoint.
+  /// Returns null on failure so the caller can gracefully degrade.
+  Future<Map<String, dynamic>?> _fetchCensoInepData(String codigoIbge) async {
+    try {
+      final resp = await _apiClient.getObject(
+        '/api/modulos/levantamento-fundeb/censo-inep?codigoIbge=$codigoIbge',
+      );
+      if (resp['success'] == true && resp['data'] is Map<String, dynamic>) {
+        return resp['data'] as Map<String, dynamic>;
+      }
+    } catch (_) {
+      // Non-critical — proceed without censo data
+    }
+    return null;
+  }
+
   Future<LevantamentoFundebBundle> buildDirectFromSiconfi({
     required String codigoIbge,
     required String nome,
@@ -370,17 +386,48 @@ class RemoteSyncRepository implements SyncRepository {
     required int exercicio,
   }) async {
     final geoUri = Uri.https('servicodados.ibge.gov.br', '/api/v1/localidades/municipios/$codigoIbge');
+
+    // Fetch 5 years of SICONFI data + geo + IBGE profile + INEP censo in parallel
     final parallel = await Future.wait([
-      _fetchSiconfiFundebYear(codigoIbge, exercicio - 1).catchError((_) => null),
-      _fetchSiconfiFundebYear(codigoIbge, exercicio - 2).catchError((_) => null),
-      http.get(geoUri).timeout(const Duration(seconds: 15)).catchError((_) => http.Response('{}', 200)),
-      _fetchIbgePerfil(nome, uf).catchError((_) => null),
+      _fetchSiconfiFundebYear(codigoIbge, exercicio).catchError((_) => null),       // [0] current year
+      _fetchSiconfiFundebYear(codigoIbge, exercicio - 1).catchError((_) => null),   // [1] year-1
+      _fetchSiconfiFundebYear(codigoIbge, exercicio - 2).catchError((_) => null),   // [2] year-2
+      _fetchSiconfiFundebYear(codigoIbge, exercicio - 3).catchError((_) => null),   // [3] year-3
+      _fetchSiconfiFundebYear(codigoIbge, exercicio - 4).catchError((_) => null),   // [4] year-4
+      http.get(geoUri).timeout(const Duration(seconds: 15)).catchError((_) => http.Response('{}', 200)), // [5]
+      _fetchIbgePerfil(nome, uf).catchError((_) => null),                           // [6]
+      _fetchCensoInepData(codigoIbge).catchError((_) => null),                      // [7]
     ]);
 
-    final siconfi = parallel[0] as RelatorioDirigidoSerieHistoricaAno?;
-    final siconfiPrev = parallel[1] as RelatorioDirigidoSerieHistoricaAno?;
-    final geoResp = parallel[2] as http.Response;
-    final ibgePerfil = parallel[3] as IbgeMunicipioPerfil?;
+    final siconfiYears = <RelatorioDirigidoSerieHistoricaAno?>[
+      parallel[4] as RelatorioDirigidoSerieHistoricaAno?,  // oldest first
+      parallel[3] as RelatorioDirigidoSerieHistoricaAno?,
+      parallel[2] as RelatorioDirigidoSerieHistoricaAno?,
+      parallel[1] as RelatorioDirigidoSerieHistoricaAno?,
+      parallel[0] as RelatorioDirigidoSerieHistoricaAno?,  // most recent
+    ];
+    final geoResp = parallel[5] as http.Response;
+    final ibgePerfil = parallel[6] as IbgeMunicipioPerfil?;
+    final censoInepData = parallel[7] as Map<String, dynamic>?;
+
+    // Use the most recent year with data for the main receitas
+    final siconfi = siconfiYears.lastWhere((y) => y != null, orElse: () => null);
+    // Use the second most recent for YoY comparison
+    final filledYears = siconfiYears.where((y) => y != null).toList();
+    final siconfiPrev = filledYears.length >= 2 ? filledYears[filledYears.length - 2] : null;
+
+    // Parse Censo historical data for enriching SICONFI years
+    final censoHistoricoAnual = <int, Map<String, dynamic>>{};
+    if (censoInepData != null) {
+      final histList = censoInepData['censoHistoricoAnual'];
+      if (histList is List) {
+        for (final item in histList) {
+          if (item is Map<String, dynamic> && item['ano'] is int) {
+            censoHistoricoAnual[item['ano'] as int] = item;
+          }
+        }
+      }
+    }
 
     // Parse geo
     Map<String, dynamic> geo = {};
@@ -467,11 +514,22 @@ class RemoteSyncRepository implements SyncRepository {
         metodologia: 'Upside condicionado por benchmark regional',
         vetores: const ['Tempo integral', 'Regularizacao VAAT', 'Ajustes de base'],
       ),
+      censoEscolar: censoInepData != null
+          ? CensoEscolar.fromJson(censoInepData['censoEscolar'] as Map<String, dynamic>)
+          : null,
       perfilComercial: PerfilComercialFundeb(
         score: compl ? 75 : 45, faixa: compl ? 'padrao' : 'basico', confianca: 0.75,
         habilitacaoVaat: 'Verificar portal Habilita/FNDE',
         populacaoEstimada: pop, fundebPerCapita: pop > 0 ? (total / pop).round().toDouble() : 0,
-        matriculasMunicipaisPorHabitante: 0, educacaoInfantilMunicipalPorHabitante: 0, crecheMunicipalPorHabitante: 0,
+        matriculasMunicipaisPorHabitante: pop > 0
+            ? ((censoInepData?['matriculasMunicipaisTotal'] as num?)?.toDouble() ?? 0) / pop
+            : 0,
+        educacaoInfantilMunicipalPorHabitante: pop > 0
+            ? ((censoInepData?['educacaoInfantilMunicipal'] as num?)?.toDouble() ?? 0) / pop
+            : 0,
+        crecheMunicipalPorHabitante: pop > 0
+            ? ((censoInepData?['crecheMunicipal'] as num?)?.toDouble() ?? 0) / pop
+            : 0,
       ),
       cronogramaVAAF: cron,
       sistemas: const [], obrasPAC2: const [],
@@ -482,14 +540,38 @@ class RemoteSyncRepository implements SyncRepository {
         'Dados de PAR, PDDE, Caminho da Escola: FNDE fora do ar.',
         if (yoy != null) 'Variacao FUNDEB ${exercicio - 2} → ${exercicio - 1}: $yoy%.',
       ],
-      idebAnosIniciais: const [], idebAnosFinais: const [],
+      idebAnosIniciais: censoInepData != null && (censoInepData['idebAnosIniciais'] as List?)?.isNotEmpty == true
+          ? (censoInepData['idebAnosIniciais'] as List)
+              .map((item) => IDEBDado.fromJson(item as Map<String, dynamic>))
+              .toList()
+          : const [],
+      idebAnosFinais: censoInepData != null && (censoInepData['idebAnosFinais'] as List?)?.isNotEmpty == true
+          ? (censoInepData['idebAnosFinais'] as List)
+              .map((item) => IDEBDado.fromJson(item as Map<String, dynamic>))
+              .toList()
+          : const [],
     );
 
-    // Build serie historica from SICONFI data
-    final hist = <RelatorioDirigidoSerieHistoricaAno>[
-      if (siconfiPrev != null) siconfiPrev,
-      if (siconfi != null) siconfi,
-    ];
+    // Build serie historica from all SICONFI years, enriched with Censo data
+    final hist = <RelatorioDirigidoSerieHistoricaAno>[];
+    for (final year in siconfiYears) {
+      if (year == null) continue;
+      final censo = censoHistoricoAnual[year.ano];
+      hist.add(RelatorioDirigidoSerieHistoricaAno(
+        ano: year.ano,
+        anoBaseCenso: censo != null ? (censo['ano'] as int?) : null,
+        totalReceitasFundeb: year.totalReceitasFundeb,
+        contribuicaoMunicipal: year.contribuicaoMunicipal,
+        complementacaoVAAF: year.complementacaoVAAF,
+        complementacaoVAAT: year.complementacaoVAAT,
+        complementacaoVAAR: year.complementacaoVAAR,
+        totalMatriculasMunicipais: censo != null ? (censo['totalMatriculas'] as num?)?.toInt() : year.totalMatriculasMunicipais,
+        totalEscolas: censo != null ? (censo['totalEscolas'] as num?)?.toInt() : year.totalEscolas,
+        tempoIntegral: censo != null ? (censo['tempoIntegral'] as num?)?.toInt() : year.tempoIntegral,
+        educacaoEspecial: censo != null ? (censo['educacaoEspecial'] as num?)?.toInt() : year.educacaoEspecial,
+        eja: censo != null ? (censo['eja'] as num?)?.toInt() : year.eja,
+      ));
+    }
 
     final dirigido = RelatorioDirigidoMunicipio(
       municipio: nome, uf: uf, codigoIbge: codigoIbge,
@@ -529,8 +611,10 @@ class RemoteSyncRepository implements SyncRepository {
       historico: RelatorioDirigidoHistorico(
         anos: hist,
         resumo: hist.length > 1
-            ? 'Serie historica com ${hist.length} exercicios do SICONFI.'
-            : 'Exercicio unico disponivel no SICONFI.',
+            ? 'Serie historica com ${hist.length} exercicios (${hist.first.ano}-${hist.last.ano}) via SICONFI/Tesouro.${censoHistoricoAnual.isNotEmpty ? ' Base escolar enriquecida com Censo INEP.' : ''}'
+            : hist.isNotEmpty
+                ? 'Exercicio ${hist.first.ano} disponivel no SICONFI.'
+                : 'Nenhum exercicio disponivel no SICONFI.',
       ),
       benchmarkRegional: const RelatorioDirigidoBenchmarkRegional(
         criterio: 'Mesma mesorregiao e faixa populacional',
@@ -785,6 +869,15 @@ class RemoteSyncRepository implements SyncRepository {
       proximosPassos: report.proximosPassos,
       prontidao: report.prontidao,
       perfilMunicipio: report.perfilMunicipio,
+      indicadoresAprendizagem: report.indicadoresAprendizagem,
+      infraestruturaEscolar: report.infraestruturaEscolar,
+      narrativas: report.narrativas,
+      saudeFiscal: report.saudeFiscal,
+      perfilIBGE: report.perfilIBGE,
+      obrasPAC2: report.obrasPAC2,
+      caminhoEscola: report.caminhoEscola,
+      cenarioEstruturacao: report.cenarioEstruturacao,
+      recursosPorAluno: report.recursosPorAluno,
       contextoPolitico: report.contextoPolitico,
       historico: RelatorioDirigidoHistorico(
         anos: enrichedYears,
@@ -812,7 +905,7 @@ class RemoteSyncRepository implements SyncRepository {
           current.complementacaoVAAT ?? siconfi.complementacaoVAAT,
       complementacaoVAAR:
           current.complementacaoVAAR ?? siconfi.complementacaoVAAR,
-      totalMatriculas: current.totalMatriculas ?? siconfi.totalMatriculas,
+      totalMatriculasMunicipais: current.totalMatriculasMunicipais ?? siconfi.totalMatriculasMunicipais,
       totalEscolas: current.totalEscolas ?? siconfi.totalEscolas,
       eja: current.eja ?? siconfi.eja,
       tempoIntegral: current.tempoIntegral ?? siconfi.tempoIntegral,
@@ -821,7 +914,7 @@ class RemoteSyncRepository implements SyncRepository {
   }
 
   bool _hasSchoolData(RelatorioDirigidoSerieHistoricaAno? year) {
-    return year?.totalMatriculas != null ||
+    return year?.totalMatriculasMunicipais != null ||
         year?.totalEscolas != null ||
         year?.tempoIntegral != null ||
         year?.educacaoEspecial != null ||
@@ -858,22 +951,36 @@ class RemoteSyncRepository implements SyncRepository {
         coluna: 'Receitas Brutas Realizadas',
       );
       if (total == null) return null;
-      final union = _siconfiValue(
+
+      // Try Anexo I-HI first (available from 2024+)
+      var union = _siconfiValue(
         items,
         anexo: 'DCA-Anexo I-HI',
         codConta: 'P4.5.2.2.3.00.00',
       );
-      final state = _siconfiValue(
+      var state = _siconfiValue(
         items,
         anexo: 'DCA-Anexo I-HI',
         codConta: 'P4.5.2.2.4.00.00',
       );
 
+      // Fallback: Anexo I-C, conta RO1.7.1.5 (Complementação da União - receitas)
+      // Available for all years including 2022/2023 where P4.5.2.2 doesn't exist
+      union ??= _siconfiValue(
+        items,
+        anexo: 'DCA-Anexo I-C',
+        codConta: 'RO1.7.1.5.00.0.0',
+        coluna: 'Receitas Brutas Realizadas',
+      );
+
+      final complementacaoUniao = union ?? 0;
+      final contribuicao = state ?? (total - complementacaoUniao);
+
       return RelatorioDirigidoSerieHistoricaAno(
         ano: year,
         totalReceitasFundeb: total,
-        contribuicaoMunicipal: state ?? (union == null ? total : total - union),
-        complementacaoVAAF: union,
+        contribuicaoMunicipal: contribuicao > 0 ? contribuicao : total - complementacaoUniao,
+        complementacaoVAAF: complementacaoUniao > 0 ? complementacaoUniao : null,
         complementacaoVAAT: 0,
         complementacaoVAAR: 0,
       );
@@ -937,7 +1044,7 @@ class RemoteSyncRepository implements SyncRepository {
       return RelatorioDirigidoSerieHistoricaAno(
         ano: year,
         anoBaseCenso: _readNullablePayloadInt(censo['ano']) ?? year,
-        totalMatriculas: totalMatriculas,
+        totalMatriculasMunicipais: totalMatriculas,
         totalEscolas: totalEscolas,
         eja: _readNullablePayloadInt(censo['matriculas_eja']),
         tempoIntegral: _readNullablePayloadInt(censo['matriculas_integral']),
@@ -1654,14 +1761,21 @@ class RemoteSyncRepository implements SyncRepository {
   @override
   Future<Map<String, dynamic>> obterDadosContratoFundeb(Map<String, dynamic> body) async {
     _assertConfigured();
+    // Usa o agente completo: IBGE → TSE → Gemini → CNPJ → Computed
     // Timeout longo (120s) pois o agente IA (Gemini 3.5 + Google Search) pode levar ~60s
-    return _apiClient.post('/api/modulos/contrato-fundeb', body: body, timeout: const Duration(seconds: 120));
+    return _apiClient.post('/api/contratos-fundeb/agent', body: body, timeout: const Duration(seconds: 120));
   }
 
   @override
   Future<Uint8List> gerarKitContratosFundeb(Map<String, dynamic> data) async {
     _assertConfigured();
     return _apiClient.postBytes('/api/modulos/contrato-fundeb/gerar-kit', body: data, timeout: const Duration(seconds: 120));
+  }
+
+  @override
+  Future<Uint8List> gerarPropostaDocx(Map<String, dynamic> data) async {
+    _assertConfigured();
+    return _apiClient.postBytes('/api/modulos/contrato-fundeb/gerar-proposta', body: data, timeout: const Duration(seconds: 60));
   }
 
   @override
