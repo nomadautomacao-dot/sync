@@ -465,7 +465,11 @@ export async function getFundebReceitasHistoricas(
         return options.atualOverride;
       }
 
-      return await getFundebReceitasOficiais(codigoIBGE, ano);
+      try {
+        return await getFundebReceitasOficiais(codigoIBGE, ano);
+      } catch {
+        return null;
+      }
     }),
   );
 
