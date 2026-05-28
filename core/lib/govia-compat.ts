@@ -975,6 +975,8 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
     educacao: {
       total_escolas: relatorio.censoEscolar?.totalEscolas ?? 0,
       total_matriculas: relatorio.censoEscolar?.totalMatriculas ?? 0,
+      total_escolas_publica: relatorio.censoEscolar?.dadosPublicosTotal?.totalEscolas ?? 0,
+      total_matriculas_publica: relatorio.censoEscolar?.dadosPublicosTotal?.totalMatriculas ?? 0,
       matriculas_creche: inepRecord?.crechePublica ?? inepRecord?.crecheTotal ?? 0,
       matriculas_pre_escola: inepRecord?.preEscolaPublica ?? inepRecord?.preEscolaTotal ?? 0,
       matriculas_fundamental_ai: relatorio.censoEscolar?.matriculasDetalhadas.anosIniciais ?? 0,

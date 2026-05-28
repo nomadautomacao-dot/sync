@@ -124,6 +124,11 @@ export interface CensoEscolar {
     fundamentalIniciaisFinais: number;
     ensinoMedio: number;
   };
+  dadosPublicosTotal?: {
+    totalEscolas: number;
+    totalMatriculas: number;
+    totalDocentes: number;
+  };
 }
 
 export interface FundebStateLayer {

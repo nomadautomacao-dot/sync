@@ -86,6 +86,11 @@ export function buildCensoEscolarFromInep(record: InepCensoMunicipalRecord | nul
       fundamentalIniciaisFinais: totalDocentes,
       ensinoMedio: 0,
     },
+    dadosPublicosTotal: {
+      totalEscolas: record.escolasPublicasTotal ?? record.escolasTotal ?? 0,
+      totalMatriculas: record.matriculasPublicasTotal ?? record.matriculasBasicaTotal ?? 0,
+      totalDocentes: record.docentesPublicosTotal ?? record.docentesTotal ?? 0,
+    },
   };
 }
 

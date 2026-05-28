@@ -96,6 +96,11 @@ export interface ComercialPdfData {
     ensinoFundamental?: number;
     eja?: number;
     educacaoEspecial?: number;
+    dadosPublicosTotal?: {
+      totalEscolas: number;
+      totalMatriculas: number;
+      totalDocentes: number;
+    };
   };
 
   // IBGE
@@ -1981,9 +1986,10 @@ export function generateComercialHtml(data: ComercialPdfData): string {
                             ${receitaDeltaPct != null ? `<div class="kpi-badge positive">+${formatPercent(receitaDeltaPct)}</div>` : ''}
                         </div>
                         <div class="kpi-card blue">
-                            <div class="kpi-label">Matrículas ${firstShWithMatriculas?.ano ?? '—'} → ${lastShWithMatriculas?.ano ?? '—'}</div>
+                            <div class="kpi-label">Matrículas (Municipal) ${firstShWithMatriculas?.ano ?? '—'} → ${lastShWithMatriculas?.ano ?? '—'}</div>
                             <div class="kpi-value" style="font-size:36px;">${matriculasDelta != null ? `+${formatInteger(matriculasDelta)}` : '—'}</div>
                             <div class="kpi-detail">de ${firstShWithMatriculas?.totalMatriculas != null ? formatInteger(firstShWithMatriculas.totalMatriculas) : '—'} para ${lastShWithMatriculas?.totalMatriculas != null ? formatInteger(lastShWithMatriculas.totalMatriculas) : '—'}</div>
+                            ${data.censo?.dadosPublicosTotal?.totalMatriculas ? `<div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:8px;">Referência QEdu (Pública Total): ${formatInteger(data.censo.dadosPublicosTotal.totalMatriculas)} matrículas</div>` : ''}
                             ${matriculasDeltaPct != null ? `<div class="kpi-badge positive">+${formatPercent(matriculasDeltaPct)}</div>` : ''}
                         </div>
                         <div class="kpi-card orange">
@@ -2411,6 +2417,7 @@ export function mapPayloadToComercialData(payload: any): ComercialPdfData {
       ensinoFundamental: (censo.matriculasEtapa?.ensinoFundamental) ?? 0,
       eja: censo.matriculasEtapa?.eja ?? 0,
       educacaoEspecial: censo.matriculasEtapa?.educacaoEspecial ?? 0,
+      dadosPublicosTotal: censo.dadosPublicosTotal ?? undefined,
     },
 
     ibge: {
