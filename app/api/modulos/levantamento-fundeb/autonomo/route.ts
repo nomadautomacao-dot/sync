@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { buildFundebComparativeSnapshot } from "@/core/lib/fundeb-comparative";
 import { buildGoviaMunicipioCompleto } from "@/core/lib/govia-compat";
 import { markGoviaMunicipioAccess } from "@/core/lib/govia-storage";
-import { generateFundebPdfBuffer, isFundebPdfTipo } from "@/core/lib/fundeb-pdf";
+import { generateFundebPdfBuffer, isFundebPdfTipo, buildFundebPdfFilename } from "@/core/lib/fundeb-pdf";
+import { generateComercialHtml, mapPayloadToComercialData } from "@/core/lib/fundeb-comercial-template";
+import { generateComercialPremiumPdf } from "@/core/lib/fundeb-comercial-pdf";
 
 interface AutonomoRequestBody {
   codigo_ibge?: string;
@@ -19,7 +21,7 @@ export async function POST(request: NextRequest) {
 
     if (!isFundebPdfTipo(tipo)) {
       return NextResponse.json(
-        { error: `Tipo invalido: "${tipo}". Use: levantamento | executiva | comparativa` },
+        { error: `Tipo invalido: "${tipo}". Use: levantamento | executiva | comparativa | comercial-premium` },
         { status: 400 },
       );
     }
@@ -67,6 +69,34 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // ── Comercial Premium: Playwright-based HTML → PDF ──────────────
+    if (tipo === "comercial-premium") {
+      const comercialData = mapPayloadToComercialData(data.payload);
+      const htmlContent = generateComercialHtml(comercialData);
+
+      const municipioSlug = (comercialData.municipio || "municipio")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .toUpperCase();
+      const ufSlug = (comercialData.uf || "UF").toUpperCase();
+
+      const { pdfBuffer, filename } = await generateComercialPremiumPdf(
+        htmlContent,
+        `${municipioSlug}-${ufSlug}`,
+      );
+
+      return new NextResponse(new Uint8Array(pdfBuffer), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `attachment; filename=${filename}`,
+        },
+      });
+    }
+
+    // ── Traditional PDF types: Python-based ─────────────────────────
     const comparativeSnapshot =
       tipo === "comparativa" || tipo === "executiva"
         ? await buildFundebComparativeSnapshot(data.relatorio)
@@ -94,3 +124,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+

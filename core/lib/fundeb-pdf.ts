@@ -11,18 +11,20 @@ interface FundebPdfFilenameSource {
   };
 }
 
-export type FundebPdfTipo = "levantamento" | "executiva" | "comparativa";
+export type FundebPdfTipo = "levantamento" | "executiva" | "comparativa" | "comercial-premium";
 
 const GERADORES: Record<FundebPdfTipo, string> = {
   levantamento: "gerador.py",
   executiva: "gerador_executiva.py",
   comparativa: "gerador_comparativa.py",
+  "comercial-premium": "", // Handled by Playwright, not Python
 };
 
 const FILENAMES: Record<FundebPdfTipo, string> = {
   levantamento: "levantamento-fundeb",
   executiva: "apresentacao-executiva-fundeb",
   comparativa: "analise-comparativa-fundeb",
+  "comercial-premium": "comercial-premium-fundeb",
 };
 
 function slugify(value: string) {
@@ -35,7 +37,7 @@ function slugify(value: string) {
 }
 
 export function isFundebPdfTipo(value: string): value is FundebPdfTipo {
-  return value === "levantamento" || value === "executiva" || value === "comparativa";
+  return value === "levantamento" || value === "executiva" || value === "comparativa" || value === "comercial-premium";
 }
 
 export function buildFundebPdfFilename(relatorio: FundebPdfFilenameSource, tipo: FundebPdfTipo) {

@@ -54,6 +54,7 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
   bool isBatchSearching = false;
   bool isLoading = false;
   bool isExportingPdf = false;
+  bool isExportingComercialPdf = false;
   bool isExportingLitePdf = false;
   bool isExportingBatchPdf = false;
   String? batchCurrentLabel;
@@ -442,16 +443,31 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
                 OutlinedButton.icon(
                   onPressed: relatorio == null || isExportingPdf
                       ? null
-                      : _exportPdf,
+                      : _exportTecnicoPdf,
                   icon: isExportingPdf
                       ? const SizedBox(
                           width: 16,
                           height: 16,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Icon(Icons.picture_as_pdf_outlined),
+                      : const Icon(Icons.description_outlined),
                   label: Text(
-                    isExportingPdf ? 'Gerando PDF...' : 'Exportar PDF',
+                    isExportingPdf ? 'Gerando...' : 'PDF Técnico',
+                  ),
+                ),
+                OutlinedButton.icon(
+                  onPressed: relatorio == null || isExportingComercialPdf
+                      ? null
+                      : _exportComercialPdf,
+                  icon: isExportingComercialPdf
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.auto_awesome_outlined),
+                  label: Text(
+                    isExportingComercialPdf ? 'Gerando...' : 'PDF Comercial',
                   ),
                 ),
                 OutlinedButton.icon(
@@ -1541,7 +1557,7 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
     }
   }
 
-  Future<void> _exportPdf() async {
+  Future<void> _exportTecnicoPdf() async {
     if (bundle == null) {
       _showSnackBar('Carregue um municipio valido antes de gerar o PDF.');
       return;
@@ -1558,20 +1574,67 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
         directedReport: report,
       );
 
-      // Generate commercial PDF too
+      await Printing.sharePdf(bytes: pdfBytes, filename: filename);
+    } catch (error) {
+      _showSnackBar('Falha ao gerar o PDF tecnico: ${_cleanErrorMessage(error)}');
+    } finally {
+      if (mounted) {
+        setState(() => isExportingPdf = false);
+      }
+    }
+  }
+
+  Future<void> _exportComercialPdf() async {
+    if (bundle == null) {
+      _showSnackBar('Carregue um municipio valido antes de gerar o PDF comercial.');
+      return;
+    }
+
+    setState(() => isExportingComercialPdf = true);
+    try {
+      final relatorio = bundle!.relatorio;
+      final rawCity = relatorio.identificacao.municipioNome.isEmpty
+          ? municipioController.text.trim()
+          : relatorio.identificacao.municipioNome;
+      final city = _sanitizeFilenameSegment(rawCity.isEmpty ? 'Municipio' : rawCity);
+      final uf = _sanitizeFilenameSegment(
+        relatorio.identificacao.uf.isEmpty ? ufController.text : relatorio.identificacao.uf,
+      ).toUpperCase();
+      final filename = 'COMERCIAL_$city - ${uf.isEmpty ? 'UF' : uf}.pdf';
+
+      // Try server-side generation first (100% fidelity)
+      try {
+        final request = MunicipioLookupRequest(
+          codigoIbge: codigoController.text.trim().isNotEmpty
+              ? codigoController.text.trim()
+              : relatorio.identificacao.codigoIBGE,
+          nome: relatorio.identificacao.municipioNome,
+          uf: relatorio.identificacao.uf,
+          exercicio: int.tryParse(exercicioController.text.trim()) ?? relatorio.identificacao.exercicio,
+        );
+        final pdfBytes = await widget.repository.generateLevantamentoFundebPdf(
+          request,
+          tipo: 'comercial-premium',
+        );
+        await Printing.sharePdf(bytes: pdfBytes, filename: filename);
+        return;
+      } catch (serverError) {
+        // Fallback to local Dart builder if server fails
+        debugPrint('Server comercial-premium failed, using local fallback: $serverError');
+      }
+
+      // Fallback: local Dart builder
+      final report = relatorioDirigido ?? bundle!.relatorioDirigidoBase;
       final comercialBytes = await FundebComercialPdfBuilder.buildFromBundle(
         bundle!,
         directedReport: report,
       );
-      final comercialFilename = _comercialPdfFilename(relatorio);
-
-      await Printing.sharePdf(bytes: pdfBytes, filename: filename);
-      await Printing.sharePdf(bytes: comercialBytes, filename: comercialFilename);
+      await Printing.sharePdf(bytes: comercialBytes, filename: filename);
     } catch (error) {
-      _showSnackBar('Falha ao gerar o PDF: ${_cleanErrorMessage(error)}');
+      _showSnackBar('Falha ao gerar o PDF comercial: ${_cleanErrorMessage(error)}');
     } finally {
       if (mounted) {
-        setState(() => isExportingPdf = false);
+        setState(() => isExportingComercialPdf = false);
       }
     }
   }

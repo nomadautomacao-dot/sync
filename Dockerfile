@@ -1,9 +1,11 @@
-# Base image
-FROM node:20-alpine AS base
+# Base image — Debian slim (required for Playwright/Chromium)
+FROM node:20-slim AS base
 
 # Install dependencies only when needed
 FROM base AS deps
-RUN apk add --no-cache libc6-compat python3 py3-pip
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 python3-pip python3-venv \
+    && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
 # Copy package files
@@ -14,6 +16,9 @@ COPY prisma ./prisma/
 RUN npm ci
 RUN npx prisma generate
 RUN python3 -m pip install --no-cache-dir --break-system-packages reportlab Pillow
+
+# Install Playwright browsers (only Chromium, minimizes size)
+RUN npx playwright install --with-deps chromium
 
 # Rebuild the source code only when needed
 FROM base AS builder
@@ -47,9 +52,18 @@ ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
 
 # Create non-root user
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-RUN apk add --no-cache python3 py3-pip
+RUN groupadd --system --gid 1001 nodejs
+RUN useradd --system --uid 1001 nextjs
+
+# Install runtime dependencies (Python for legacy PDF + Chromium for Playwright)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    python3 python3-pip \
+    wget ca-certificates fonts-liberation libasound2 libatk-bridge2.0-0 \
+    libatk1.0-0 libcups2 libdbus-1-3 libdrm2 libgbm1 libgtk-3-0 \
+    libnspr4 libnss3 libx11-xcb1 libxcomposite1 libxdamage1 \
+    libxrandr2 xdg-utils libxss1 libxshmfence1 libpango-1.0-0 \
+    libpangocairo-1.0-0 libcairo2 libgdk-pixbuf2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
 RUN python3 -m pip install --no-cache-dir --break-system-packages reportlab Pillow
 
 # Copy necessary files
@@ -65,6 +79,14 @@ COPY --from=builder /app/node_modules/pdfjs-dist/legacy/build/pdf.mjs ./node_mod
 COPY --from=builder /app/node_modules/pdfjs-dist/standard_fonts ./node_modules/pdfjs-dist/standard_fonts
 COPY --from=builder /app/node_modules/pdf-parse ./node_modules/pdf-parse
 
+# Copy Playwright browser binaries from deps stage
+COPY --from=deps /root/.cache/ms-playwright /home/nextjs/.cache/ms-playwright
+RUN chown -R nextjs:nodejs /home/nextjs/.cache
+
+# Copy Playwright Node.js package for runtime
+COPY --from=deps /app/node_modules/playwright ./node_modules/playwright
+COPY --from=deps /app/node_modules/playwright-core ./node_modules/playwright-core
+
 # Copy Python PDF generators and supporting modules (not included in Next.js standalone)
 COPY --from=builder /app/app/api/modulos/levantamento-fundeb/pdf ./app/api/modulos/levantamento-fundeb/pdf
 COPY --from=builder /app/app/api/modulos/slides/pdf ./app/api/modulos/slides/pdf
@@ -72,6 +94,7 @@ COPY --from=builder /app/kit_padrao_pdf_rocha_prime ./kit_padrao_pdf_rocha_prime
 
 # Copy bundled FNDE CSV data (fallback when gov.br blocks Cloud Run IPs)
 COPY --from=builder /app/data/fnde ./data/fnde
+
 # Set permissions
 RUN chown -R nextjs:nodejs /app
 
