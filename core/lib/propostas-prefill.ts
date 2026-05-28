@@ -150,7 +150,7 @@ export async function buildPropostaPrefillMunicipioData(
   const [receitasOficiais, vaatContext, ibgeIndicators] = await Promise.all([
     getFundebReceitasOficiais(codigoIbge, exercicio).catch(() => null),
     getFundebVaatContext(codigoIbge, exercicio).catch(() => null),
-    getIbgeCidadeIndicators(municipio.nome, municipioUf).catch(() => null),
+    getIbgeCidadeIndicators(municipio.nome, municipioUf, String(municipio.id)).catch(() => null),
   ]);
 
   const inepRecord = getInepCensoMunicipalRecord(codigoIbge);

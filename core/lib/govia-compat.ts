@@ -807,7 +807,7 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
   const [vaatContext, ibgeIndicators, inepRecord, fndePublic, qeduIndicators, siconfiFiscal, simecObras] =
     await Promise.all([
     getFundebVaatContext(String(municipio.id), exercicio).catch(() => null),
-    getIbgeCidadeIndicators(municipio.nome, municipioUf).catch(() => null),
+    getIbgeCidadeIndicators(municipio.nome, municipioUf, String(municipio.id)).catch(() => null),
     Promise.resolve(getInepCensoMunicipalRecord(String(municipio.id))),
     getFndePublicEnrichment({
       municipio: municipio.nome,

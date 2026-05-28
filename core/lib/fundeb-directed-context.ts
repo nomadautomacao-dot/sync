@@ -180,7 +180,7 @@ function buildComparableInsight(input: {
 }
 
 export async function buildDirectedRegionalBenchmark(relatorio: RelatorioFundeb): Promise<RelatorioDirigidoBenchmarkRegional> {
-  const currentIndicators = await getIbgeCidadeIndicators(relatorio.identificacao.municipioNome, relatorio.identificacao.uf).catch(
+  const currentIndicators = await getIbgeCidadeIndicators(relatorio.identificacao.municipioNome, relatorio.identificacao.uf, relatorio.identificacao.codigoIBGE).catch(
     () => null,
   );
   const currentPopulation = currentIndicators?.populacaoEstimada ?? currentIndicators?.populacaoUltimoCenso ?? null;
@@ -198,7 +198,7 @@ export async function buildDirectedRegionalBenchmark(relatorio: RelatorioFundeb)
   const rawCandidates = await Promise.all(
     regionalCandidates.slice(0, 14).map(async (candidate) => {
       const [indicators, receitaAtual, censoHistory] = await Promise.all([
-        getIbgeCidadeIndicators(candidate.nome, candidate.uf).catch(() => null),
+        getIbgeCidadeIndicators(candidate.nome, candidate.uf, String(candidate.id)).catch(() => null),
         getFundebReceitasOficiais(candidate.codigo_ibge, relatorio.identificacao.exercicio).catch(() => null),
         Promise.resolve(getInepCensoMunicipalHistory(candidate.codigo_ibge)),
       ]);

@@ -1,3 +1,7 @@
+import populacaoCenso2022 from "@/data/ibge-populacao-2022.json";
+
+const populacaoDataset = populacaoCenso2022 as Record<string, number>;
+
 function slugifyMunicipio(value: string) {
   return value
     .normalize("NFD")
@@ -82,6 +86,7 @@ const cache = new Map<string, Promise<IbgeCidadeIndicators | null>>();
 export async function getIbgeCidadeIndicators(
   municipioNome: string,
   uf: string,
+  codigoIBGE?: string,
 ): Promise<IbgeCidadeIndicators | null> {
   const key = `${municipioNome}|${uf}`.toUpperCase();
   const cached = cache.get(key);
@@ -133,7 +138,35 @@ export async function getIbgeCidadeIndicators(
       mortalidadeAnoReferencia: mortalidadeInfantil?.year ?? null,
       areaTerritorial: parseBrazilianNumber(areaTerritorial?.value),
     } satisfies IbgeCidadeIndicators;
-  })();
+  })().catch((error) => {
+    console.warn(`[ibge] Scraping failed for ${municipioNome}/${uf}:`, error instanceof Error ? error.message : error);
+    return null;
+  }).then((result) => {
+    // Fallback: se o scraping falhou ou retornou null, usar dataset local
+    if (!result || (result.populacaoEstimada == null && result.populacaoUltimoCenso == null)) {
+      const ibgeCode = codigoIBGE?.replace(/\D/g, "") ?? "";
+      const populacaoLocal = ibgeCode ? populacaoDataset[ibgeCode] : undefined;
+      if (populacaoLocal) {
+        console.info(`[ibge] Usando fallback local para ${municipioNome} (${ibgeCode}): pop=${populacaoLocal}`);
+        return {
+          populacaoEstimada: null,
+          populacaoAnoReferencia: "2022",
+          populacaoUltimoCenso: populacaoLocal,
+          receitasBrutasMunicipais: result?.receitasBrutasMunicipais ?? null,
+          receitasAnoReferencia: result?.receitasAnoReferencia ?? null,
+          escolarizacao614: result?.escolarizacao614 ?? null,
+          pibPerCapita: result?.pibPerCapita ?? null,
+          pibAnoReferencia: result?.pibAnoReferencia ?? null,
+          idhm: result?.idhm ?? null,
+          idhmAnoReferencia: result?.idhmAnoReferencia ?? null,
+          mortalidadeInfantil: result?.mortalidadeInfantil ?? null,
+          mortalidadeAnoReferencia: result?.mortalidadeAnoReferencia ?? null,
+          areaTerritorial: result?.areaTerritorial ?? null,
+        } satisfies IbgeCidadeIndicators;
+      }
+    }
+    return result;
+  });
 
   cache.set(key, promise);
   return promise;
