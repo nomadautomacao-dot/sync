@@ -1989,7 +1989,7 @@ export function generateComercialHtml(data: ComercialPdfData): string {
                             <div class="kpi-label">Matrículas (Municipal) ${firstShWithMatriculas?.ano ?? '—'} → ${lastShWithMatriculas?.ano ?? '—'}</div>
                             <div class="kpi-value" style="font-size:36px;">${matriculasDelta != null ? `+${formatInteger(matriculasDelta)}` : '—'}</div>
                             <div class="kpi-detail">de ${firstShWithMatriculas?.totalMatriculas != null ? formatInteger(firstShWithMatriculas.totalMatriculas) : '—'} para ${lastShWithMatriculas?.totalMatriculas != null ? formatInteger(lastShWithMatriculas.totalMatriculas) : '—'}</div>
-                            ${data.censo?.dadosPublicosTotal?.totalMatriculas ? `<div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:8px;line-height:1.4;">Rede Pública Total: <strong>${formatInteger(data.censo.dadosPublicosTotal.totalMatriculas)}</strong> matrículas<br><span style="opacity:0.8">(Ref. QEdu / Saeb: ${formatInteger(data.censo.dadosPublicosTotal.fundamentalMedio)} | Infantil: ${formatInteger(data.censo.dadosPublicosTotal.infantil)} | EJA: ${formatInteger(data.censo.dadosPublicosTotal.eja)})</span></div>` : ''}
+                            ${data.censo?.dadosPublicosTotal?.fundamentalMedio ? `<div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:8px;">Referência Pública (QEdu): ${formatInteger(data.censo.dadosPublicosTotal.fundamentalMedio)} matrículas</div>` : ''}
                             ${matriculasDeltaPct != null ? `<div class="kpi-badge positive">+${formatPercent(matriculasDeltaPct)}</div>` : ''}
                         </div>
                         <div class="kpi-card orange">
