@@ -1,4 +1,4 @@
-﻿import { getFundebReceitasHistoricas, getFundebReceitasOficiais } from "@/core/lib/fundeb-fnde";
+import { getFundebReceitasHistoricas, getFundebReceitasOficiais } from "@/core/lib/fundeb-fnde";
 import { listGoviaMunicipiosByRegionalContext } from "@/core/lib/govia-compat";
 import { getIbgeCidadeIndicators } from "@/core/lib/ibge-cidade-indicators";
 import { getInepCensoMunicipalHistory, type InepCensoMunicipalRecord } from "@/core/lib/inep-censo";
@@ -18,16 +18,21 @@ function getTempoIntegralTotal(record: InepCensoMunicipalRecord | null | undefin
     return 0;
   }
 
+  // Prefer municipal data for FUNDEB scope
+  if (record.tempoIntegralBasicaMunicipal !== null && record.tempoIntegralBasicaMunicipal !== undefined) {
+    return record.tempoIntegralBasicaMunicipal;
+  }
+
   if (record.tempoIntegralBasicaPublica !== null && record.tempoIntegralBasicaPublica !== undefined) {
     return record.tempoIntegralBasicaPublica;
   }
 
   return (
-    (record.tempoIntegralEducacaoInfantilPublica ?? 0) +
-    (record.tempoIntegralEnsinoFundamentalPublica ?? 0) +
-    (record.tempoIntegralEnsinoMedioPublica ?? 0) +
-    (record.tempoIntegralEjaPublica ?? 0) +
-    (record.tempoIntegralEducacaoEspecialPublica ?? 0)
+    (record.tempoIntegralEducacaoInfantilMunicipal ?? record.tempoIntegralEducacaoInfantilPublica ?? 0) +
+    (record.tempoIntegralEnsinoFundamentalMunicipal ?? record.tempoIntegralEnsinoFundamentalPublica ?? 0) +
+    (record.tempoIntegralEnsinoMedioMunicipal ?? 0) +
+    (record.tempoIntegralEjaMunicipal ?? record.tempoIntegralEjaPublica ?? 0) +
+    (record.tempoIntegralEducacaoEspecialMunicipal ?? record.tempoIntegralEducacaoEspecialPublica ?? 0)
   );
 }
 
@@ -99,24 +104,24 @@ export async function buildDirectedHistoricalSeries(relatorio: RelatorioFundeb):
       complementacaoVAAT: receita?.complementacaoVAAT ?? null,
       complementacaoVAAR: receita?.complementacaoVAAR ?? null,
       totalMatriculas:
-        censo && "matriculasPublicasTotal" in censo
-          ? (censo.matriculasPublicasTotal ?? censo.matriculasBasicaTotal)
+        censo && "matriculasMunicipaisTotal" in censo
+          ? (censo.matriculasMunicipaisTotal ?? censo.matriculasPublicasTotal ?? censo.matriculasBasicaTotal)
           : relatorio.censoEscolar?.totalMatriculas ?? null,
       totalEscolas:
-        censo && "escolasPublicasTotal" in censo
-          ? (censo.escolasPublicasTotal ?? censo.escolasTotal)
+        censo && "escolasMunicipaisTotal" in censo
+          ? (censo.escolasMunicipaisTotal ?? censo.escolasPublicasTotal ?? censo.escolasTotal)
           : relatorio.censoEscolar?.totalEscolas ?? null,
       eja:
-        censo && "ejaPublica" in censo
-          ? (censo.ejaPublica ?? censo.ejaTotal ?? null)
+        censo && "ejaMunicipal" in censo
+          ? (censo.ejaMunicipal ?? censo.ejaPublica ?? censo.ejaTotal ?? null)
           : relatorio.censoEscolar?.matriculasEtapa.eja ?? null,
       tempoIntegral:
-        censo && "tempoIntegralBasicaPublica" in censo
+        censo && "tempoIntegralBasicaMunicipal" in censo
           ? getTempoIntegralTotal(censo)
           : relatorio.censoEscolar?.tempoIntegral.total ?? null,
       educacaoEspecial:
-        censo && "educacaoEspecialPublica" in censo
-          ? (censo.educacaoEspecialPublica ?? censo.educacaoEspecialTotal ?? null)
+        censo && "educacaoEspecialMunicipal" in censo
+          ? (censo.educacaoEspecialMunicipal ?? censo.educacaoEspecialPublica ?? censo.educacaoEspecialTotal ?? null)
           : relatorio.censoEscolar?.matriculasEtapa.educacaoEspecial ?? null,
     };
   });

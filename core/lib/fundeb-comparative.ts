@@ -37,16 +37,21 @@ function getTempoIntegralTotal(record: InepCensoMunicipalRecord | null | undefin
     return 0;
   }
 
+  // Prefer municipal data for FUNDEB scope
+  if (record.tempoIntegralBasicaMunicipal !== null && record.tempoIntegralBasicaMunicipal !== undefined) {
+    return record.tempoIntegralBasicaMunicipal;
+  }
+
   if (record.tempoIntegralBasicaPublica !== null && record.tempoIntegralBasicaPublica !== undefined) {
     return record.tempoIntegralBasicaPublica;
   }
 
   return (
-    (record.tempoIntegralEducacaoInfantilPublica ?? 0) +
-    (record.tempoIntegralEnsinoFundamentalPublica ?? 0) +
-    (record.tempoIntegralEnsinoMedioPublica ?? 0) +
-    (record.tempoIntegralEjaPublica ?? 0) +
-    (record.tempoIntegralEducacaoEspecialPublica ?? 0)
+    (record.tempoIntegralEducacaoInfantilMunicipal ?? record.tempoIntegralEducacaoInfantilPublica ?? 0) +
+    (record.tempoIntegralEnsinoFundamentalMunicipal ?? record.tempoIntegralEnsinoFundamentalPublica ?? 0) +
+    (record.tempoIntegralEnsinoMedioMunicipal ?? 0) +
+    (record.tempoIntegralEjaMunicipal ?? record.tempoIntegralEjaPublica ?? 0) +
+    (record.tempoIntegralEducacaoEspecialMunicipal ?? record.tempoIntegralEducacaoEspecialPublica ?? 0)
   );
 }
 
@@ -118,9 +123,9 @@ function buildHistoricoCenso(history: InepCensoMunicipalRecord[]) {
     ano: item.anoReferencia,
     matriculasPublicas: item.matriculasPublicasTotal ?? item.matriculasBasicaTotal,
     matriculasMunicipais: item.matriculasMunicipaisTotal,
-    eja: item.ejaPublica ?? item.ejaTotal ?? 0,
+    eja: item.ejaMunicipal ?? item.ejaPublica ?? item.ejaTotal ?? 0,
     tempoIntegral: getTempoIntegralTotal(item),
-    educacaoEspecial: item.educacaoEspecialPublica ?? item.educacaoEspecialTotal ?? 0,
+    educacaoEspecial: item.educacaoEspecialMunicipal ?? item.educacaoEspecialPublica ?? item.educacaoEspecialTotal ?? 0,
   }));
 }
 
@@ -137,6 +142,7 @@ function buildCenarioEstruturacao(
     relatorio.perfilComercial?.matriculasMunicipais ??
     0;
   const ejaAtual =
+    censoAtual?.ejaMunicipal ??
     censoAtual?.ejaPublica ??
     censoAtual?.ejaTotal ??
     relatorio.censoEscolar?.matriculasEtapa.eja ??
@@ -146,6 +152,7 @@ function buildCenarioEstruturacao(
     relatorio.censoEscolar?.tempoIntegral.total ||
     0;
   const especialAtual =
+    censoAtual?.educacaoEspecialMunicipal ??
     censoAtual?.educacaoEspecialPublica ??
     censoAtual?.educacaoEspecialTotal ??
     relatorio.censoEscolar?.matriculasEtapa.educacaoEspecial ??

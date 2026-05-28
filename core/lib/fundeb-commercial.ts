@@ -14,45 +14,48 @@ export function buildCensoEscolarFromInep(record: InepCensoMunicipalRecord | nul
     return createEmptyCensoEscolar();
   }
 
-  const totalEscolas = record.escolasPublicasTotal ?? record.escolasTotal;
-  const totalMatriculas = record.matriculasPublicasTotal ?? record.matriculasBasicaTotal;
-  const totalDocentes = record.docentesPublicosTotal ?? record.docentesTotal;
-  const educacaoInfantil = record.educacaoInfantilPublica ?? record.educacaoInfantilTotal;
-  const creche = record.crechePublica ?? record.crecheTotal;
-  const preEscola = record.preEscolaPublica ?? record.preEscolaTotal;
-  const anosIniciais = record.anosIniciaisFundamentalPublica ?? record.anosIniciaisFundamentalTotal ?? 0;
-  const anosFinais = record.anosFinaisFundamentalPublica ?? record.anosFinaisFundamentalTotal ?? 0;
+  // FUNDEB: usar dados da rede MUNICIPAL (não pública que soma estadual+federal)
+  const totalEscolas = record.escolasMunicipaisTotal ?? record.escolasPublicasTotal ?? record.escolasTotal;
+  const totalMatriculas = record.matriculasMunicipaisTotal ?? record.matriculasPublicasTotal ?? record.matriculasBasicaTotal;
+  const totalDocentes = record.docentesMunicipaisTotal ?? record.docentesPublicosTotal ?? record.docentesTotal;
+  const educacaoInfantil = record.educacaoInfantilMunicipal ?? record.educacaoInfantilPublica ?? record.educacaoInfantilTotal;
+  const creche = record.crecheMunicipal ?? record.crechePublica ?? record.crecheTotal;
+  const preEscola = record.preEscolaMunicipal ?? record.preEscolaPublica ?? record.preEscolaTotal;
+  const anosIniciais = record.anosIniciaisFundamentalMunicipal ?? record.anosIniciaisFundamentalPublica ?? record.anosIniciaisFundamentalTotal ?? 0;
+  const anosFinais = record.anosFinaisFundamentalMunicipal ?? record.anosFinaisFundamentalPublica ?? record.anosFinaisFundamentalTotal ?? 0;
   const ensinoFundamental =
+    record.ensinoFundamentalMunicipal ??
     record.ensinoFundamentalPublica ??
     record.ensinoFundamentalTotal ??
     Math.max(
       0,
       totalMatriculas -
         educacaoInfantil -
-        (record.ensinoMedioPublica ?? record.ensinoMedioTotal ?? 0) -
-        (record.ejaPublica ?? record.ejaTotal ?? 0),
+        (record.ensinoMedioMunicipal ?? record.ensinoMedioPublica ?? record.ensinoMedioTotal ?? 0) -
+        (record.ejaMunicipal ?? record.ejaPublica ?? record.ejaTotal ?? 0),
     );
-  const ensinoMedio = record.ensinoMedioPublica ?? record.ensinoMedioTotal ?? 0;
-  const eja = record.ejaPublica ?? record.ejaTotal ?? 0;
-  const educacaoEspecial = record.educacaoEspecialPublica ?? record.educacaoEspecialTotal ?? 0;
-  const tempoIntegralCreche = record.tempoIntegralCrechePublica ?? record.tempoIntegralCrecheTotal ?? null;
-  const tempoIntegralPreEscola = record.tempoIntegralPreEscolaPublica ?? record.tempoIntegralPreEscolaTotal ?? null;
+  // Ensino Médio municipal é tipicamente 0 (competência estadual)
+  const ensinoMedio = record.ensinoMedioMunicipal ?? 0;
+  const eja = record.ejaMunicipal ?? record.ejaPublica ?? record.ejaTotal ?? 0;
+  const educacaoEspecial = record.educacaoEspecialMunicipal ?? record.educacaoEspecialPublica ?? record.educacaoEspecialTotal ?? 0;
+  const tempoIntegralCreche = record.tempoIntegralCrecheMunicipal ?? record.tempoIntegralCrechePublica ?? record.tempoIntegralCrecheTotal ?? null;
+  const tempoIntegralPreEscola = record.tempoIntegralPreEscolaMunicipal ?? record.tempoIntegralPreEscolaPublica ?? record.tempoIntegralPreEscolaTotal ?? null;
   const tempoIntegralAnosIniciais =
-    record.tempoIntegralAnosIniciaisPublica ?? record.tempoIntegralAnosIniciaisTotal ?? null;
+    record.tempoIntegralAnosIniciaisMunicipal ?? record.tempoIntegralAnosIniciaisPublica ?? record.tempoIntegralAnosIniciaisTotal ?? null;
   const tempoIntegralAnosFinais =
-    record.tempoIntegralAnosFinaisPublica ?? record.tempoIntegralAnosFinaisTotal ?? null;
+    record.tempoIntegralAnosFinaisMunicipal ?? record.tempoIntegralAnosFinaisPublica ?? record.tempoIntegralAnosFinaisTotal ?? null;
   const tempoIntegralEducacaoInfantil =
-    record.tempoIntegralEducacaoInfantilPublica ?? record.tempoIntegralEducacaoInfantilTotal ?? null;
+    record.tempoIntegralEducacaoInfantilMunicipal ?? record.tempoIntegralEducacaoInfantilPublica ?? record.tempoIntegralEducacaoInfantilTotal ?? null;
   const tempoIntegralEnsinoFundamental =
-    record.tempoIntegralEnsinoFundamentalPublica ?? record.tempoIntegralEnsinoFundamentalTotal ?? null;
+    record.tempoIntegralEnsinoFundamentalMunicipal ?? record.tempoIntegralEnsinoFundamentalPublica ?? record.tempoIntegralEnsinoFundamentalTotal ?? null;
 
   return {
     totalEscolas,
     totalMatriculas,
     totalDocentes,
-    fonte: "INEP/Censo Escolar consolidado — rede pública",
+    fonte: "INEP/Censo Escolar consolidado — rede municipal",
     anoReferencia: record.anoReferencia,
-    recorte: "publica",
+    recorte: "municipal",
     matriculasEtapa: {
       educacaoInfantil,
       ensinoFundamental,
@@ -67,17 +70,17 @@ export function buildCensoEscolarFromInep(record: InepCensoMunicipalRecord | nul
       anosFinais,
     },
     tempoIntegral: {
-      total: record.tempoIntegralBasicaPublica ?? record.tempoIntegralBasicaTotal ?? null,
+      total: record.tempoIntegralBasicaMunicipal ?? record.tempoIntegralBasicaPublica ?? record.tempoIntegralBasicaTotal ?? null,
       educacaoInfantil: tempoIntegralEducacaoInfantil,
       creche: tempoIntegralCreche,
       preEscola: tempoIntegralPreEscola,
       anosIniciais: tempoIntegralAnosIniciais,
       anosFinais: tempoIntegralAnosFinais,
       ensinoFundamental: tempoIntegralEnsinoFundamental,
-      ensinoMedio: record.tempoIntegralEnsinoMedioPublica ?? record.tempoIntegralEnsinoMedioTotal ?? null,
-      eja: record.tempoIntegralEjaPublica ?? record.tempoIntegralEjaTotal ?? null,
+      ensinoMedio: record.tempoIntegralEnsinoMedioMunicipal ?? 0,
+      eja: record.tempoIntegralEjaMunicipal ?? record.tempoIntegralEjaPublica ?? record.tempoIntegralEjaTotal ?? null,
       educacaoEspecial:
-        record.tempoIntegralEducacaoEspecialPublica ?? record.tempoIntegralEducacaoEspecialTotal ?? null,
+        record.tempoIntegralEducacaoEspecialMunicipal ?? record.tempoIntegralEducacaoEspecialPublica ?? record.tempoIntegralEducacaoEspecialTotal ?? null,
     },
     docentesCiclo: {
       fundamentalIniciaisFinais: totalDocentes,

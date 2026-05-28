@@ -539,18 +539,18 @@ function buildRelatorioDirigidoBase({
     censoByYear.set(record.anoReferencia, record);
   }
 
-  // Helper: calculate tempo integral with fallback for 2023/2024 datasets
+  // Helper: calculate tempo integral — REDE MUNICIPAL apenas
   function getTempoIntegralFromRecord(record: InepCensoMunicipalRecord | undefined | null): number | null {
     if (!record) return null;
-    if (record.tempoIntegralBasicaTotal != null) return record.tempoIntegralBasicaTotal;
+    if (record.tempoIntegralBasicaMunicipal != null) return record.tempoIntegralBasicaMunicipal;
     if (record.tempoIntegralBasicaPublica != null) return record.tempoIntegralBasicaPublica;
-    // Sum subtypes as fallback
+    // Sum subtypes as fallback (prefer Municipal)
     const sum =
-      (record.tempoIntegralEducacaoInfantilPublica ?? record.tempoIntegralEducacaoInfantilTotal ?? 0) +
-      (record.tempoIntegralEnsinoFundamentalPublica ?? record.tempoIntegralEnsinoFundamentalTotal ?? 0) +
-      (record.tempoIntegralEnsinoMedioPublica ?? record.tempoIntegralEnsinoMedioTotal ?? 0) +
-      (record.tempoIntegralEjaPublica ?? record.tempoIntegralEjaTotal ?? 0) +
-      (record.tempoIntegralEducacaoEspecialPublica ?? record.tempoIntegralEducacaoEspecialTotal ?? 0);
+      (record.tempoIntegralEducacaoInfantilMunicipal ?? record.tempoIntegralEducacaoInfantilPublica ?? record.tempoIntegralEducacaoInfantilTotal ?? 0) +
+      (record.tempoIntegralEnsinoFundamentalMunicipal ?? record.tempoIntegralEnsinoFundamentalPublica ?? record.tempoIntegralEnsinoFundamentalTotal ?? 0) +
+      (record.tempoIntegralEnsinoMedioMunicipal ?? 0) +
+      (record.tempoIntegralEjaMunicipal ?? record.tempoIntegralEjaPublica ?? record.tempoIntegralEjaTotal ?? 0) +
+      (record.tempoIntegralEducacaoEspecialMunicipal ?? record.tempoIntegralEducacaoEspecialPublica ?? record.tempoIntegralEducacaoEspecialTotal ?? 0);
     return sum > 0 ? sum : null;
   }
 
@@ -578,8 +578,8 @@ function buildRelatorioDirigidoBase({
       totalMatriculasMunicipais: matriculasMunicipais,
       totalEscolas: censoRecord?.escolasMunicipaisTotal ?? null,
       tempoIntegral: getTempoIntegralFromRecord(censoRecord),
-      educacaoEspecial: censoRecord?.educacaoEspecialTotal ?? null,
-      eja: censoRecord?.ejaTotal ?? null,
+      educacaoEspecial: censoRecord?.educacaoEspecialMunicipal ?? censoRecord?.educacaoEspecialTotal ?? null,
+      eja: censoRecord?.ejaMunicipal ?? censoRecord?.ejaTotal ?? null,
       fonteReceita: receita.ano === exercicio ? "Portaria FNDE" : "SICONFI/DCA",
       recursoPorAluno: (matriculasMunicipais && receita.totalReceitas)
         ? Math.round(receita.totalReceitas / matriculasMunicipais * 100) / 100
@@ -603,8 +603,8 @@ function buildRelatorioDirigidoBase({
         totalMatriculasMunicipais: matriculasMunicipais,
         totalEscolas: record.escolasMunicipaisTotal ?? null,
         tempoIntegral: getTempoIntegralFromRecord(record),
-        educacaoEspecial: record.educacaoEspecialTotal ?? null,
-        eja: record.ejaTotal ?? null,
+        educacaoEspecial: record.educacaoEspecialMunicipal ?? record.educacaoEspecialTotal ?? null,
+        eja: record.ejaMunicipal ?? record.ejaTotal ?? null,
         fonteReceita: "Censo INEP",
         recursoPorAluno: null,
       });
