@@ -128,6 +128,10 @@ export interface CensoEscolar {
     totalEscolas: number;
     totalMatriculas: number;
     totalDocentes: number;
+    infantil: number;
+    fundamentalMedio: number;
+    eja: number;
+    especial: number;
   };
 }
 

@@ -90,6 +90,10 @@ export function buildCensoEscolarFromInep(record: InepCensoMunicipalRecord | nul
       totalEscolas: record.escolasPublicasTotal ?? record.escolasTotal ?? 0,
       totalMatriculas: record.matriculasPublicasTotal ?? record.matriculasBasicaTotal ?? 0,
       totalDocentes: record.docentesPublicosTotal ?? record.docentesTotal ?? 0,
+      infantil: record.educacaoInfantilPublica ?? 0,
+      fundamentalMedio: (record.ensinoFundamentalPublica ?? 0) + (record.ensinoMedioPublica ?? 0),
+      eja: record.ejaPublica ?? 0,
+      especial: record.educacaoEspecialPublica ?? 0,
     },
   };
 }
