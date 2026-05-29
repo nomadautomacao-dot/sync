@@ -18,6 +18,8 @@ class FundebLevantamentoPdfBuilder {
   static const PdfColor _softBlue = PdfColor.fromInt(0xFFEAF3FF);
   static const PdfColor _softGreen = PdfColor.fromInt(0xFFEDF7EF);
   static const PdfColor _softOrange = PdfColor.fromInt(0xFFFFF4E8);
+  static const PdfColor _grey600 = PdfColor.fromInt(0xFF6B7280);
+  static const PdfColor _grey700 = PdfColor.fromInt(0xFF374151);
   static const PdfColor _white = PdfColor.fromInt(0xFFFFFFFF);
   static const String _footerText =
       'Documento confidencial. Reprodução não autorizada.';
@@ -1696,6 +1698,14 @@ class FundebLevantamentoPdfBuilder {
         ],
         widths: const {0: pw.FlexColumnWidth(58), 1: pw.FlexColumnWidth(42)},
       ),
+      if (censo.recorte == 'municipal' && etapas.ensinoMedio == 0) ...[
+        pw.SizedBox(height: 10),
+        _callout(
+          'A rede municipal não opera o Ensino Médio. Esta etapa é de responsabilidade da rede estadual.',
+          accent: _blue,
+          background: _softBlue,
+        ),
+      ],
       pw.SizedBox(height: 18),
       _sectionHeading('9.2', 'Detalhamento da Rede Publica'),
       pw.SizedBox(height: 10),
@@ -1706,7 +1716,8 @@ class FundebLevantamentoPdfBuilder {
           ['Pre-escola', _integer(detalhadas.preEscola)],
           ['Anos iniciais do Fundamental', _integer(detalhadas.anosIniciais)],
           ['Anos finais do Fundamental', _integer(detalhadas.anosFinais)],
-          ['Ensino Médio', _integer(etapas.ensinoMedio)],
+          if (!(censo.recorte == 'municipal' && etapas.ensinoMedio == 0))
+            ['Ensino Médio', _integer(etapas.ensinoMedio)],
           ['EJA', _integer(etapas.eja)],
           ['Educação Especial', _integer(etapas.educacaoEspecial)],
         ],
@@ -1745,41 +1756,117 @@ class FundebLevantamentoPdfBuilder {
   }
 
   static List<pw.Widget> _buildIdebPage(RelatorioFundeb relatorio) {
-    final rows = <List<String>>[];
-    for (final item in relatorio.idebAnosIniciais) {
-      rows.add([
-        'Anos Iniciais',
+    // Find latest year with data for each etapa
+    IDEBDado? latestIniciais;
+    IDEBDado? latestFinais;
+    for (final item in relatorio.idebAnosIniciais.reversed) {
+      if (item.idebVerificado != null) {
+        latestIniciais = item;
+        break;
+      }
+    }
+    for (final item in relatorio.idebAnosFinais.reversed) {
+      if (item.idebVerificado != null) {
+        latestFinais = item;
+        break;
+      }
+    }
+
+    // Filter rows that have at least meta or verificado
+    List<List<String>> buildEtapaRows(List<IDEBDado> items) {
+      final filtered = items.where(
+        (i) => i.metaProjetada != null || i.idebVerificado != null,
+      );
+      return filtered.map((item) => [
         '${item.ano}',
         _nullableNumber(item.metaProjetada),
         _nullableNumber(item.idebVerificado),
-      ]);
+        _idebStatusLabel(item),
+      ]).toList();
     }
-    for (final item in relatorio.idebAnosFinais) {
-      rows.add([
-        'Anos Finais',
-        '${item.ano}',
-        _nullableNumber(item.metaProjetada),
-        _nullableNumber(item.idebVerificado),
-      ]);
-    }
+
+    final rowsIniciais = buildEtapaRows(relatorio.idebAnosIniciais);
+    final rowsFinais = buildEtapaRows(relatorio.idebAnosFinais);
+    final hasAnyData = rowsIniciais.isNotEmpty || rowsFinais.isNotEmpty;
+    final hasOnlyLatest = hasAnyData &&
+        relatorio.idebAnosIniciais.where((i) => i.idebVerificado != null).length <= 1 &&
+        relatorio.idebAnosFinais.where((i) => i.idebVerificado != null).length <= 1;
 
     return [
       _pageTitle('PARTE III - INDICADORES EDUCACIONAIS'),
       pw.SizedBox(height: 10),
       _sectionHeading('11', 'Série Histórica do IDEB'),
       pw.SizedBox(height: 10),
-      if (rows.isNotEmpty)
+
+      // KPI cards for latest IDEB
+      if (latestIniciais != null || latestFinais != null)
+        pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            if (latestIniciais != null)
+              pw.Expanded(
+                child: _idebKpiCard(
+                  'Anos Iniciais',
+                  latestIniciais,
+                ),
+              ),
+            if (latestIniciais != null && latestFinais != null)
+              pw.SizedBox(width: 12),
+            if (latestFinais != null)
+              pw.Expanded(
+                child: _idebKpiCard(
+                  'Anos Finais',
+                  latestFinais,
+                ),
+              ),
+          ],
+        ),
+      if (latestIniciais != null || latestFinais != null)
+        pw.SizedBox(height: 14),
+
+      // Context callout if only latest year available
+      if (hasOnlyLatest)
+        _callout(
+          'O IDEB verificado disponível refere-se à edição mais recente (${latestIniciais?.ano ?? latestFinais?.ano}). '
+          'A série histórica completa com os valores observados de todas as edições anteriores será integrada '
+          'após consulta à base completa do INEP/SAEB.',
+          accent: _orange,
+          background: _softOrange,
+        ),
+      if (hasOnlyLatest)
+        pw.SizedBox(height: 12),
+
+      // Tables
+      if (rowsIniciais.isNotEmpty) ...[
+        _sectionHeading('11.1', 'Anos Iniciais do Ensino Fundamental'),
+        pw.SizedBox(height: 8),
         _table(
-          headers: const ['Etapa', 'Ano', 'Meta Projetada', 'IDEB Verificado'],
-          rows: rows,
+          headers: const ['Ano', 'Meta Projetada', 'IDEB Verificado', 'Situação'],
+          rows: rowsIniciais,
           widths: const {
-            0: pw.FlexColumnWidth(28),
-            1: pw.FlexColumnWidth(12),
-            2: pw.FlexColumnWidth(30),
-            3: pw.FlexColumnWidth(30),
+            0: pw.FlexColumnWidth(15),
+            1: pw.FlexColumnWidth(25),
+            2: pw.FlexColumnWidth(25),
+            3: pw.FlexColumnWidth(35),
           },
-        )
-      else
+        ),
+        pw.SizedBox(height: 14),
+      ],
+      if (rowsFinais.isNotEmpty) ...[
+        _sectionHeading('11.2', 'Anos Finais do Ensino Fundamental'),
+        pw.SizedBox(height: 8),
+        _table(
+          headers: const ['Ano', 'Meta Projetada', 'IDEB Verificado', 'Situação'],
+          rows: rowsFinais,
+          widths: const {
+            0: pw.FlexColumnWidth(15),
+            1: pw.FlexColumnWidth(25),
+            2: pw.FlexColumnWidth(25),
+            3: pw.FlexColumnWidth(35),
+          },
+        ),
+      ],
+      if (!hasAnyData)
         _callout(
           'Os dados de IDEB para este município serão integrados na próxima versão deste relatório após consulta ao portal do SIMEC. '
           'A série histórica do município pode ser verificada diretamente no portal.',
@@ -1788,6 +1875,78 @@ class FundebLevantamentoPdfBuilder {
           background: _softOrange,
         ),
     ];
+  }
+
+  /// KPI card for latest IDEB value
+  static pw.Widget _idebKpiCard(String etapaLabel, IDEBDado item) {
+    final verificado = item.idebVerificado;
+    final meta = item.metaProjetada;
+    final abaixo = verificado != null && meta != null && verificado < meta;
+    final acima = verificado != null && meta != null && verificado >= meta;
+
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(12),
+      decoration: pw.BoxDecoration(
+        color: abaixo ? _softOrange : _softGreen,
+        borderRadius: pw.BorderRadius.circular(6),
+        border: pw.Border.all(
+          color: abaixo ? _orange : _green,
+          width: 0.5,
+        ),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
+        children: [
+          pw.Text(
+            etapaLabel.toUpperCase(),
+            style: pw.TextStyle(
+              fontSize: 8,
+              fontWeight: pw.FontWeight.bold,
+              color: _grey700,
+            ),
+          ),
+          pw.SizedBox(height: 4),
+          pw.Text(
+            verificado != null
+                ? verificado.toStringAsFixed(1).replaceAll('.', ',')
+                : '—',
+            style: pw.TextStyle(
+              fontSize: 22,
+              fontWeight: pw.FontWeight.bold,
+              color: abaixo ? _orange : _green,
+            ),
+          ),
+          pw.SizedBox(height: 2),
+          pw.Text(
+            'IDEB ${item.ano}',
+            style: pw.TextStyle(fontSize: 7, color: _grey600),
+          ),
+          if (meta != null) ...[
+            pw.SizedBox(height: 4),
+            pw.Text(
+              acima
+                  ? '+${(verificado! - meta).toStringAsFixed(1).replaceAll('.', ',')} acima da meta'
+                  : abaixo
+                      ? '${(verificado! - meta).toStringAsFixed(1).replaceAll('.', ',')} abaixo da meta'
+                      : 'Meta: ${meta.toStringAsFixed(1).replaceAll('.', ',')}',
+              style: pw.TextStyle(
+                fontSize: 7,
+                fontWeight: pw.FontWeight.bold,
+                color: abaixo ? _orange : _green,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Status label for IDEB row
+  static String _idebStatusLabel(IDEBDado item) {
+    if (item.idebVerificado == null) return '—';
+    if (item.metaProjetada == null) return 'Sem meta definida';
+    if (item.idebVerificado! >= item.metaProjetada!) return '✓ Meta atingida';
+    return '✗ Abaixo da meta';
   }
 
   static List<pw.Widget> _buildIndicadoresAprendizagemPage(

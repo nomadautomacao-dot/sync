@@ -64,7 +64,7 @@ export async function generateFundebPdfBuffer(
   const scriptPath = path.join(process.cwd(), "app/api/modulos/levantamento-fundeb/pdf", gerador);
 
   return await new Promise<{ pdfBuffer: Buffer; filename: string }>((resolve, reject) => {
-    const pythonProcess = spawn("python3", [scriptPath], { shell: true });
+    const pythonProcess = spawn("python3", [scriptPath]);
     let output = "";
     let errorOutput = "";
 

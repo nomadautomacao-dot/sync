@@ -15,6 +15,7 @@ import { buildFundebComparativeSnapshot } from "@/core/lib/fundeb-comparative";
 import { getTsePrefeitoRecord } from "@/core/lib/tse-prefeitos";
 import { getIdebMunicipalRecord, getIdebMetasNacionais } from "@/core/lib/ideb-municipal";
 import { getQeduMunicipalIndicators } from "@/core/lib/qedu-indicators";
+import { getQeduMunicipalApiSnapshot } from "@/core/lib/qedu-api";
 import { getSiconfiFiscalRecord } from "@/core/lib/siconfi-fiscal";
 import { getSimecObrasRecord } from "@/core/lib/simec-obras";
 
@@ -804,7 +805,7 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
   } catch (e) {
     console.warn(`[govia] FNDE receitas fetch failed for ${exercicio}:`, e instanceof Error ? e.message : e);
   }
-  const [vaatContext, ibgeIndicators, inepRecord, fndePublic, qeduIndicators, siconfiFiscal, simecObras] =
+  const [vaatContext, ibgeIndicators, inepRecord, fndePublic, qeduIndicators, siconfiFiscal, simecObras, qeduApiSnapshot] =
     await Promise.all([
     getFundebVaatContext(String(municipio.id), exercicio).catch(() => null),
     getIbgeCidadeIndicators(municipio.nome, municipioUf, String(municipio.id)).catch(() => null),
@@ -817,6 +818,7 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
       getQeduMunicipalIndicators(String(municipio.id)).catch(() => null),
       getSiconfiFiscalRecord(String(municipio.id), exercicio).catch(() => null),
       getSimecObrasRecord(String(municipio.id)).catch(() => null),
+      getQeduMunicipalApiSnapshot(String(municipio.id)).catch(() => null),
     ]);
   const receitasBase =
     receitasOficiais ??
@@ -862,23 +864,53 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
       ...(simecObras?.observacoes ?? []),
     ]),
     idebAnosIniciais: (() => {
-      const idebVerificado = qeduIndicators?.anosIniciais?.idebObservado ?? idebRecord?.anosIniciaisPublica ?? null;
-      if (!idebVerificado) return undefined;
+      const apiHistory = qeduApiSnapshot?.historicoIdeb?.anosIniciais;
+      const localVerificado = qeduIndicators?.anosIniciais?.idebObservado ?? idebRecord?.anosIniciaisPublica ?? null;
+      const localAnoRef = idebRecord?.anoReferencia ?? 2023;
       const metasNacionais = getIdebMetasNacionais();
+
+      if (apiHistory?.length) {
+        // Merge: use API data as base, fill gaps with local data + national goals
+        return metasNacionais.anosIniciais.map((entry) => {
+          const apiEntry = apiHistory.find((a) => a.ano === entry.ano);
+          return {
+            ano: entry.ano,
+            metaProjetada: apiEntry?.metaProjetada ?? entry.meta,
+            idebVerificado: apiEntry?.idebVerificado ?? (entry.ano === localAnoRef ? localVerificado : null),
+          };
+        });
+      }
+
+      if (!localVerificado) return undefined;
       return metasNacionais.anosIniciais.map((entry) => ({
         ano: entry.ano,
         metaProjetada: entry.meta,
-        idebVerificado: entry.ano === 2023 ? idebVerificado : null,
+        idebVerificado: entry.ano === localAnoRef ? localVerificado : null,
       }));
     })(),
     idebAnosFinais: (() => {
-      const idebVerificado = qeduIndicators?.anosFinais?.idebObservado ?? idebRecord?.anosFinaisPublica ?? null;
-      if (!idebVerificado) return undefined;
+      const apiHistory = qeduApiSnapshot?.historicoIdeb?.anosFinais;
+      const localVerificado = qeduIndicators?.anosFinais?.idebObservado ?? idebRecord?.anosFinaisPublica ?? null;
+      const localAnoRef = idebRecord?.anoReferencia ?? 2023;
       const metasNacionais = getIdebMetasNacionais();
+
+      if (apiHistory?.length) {
+        // Merge: use API data as base, fill gaps with local data + national goals
+        return metasNacionais.anosFinais.map((entry) => {
+          const apiEntry = apiHistory.find((a) => a.ano === entry.ano);
+          return {
+            ano: entry.ano,
+            metaProjetada: apiEntry?.metaProjetada ?? entry.meta,
+            idebVerificado: apiEntry?.idebVerificado ?? (entry.ano === localAnoRef ? localVerificado : null),
+          };
+        });
+      }
+
+      if (!localVerificado) return undefined;
       return metasNacionais.anosFinais.map((entry) => ({
         ano: entry.ano,
         metaProjetada: entry.meta,
-        idebVerificado: entry.ano === 2023 ? idebVerificado : null,
+        idebVerificado: entry.ano === localAnoRef ? localVerificado : null,
       }));
     })(),
   });
