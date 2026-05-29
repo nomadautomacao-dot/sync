@@ -1,4 +1,5 @@
 import ideb2023 from "@/data/ideb-municipal-2023.json";
+import idebHistorico from "@/data/ideb-municipal-historico.json";
 
 export interface IdebMunicipalRecord {
   codigoIBGE: string;
@@ -29,4 +30,11 @@ export function getIdebMunicipalRecord(codigoIBGE: string): IdebMunicipalRecord 
   }
 
   return null;
+}
+
+export function getIdebMetasNacionais(): {
+  anosIniciais: Array<{ ano: number; meta: number }>;
+  anosFinais: Array<{ ano: number; meta: number }>;
+} {
+  return idebHistorico.metasNacionais;
 }

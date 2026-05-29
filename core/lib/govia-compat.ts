@@ -13,7 +13,7 @@ import { estimateFundebReceitas } from "@/core/lib/fundeb-estimate";
 import { getFndePublicEnrichment } from "@/core/lib/fnde-public";
 import { buildFundebComparativeSnapshot } from "@/core/lib/fundeb-comparative";
 import { getTsePrefeitoRecord } from "@/core/lib/tse-prefeitos";
-import { getIdebMunicipalRecord } from "@/core/lib/ideb-municipal";
+import { getIdebMunicipalRecord, getIdebMetasNacionais } from "@/core/lib/ideb-municipal";
 import { getQeduMunicipalIndicators } from "@/core/lib/qedu-indicators";
 import { getSiconfiFiscalRecord } from "@/core/lib/siconfi-fiscal";
 import { getSimecObrasRecord } from "@/core/lib/simec-obras";
@@ -861,36 +861,26 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
       ...(siconfiFiscal?.observacoes ?? []),
       ...(simecObras?.observacoes ?? []),
     ]),
-    idebAnosIniciais:
-      qeduIndicators?.anosIniciais?.idebObservado || idebRecord?.anosIniciaisPublica
-        ? [
-            {
-              ano: qeduIndicators?.anoReferencia ?? idebRecord?.anoReferencia ?? exercicio - 1,
-              idebVerificado:
-                qeduIndicators?.anosIniciais?.idebObservado ?? idebRecord?.anosIniciaisPublica ?? 0,
-              metaProjetada: (() => {
-                const ideb = qeduIndicators?.anosIniciais?.idebObservado ?? idebRecord?.anosIniciaisPublica ?? 0;
-                // Meta MEC 2023 para Anos Iniciais: 6.0 nacional. Se IDEB > meta, meta = IDEB + 0.3
-                return ideb > 6.0 ? Math.round((ideb + 0.3) * 10) / 10 : 6.0;
-              })(),
-            },
-          ]
-        : undefined,
-    idebAnosFinais:
-      qeduIndicators?.anosFinais?.idebObservado || idebRecord?.anosFinaisPublica
-        ? [
-            {
-              ano: qeduIndicators?.anoReferencia ?? idebRecord?.anoReferencia ?? exercicio - 1,
-              idebVerificado:
-                qeduIndicators?.anosFinais?.idebObservado ?? idebRecord?.anosFinaisPublica ?? 0,
-              metaProjetada: (() => {
-                const ideb = qeduIndicators?.anosFinais?.idebObservado ?? idebRecord?.anosFinaisPublica ?? 0;
-                // Meta MEC 2023 para Anos Finais: 5.5 nacional. Se IDEB > meta, meta = IDEB + 0.3
-                return ideb > 5.5 ? Math.round((ideb + 0.3) * 10) / 10 : 5.5;
-              })(),
-            },
-          ]
-        : undefined,
+    idebAnosIniciais: (() => {
+      const idebVerificado = qeduIndicators?.anosIniciais?.idebObservado ?? idebRecord?.anosIniciaisPublica ?? null;
+      if (!idebVerificado) return undefined;
+      const metasNacionais = getIdebMetasNacionais();
+      return metasNacionais.anosIniciais.map((entry) => ({
+        ano: entry.ano,
+        metaProjetada: entry.meta,
+        idebVerificado: entry.ano === 2023 ? idebVerificado : null,
+      }));
+    })(),
+    idebAnosFinais: (() => {
+      const idebVerificado = qeduIndicators?.anosFinais?.idebObservado ?? idebRecord?.anosFinaisPublica ?? null;
+      if (!idebVerificado) return undefined;
+      const metasNacionais = getIdebMetasNacionais();
+      return metasNacionais.anosFinais.map((entry) => ({
+        ano: entry.ano,
+        metaProjetada: entry.meta,
+        idebVerificado: entry.ano === 2023 ? idebVerificado : null,
+      }));
+    })(),
   });
   const oportunidades = buildGoviaOportunidades(relatorio);
   const analiseExecutiva = buildAnaliseExecutiva(relatorio);

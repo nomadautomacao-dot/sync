@@ -71,6 +71,7 @@ export interface ComercialPdfData {
     matriculasPerCapita?: string;
     edInfantilPerCapita?: string;
     crechePerCapita?: string;
+    valorAlunoMedio?: string;
     regiao?: string; // e.g. "Centro-Oeste"
   };
 
@@ -1324,7 +1325,12 @@ export function generateComercialHtml(data: ComercialPdfData): string {
   const now = new Date();
   const r = data.receitas;
   const p = data.projecao;
-  const sh = data.serieHistorica ?? [];
+  const shRaw = data.serieHistorica ?? [];
+  // Filter out years where totalReceitasFundeb is 0/null AND totalMatriculas is 0/null (no real data)
+  const sh = shRaw.filter(s =>
+    (s.totalReceitasFundeb != null && s.totalReceitasFundeb > 0) ||
+    (s.totalMatriculas != null && s.totalMatriculas > 0)
+  );
   const gestorNome = data.gestor?.nome ?? '—';
   const gestorPartido = data.gestor?.partido ?? '—';
   const mandato = data.gestor?.mandato ?? '—';
@@ -1337,7 +1343,8 @@ export function generateComercialHtml(data: ComercialPdfData): string {
   const pctVAAR = r.totalReceitas > 0 ? (r.complementacaoVAAR / r.totalReceitas) * 100 : 0;
 
   // Série histórica – compute bar widths (by total receita, relative to max)
-  const shReceitas = sh.filter(s => s.totalReceitasFundeb != null);
+  // Only show bars for years with actual revenue data
+  const shReceitas = sh.filter(s => s.totalReceitasFundeb != null && s.totalReceitasFundeb > 0);
   const maxShReceita = shReceitas.length > 0 ? Math.max(...shReceitas.map(s => s.totalReceitasFundeb!)) : 1;
 
   // IDEB latest
@@ -1346,8 +1353,10 @@ export function generateComercialHtml(data: ComercialPdfData): string {
   const latestIniciais = idebIniciais.length > 0 ? idebIniciais[idebIniciais.length - 1] : null;
   const latestFinais = idebFinais.length > 0 ? idebFinais[idebFinais.length - 1] : null;
 
-  // Habilitação VAAT display
-  const vaatHabilitado = data.habilitacaoVaat ?? 'Não informado';
+  // Sanitize encoding artifacts in VAAT text (e.g., "C☐LCULO" → "CÁLCULO")
+  const vaatHabilitado = (data.habilitacaoVaat ?? 'Não informado')
+    .replace(/C[\u2610\u25A1\uFFFD]LCULO/gi, 'CÁLCULO')
+    .replace(/[\uFFFD]/g, '');
   const vaatIsHabilitado = vaatHabilitado.toLowerCase().includes('habilit');
   const vaatCalloutClass = vaatIsHabilitado ? 'success' : 'warning';
   const vaatCalloutIcon = vaatIsHabilitado ? '✅' : '⚠️';
@@ -1400,22 +1409,28 @@ export function generateComercialHtml(data: ComercialPdfData): string {
   ];
 
   // Série histórica metrics for comparison slide
-  const firstSh = sh.length > 0 ? sh[0] : null;
-  const lastShWithMatriculas = [...sh].reverse().find(s => s.totalMatriculas != null);
-  const lastSh = sh.length > 0 ? sh[sh.length - 1] : null;
-  const firstShWithMatriculas = sh.find(s => s.totalMatriculas != null);
-  const firstShWithTI = sh.find(s => s.tempoIntegral != null);
-  const lastShWithTI = [...sh].reverse().find(s => s.tempoIntegral != null);
+  // Use only years with real receita data for financial deltas
+  const shWithReceita = sh.filter(s => s.totalReceitasFundeb != null && s.totalReceitasFundeb > 0);
+  const firstSh = shWithReceita.length > 0 ? shWithReceita[0] : null;
+  const lastSh = shWithReceita.length > 0 ? shWithReceita[shWithReceita.length - 1] : null;
+  // Use only years with real matrícula data (> 0) for educational deltas
+  const shWithMatriculas = sh.filter(s => s.totalMatriculas != null && s.totalMatriculas > 0);
+  const firstShWithMatriculas = shWithMatriculas.length > 0 ? shWithMatriculas[0] : null;
+  const lastShWithMatriculas = shWithMatriculas.length > 0 ? shWithMatriculas[shWithMatriculas.length - 1] : null;
+  // Use only years with real TI data (> 0) for integral deltas
+  const shWithTI = sh.filter(s => s.tempoIntegral != null && s.tempoIntegral > 0);
+  const firstShWithTI = shWithTI.length > 0 ? shWithTI[0] : null;
+  const lastShWithTI = shWithTI.length > 0 ? shWithTI[shWithTI.length - 1] : null;
 
-  const receitaDelta = (firstSh && lastSh && firstSh.totalReceitasFundeb && lastSh.totalReceitasFundeb)
-    ? lastSh.totalReceitasFundeb - firstSh.totalReceitasFundeb : null;
+  const receitaDelta = (firstSh && lastSh && firstSh !== lastSh)
+    ? lastSh.totalReceitasFundeb! - firstSh.totalReceitasFundeb! : null;
   const receitaDeltaPct = (firstSh?.totalReceitasFundeb && receitaDelta != null)
     ? (receitaDelta / firstSh.totalReceitasFundeb) * 100 : null;
-  const matriculasDelta = (firstShWithMatriculas?.totalMatriculas != null && lastShWithMatriculas?.totalMatriculas != null)
+  const matriculasDelta = (firstShWithMatriculas?.totalMatriculas != null && lastShWithMatriculas?.totalMatriculas != null && firstShWithMatriculas !== lastShWithMatriculas)
     ? lastShWithMatriculas.totalMatriculas - firstShWithMatriculas.totalMatriculas : null;
   const matriculasDeltaPct = (firstShWithMatriculas?.totalMatriculas && matriculasDelta != null)
     ? (matriculasDelta / firstShWithMatriculas.totalMatriculas) * 100 : null;
-  const tiDelta = (firstShWithTI?.tempoIntegral != null && lastShWithTI?.tempoIntegral != null)
+  const tiDelta = (firstShWithTI?.tempoIntegral != null && lastShWithTI?.tempoIntegral != null && firstShWithTI !== lastShWithTI)
     ? lastShWithTI.tempoIntegral - firstShWithTI.tempoIntegral : null;
   const tiDeltaPct = (firstShWithTI?.tempoIntegral && tiDelta != null)
     ? (tiDelta / firstShWithTI.tempoIntegral) * 100 : null;
@@ -1752,15 +1767,16 @@ export function generateComercialHtml(data: ComercialPdfData): string {
                             <table class="data-table">
                                 <thead><tr><th>Indicador Técnico</th><th>Valor</th></tr></thead>
                                 <tbody>
-                                    <tr><td>Índice de Eficiência Arrecadatória</td><td>${ef?.indiceEficiencia != null ? ef.indiceEficiencia.toFixed(2).replace('.', ',') : '—'}</td></tr>
-                                    <tr><td>Fator de ajuste regional aplicado</td><td>${ef?.fatorAjusteRegional != null ? ef.fatorAjusteRegional.toFixed(2).replace('.', ',') : '—'}</td></tr>
+                                    <tr><td>Índice de Eficiência Arrecadatória</td><td>${ef?.indiceEficiencia != null ? ef.indiceEficiencia.toFixed(1).replace('.', ',') : '—'}</td></tr>
+                                    <tr><td>Fator de ajuste regional aplicado</td><td>${ef?.fatorAjusteRegional != null ? (ef.fatorAjusteRegional >= 0 ? '+' : '') + ef.fatorAjusteRegional.toFixed(4).replace('.', ',') : '—'}</td></tr>
                                     <tr><td>FUNDEB per capita</td><td>${safeStr(ef?.fundebPerCapita)}</td></tr>
+                                    <tr><td>Valor aluno médio municipal</td><td>${safeStr(ef?.valorAlunoMedio)}</td></tr>
                                     <tr><td>Matrículas municipais por habitante</td><td>${safeStr(ef?.matriculasPerCapita)}</td></tr>
                                     <tr><td>Ed. infantil municipal por habitante</td><td>${safeStr(ef?.edInfantilPerCapita)}</td></tr>
                                     <tr><td>Creche municipal por habitante</td><td>${safeStr(ef?.crechePerCapita)}</td></tr>
                                     <tr><td>Habilitação VAAT</td><td><span class="status-badge ${vaatBadgeClass}">${vaatHabilitado}</span></td></tr>
                                     <tr><td>UF / fundo estadual</td><td>${data.uf} / ${safeStr(ef?.regiao)}</td></tr>
-                                    <tr><td>Ajuste estadual aplicado</td><td>${ef?.fatorAjusteRegional != null ? ef.fatorAjusteRegional.toFixed(2).replace('.', ',') : '—'}</td></tr>
+                                    <tr><td>Ajuste estadual aplicado</td><td>${ef?.fatorAjusteRegional != null ? (ef.fatorAjusteRegional >= 0 ? '+' : '') + ef.fatorAjusteRegional.toFixed(4).replace('.', ',') : '—'}</td></tr>
                                 </tbody>
                             </table>
                         </div>
@@ -1919,10 +1935,36 @@ export function generateComercialHtml(data: ComercialPdfData): string {
                             </div>
 
                             ${(() => {
+                              // IDEB historical table — show all available years
+                              const idebI = data.idebAnosIniciais ?? [];
+                              const idebF = data.idebAnosFinais ?? [];
+                              const allYears = [...new Set([...idebI.map(x => x.ano), ...idebF.map(x => x.ano)])].sort((a, b) => a - b);
+                              if (allYears.length > 0) {
+                                const rows = allYears.map(ano => {
+                                  const ini = idebI.find(x => x.ano === ano);
+                                  const fin = idebF.find(x => x.ano === ano);
+                                  return `<tr>
+                                    <td style="font-weight:600;">${ano}</td>
+                                    <td>${ini?.metaProjetada != null ? ini.metaProjetada.toFixed(1).replace('.', ',') : '—'}</td>
+                                    <td style="color:${ini?.idebVerificado != null && ini?.metaProjetada != null && ini.idebVerificado < ini.metaProjetada ? 'var(--orange)' : 'var(--green)'};font-weight:600;">${ini?.idebVerificado != null ? ini.idebVerificado.toFixed(1).replace('.', ',') : '—'}</td>
+                                    <td>${fin?.metaProjetada != null ? fin.metaProjetada.toFixed(1).replace('.', ',') : '—'}</td>
+                                    <td style="color:${fin?.idebVerificado != null && fin?.metaProjetada != null && fin.idebVerificado < fin.metaProjetada ? 'var(--red)' : 'var(--green)'};font-weight:600;">${fin?.idebVerificado != null ? fin.idebVerificado.toFixed(1).replace('.', ',') : '—'}</td>
+                                  </tr>`;
+                                }).join('');
+                                return `<table class="data-table reveal" style="transition-delay:0.4s;margin-top:16px;font-size:15px;">
+                                  <thead><tr><th>Ano</th><th colspan="2">Anos Iniciais</th><th colspan="2">Anos Finais</th></tr>
+                                  <tr style="font-size:12px;color:var(--gray-400);"><th></th><th>Meta</th><th>Verificado</th><th>Meta</th><th>Verificado</th></tr></thead>
+                                  <tbody>${rows}</tbody>
+                                </table>`;
+                              }
+                              return '';
+                            })()}
+
+                            ${(() => {
                               const bothBelow = latestIniciais?.idebVerificado != null && latestIniciais?.metaProjetada != null && latestIniciais.idebVerificado < latestIniciais.metaProjetada
                                 && latestFinais?.idebVerificado != null && latestFinais?.metaProjetada != null && latestFinais.idebVerificado < latestFinais.metaProjetada;
                               if (bothBelow) {
-                                return `<div class="callout warning reveal" style="transition-delay:0.4s;margin-top:16px;">
+                                return `<div class="callout warning reveal" style="transition-delay:0.5s;margin-top:16px;">
                                 <span class="callout-icon">⚠️</span>
                                 <div>O IDEB verificado ficou <strong>abaixo da meta projetada</strong> em ambas as etapas. Ponto de atenção para condicionalidades VAAR.</div>
                             </div>`;
@@ -1948,7 +1990,11 @@ export function generateComercialHtml(data: ComercialPdfData): string {
                                     }).join('\n                                    ')}
                                 </div>
                                 ${receitaDeltaPct != null ? `<div style="font-family:var(--font-body);font-size:13px;color:var(--green);font-weight:600;margin-top:12px;text-align:right;">
-                                    Variação total: +${formatPercent(receitaDeltaPct)}
+                                    Variação total: ${receitaDeltaPct >= 0 ? '+' : ''}${formatPercent(receitaDeltaPct)}
+                                </div>` : ''}
+                                ${shReceitas.length <= 1 ? `<div class="callout info" style="margin-top:12px;font-size:13px;">
+                                    <span class="callout-icon">📌</span>
+                                    <div>Receitas de exercícios anteriores não estão disponíveis nas bases FNDE/SICONFI consultadas. A série será expandida conforme novas fontes forem integradas.</div>
                                 </div>` : ''}
                             </div>
                         </div>
@@ -1981,31 +2027,35 @@ export function generateComercialHtml(data: ComercialPdfData): string {
                     <div class="kpi-row reveal" style="transition-delay:0.2s;">
                         <div class="kpi-card green">
                             <div class="kpi-label">Receita ${firstSh?.ano ?? '—'} → ${lastSh?.ano ?? '—'}</div>
-                            <div class="kpi-value" style="font-size:36px;color:var(--green);">${receitaDelta != null ? `+${formatBRLShort(receitaDelta)}` : '—'}</div>
+                            <div class="kpi-value" style="font-size:36px;color:var(--green);">${receitaDelta != null ? `${receitaDelta >= 0 ? '+' : ''}${formatBRLShort(receitaDelta)}` : '—'}</div>
                             <div class="kpi-detail">de ${firstSh?.totalReceitasFundeb != null ? formatBRLShort(firstSh.totalReceitasFundeb) : '—'} para ${lastSh?.totalReceitasFundeb != null ? formatBRLShort(lastSh.totalReceitasFundeb) : '—'}</div>
-                            ${receitaDeltaPct != null ? `<div class="kpi-badge positive">+${formatPercent(receitaDeltaPct)}</div>` : ''}
+                            ${receitaDeltaPct != null ? `<div class="kpi-badge ${receitaDeltaPct >= 0 ? 'positive' : 'negative'}">${receitaDeltaPct >= 0 ? '+' : ''}${formatPercent(receitaDeltaPct)}</div>` : ''}
                         </div>
                         <div class="kpi-card blue">
                             <div class="kpi-label">Matrículas (Municipal) ${firstShWithMatriculas?.ano ?? '—'} → ${lastShWithMatriculas?.ano ?? '—'}</div>
-                            <div class="kpi-value" style="font-size:36px;">${matriculasDelta != null ? `+${formatInteger(matriculasDelta)}` : '—'}</div>
+                            <div class="kpi-value" style="font-size:36px;">${matriculasDelta != null ? `${matriculasDelta >= 0 ? '+' : ''}${formatInteger(matriculasDelta)}` : '—'}</div>
                             <div class="kpi-detail">de ${firstShWithMatriculas?.totalMatriculas != null ? formatInteger(firstShWithMatriculas.totalMatriculas) : '—'} para ${lastShWithMatriculas?.totalMatriculas != null ? formatInteger(lastShWithMatriculas.totalMatriculas) : '—'}</div>
                             ${data.censo?.dadosPublicosTotal?.fundamentalMedio ? `<div style="font-size:11px;color:rgba(255,255,255,0.7);margin-top:8px;">Referência Pública (QEdu): ${formatInteger(data.censo.dadosPublicosTotal.fundamentalMedio)} matrículas</div>` : ''}
-                            ${matriculasDeltaPct != null ? `<div class="kpi-badge positive">+${formatPercent(matriculasDeltaPct)}</div>` : ''}
+                            ${matriculasDeltaPct != null ? `<div class="kpi-badge ${matriculasDeltaPct >= 0 ? 'positive' : 'negative'}">${matriculasDeltaPct >= 0 ? '+' : ''}${formatPercent(matriculasDeltaPct)}</div>` : ''}
                         </div>
                         <div class="kpi-card orange">
                             <div class="kpi-label">Tempo Integral ${firstShWithTI?.ano ?? '—'} → ${lastShWithTI?.ano ?? '—'}</div>
-                            <div class="kpi-value" style="font-size:36px;color:var(--orange);">${tiDelta != null ? `+${formatInteger(tiDelta)}` : '—'}</div>
+                            <div class="kpi-value" style="font-size:36px;color:var(--orange);">${tiDelta != null ? `${tiDelta >= 0 ? '+' : ''}${formatInteger(tiDelta)}` : '—'}</div>
                             <div class="kpi-detail">de ${firstShWithTI?.tempoIntegral != null ? formatInteger(firstShWithTI.tempoIntegral) : '—'} para ${lastShWithTI?.tempoIntegral != null ? formatInteger(lastShWithTI.tempoIntegral) : '—'}</div>
-                            ${tiDeltaPct != null ? `<div class="kpi-badge positive">+${formatPercent(tiDeltaPct, 0)}</div>` : ''}
+                            ${tiDeltaPct != null ? `<div class="kpi-badge ${tiDeltaPct >= 0 ? 'positive' : 'negative'}">${tiDeltaPct >= 0 ? '+' : ''}${formatPercent(tiDeltaPct, 0)}</div>` : ''}
                         </div>
                     </div>
 
-                    <table class="data-table reveal" style="transition-delay:0.35s;margin-top:16px;font-size:16px;">
-                        <thead><tr><th>Ano</th><th>Receita FUNDEB</th><th>Matrículas</th><th>Tempo integral</th><th>Ed. especial</th><th>EJA</th><th>Escolas</th><th>Variação</th></tr></thead>
+                    <table class="data-table reveal" style="transition-delay:0.35s;margin-top:16px;font-size:15px;">
+                        <thead><tr><th>Ano</th><th>Receita FUNDEB</th><th>Matr.</th><th>Valor/Aluno</th><th>T. integral</th><th>Ed. especial</th><th>EJA</th><th>Escolas</th><th>Variação</th></tr></thead>
                         <tbody>
                             ${sh.map((item, idx) => {
                               const isLast = idx === sh.length - 1;
-                              const hasMatriculas = item.totalMatriculas != null;
+                              const hasMatriculas = item.totalMatriculas != null && item.totalMatriculas > 0;
+                              const hasReceita = item.totalReceitasFundeb != null && item.totalReceitasFundeb > 0;
+                              const valorAluno = hasReceita && hasMatriculas
+                                ? `R$ ${Math.round(item.totalReceitasFundeb! / item.totalMatriculas!).toLocaleString('pt-BR')}`
+                                : '—';
                               const variacaoStr = idx === 0
                                 ? '<span class="status-badge historico">base</span>'
                                 : item.variacao != null
@@ -2018,7 +2068,7 @@ export function generateComercialHtml(data: ComercialPdfData): string {
                                   : item.variacao != null
                                     ? 'color:var(--red);font-weight:600'
                                     : '';
-                              return `<tr><td${isLast ? ' style="font-weight:700;color:var(--orange)"' : ''}>${item.ano}</td><td${isLast ? ' style="font-weight:700"' : ''}>${item.totalReceitasFundeb != null ? formatBRLNoCents(item.totalReceitasFundeb) : '—'}</td><td>${hasMatriculas ? formatInteger(item.totalMatriculas!) : '—'}</td><td>${item.tempoIntegral != null ? formatInteger(item.tempoIntegral) : '—'}</td><td>${item.educacaoEspecial != null ? formatInteger(item.educacaoEspecial) : '—'}</td><td>${item.eja != null ? formatInteger(item.eja) : '—'}</td><td>${item.totalEscolas != null ? formatInteger(item.totalEscolas) : '—'}</td><td style="text-align:right${varStyle ? `;${varStyle}` : ''}">${variacaoStr}</td></tr>`;
+                              return `<tr><td${isLast ? ' style="font-weight:700;color:var(--orange)"' : ''}>${item.ano}</td><td${isLast ? ' style="font-weight:700"' : ''}>${hasReceita ? formatBRLNoCents(item.totalReceitasFundeb!) : '—'}</td><td>${hasMatriculas ? formatInteger(item.totalMatriculas!) : '—'}</td><td style="font-weight:600;">${valorAluno}</td><td>${item.tempoIntegral != null ? formatInteger(item.tempoIntegral) : '—'}</td><td>${item.educacaoEspecial != null ? formatInteger(item.educacaoEspecial) : '—'}</td><td>${item.eja != null ? formatInteger(item.eja) : '—'}</td><td>${item.totalEscolas != null ? formatInteger(item.totalEscolas) : '—'}</td><td style="text-align:right${varStyle ? `;${varStyle}` : ''}">${variacaoStr}</td></tr>`;
                             }).join('\n                            ')}
                         </tbody>
                     </table>
@@ -2068,8 +2118,8 @@ export function generateComercialHtml(data: ComercialPdfData): string {
                                   }).join('\n                                ');
                                 })()}
                             </div>
-                            ${tiDeltaPct != null ? `<div style="font-family:var(--font-body);font-size:13px;color:var(--orange);font-weight:600;margin-top:12px;text-align:right;">
-                                +${formatPercent(tiDeltaPct, 0)} em ${sh.filter(s => s.tempoIntegral != null).length > 1 ? sh.filter(s => s.tempoIntegral != null).length - 1 : '—'} anos!
+                            ${tiDeltaPct != null ? `<div style="font-family:var(--font-body);font-size:13px;color:${tiDeltaPct >= 0 ? 'var(--green)' : 'var(--orange)'};font-weight:600;margin-top:12px;text-align:right;">
+                                ${tiDeltaPct >= 0 ? '+' : ''}${formatPercent(tiDeltaPct, 0)} em ${shWithTI.length > 1 ? shWithTI.length - 1 : '—'} anos${tiDeltaPct >= 0 ? '!' : ''}
                             </div>` : ''}
                         </div>
                     </div>
@@ -2315,18 +2365,19 @@ export function mapPayloadToComercialData(payload: any): ComercialPdfData {
   const ctx = dirigido?.contextoPolitico ?? {};
 
   // Build série histórica from the dirigido report
+  // Preserve null for missing data so the template can filter out years with no real data
   const serieHistorica = (historico.anos ?? []).map((a: any) => ({
     ano: a.ano,
-    totalReceitasFundeb: a.totalReceitasFundeb ?? 0,
-    contribuicaoMunicipal: a.contribuicaoMunicipal ?? 0,
-    complementacaoVAAF: a.complementacaoVAAF ?? 0,
-    complementacaoVAAT: a.complementacaoVAAT ?? 0,
-    complementacaoVAAR: a.complementacaoVAAR ?? 0,
-    totalMatriculas: a.totalMatriculasMunicipais ?? 0,
-    totalEscolas: a.totalEscolas ?? 0,
-    tempoIntegral: a.tempoIntegral ?? 0,
-    educacaoEspecial: a.educacaoEspecial ?? 0,
-    eja: a.eja ?? 0,
+    totalReceitasFundeb: a.totalReceitasFundeb ?? null,
+    contribuicaoMunicipal: a.contribuicaoMunicipal ?? null,
+    complementacaoVAAF: a.complementacaoVAAF ?? null,
+    complementacaoVAAT: a.complementacaoVAAT ?? null,
+    complementacaoVAAR: a.complementacaoVAAR ?? null,
+    totalMatriculas: a.totalMatriculasMunicipais ?? null,
+    totalEscolas: a.totalEscolas ?? null,
+    tempoIntegral: a.tempoIntegral ?? null,
+    educacaoEspecial: a.educacaoEspecial ?? null,
+    eja: a.eja ?? null,
   }));
 
   // IDEB
@@ -2400,12 +2451,28 @@ export function mapPayloadToComercialData(payload: any): ComercialPdfData {
     habilitacaoVaat: rel?.perfilComercial?.habilitacaoVaat || undefined,
 
     eficiencia: {
+      indiceEficiencia: rel?.perfilComercial?.score ?? undefined,
+      fatorAjusteRegional: rel?.perfilComercial?.camadaEstadual?.ajusteMultiplicadorAplicado ?? undefined,
       fundebPerCapita: rel?.perfilComercial?.fundebPerCapita
         ? `R$ ${Math.round(rel.perfilComercial.fundebPerCapita).toLocaleString('pt-BR')}`
         : undefined,
-      matriculasPerCapita: rel?.perfilComercial?.matriculasMunicipaisPorHabitante
-        ? (rel.perfilComercial.matriculasMunicipaisPorHabitante * 100).toFixed(1) + '%'
+      matriculasPerCapita: rel?.perfilComercial?.matriculasMunicipaisPorHabitante != null
+        ? rel.perfilComercial.matriculasMunicipaisPorHabitante.toFixed(1) + '%'
         : undefined,
+      edInfantilPerCapita: rel?.perfilComercial?.educacaoInfantilMunicipalPorHabitante != null
+        ? rel.perfilComercial.educacaoInfantilMunicipalPorHabitante.toFixed(1) + '%'
+        : undefined,
+      crechePerCapita: rel?.perfilComercial?.crecheMunicipalPorHabitante != null
+        ? rel.perfilComercial.crecheMunicipalPorHabitante.toFixed(1) + '%'
+        : undefined,
+      valorAlunoMedio: (() => {
+        const totalReceita = receitas.totalReceitas ?? 0;
+        const totalMatriculas = rel?.perfilComercial?.matriculasMunicipais ?? censo.totalMatriculas ?? 0;
+        return totalReceita > 0 && totalMatriculas > 0
+          ? `R$ ${Math.round(totalReceita / totalMatriculas).toLocaleString('pt-BR')}`
+          : undefined;
+      })(),
+      regiao: ident.regiao || ident.mesorregiao || undefined,
     },
 
     censo: {

@@ -216,6 +216,7 @@ def gerar_pdf(relatorio_raw) -> str:
     ideb_ini = relatorio.get("idebAnosIniciais") or []
     ideb_fin = relatorio.get("idebAnosFinais") or []
     censo = relatorio.get("censoEscolar") or {}
+    perfil_ibge = relatorio.get("perfilIBGE") or {}
 
     TITLE = "Diagnóstico Estratégico Educacional"
     FONTE = "FNDE / INEP / IBGE"
@@ -379,7 +380,7 @@ def gerar_pdf(relatorio_raw) -> str:
     vaat_v = float(receitas.get("complementacaoVAAT") or 0)
     vaar_v = float(receitas.get("complementacaoVAAR") or 0)
     contrib_pct_text = f"{pct_rec(receitas.get('receitaContribuicaoMunicipal'))}"
-    sem_vaar = "O município não está recebendo atualmente: VAAR (Vinculado a Resultados). " if vaar_v == 0 else ""
+    sem_vaar = "O município não está recebendo atualmente: VAAR (Vinculado a Resultados). " if vaar_v is not None and vaar_v == 0 else ""
     analise_txt = (
         f"A estrutura de receitas do FUNDEB para o exercício de {exercicio} apresenta predominância de receita de contribuição "
         f"municipal, representando {contrib_pct_text} do montante total. {sem_vaar}"
@@ -396,7 +397,7 @@ def gerar_pdf(relatorio_raw) -> str:
     draw_header(c, title=TITLE, subtitle=mun_label, source=FONTE)
     y = PAGE_H - 160
 
-    draw_section_title(c, "3", "Projecao Rocha Prime - Ganho Potencial", y)
+    draw_section_title(c, "3", "Projeção Rocha Prime - Ganho Potencial", y)
     y -= 30
 
     # 4 cards no topo
@@ -445,7 +446,7 @@ def gerar_pdf(relatorio_raw) -> str:
         ["TOTAL",                        f_money(proj.get("totalAtual")), f_money(proj.get("totalProjetado")), f_money(proj.get("totalGanho"))],
     ]]
     y = draw_kv_table(c, MARGIN_X, y, W,
-        safe_row(["Componente", "Cenario Atual", "Cenario Projetado", "Variacao"]),
+        safe_row(["Componente", "Cenário Atual", "Cenário Projetado", "Variação"]),
         proj_rows, [W * 0.37, W * 0.21, W * 0.21, W * 0.21],
         highlight_last=True, positive_cols={3}, center_cols={1, 2, 3}
     )
@@ -459,14 +460,6 @@ def gerar_pdf(relatorio_raw) -> str:
         "para acesso às complementações federais. O ganho projetado em VAAR está condicionado ao atendimento dos indicadores de "
         "desempenho educacional e à regularidade das informações junto ao MEC/FNDE. "
         + (f"Metodologia aplicada: {met_txt}." if met_txt else "A metodologia adota parâmetros conservadores, respeitando os limites regulatórios estabelecidos pela legislação do FUNDEB.")
-    )
-    fund_text = (
-        "A projecao de cenario otimizado foi elaborada considerando analise tecnica das bases do FNDE, dados do Censo Escolar "
-        "e parametros regulatorios vigentes. Os principais fatores de variacao identificados estao relacionados a VAAT e VAAF. "
-        "A estimativa considera a revisao de dados do Censo Escolar, a conferencia das bases de calculo e a evolucao das condicoes "
-        "para acesso as complementacoes federais. O ganho projetado em VAAR permanece condicionado ao atendimento dos indicadores de "
-        "desempenho educacional e a regularidade das informacoes junto ao MEC/FNDE. "
-        + (f"Metodologia aplicada: {met_txt}." if met_txt else "A metodologia adota os parametros historicos do levantamento Rocha Prime.")
         + (
             f" Como camada técnica secundária, o ganho recuperável já evidenciado nas bases atuais soma {f_money(ganho_recuperavel)}."
             if ganho_recuperavel > 0 and abs(ganho_recuperavel - ganho) > 0.01
@@ -518,27 +511,32 @@ def gerar_pdf(relatorio_raw) -> str:
     confianca = perfil.get("confianca") or 0
     score = perfil.get("score") or 0
 
+    # Valor Aluno Médio calculation
+    total_matriculas_censo = int(censo.get("totalMatriculas") or 0)
+    valor_aluno_medio = f_money(total_rec_float / total_matriculas_censo) if total_rec_float > 0 and total_matriculas_censo > 0 else "-"
+
     ef_rows = [safe_row(r) for r in [
-        ["Indice de Eficiencia Arrecadatoria", f"{score:.2f}".replace(".", ",")],
-        ["Classificacao", faixa],
+        ["Índice de Eficiência Arrecadatória", f"{score:.1f}".replace(".", ",")],
+        ["Classificação", faixa],
         ["Multiplicador de Benchmark Interno", f"{mul_aplicado:.2f}x".replace(".", ",")],
-        ["Nivel de Confianca", f_pct(confianca)],
+        ["Nível de Confiança", f_pct(confianca)],
         ["FUNDEB per capita", f_money(perfil.get("fundebPerCapita"))],
-        ["Matriculas municipais por habitante", f_pct(perfil.get("matriculasMunicipaisPorHabitante"))],
-        ["Educacao infantil municipal por habitante", f_pct(perfil.get("educacaoInfantilMunicipalPorHabitante"))],
+        ["Valor aluno médio municipal", valor_aluno_medio],
+        ["Matrículas municipais por habitante", f_pct(perfil.get("matriculasMunicipaisPorHabitante"))],
+        ["Educação infantil municipal por habitante", f_pct(perfil.get("educacaoInfantilMunicipalPorHabitante"))],
         ["Creche municipal por habitante", f_pct(perfil.get("crecheMunicipalPorHabitante"))],
         ["Habilitação VAAT", f_str(perfil.get("habilitacaoVaat"))],
-        ["Pendencia VAAT", f_str(perfil.get("pendenciaVaat"))],
+        ["Pendência VAAT", f_str(perfil.get("pendenciaVaat"))],
         ["UF / fundo estadual", f"{f_str(ident.get('uf'))} / {f_str(camada.get('fundoEstadual'))}"],
-        ["Ajuste estadual aplicado", f"{camada.get('ajusteMultiplicadorAplicado', 0):.2f}x".replace(".", ",")],
+        ["Ajuste estadual aplicado", f"{camada.get('ajusteMultiplicadorAplicado', 0):.4f}".replace(".", ",")],
     ]]
     # Indicador 60% | Valor 40% - center_cols={1} alinha header e dados juntos
     y = draw_kv_table(c, MARGIN_X, y, W, safe_row(["Indicador de Benchmark", "Valor"]),
         ef_rows, [W * 0.60, W * 0.40], row_h=21, center_cols={1})
 
-    # Secao 5 - Fundamentacao dos indicadores (usa Paragraph = word-wrap + Unicode correto)
+    # Secao 5.1 - Fundamentacao dos indicadores (usa Paragraph = word-wrap + Unicode correto)
     y = check_y(c, y, 180, TITLE, mun_label)
-    draw_section_title(c, "5", "Fundamentacao dos Indicadores", y - 20)
+    draw_section_title(c, "4.1", "Fundamentação dos Indicadores", y - 20)
     y -= 40
 
     fatores = perfil.get("fatores") or []
@@ -566,6 +564,44 @@ def gerar_pdf(relatorio_raw) -> str:
     y = check_y(c, y, bullets_required, TITLE, mun_label)
     y = draw_bullets_box(c, MARGIN_X, y, W, "An\u00e1lise Contextual", bullets)
 
+    # Secao 5.2 - Perfil IBGE do Município
+    if perfil_ibge.get("disponivel"):
+        y = check_y(c, y, 120, TITLE, mun_label)
+        draw_section_title(c, "4.2", "Perfil IBGE do Município", y - 20)
+        y -= 40
+
+        ibge_card_w = (W - 20) / 3
+        ibge_card_h = 55
+        ibge_row1 = [
+            ("POPULAÇÃO ESTIMADA", f_int(perfil_ibge.get("populacaoEstimada")), perfil_ibge.get("populacaoAnoReferencia") or ""),
+            ("IDHM", f"{perfil_ibge.get('idhm', 0):.3f}".replace(".", ",") if perfil_ibge.get("idhm") else "-", perfil_ibge.get("idhmAnoReferencia") or ""),
+            ("PIB PER CAPITA", f_money(perfil_ibge.get("pibPerCapita")) if perfil_ibge.get("pibPerCapita") else "-", perfil_ibge.get("pibAnoReferencia") or ""),
+        ]
+        ibge_row2 = [
+            ("ÁREA TERRITORIAL", f"{float(perfil_ibge.get('areaTerritorial') or 0):,.1f} km²".replace(",", "X").replace(".", ",").replace("X", ".") if perfil_ibge.get("areaTerritorial") else "-", ""),
+            ("ESCOLARIZAÇÃO 6-14", f_pct(perfil_ibge.get("escolarizacao614")) if perfil_ibge.get("escolarizacao614") else "-", ""),
+            ("MORTALIDADE INFANTIL", f"{float(perfil_ibge.get('mortalidadeInfantil') or 0):.1f}".replace(".", ",") + " por mil" if perfil_ibge.get("mortalidadeInfantil") else "-", ""),
+        ]
+
+        for row_data in [ibge_row1, ibge_row2]:
+            cx_ibge = MARGIN_X
+            bg_colors = [LIGHT_BLUE, colors.HexColor("#F0FBE6"), colors.HexColor("#FFF7EC")]
+            for idx, (lbl, val, ref) in enumerate(row_data):
+                bg = bg_colors[idx % 3]
+                round_rect(c, cx_ibge, y - ibge_card_h, ibge_card_w, ibge_card_h, bg, radius=6)
+                c.setFillColor(MUTED)
+                c.setFont("BodyBold", 6.5)
+                c.drawString(cx_ibge + 8, y - 14, lbl)
+                c.setFillColor(NAVY)
+                c.setFont("Heading", 14)
+                c.drawString(cx_ibge + 8, y - 34, val)
+                if ref:
+                    c.setFillColor(MUTED)
+                    c.setFont("Body", 6)
+                    c.drawString(cx_ibge + 8, y - 46, f"Ref: {ref}")
+                cx_ibge += ibge_card_w + 10
+            y -= ibge_card_h + 10
+
     draw_footer(c)
     c.showPage()
 
@@ -581,8 +617,7 @@ def gerar_pdf(relatorio_raw) -> str:
         crono_rows = [safe_row([f_str(r.get("mes")), f_money(r.get("valorProjetado")), f_pct(r.get("percentual"))]) for r in crono if r]
 
         y = draw_kv_table(c, MARGIN_X, y, W,
-            safe_row(["Mes", "Valor Projetado (R$)", "Participacao (%)"]),
-            crono_rows, [W * 0.20, W * 0.50, W * 0.30], center_cols={1, 2}
+            safe_row(["Mês", "Valor Projetado (R$)", "Participação (%)"]),            crono_rows, [W * 0.20, W * 0.50, W * 0.30], center_cols={1, 2}
         )
 
         # Box potencial de incremento
@@ -624,7 +659,7 @@ def gerar_pdf(relatorio_raw) -> str:
         sys_required = (len(sys_rows) + 1) * 30 + 40
         y = check_y(c, y, sys_required, TITLE, mun_label)
         y = draw_kv_table(c, MARGIN_X, y, W,
-            safe_row(["Instituicao", "Sistema", "Situacao Cadastral"]),
+            safe_row(["Instituição", "Sistema", "Situação Cadastral"]),
             sys_rows, [W * 0.12, W * 0.16, W * 0.72], row_h=30, font_size=7.0,
             center_cols={1}
         )
@@ -632,13 +667,13 @@ def gerar_pdf(relatorio_raw) -> str:
     if pdde:
         pdde_required = (len(pdde) + 1) * 22 + 80
         y = check_y(c, y, pdde_required, TITLE, mun_label)
-        draw_section_title(c, "7.1", safe_text("Historico de Repasses PDDE"), y - 20)
+        draw_section_title(c, "7.1", safe_text("Histórico de Repasses PDDE"), y - 20)
         y -= 40
         pdde_rows = [safe_row([str(p.get("ano", "")), f_money(p.get("valor"))]) for p in pdde if p]
         # Ano 20% | Valor Repassado 80%
         y = draw_kv_table(c, MARGIN_X, y, W, safe_row(["Ano", "Valor Repassado"]), pdde_rows, [W * 0.20, W * 0.80])
-        y = draw_obs_box(c, MARGIN_X, y - 10, W, "Leitura operacional da secao",
-            "O historico de repasses do PDDE reforca a leitura operacional do ente e oferece evidencia concreta da movimentacao recente de recursos federais na rede publica local.")
+        y = draw_obs_box(c, MARGIN_X, y - 10, W, "Leitura operacional da seção",
+            "O histórico de repasses do PDDE reforça a leitura operacional do ente e oferece evidência concreta da movimentação recente de recursos federais na rede pública local.")
 
     if obs_ops:
         y = check_y(c, y, 60, TITLE, mun_label)
@@ -661,18 +696,19 @@ def gerar_pdf(relatorio_raw) -> str:
     draw_section_title(c, "8", "Censo Escolar e IDEB", y)
     y -= 20
 
-    # 3 cards de resumo
+    # 4 cards de resumo
     if censo:
-        card_w2 = (W - 20) / 3
+        card_w2 = (W - 24) / 4
         censo_cards = [
-            ("UNIDADES ESCOLARES", f_int(censo.get("totalEscolas"))),
-            ("TOTAL DE MATRÍCULAS", f_int(censo.get("totalMatriculas"))),
-            ("DOCENTES", f_int(censo.get("totalDocentes"))),
+            ("UNIDADES ESCOLARES", f_int(censo.get("totalEscolas")), NAVY),
+            ("MATRÍCULAS MUNICIPAIS", f_int(censo.get("totalMatriculas")), NAVY),
+            ("DOCENTES", f_int(censo.get("totalDocentes")), NAVY),
+            ("RECURSO POR ALUNO MUNICIPAL", valor_aluno_medio, BLUE),
         ]
         cx2 = MARGIN_X
-        for label, value in censo_cards:
-            draw_info_box(c, cx2, y - 60, card_w2, 60, label, value)
-            cx2 += card_w2 + 10
+        for label, value, clr in censo_cards:
+            draw_info_box(c, cx2, y - 60, card_w2, 60, label, value, color=clr)
+            cx2 += card_w2 + 8
         y -= 75
 
         etapas = censo.get("matriculasEtapa") or {}
@@ -780,7 +816,7 @@ def gerar_pdf(relatorio_raw) -> str:
         # Calcular altura real necessaria para a tabela inteira (evita overlap no footer)
         ideb_required = (len(ideb_rows) + 1) * 22 + 80
         y = check_y(c, y, ideb_required, TITLE, mun_label)
-        draw_section_title(c, "8.4", "Serie Historica do IDEB", y - 20)
+        draw_section_title(c, "9", "Série Histórica do IDEB", y - 20)
         y -= 40
         # Etapa 28% | Ano 12% (centralizado) | Meta 30% | IDEB 30%
         y = draw_kv_table(c, MARGIN_X, y, W,

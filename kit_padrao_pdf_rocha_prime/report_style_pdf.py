@@ -37,11 +37,47 @@ _LOGO_CACHE: dict[str, ImageReader] = {}
 
 
 def register_fonts() -> None:
-    fonts = {
+    import platform
+    is_win = platform.system() == "Windows"
+
+    # Windows fonts (primary)
+    win_fonts = {
         "Heading": Path(r"C:\Windows\Fonts\bahnschrift.ttf"),
         "Body": Path(r"C:\Windows\Fonts\segoeui.ttf"),
         "BodyBold": Path(r"C:\Windows\Fonts\seguisb.ttf"),
     }
+    # Linux fallback: Liberation Sans (widely available)
+    linux_candidates = [
+        Path("/usr/share/fonts/liberation-sans-fonts/LiberationSans-Regular.ttf"),
+        Path("/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"),
+        Path("/usr/share/fonts/google-noto/NotoSans-Regular.ttf"),
+    ]
+    linux_bold_candidates = [
+        Path("/usr/share/fonts/liberation-sans-fonts/LiberationSans-Bold.ttf"),
+        Path("/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"),
+        Path("/usr/share/fonts/google-noto/NotoSans-Bold.ttf"),
+    ]
+
+    def find_font(candidates: list[Path]) -> Path | None:
+        for p in candidates:
+            if p.exists():
+                return p
+        return None
+
+    if is_win:
+        fonts = win_fonts
+    else:
+        regular = find_font(linux_candidates)
+        bold = find_font(linux_bold_candidates)
+        if not regular or not bold:
+            # Absolute fallback: use Helvetica (built-in)
+            return
+        fonts = {
+            "Heading": bold,
+            "Body": regular,
+            "BodyBold": bold,
+        }
+
     for name, path in fonts.items():
         if name not in pdfmetrics.getRegisteredFontNames():
             pdfmetrics.registerFont(TTFont(name, str(path)))
@@ -180,9 +216,24 @@ def draw_footer(c: canvas.Canvas) -> None:
 
 
 def draw_section_title(c: canvas.Canvas, number: str, title: str, y: float) -> None:
+    """Draw a styled section title with a navy badge containing the section number."""
+    badge_w = max(24, len(number) * 10 + 12)
+    badge_h = 18
+    badge_y = y - 4
+    # Badge background
+    c.saveState()
+    c.setFillColor(NAVY)
+    c.setStrokeColor(NAVY)
+    c.roundRect(MARGIN_X, badge_y, badge_w, badge_h, 4, fill=1, stroke=0)
+    # Badge number
+    c.setFillColor(WHITE)
+    c.setFont("BodyBold", 9)
+    c.drawCentredString(MARGIN_X + badge_w / 2, badge_y + 5, str(number))
+    c.restoreState()
+    # Title text
     c.setFillColor(NAVY)
     c.setFont("BodyBold", 12)
-    c.drawString(MARGIN_X, y, f"{number}. {title}")
+    c.drawString(MARGIN_X + badge_w + 8, y, title)
 
 
 def draw_kv_table(
