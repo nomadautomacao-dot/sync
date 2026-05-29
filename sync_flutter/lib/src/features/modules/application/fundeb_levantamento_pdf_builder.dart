@@ -1700,11 +1700,20 @@ class FundebLevantamentoPdfBuilder {
       ),
       if (censo.recorte == 'municipal' && etapas.ensinoMedio == 0) ...[
         pw.SizedBox(height: 10),
-        _callout(
-          'A rede municipal não opera o Ensino Médio. Esta etapa é de responsabilidade da rede estadual.',
-          accent: _blue,
-          background: _softBlue,
-        ),
+        if (etapas.ensinoMedioPublica != null &&
+            etapas.ensinoMedioPublica! > 0)
+          _callout(
+            'A rede pública de ${_municipioLabel(relatorio)} conta com ${_integer(etapas.ensinoMedioPublica!)} matrículas no Ensino Médio (rede estadual/federal). '
+            'Essas matrículas não são consideradas no cálculo do FUNDEB municipal.',
+            accent: _blue,
+            background: _softBlue,
+          )
+        else
+          _callout(
+            'A rede municipal não opera o Ensino Médio. Esta etapa é de responsabilidade da rede estadual.',
+            accent: _blue,
+            background: _softBlue,
+          ),
       ],
       pw.SizedBox(height: 18),
       _sectionHeading('9.2', 'Detalhamento da Rede Publica'),

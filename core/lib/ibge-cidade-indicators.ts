@@ -48,18 +48,45 @@ function decodeHtml(value: string) {
     .trim();
 }
 
+function stripAccents(value: string) {
+  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
 function extractIndicators(html: string) {
-  const regex =
-    /<div class='ind-label'>[\s\S]*?<p>(.*?)<\/p><\/div><p class='ind-value'>(.*?)<span class='indicador-unidade'>(.*?)<\/span><small>[\s\S]*?\[(.*?)\]<\/small>/g;
   const indicators = new Map<string, { value: string; unit: string; year: string }>();
 
-  for (const match of html.matchAll(regex)) {
-    const label = decodeHtml(match[1]);
-    indicators.set(label, {
-      value: decodeHtml(match[2]),
-      unit: decodeHtml(match[3]),
-      year: decodeHtml(match[4]),
-    });
+  // Split HTML into individual <li> blocks — each indicator is inside one <li>
+  const liBlocks = html.split(/<li[^>]*>/);
+  for (const block of liBlocks) {
+    // Extract label from <div class='ind-label'>...<p>LABEL</p></div>
+    const labelMatch = block.match(/<div class='ind-label'>[\s\S]*?<p>(.*?)<\/p><\/div>/);
+    if (!labelMatch) continue;
+    const label = decodeHtml(labelMatch[1]);
+
+    // Extract year from <small>...[YEAR]</small>
+    const yearMatch = block.match(/<small>[\s\S]*?\[(.*?)\]<\/small>/);
+    if (!yearMatch) continue;
+    const year = decodeHtml(yearMatch[1]);
+
+    // Extract value and optional unit from <p class='ind-value'>VALUE<span class='indicador-unidade'>UNIT</span>
+    const withUnitMatch = block.match(/<p class='ind-value'>(.*?)<span class='indicador-unidade'>(.*?)<\/span>/);
+    if (withUnitMatch) {
+      indicators.set(label, {
+        value: decodeHtml(withUnitMatch[1]),
+        unit: decodeHtml(withUnitMatch[2]),
+        year,
+      });
+    } else {
+      // No unit span (e.g. IDHM): <p class='ind-value'>VALUE<small>
+      const noUnitMatch = block.match(/<p class='ind-value'>([^<]*?)<small>/);
+      if (noUnitMatch) {
+        indicators.set(label, {
+          value: decodeHtml(noUnitMatch[1]),
+          unit: "",
+          year,
+        });
+      }
+    }
   }
 
   return indicators;
@@ -112,7 +139,10 @@ export async function getIbgeCidadeIndicators(
     const indicators = extractIndicators(html);
     const entries = Array.from(indicators.entries());
     const findIndicator = (...fragments: string[]) =>
-      entries.find(([label]) => fragments.every((fragment) => label.toLowerCase().includes(fragment.toLowerCase())))?.[1];
+      entries.find(([label]) => {
+        const normalizedLabel = stripAccents(label).toLowerCase();
+        return fragments.every((fragment) => normalizedLabel.includes(stripAccents(fragment).toLowerCase()));
+      })?.[1];
 
     const estimada = findIndicator("Populacao estimada");
     const ultimoCenso = findIndicator("Populacao no ultimo censo");

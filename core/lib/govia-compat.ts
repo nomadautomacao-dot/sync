@@ -581,7 +581,7 @@ function buildRelatorioDirigidoBase({
       tempoIntegral: getTempoIntegralFromRecord(censoRecord),
       educacaoEspecial: censoRecord?.educacaoEspecialMunicipal ?? censoRecord?.educacaoEspecialTotal ?? null,
       eja: censoRecord?.ejaMunicipal ?? censoRecord?.ejaTotal ?? null,
-      fonteReceita: receita.ano === exercicio ? "Portaria FNDE" : "SICONFI/DCA",
+      fonteReceita: receita.fonte ?? (receita.ano === exercicio ? "Portaria FNDE" : "Histórico FNDE"),
       recursoPorAluno: (matriculasMunicipais && receita.totalReceitas)
         ? Math.round(receita.totalReceitas / matriculasMunicipais * 100) / 100
         : null,
@@ -1009,6 +1009,8 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
       matriculas_fundamental_af: relatorio.censoEscolar?.matriculasDetalhadas.anosFinais ?? 0,
       matriculas_eja: relatorio.censoEscolar?.matriculasEtapa.eja ?? 0,
       matriculas_ensino_medio: relatorio.censoEscolar?.matriculasEtapa.ensinoMedio ?? 0,
+      matriculas_ensino_medio_rede_publica: inepRecord?.ensinoMedioPublica ?? null,
+      matriculas_ensino_medio_total: inepRecord?.ensinoMedioTotal ?? null,
       matriculas_educacao_especial: relatorio.censoEscolar?.matriculasEtapa.educacaoEspecial ?? 0,
       matriculas_tempo_integral: relatorio.censoEscolar?.tempoIntegral.total ?? 0,
       ideb_anos_iniciais: qeduIndicators?.anosIniciais?.idebObservado ?? idebRecord?.anosIniciaisPublica ?? 0,

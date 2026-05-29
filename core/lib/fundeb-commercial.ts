@@ -60,6 +60,8 @@ export function buildCensoEscolarFromInep(record: InepCensoMunicipalRecord | nul
       educacaoInfantil,
       ensinoFundamental,
       ensinoMedio,
+      ensinoMedioPublica: record.ensinoMedioPublica ?? null,
+      ensinoMedioTotal: record.ensinoMedioTotal ?? null,
       eja,
       educacaoEspecial,
     },

@@ -1214,8 +1214,13 @@ class RemoteSyncRepository implements SyncRepository {
     final demografia =
         payload['demografia'] as Map<String, dynamic>? ?? const {};
     final fiscal = payload['fiscal'] as Map<String, dynamic>? ?? const {};
+    final dirigidoBase =
+        payload['relatorio_dirigido_base'] as Map<String, dynamic>? ?? const {};
+    final ibgePerfil =
+        dirigidoBase['perfilIBGE'] as Map<String, dynamic>? ?? const {};
     final perfil = IbgeMunicipioPerfil(
-      populacaoEstimada: _readNullableInt(demografia['populacao']),
+      populacaoEstimada: _readNullableInt(demografia['populacao']) ??
+          _readNullableInt(ibgePerfil['populacaoEstimada']),
       populacaoEstimadaAnoReferencia: _readNullableString(
         demografia['populacao_ano_referencia'],
       ),
@@ -1223,6 +1228,9 @@ class RemoteSyncRepository implements SyncRepository {
       idhmAnoReferencia: _readNullableString(demografia['idh_ano_referencia']),
       receitasBrutasRealizadas: _readNullableDouble(fiscal['receita_total']),
       pibPerCapita: _readNullableDouble(fiscal['pib_per_capita']),
+      areaTerritorial: _readNullableDouble(ibgePerfil['areaTerritorial']),
+      mortalidadeInfantil: _readNullableDouble(ibgePerfil['mortalidadeInfantil']),
+      escolarizacao614: _readNullableDouble(ibgePerfil['escolarizacao614']),
     );
     return perfil.hasAny ? perfil : null;
   }

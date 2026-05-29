@@ -32,9 +32,24 @@ type FndeReceitasSource =
       kind: "pdf";
       url: string;
       sourceLabel: string;
+    }
+  | {
+      kind: "pdf-vaaf";
+      url: string;
+      sourceLabel: string;
     };
 
 const FNDE_RECEITAS_SOURCES: Record<number, FndeReceitasSource> = {
+  2022: {
+    kind: "pdf-vaaf",
+    url: "https://www.gov.br/fnde/pt-br/acesso-a-informacao/acoes-e-programas/financiamento/fundeb/novo-fundeb/2022/copy2_of_ReceitaeComplementaoporentefederadoFundeb2022.pdf",
+    sourceLabel: "Portaria FNDE / MEC - VAAF FUNDEB 2022 (3a publicacao)",
+  },
+  2023: {
+    kind: "pdf-vaaf",
+    url: "https://www.gov.br/fnde/pt-br/acesso-a-informacao/acoes-e-programas/financiamento/fundeb/vaaf/copy2_of_ReceitaeComplementaoporentefederadoFundeb2023.pdf",
+    sourceLabel: "Portaria FNDE / MEC - VAAF FUNDEB 2023 (4a publicacao)",
+  },
   2024: {
     kind: "pdf",
     url: "https://www.gov.br/fnde/pt-br/acesso-a-informacao/acoes-e-programas/financiamento/fundeb/2024/ReceitaTotalporEnteFederado.pdf",
@@ -249,6 +264,74 @@ function parseFundebReceitasPdf(pdfText: string, sourceLabel: string) {
   return map;
 }
 
+/**
+ * Parser for the older VAAF-style "Receita e Complementação da União-VAAF
+ * por ente federado" PDFs (2021–2023). These have 3 value columns:
+ *   Receita da contribuição | Complementação VAAF | Total
+ * VAAT and VAAR were not separately published in this format.
+ */
+function parseFundebReceitasVaafPdf(pdfText: string, sourceLabel: string) {
+  const lines = pdfText
+    .split(/\r?\n/)
+    .map((line) => line.replace(/\t+/g, " ").replace(/\s+/g, " ").trim())
+    .filter(Boolean);
+  const map = new Map<string, FndeFundebReceitas>();
+
+  // Try 3-column format: UF IBGE Nome Receita VAAF Total
+  const rowRegex3 =
+    /^([A-Z]{2})\s+(\d{7})\s+(.+?)\s+((?:-|\d[\d.,]*)\s+(?:-|\d[\d.,]*)\s+(?:-|\d[\d.,]*))$/;
+  // Fallback 4-column: UF IBGE Nome Receita VAAF [algo] Total
+  const rowRegex4 =
+    /^([A-Z]{2})\s+(\d{7})\s+(.+?)\s+((?:-|\d[\d.,]*)\s+(?:-|\d[\d.,]*)\s+(?:-|\d[\d.,]*)\s+(?:-|\d[\d.,]*))$/;
+
+  for (const line of lines) {
+    let uf: string, codigoIBGE: string, municipio: string;
+    let receitaContribuicao = 0;
+    let complementacaoVAAF = 0;
+    let totalReceitas = 0;
+
+    const match3 = line.match(rowRegex3);
+    if (match3) {
+      const values = match3[4].split(/\s+/).map(parseBrazilianNumber);
+      if (values.length === 3) {
+        [uf, codigoIBGE, municipio] = [match3[1], match3[2], match3[3]];
+        [receitaContribuicao, complementacaoVAAF, totalReceitas] = values;
+      } else {
+        continue;
+      }
+    } else {
+      const match4 = line.match(rowRegex4);
+      if (match4) {
+        const values = match4[4].split(/\s+/).map(parseBrazilianNumber);
+        if (values.length === 4) {
+          [uf, codigoIBGE, municipio] = [match4[1], match4[2], match4[3]];
+          receitaContribuicao = values[0];
+          complementacaoVAAF = values[1];
+          totalReceitas = values[3]; // last column is total
+        } else {
+          continue;
+        }
+      } else {
+        continue;
+      }
+    }
+
+    map.set(codigoIBGE, {
+      codigoIBGE,
+      municipio: municipio.trim(),
+      uf,
+      receitaContribuicaoMunicipal: receitaContribuicao,
+      complementacaoVAAF,
+      complementacaoVAAT: 0,
+      complementacaoVAAR: 0,
+      totalReceitas: totalReceitas || (receitaContribuicao + complementacaoVAAF),
+      fonte: sourceLabel,
+    });
+  }
+
+  return map;
+}
+
 function parseVaatCsv(csvText: string) {
   const rows = csvText
     .split(/\r?\n/)
@@ -319,6 +402,10 @@ async function loadFundebReceitasByYear(exercicio: number) {
     try {
       if (source.kind === "csv") {
         return parseFundebReceitasCsv(await fetchCsv(source.url, FNDE_LOCAL_RECEITAS[exercicio]), source.sourceLabel);
+      }
+
+      if (source.kind === "pdf-vaaf") {
+        return parseFundebReceitasVaafPdf(await fetchPdfText(source.url), source.sourceLabel);
       }
 
       return parseFundebReceitasPdf(await fetchPdfText(source.url), source.sourceLabel);
@@ -448,6 +535,51 @@ export async function getFundebVaatContext(
   };
 }
 
+/**
+ * Fallback: fetch FUNDEB revenue from SICONFI DCA (Tesouro Nacional) when FNDE portarias are unavailable.
+ * Uses DCA Anexo I-C (Receitas Orçamentárias) to find FUNDEB-related accounts.
+ */
+async function getFundebReceitasSiconfiDCA(
+  codigoIBGE: string,
+  exercicio: number,
+): Promise<FndeFundebReceitas | null> {
+  const ibge7 = normalizarIBGE(codigoIBGE);
+  const url = `https://apidatalake.tesouro.gov.br/ords/siconfi/tt/dca?an_exercicio=${exercicio}&id_ente=${ibge7}&no_anexo=DCA-Anexo%20I-C&co_tipo_demonstrativo=DCA`;
+
+  try {
+    const response = await fetch(url, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(12000),
+    });
+
+    if (!response.ok) return null;
+    const data = await response.json() as { items?: Array<{ conta: string; valor: number }> };
+    const items = data.items ?? [];
+
+    // FUNDEB transfer account: 1.7.5.1.00.0.0
+    const transferencias = items.find((i) => /^1\.7\.5\.1/.test(i.conta))?.valor ?? 0;
+    // FUNDEB complementação account: 1.7.1.5.00.0.0
+    const complementacao = items.find((i) => /^1\.7\.1\.5/.test(i.conta))?.valor ?? 0;
+    const totalReceitas = transferencias + complementacao;
+
+    if (totalReceitas <= 0) return null;
+
+    return {
+      codigoIBGE: ibge7,
+      municipio: "",
+      uf: "",
+      totalReceitas,
+      receitaContribuicaoMunicipal: transferencias,
+      complementacaoVAAF: complementacao,
+      complementacaoVAAT: 0,
+      complementacaoVAAR: 0,
+      fonte: `SICONFI / Tesouro Nacional - DCA ${exercicio}`,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function getFundebReceitasHistoricas(
   codigoIBGE: string,
   exercicio: number,
@@ -466,7 +598,15 @@ export async function getFundebReceitasHistoricas(
       }
 
       try {
-        return await getFundebReceitasOficiais(codigoIBGE, ano);
+        const fnde = await getFundebReceitasOficiais(codigoIBGE, ano);
+        if (fnde) return fnde;
+      } catch {
+        // FNDE portaria failed (403, timeout, etc.)
+      }
+
+      // Fallback: try SICONFI DCA for years without FNDE data
+      try {
+        return await getFundebReceitasSiconfiDCA(codigoIBGE, ano);
       } catch {
         return null;
       }

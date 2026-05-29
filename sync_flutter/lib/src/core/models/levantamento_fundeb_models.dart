@@ -527,6 +527,8 @@ class CensoMatriculasEtapa {
     required this.ensinoMedio,
     required this.eja,
     required this.educacaoEspecial,
+    this.ensinoMedioPublica,
+    this.ensinoMedioTotal,
   });
 
   final int educacaoInfantil;
@@ -534,6 +536,8 @@ class CensoMatriculasEtapa {
   final int ensinoMedio;
   final int eja;
   final int educacaoEspecial;
+  final int? ensinoMedioPublica;
+  final int? ensinoMedioTotal;
 
   factory CensoMatriculasEtapa.fromJson(Map<String, dynamic> json) {
     return CensoMatriculasEtapa(
@@ -542,6 +546,8 @@ class CensoMatriculasEtapa {
       ensinoMedio: _readInt(json, 'ensinoMedio'),
       eja: _readInt(json, 'eja'),
       educacaoEspecial: _readInt(json, 'educacaoEspecial'),
+      ensinoMedioPublica: _readNullableInt(json['ensinoMedioPublica']),
+      ensinoMedioTotal: _readNullableInt(json['ensinoMedioTotal']),
     );
   }
 }
