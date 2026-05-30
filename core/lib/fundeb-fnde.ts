@@ -248,15 +248,32 @@ function parseFundebReceitasPdf(pdfText: string, sourceLabel: string) {
       continue;
     }
 
+    const receitaContrib = values[0];
+    const cVAAF = values[1];
+    const cVAAT = values[2];
+    const cVAAR = values[3];
+    // values[4] = complementação total (skip), values[5] = receita total
+    const receitaTotal = values[5];
+
+    // Sanity check: total should be >= each component, and components should sum ≈ total
+    const compSum = receitaContrib + cVAAF + cVAAT + cVAAR;
+    const valid =
+      receitaTotal > 0 &&
+      receitaContrib <= receitaTotal &&
+      cVAAF <= receitaTotal &&
+      cVAAT <= receitaTotal &&
+      cVAAR <= receitaTotal &&
+      (compSum === 0 || Math.abs(compSum - receitaTotal) / receitaTotal < 0.10);
+
     map.set(codigoIBGE, {
       codigoIBGE,
       municipio: municipio.trim(),
       uf,
-      receitaContribuicaoMunicipal: values[0],
-      complementacaoVAAF: values[1],
-      complementacaoVAAT: values[2],
-      complementacaoVAAR: values[3],
-      totalReceitas: values[5],
+      receitaContribuicaoMunicipal: valid ? receitaContrib : 0,
+      complementacaoVAAF: valid ? cVAAF : 0,
+      complementacaoVAAT: valid ? cVAAT : 0,
+      complementacaoVAAR: valid ? cVAAR : 0,
+      totalReceitas: receitaTotal,
       fonte: sourceLabel,
     });
   }
@@ -316,15 +333,26 @@ function parseFundebReceitasVaafPdf(pdfText: string, sourceLabel: string) {
       }
     }
 
+    // Derive total: prefer the explicit total column; fallback to sum of components
+    const derivedTotal = totalReceitas || (receitaContribuicao + complementacaoVAAF);
+
+    // Sanity check: components should be <= total and sum ≈ total
+    const compSumVaaf = receitaContribuicao + complementacaoVAAF;
+    const validVaaf =
+      derivedTotal > 0 &&
+      receitaContribuicao <= derivedTotal &&
+      complementacaoVAAF <= derivedTotal &&
+      (compSumVaaf === 0 || Math.abs(compSumVaaf - derivedTotal) / derivedTotal < 0.10);
+
     map.set(codigoIBGE, {
       codigoIBGE,
       municipio: municipio.trim(),
       uf,
-      receitaContribuicaoMunicipal: receitaContribuicao,
-      complementacaoVAAF,
+      receitaContribuicaoMunicipal: validVaaf ? receitaContribuicao : 0,
+      complementacaoVAAF: validVaaf ? complementacaoVAAF : 0,
       complementacaoVAAT: 0,
       complementacaoVAAR: 0,
-      totalReceitas: totalReceitas || (receitaContribuicao + complementacaoVAAF),
+      totalReceitas: derivedTotal,
       fonte: sourceLabel,
     });
   }
@@ -538,6 +566,16 @@ export async function getFundebVaatContext(
 /**
  * Fallback: fetch FUNDEB revenue from SICONFI DCA (Tesouro Nacional) when FNDE portarias are unavailable.
  * Uses DCA Anexo I-C (Receitas Orçamentárias) to find FUNDEB-related accounts.
+ *
+ * Account mapping (PCASP / DCA Anexo I-C):
+ *   1.7.5.1.xx.x.x — Transferências recebidas do FUNDEB (redistribuição estadual/municipal)
+ *   1.7.1.5.xx.x.x — Transferências da União – Complementação ao FUNDEB (VAAF + VAAT + VAAR)
+ *
+ * IMPORTANT: The DCA does NOT break down the federal complement into VAAF/VAAT/VAAR.
+ * We only get: (a) total redistributed FUNDEB transfers, (b) total federal complement.
+ * If the decomposition is inconsistent (e.g. complement > total, or components don't sum
+ * to total), we keep the total but null out the component breakdown to avoid showing
+ * swapped or incorrect values in the historical revenue table.
  */
 async function getFundebReceitasSiconfiDCA(
   codigoIBGE: string,
@@ -553,24 +591,60 @@ async function getFundebReceitasSiconfiDCA(
     });
 
     if (!response.ok) return null;
-    const data = await response.json() as { items?: Array<{ conta: string; valor: number }> };
+    const data = await response.json() as { items?: Array<{ conta: string; coluna: string; valor: number }> };
     const items = data.items ?? [];
 
-    // FUNDEB transfer account: 1.7.5.1.00.0.0
-    const transferencias = items.find((i) => /^1\.7\.5\.1/.test(i.conta))?.valor ?? 0;
-    // FUNDEB complementação account: 1.7.1.5.00.0.0
-    const complementacao = items.find((i) => /^1\.7\.1\.5/.test(i.conta))?.valor ?? 0;
-    const totalReceitas = transferencias + complementacao;
+    // Filter to "Receitas Realizadas" column when available; DCA rows may have
+    // multiple columns (previsão inicial, previsão atualizada, realizadas, etc.)
+    const realized = items.filter(
+      (i) => !i.coluna || /realizad|arrecadad|Receitas Brutas Realizadas/i.test(i.coluna),
+    );
+    const source = realized.length > 0 ? realized : items;
+
+    // 1.7.5.1 — FUNDEB redistribution transfers (state+municipal contribution through the fund).
+    // Pick the most specific top-level account match (e.g. 1.7.5.1.00.0.0 preferred over sub-accounts).
+    const transferencias = pickBestAccountValue(source, "1.7.5.1");
+
+    // 1.7.1.5 — Federal complementation to FUNDEB (VAAF + VAAT + VAAR combined).
+    const complementacao = pickBestAccountValue(source, "1.7.1.5");
+
+    // Some municipalities report a single total FUNDEB line at 1.7.5.0 or 1.7.5.x
+    const totalFundebLine = pickBestAccountValue(source, "1.7.5.0");
+
+    // Determine the most reliable total
+    const componentsSum = transferencias + complementacao;
+    const totalReceitas =
+      totalFundebLine > 0 && totalFundebLine >= componentsSum
+        ? totalFundebLine
+        : componentsSum > 0
+          ? componentsSum
+          : 0;
 
     if (totalReceitas <= 0) return null;
+
+    // Validate decomposition: components must be non-negative and sum ≈ total
+    const decompositionValid =
+      transferencias > 0 &&
+      complementacao >= 0 &&
+      componentsSum > 0 &&
+      // Allow 5% tolerance for rounding
+      Math.abs(componentsSum - totalReceitas) / totalReceitas < 0.05 &&
+      // Complement should not exceed total (it's a part of total)
+      complementacao <= totalReceitas &&
+      // For most municipalities, the contribution is the larger part
+      // (only very small/poor municipalities get more complement than contribution)
+      // We don't enforce this but we do validate the sum
+      transferencias <= totalReceitas;
 
     return {
       codigoIBGE: ibge7,
       municipio: "",
       uf: "",
       totalReceitas,
-      receitaContribuicaoMunicipal: transferencias,
-      complementacaoVAAF: complementacao,
+      // Only expose breakdown when it's validated; otherwise null-out to avoid
+      // showing swapped/wrong values in the PDF
+      receitaContribuicaoMunicipal: decompositionValid ? transferencias : 0,
+      complementacaoVAAF: decompositionValid ? complementacao : 0,
       complementacaoVAAT: 0,
       complementacaoVAAR: 0,
       fonte: `SICONFI / Tesouro Nacional - DCA ${exercicio}`,
@@ -578,6 +652,32 @@ async function getFundebReceitasSiconfiDCA(
   } catch {
     return null;
   }
+}
+
+/**
+ * Pick the best account value from DCA items for a given account prefix.
+ * Prefers the top-level aggregation (e.g. "1.7.5.1.00.0.0") over sub-accounts.
+ * If there are multiple matches, picks the one with the highest (most aggregated) value,
+ * unless the ".00.0.0" suffix is found (which is the rollup line).
+ */
+function pickBestAccountValue(
+  items: Array<{ conta: string; valor: number }>,
+  prefix: string,
+): number {
+  const re = new RegExp(`^${prefix.replace(/\./g, "\\.")}`);
+  const matches = items.filter((i) => re.test(i.conta));
+  if (matches.length === 0) return 0;
+
+  // Prefer the rollup line ending in .00.0.0 or .00.00.00
+  const rollup = matches.find((i) =>
+    /\.00\.0\.0$|\.00\.00\.00$/.test(i.conta),
+  );
+  if (rollup) return rollup.valor;
+
+  // Otherwise pick the match with the highest absolute value (likely the rollup)
+  return matches.reduce((best, item) =>
+    Math.abs(item.valor) > Math.abs(best.valor) ? item : best,
+  ).valor;
 }
 
 export async function getFundebReceitasHistoricas(

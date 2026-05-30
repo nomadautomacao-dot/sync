@@ -568,14 +568,37 @@ function buildRelatorioDirigidoBase({
   const anos = comparativo.receitasHistoricas.map((receita) => {
     const censoRecord = censoByYear.get(receita.ano);
     const matriculasMunicipais = getMatriculasMunicipaisSemEM(censoRecord);
+
+    // Validate revenue decomposition: components must sum ≈ total.
+    // If the breakdown is inconsistent (swapped columns, DCA fallback issues, etc.),
+    // null-out the components to avoid displaying wrong values in the PDF.
+    const total = receita.totalReceitas ?? 0;
+    const contrib = receita.receitaContribuicaoMunicipal ?? 0;
+    const vaaf = receita.complementacaoVAAF ?? 0;
+    const vaat = receita.complementacaoVAAT ?? 0;
+    const vaar = receita.complementacaoVAAR ?? 0;
+    const componentsSum = contrib + vaaf + vaat + vaar;
+    const decompositionValid =
+      total > 0 &&
+      componentsSum > 0 &&
+      // Components sum within 5% of total
+      Math.abs(componentsSum - total) / total < 0.05 &&
+      // No single component exceeds total
+      contrib <= total &&
+      vaaf <= total &&
+      vaat <= total &&
+      vaar <= total &&
+      // Complement total should not exceed total revenue
+      (vaaf + vaat + vaar) <= total;
+
     return {
       ano: receita.ano,
       anoBaseCenso: censoRecord?.anoReferencia ?? null,
       totalReceitasFundeb: receita.totalReceitas,
-      contribuicaoMunicipal: receita.receitaContribuicaoMunicipal,
-      complementacaoVAAF: receita.complementacaoVAAF,
-      complementacaoVAAT: receita.complementacaoVAAT,
-      complementacaoVAAR: receita.complementacaoVAAR,
+      contribuicaoMunicipal: decompositionValid ? contrib : null,
+      complementacaoVAAF: decompositionValid ? vaaf : null,
+      complementacaoVAAT: decompositionValid ? vaat : null,
+      complementacaoVAAR: decompositionValid ? vaar : null,
       totalMatriculasMunicipais: matriculasMunicipais,
       totalEscolas: censoRecord?.escolasMunicipaisTotal ?? null,
       tempoIntegral: getTempoIntegralFromRecord(censoRecord),
@@ -870,13 +893,20 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
       const metasNacionais = getIdebMetasNacionais();
 
       if (apiHistory?.length) {
+        // Extract the latest verified value from API as additional fallback
+        const latestApiVerificado = [...apiHistory]
+          .filter((a) => a.idebVerificado != null)
+          .sort((a, b) => b.ano - a.ano)[0];
+        const effectiveLocal = localVerificado ?? latestApiVerificado?.idebVerificado ?? null;
+        const effectiveAnoRef = localVerificado ? localAnoRef : (latestApiVerificado?.ano ?? localAnoRef);
+
         // Merge: use API data as base, fill gaps with local data + national goals
         return metasNacionais.anosIniciais.map((entry) => {
           const apiEntry = apiHistory.find((a) => a.ano === entry.ano);
           return {
             ano: entry.ano,
             metaProjetada: apiEntry?.metaProjetada ?? entry.meta,
-            idebVerificado: apiEntry?.idebVerificado ?? (entry.ano === localAnoRef ? localVerificado : null),
+            idebVerificado: apiEntry?.idebVerificado ?? (entry.ano === effectiveAnoRef ? effectiveLocal : null),
           };
         });
       }
@@ -895,13 +925,20 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
       const metasNacionais = getIdebMetasNacionais();
 
       if (apiHistory?.length) {
+        // Extract the latest verified value from API as additional fallback
+        const latestApiVerificado = [...apiHistory]
+          .filter((a) => a.idebVerificado != null)
+          .sort((a, b) => b.ano - a.ano)[0];
+        const effectiveLocal = localVerificado ?? latestApiVerificado?.idebVerificado ?? null;
+        const effectiveAnoRef = localVerificado ? localAnoRef : (latestApiVerificado?.ano ?? localAnoRef);
+
         // Merge: use API data as base, fill gaps with local data + national goals
         return metasNacionais.anosFinais.map((entry) => {
           const apiEntry = apiHistory.find((a) => a.ano === entry.ano);
           return {
             ano: entry.ano,
             metaProjetada: apiEntry?.metaProjetada ?? entry.meta,
-            idebVerificado: apiEntry?.idebVerificado ?? (entry.ano === localAnoRef ? localVerificado : null),
+            idebVerificado: apiEntry?.idebVerificado ?? (entry.ano === effectiveAnoRef ? effectiveLocal : null),
           };
         });
       }
