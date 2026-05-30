@@ -41,22 +41,22 @@ type FndeReceitasSource =
 
 const FNDE_RECEITAS_SOURCES: Record<number, FndeReceitasSource> = {
   2022: {
-    kind: "pdf-vaaf",
+    kind: "csv",
     url: "https://www.gov.br/fnde/pt-br/acesso-a-informacao/acoes-e-programas/financiamento/fundeb/novo-fundeb/2022/copy2_of_ReceitaeComplementaoporentefederadoFundeb2022.pdf",
     sourceLabel: "Portaria FNDE / MEC - VAAF FUNDEB 2022 (3a publicacao)",
   },
   2023: {
-    kind: "pdf-vaaf",
+    kind: "csv",
     url: "https://www.gov.br/fnde/pt-br/acesso-a-informacao/acoes-e-programas/financiamento/fundeb/vaaf/copy2_of_ReceitaeComplementaoporentefederadoFundeb2023.pdf",
     sourceLabel: "Portaria FNDE / MEC - VAAF FUNDEB 2023 (4a publicacao)",
   },
   2024: {
-    kind: "pdf",
+    kind: "csv",
     url: "https://www.gov.br/fnde/pt-br/acesso-a-informacao/acoes-e-programas/financiamento/fundeb/2024/ReceitaTotalporEnteFederado.pdf",
     sourceLabel: "Portaria FNDE / MEC - FUNDEB 2024",
   },
   2025: {
-    kind: "pdf",
+    kind: "csv",
     url: "https://www.gov.br/fnde/pt-br/acesso-a-informacao/acoes-e-programas/financiamento/fundeb/2025-1/5a-publicacao-2013-portaria-mec-mf-no-13-de-29-de-dezembro-de-2025/1-receita-total-do-fundeb-por-ente-federado.pdf",
     sourceLabel: "Portaria FNDE / MEC - FUNDEB 2025",
   },
@@ -79,6 +79,10 @@ const FNDE_VAAT_HABILITACAO_URLS: Record<number, string> = {
 
 // Local CSV fallback files bundled in the project
 const FNDE_LOCAL_RECEITAS: Record<number, string> = {
+  2022: "data/fnde/receitas-2022.csv",
+  2023: "data/fnde/receitas-2023.csv",
+  2024: "data/fnde/receitas-2024.csv",
+  2025: "data/fnde/receitas-2025.csv",
   2026: "data/fnde/receitas-2026.csv",
 };
 
