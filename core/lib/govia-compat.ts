@@ -950,6 +950,36 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
         idebVerificado: entry.ano === localAnoRef ? localVerificado : null,
       }));
     })(),
+    idebEnsinoMedio: (() => {
+      const apiHistory = qeduApiSnapshot?.historicoIdeb?.ensinoMedio;
+      const localVerificado = idebRecord?.ensinoMedioPublica ?? null;
+      const localAnoRef = idebRecord?.anoReferencia ?? 2023;
+      const metasNacionais = getIdebMetasNacionais();
+
+      if (apiHistory?.length) {
+        const latestApiVerificado = [...apiHistory]
+          .filter((a) => a.idebVerificado != null)
+          .sort((a, b) => b.ano - a.ano)[0];
+        const effectiveLocal = localVerificado ?? latestApiVerificado?.idebVerificado ?? null;
+        const effectiveAnoRef = localVerificado ? localAnoRef : (latestApiVerificado?.ano ?? localAnoRef);
+
+        return metasNacionais.ensinoMedio.map((entry) => {
+          const apiEntry = apiHistory.find((a) => a.ano === entry.ano);
+          return {
+            ano: entry.ano,
+            metaProjetada: apiEntry?.metaProjetada ?? entry.meta,
+            idebVerificado: apiEntry?.idebVerificado ?? (entry.ano === effectiveAnoRef ? effectiveLocal : null),
+          };
+        });
+      }
+
+      // Even without API data, show the EM section with metas (informational)
+      return metasNacionais.ensinoMedio.map((entry) => ({
+        ano: entry.ano,
+        metaProjetada: entry.meta,
+        idebVerificado: entry.ano === localAnoRef ? localVerificado : null,
+      }));
+    })(),
   });
   const oportunidades = buildGoviaOportunidades(relatorio);
   const analiseExecutiva = buildAnaliseExecutiva(relatorio);

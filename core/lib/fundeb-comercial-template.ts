@@ -125,6 +125,12 @@ export interface ComercialPdfData {
     metaProjetada?: number;
   }>;
 
+  idebEnsinoMedio?: Array<{
+    ano: number;
+    idebVerificado?: number;
+    metaProjetada?: number;
+  }>;
+
   // Série histórica
   serieHistorica?: Array<{
     ano: number;
@@ -1350,8 +1356,10 @@ export function generateComercialHtml(data: ComercialPdfData): string {
   // IDEB latest
   const idebIniciais = data.idebAnosIniciais ?? [];
   const idebFinais = data.idebAnosFinais ?? [];
+  const idebEM = data.idebEnsinoMedio ?? [];
   const latestIniciais = idebIniciais.length > 0 ? idebIniciais[idebIniciais.length - 1] : null;
   const latestFinais = idebFinais.length > 0 ? idebFinais[idebFinais.length - 1] : null;
+  const latestEM = idebEM.length > 0 ? idebEM[idebEM.length - 1] : null;
 
   // Sanitize encoding artifacts in VAAT text (e.g., "C☐LCULO" → "CÁLCULO")
   const vaatHabilitado = (data.habilitacaoVaat ?? 'Não informado')
@@ -1938,24 +1946,29 @@ export function generateComercialHtml(data: ComercialPdfData): string {
                               // IDEB historical table — show all available years
                               const idebI = data.idebAnosIniciais ?? [];
                               const idebF = data.idebAnosFinais ?? [];
-                              const allYears = [...new Set([...idebI.map(x => x.ano), ...idebF.map(x => x.ano)])].sort((a, b) => a - b);
+                              const idebE = data.idebEnsinoMedio ?? [];
+                              const allYears = [...new Set([...idebI.map(x => x.ano), ...idebF.map(x => x.ano), ...idebE.map(x => x.ano)])].sort((a, b) => a - b);
                               if (allYears.length > 0) {
+                                const hasEM = idebE.length > 0;
                                 const rows = allYears.map(ano => {
                                   const ini = idebI.find(x => x.ano === ano);
                                   const fin = idebF.find(x => x.ano === ano);
+                                  const em = idebE.find(x => x.ano === ano);
                                   return `<tr>
                                     <td style="font-weight:600;">${ano}</td>
                                     <td>${ini?.metaProjetada != null ? ini.metaProjetada.toFixed(1).replace('.', ',') : '—'}</td>
                                     <td style="color:${ini?.idebVerificado != null && ini?.metaProjetada != null && ini.idebVerificado < ini.metaProjetada ? 'var(--orange)' : 'var(--green)'};font-weight:600;">${ini?.idebVerificado != null ? ini.idebVerificado.toFixed(1).replace('.', ',') : '—'}</td>
                                     <td>${fin?.metaProjetada != null ? fin.metaProjetada.toFixed(1).replace('.', ',') : '—'}</td>
                                     <td style="color:${fin?.idebVerificado != null && fin?.metaProjetada != null && fin.idebVerificado < fin.metaProjetada ? 'var(--red)' : 'var(--green)'};font-weight:600;">${fin?.idebVerificado != null ? fin.idebVerificado.toFixed(1).replace('.', ',') : '—'}</td>
+                                    ${hasEM ? `<td style="opacity:0.7;">${em?.metaProjetada != null ? em.metaProjetada.toFixed(1).replace('.', ',') : '—'}</td>
+                                    <td style="opacity:0.7;color:${em?.idebVerificado != null && em?.metaProjetada != null && em.idebVerificado < em.metaProjetada ? 'var(--red)' : 'var(--green)'};font-weight:600;">${em?.idebVerificado != null ? em.idebVerificado.toFixed(1).replace('.', ',') : '—'}</td>` : ''}
                                   </tr>`;
                                 }).join('');
                                 return `<table class="data-table reveal" style="transition-delay:0.4s;margin-top:16px;font-size:15px;">
-                                  <thead><tr><th>Ano</th><th colspan="2">Anos Iniciais</th><th colspan="2">Anos Finais</th></tr>
-                                  <tr style="font-size:12px;color:var(--gray-400);"><th></th><th>Meta</th><th>Verificado</th><th>Meta</th><th>Verificado</th></tr></thead>
+                                  <thead><tr><th>Ano</th><th colspan="2">Anos Iniciais</th><th colspan="2">Anos Finais</th>${hasEM ? '<th colspan="2" style="opacity:0.7;">Ensino Médio ℹ️</th>' : ''}</tr>
+                                  <tr style="font-size:12px;color:var(--gray-400);"><th></th><th>Meta</th><th>Verificado</th><th>Meta</th><th>Verificado</th>${hasEM ? '<th>Meta</th><th>Verificado</th>' : ''}</tr></thead>
                                   <tbody>${rows}</tbody>
-                                </table>`;
+                                </table>${hasEM ? '<div style="font-size:11px;color:var(--gray-400);margin-top:6px;font-style:italic;">ℹ️ Ensino Médio: dados da rede estadual/federal (informativo, não compõe cálculo FUNDEB municipal)</div>' : ''}`;
                               }
                               return '';
                             })()}
@@ -2391,6 +2404,11 @@ export function mapPayloadToComercialData(payload: any): ComercialPdfData {
     idebVerificado: i.idebVerificado,
     metaProjetada: i.metaProjetada,
   }));
+  const idebEnsinoMedio = (rel?.idebEnsinoMedio ?? []).map((i: any) => ({
+    ano: i.ano,
+    idebVerificado: i.idebVerificado,
+    metaProjetada: i.metaProjetada,
+  }));
 
   // Build rastreabilidade from fontes_utilizadas
   const fontes = payload?.fontes_utilizadas ?? payload?.metadata?.fontes ?? [];
@@ -2496,6 +2514,7 @@ export function mapPayloadToComercialData(payload: any): ComercialPdfData {
 
     idebAnosIniciais: idebIniciais.length > 0 ? idebIniciais : undefined,
     idebAnosFinais: idebFinais.length > 0 ? idebFinais : undefined,
+    idebEnsinoMedio: idebEnsinoMedio.length > 0 ? idebEnsinoMedio : undefined,
 
     serieHistorica: serieHistorica.length > 0 ? serieHistorica : undefined,
 

@@ -1796,7 +1796,8 @@ class FundebLevantamentoPdfBuilder {
 
     final rowsIniciais = buildEtapaRows(relatorio.idebAnosIniciais);
     final rowsFinais = buildEtapaRows(relatorio.idebAnosFinais);
-    final hasAnyData = rowsIniciais.isNotEmpty || rowsFinais.isNotEmpty;
+    final rowsEM = buildEtapaRows(relatorio.idebEnsinoMedio);
+    final hasAnyData = rowsIniciais.isNotEmpty || rowsFinais.isNotEmpty || rowsEM.isNotEmpty;
     final hasOnlyLatest = hasAnyData &&
         relatorio.idebAnosIniciais.where((i) => i.idebVerificado != null).length <= 1 &&
         relatorio.idebAnosFinais.where((i) => i.idebVerificado != null).length <= 1;
@@ -1867,6 +1868,28 @@ class FundebLevantamentoPdfBuilder {
         _table(
           headers: const ['Ano', 'Meta Projetada', 'IDEB Verificado', 'Situação'],
           rows: rowsFinais,
+          widths: const {
+            0: pw.FlexColumnWidth(15),
+            1: pw.FlexColumnWidth(25),
+            2: pw.FlexColumnWidth(25),
+            3: pw.FlexColumnWidth(35),
+          },
+        ),
+      ],
+      // Ensino Médio (informational — state/federal network)
+      if (rowsEM.isNotEmpty) ...[
+        pw.SizedBox(height: 14),
+        _sectionHeading('11.3', 'Ensino Médio (Rede Estadual/Federal)'),
+        pw.SizedBox(height: 4),
+        _callout(
+          'Dados informativos da rede estadual/federal. O Ensino Médio não compõe o cálculo do FUNDEB municipal.',
+          accent: PdfColor.fromInt(0xFF3B82F6),
+          background: PdfColor.fromInt(0xFFEFF6FF),
+        ),
+        pw.SizedBox(height: 8),
+        _table(
+          headers: const ['Ano', 'Meta Projetada', 'IDEB Verificado', 'Situação'],
+          rows: rowsEM,
           widths: const {
             0: pw.FlexColumnWidth(15),
             1: pw.FlexColumnWidth(25),

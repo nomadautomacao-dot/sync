@@ -696,6 +696,7 @@ class RelatorioFundeb {
     required this.observacoesOperacionais,
     required this.idebAnosIniciais,
     required this.idebAnosFinais,
+    required this.idebEnsinoMedio,
     this.projecaoComercial,
     this.upsideCondicionado,
     this.perfilComercial,
@@ -719,6 +720,7 @@ class RelatorioFundeb {
   final List<String> observacoesOperacionais;
   final List<IDEBDado> idebAnosIniciais;
   final List<IDEBDado> idebAnosFinais;
+  final List<IDEBDado> idebEnsinoMedio;
   final CensoEscolar? censoEscolar;
 
   ProjecaoRochaPrime get activeProjection =>
@@ -762,6 +764,7 @@ class RelatorioFundeb {
       observacoesOperacionais: _readStringList(json['observacoesOperacionais']),
       idebAnosIniciais: _readList(json['idebAnosIniciais'], IDEBDado.fromJson),
       idebAnosFinais: _readList(json['idebAnosFinais'], IDEBDado.fromJson),
+      idebEnsinoMedio: _readList(json['idebEnsinoMedio'], IDEBDado.fromJson),
       censoEscolar: _mapOrNull(json['censoEscolar'], CensoEscolar.fromJson),
     );
   }

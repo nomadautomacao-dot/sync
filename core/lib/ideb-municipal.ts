@@ -35,6 +35,7 @@ export function getIdebMunicipalRecord(codigoIBGE: string): IdebMunicipalRecord 
 export function getIdebMetasNacionais(): {
   anosIniciais: Array<{ ano: number; meta: number }>;
   anosFinais: Array<{ ano: number; meta: number }>;
+  ensinoMedio: Array<{ ano: number; meta: number }>;
 } {
   return idebHistorico.metasNacionais;
 }

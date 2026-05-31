@@ -551,6 +551,11 @@ class RemoteSyncRepository implements SyncRepository {
               .map((item) => IDEBDado.fromJson(item as Map<String, dynamic>))
               .toList()
           : const [],
+      idebEnsinoMedio: censoInepData != null && (censoInepData['idebEnsinoMedio'] as List?)?.isNotEmpty == true
+          ? (censoInepData['idebEnsinoMedio'] as List)
+              .map((item) => IDEBDado.fromJson(item as Map<String, dynamic>))
+              .toList()
+          : const [],
     );
 
     // Build serie historica from all SICONFI years, enriched with Censo data

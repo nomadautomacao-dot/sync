@@ -916,6 +916,12 @@ class MockSyncRepository implements SyncRepository {
         IDEBDado(ano: 2021, metaProjetada: 5.0, idebVerificado: 4.7),
         IDEBDado(ano: 2023, metaProjetada: 5.2, idebVerificado: 4.9),
       ],
+      idebEnsinoMedio: const [
+        IDEBDado(ano: 2017, metaProjetada: 4.4, idebVerificado: 3.8),
+        IDEBDado(ano: 2019, metaProjetada: 4.6, idebVerificado: 4.0),
+        IDEBDado(ano: 2021, metaProjetada: 4.9, idebVerificado: 4.2),
+        IDEBDado(ano: 2023, metaProjetada: 5.2, idebVerificado: 4.5),
+      ],
       censoEscolar: const CensoEscolar(
         totalEscolas: 41,
         totalMatriculas: 7340,

@@ -39,6 +39,7 @@ export interface QeduIdebHistoryPoint {
 export interface QeduMunicipalIdebHistory {
   anosIniciais: QeduIdebHistoryPoint[];
   anosFinais: QeduIdebHistoryPoint[];
+  ensinoMedio: QeduIdebHistoryPoint[];
   fonte: string;
   dependenciaIdPreferida: number | null;
 }
@@ -191,6 +192,7 @@ function pickPreferredByDependencia<T extends { dependencia_id?: number | string
 function buildHistoryFromIdebApi(itemsByYear: Array<{ ano: number; items: QeduIdebApiItem[] }>): QeduMunicipalIdebHistory | null {
   const anosIniciais: QeduIdebHistoryPoint[] = [];
   const anosFinais: QeduIdebHistoryPoint[] = [];
+  const ensinoMedio: QeduIdebHistoryPoint[] = [];
   const dependenciaIds = new Set<number>();
 
   for (const { ano, items } of itemsByYear) {
@@ -200,6 +202,10 @@ function buildHistoryFromIdebApi(itemsByYear: Array<{ ano: number; items: QeduId
     const af = pickPreferredByDependencia(
       items.filter((item) => normalizeCycleId(item.ciclo_id) === "AF"),
     );
+    // EM: try rede estadual (dependencia 2) first, then any
+    const emItems = items.filter((item) => normalizeCycleId(item.ciclo_id) === "EM");
+    const em = emItems.find((item) => toNumberOrNull(item.dependencia_id) === 2)
+      ?? pickPreferredByDependencia(emItems);
 
     if (ai) {
       const dependenciaId = toNumberOrNull(ai.dependencia_id);
@@ -225,9 +231,17 @@ function buildHistoryFromIdebApi(itemsByYear: Array<{ ano: number; items: QeduId
       metaProjetada: toNumberOrNull(af?.ideb_projetado),
       idebVerificado: toNumberOrNull(af?.ideb),
     });
+    // EM only from 2017+
+    if (ano >= 2017) {
+      ensinoMedio.push({
+        ano,
+        metaProjetada: toNumberOrNull(em?.ideb_projetado),
+        idebVerificado: toNumberOrNull(em?.ideb),
+      });
+    }
   }
 
-  const possuiDados = [...anosIniciais, ...anosFinais].some(
+  const possuiDados = [...anosIniciais, ...anosFinais, ...ensinoMedio].some(
     (item) => item.metaProjetada !== null || item.idebVerificado !== null,
   );
 
@@ -238,6 +252,7 @@ function buildHistoryFromIdebApi(itemsByYear: Array<{ ano: number; items: QeduId
   return {
     anosIniciais,
     anosFinais,
+    ensinoMedio,
     fonte: "QEdu API / IDEB historico municipal",
     dependenciaIdPreferida: dependenciaIds.size === 1 ? [...dependenciaIds][0] : null,
   };
