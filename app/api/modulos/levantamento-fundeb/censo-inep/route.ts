@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getInepCensoMunicipalRecord, getInepCensoMunicipalHistory } from "@/core/lib/inep-censo";
-import { getIdebMunicipalRecord } from "@/core/lib/ideb-municipal";
+import { getIdebMunicipalRecord, getIdebMetasNacionais } from "@/core/lib/ideb-municipal";
 import { buildCensoEscolarFromInep } from "@/core/lib/fundeb-commercial";
 
 /**
@@ -27,6 +27,7 @@ export async function GET(request: NextRequest) {
     const inepRecord = getInepCensoMunicipalRecord(codigoIbge);
     const idebRecord = getIdebMunicipalRecord(codigoIbge);
     const censoEscolar = buildCensoEscolarFromInep(inepRecord);
+    const metasNacionais = getIdebMetasNacionais();
 
     // Fetch multi-year history for annual comparison (Parte IV)
     const censoHistory = getInepCensoMunicipalHistory(codigoIbge);
@@ -38,27 +39,26 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const idebAnosIniciais =
-      idebRecord?.anosIniciaisPublica != null
-        ? [
-            {
-              ano: idebRecord.anoReferencia,
-              idebVerificado: idebRecord.anosIniciaisPublica,
-              metaProjetada: 0,
-            },
-          ]
-        : [];
+    // Build IDEB arrays merged with national metas
+    const localAnoRef = idebRecord?.anoReferencia ?? 2023;
 
-    const idebAnosFinais =
-      idebRecord?.anosFinaisPublica != null
-        ? [
-            {
-              ano: idebRecord.anoReferencia,
-              idebVerificado: idebRecord.anosFinaisPublica,
-              metaProjetada: 0,
-            },
-          ]
-        : [];
+    const idebAnosIniciais = metasNacionais.anosIniciais.map((entry) => ({
+      ano: entry.ano,
+      metaProjetada: entry.meta,
+      idebVerificado: entry.ano === localAnoRef ? (idebRecord?.anosIniciaisPublica ?? null) : null,
+    }));
+
+    const idebAnosFinais = metasNacionais.anosFinais.map((entry) => ({
+      ano: entry.ano,
+      metaProjetada: entry.meta,
+      idebVerificado: entry.ano === localAnoRef ? (idebRecord?.anosFinaisPublica ?? null) : null,
+    }));
+
+    const idebEnsinoMedio = metasNacionais.ensinoMedio.map((entry) => ({
+      ano: entry.ano,
+      metaProjetada: entry.meta,
+      idebVerificado: entry.ano === localAnoRef ? (idebRecord?.ensinoMedioPublica ?? null) : null,
+    }));
 
     // Build per-year school base for annual comparison
     const censoHistoricoAnual = censoHistory.map((record) => {
@@ -90,6 +90,7 @@ export async function GET(request: NextRequest) {
         censoEscolar,
         idebAnosIniciais,
         idebAnosFinais,
+        idebEnsinoMedio,
         inepAnoReferencia: inepRecord?.anoReferencia ?? null,
         idebAnoReferencia: idebRecord?.anoReferencia ?? null,
         // Indicadores para perfilComercial
