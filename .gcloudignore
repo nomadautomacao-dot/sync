@@ -75,12 +75,14 @@ data/*.xlsx
 tmp_*
 *.xlsx
 *.csv
+!data/fnde/*.csv
 *.db
 *.sqlite
 *.zip
 *.7z
 *.rar
 *.pdf
+!data/fnde/*.pdf
 BIT4AFD.tmp
 outputs/
 pdf_extracts/
