@@ -133,6 +133,16 @@ function readLocalCsv(relativePath: string): string | null {
 }
 
 async function fetchCsv(url: string, localFallback?: string) {
+  // Try local bundled CSV FIRST when available — this avoids downloading PDFs
+  // from gov.br which are blocked in Cloud Run and return binary content
+  if (localFallback) {
+    const local = readLocalCsv(localFallback);
+    if (local) {
+      console.info(`[FNDE] Using local CSV: ${localFallback}`);
+      return local;
+    }
+  }
+
   try {
     const response = await fetch(url, {
       headers: {
@@ -154,15 +164,7 @@ async function fetchCsv(url: string, localFallback?: string) {
       ? utf8Text
       : new TextDecoder("latin1").decode(bytes);
   } catch (e) {
-    // Try local bundled CSV as fallback
-    if (localFallback) {
-      const local = readLocalCsv(localFallback);
-      if (local) {
-        console.warn(`[FNDE] Remote fetch failed, using local fallback: ${localFallback}`);
-        return local;
-      }
-    }
-    throw e;
+    throw new Error(`[FNDE] CSV fetch failed for ${url}: ${e instanceof Error ? e.message : e}`);
   }
 }
 
