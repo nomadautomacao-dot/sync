@@ -47,10 +47,29 @@ if (!raw) {
   process.exit(1);
 }
 
-initializeApp({ credential: cert(JSON.parse(raw)) });
+let serviceAccount;
+try {
+  serviceAccount = JSON.parse(raw);
+} catch {
+  console.error("FIREBASE_SERVICE_ACCOUNT nao e um JSON valido. Cole o conteudo inteiro da chave, em uma linha.");
+  process.exit(1);
+}
+
+initializeApp({ credential: cert(serviceAccount) });
 const auth = getAuth();
 
-const user = await auth.getUserByEmail(email);
+let user;
+try {
+  user = await auth.getUserByEmail(email);
+} catch (err) {
+  if (err.code === "auth/user-not-found") {
+    console.error(`Usuario ${email} nao existe no Firebase Auth. Crie-o primeiro em Authentication > Users.`);
+  } else {
+    console.error(`Falha ao consultar o Firebase: ${err.message}`);
+  }
+  process.exit(1);
+}
+
 await auth.setCustomUserClaims(user.uid, { groupId, groupRole });
 
 console.log(`OK: ${email} (${user.uid}) -> groupId=${groupId} groupRole=${groupRole}`);
