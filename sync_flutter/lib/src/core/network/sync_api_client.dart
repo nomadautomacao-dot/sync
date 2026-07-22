@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
@@ -128,9 +129,9 @@ class SyncApiClient {
     final headers = <String, String>{'Content-Type': 'application/json'};
 
     if (includeSession) {
-      final cookie = await _sessionStorage.readCookie();
-      if (cookie != null && cookie.isNotEmpty && cookie != 'browser_managed') {
-        headers['Cookie'] = cookie;
+      final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
+      if (idToken != null) {
+        headers['Authorization'] = 'Bearer $idToken';
       }
     }
 
@@ -238,12 +239,12 @@ class SyncApiClient {
     );
   }
 
-  /// Returns authentication headers (Cookie) for use in external requests (e.g. multipart).
+  /// Returns authentication headers (Bearer) for use in external requests (e.g. multipart).
   Future<Map<String, String>> getAuthHeaders() async {
     final headers = <String, String>{};
-    final cookie = await _sessionStorage.readCookie();
-    if (cookie != null && cookie.isNotEmpty && cookie != 'browser_managed') {
-      headers['Cookie'] = cookie;
+    final idToken = await FirebaseAuth.instance.currentUser?.getIdToken();
+    if (idToken != null) {
+      headers['Authorization'] = 'Bearer $idToken';
     }
     return headers;
   }

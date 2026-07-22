@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -37,17 +38,22 @@ class RemoteSyncRepository implements SyncRepository {
   @override
   Future<SyncUser?> restoreSession() async {
     if (!remoteEnabled) return null;
-    final user = await _sessionStorage.readUser();
-    if (user == null) {
+
+    // A sessao persiste no proprio SDK do Firebase; nao ha mais cookie.
+    final firebaseUser = FirebaseAuth.instance.currentUser;
+    if (firebaseUser == null) {
       return null;
     }
 
+    final user = _userFromFirebase(firebaseUser);
+
     try {
+      // Confirma que o ID token e aceito pelo backend antes de dar por logado.
       await _apiClient.getList('/api/modules');
       return user;
     } on ApiException catch (error) {
       if (error.statusCode == 401) {
-        await _sessionStorage.clear();
+        await FirebaseAuth.instance.signOut();
         return null;
       }
       rethrow;
@@ -62,32 +68,55 @@ class RemoteSyncRepository implements SyncRepository {
       );
     }
 
-    final http.Response response = await _apiClient.rawLogin(
-      email: email,
-      password: password,
-    );
-    final cookie = _apiClient.extractSessionCookie(response);
-    if (cookie == null) {
-      throw const ApiException('Login realizado sem cookie de sessao.');
+    try {
+      final credential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
+      final firebaseUser = credential.user;
+      if (firebaseUser == null) {
+        throw const ApiException('Nao foi possivel entrar. Tente novamente.');
+      }
+      return _userFromFirebase(firebaseUser);
+    } on FirebaseAuthException catch (error) {
+      throw ApiException(_authErrorMessage(error.code));
     }
+  }
 
-    final body = _decodeUser(response.body);
-    final user = SyncUser(
-      name: body['name'] as String? ?? email,
-      email: body['email'] as String? ?? email,
-      initials: _buildInitials(body['name'] as String? ?? email),
+  SyncUser _userFromFirebase(User firebaseUser) {
+    final name = (firebaseUser.displayName?.trim().isNotEmpty ?? false)
+        ? firebaseUser.displayName!.trim()
+        : (firebaseUser.email ?? 'Usuario');
+    return SyncUser(
+      name: name,
+      email: firebaseUser.email ?? '',
+      initials: _buildInitials(name),
     );
+  }
 
-    await _sessionStorage.saveSession(cookie: cookie, user: user);
-    return user;
+  String _authErrorMessage(String code) {
+    switch (code) {
+      case 'invalid-credential':
+      case 'wrong-password':
+      case 'user-not-found':
+        return 'Email ou senha incorretos.';
+      case 'invalid-email':
+        return 'Email invalido.';
+      case 'user-disabled':
+        return 'Esta conta esta desativada.';
+      case 'too-many-requests':
+        return 'Muitas tentativas. Aguarde alguns minutos.';
+      case 'network-request-failed':
+        return 'Sem conexao com a internet.';
+      default:
+        return 'Nao foi possivel entrar. Tente novamente.';
+    }
   }
 
   @override
   Future<void> signOut() async {
     try {
-      if (remoteEnabled) {
-        await _apiClient.logout();
-      }
+      await FirebaseAuth.instance.signOut();
     } finally {
       await _sessionStorage.clear();
     }
@@ -946,15 +975,6 @@ class RemoteSyncRepository implements SyncRepository {
       body: request.toJson(),
       timeout: const Duration(seconds: 180),
     );
-  }
-
-  Map<String, dynamic> _decodeUser(String body) {
-    final payload = _apiClient.getObjectFromString(body);
-    final user = payload['user'];
-    if (user is! Map<String, dynamic>) {
-      throw const ApiException('Resposta de login invalida.');
-    }
-    return user;
   }
 
   String _buildInitials(String value) {
