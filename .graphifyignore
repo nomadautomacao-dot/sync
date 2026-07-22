@@ -1,0 +1,18 @@
+# Build output / compiled artifacts (minified — polui o grafo com nós p(), b(), a())
+public/flutter-web/
+public/main.dart.js
+public/main.dart.js.map
+public/canvaskit/
+build/
+dist/
+.next/
+node_modules/
+
+# Config de agentes de IA — não é código da aplicação
+.agents/
+.codex/
+.claude/
+sync_flutter/.agent/
+
+# Backups
+sync_flutter/backup/

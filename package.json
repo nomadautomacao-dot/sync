@@ -20,9 +20,16 @@
     "supabase:bootstrap": "node scripts/supabase-bootstrap.mjs",
     "supabase:clean": "node scripts/supabase-clean.mjs",
     "supabase:reset": "npm run supabase:bootstrap && npm run supabase:clean",
-    "dev:flutter:linux": "cd sync_flutter && /home/AdrielT87/sync_tooling/flutter/bin/flutter run -d linux",
-    "dev:flutter:web": "cd sync_flutter && /home/AdrielT87/sync_tooling/flutter/bin/flutter run -d chrome",
-    "build:flutter:web": "cd sync_flutter && /home/AdrielT87/sync_tooling/flutter/bin/flutter build web --release --base-href /flutter-web/ && cp -r build/web ../public/flutter-web"
+    "dev:flutter:linux": "cd sync_flutter && /home/AdrielT87/sync_tooling/flutter/bin/flutter run -d linux --dart-define=SYNC_API_BASE_URL=http://localhost:3000",
+    "dev:flutter:web": "cd sync_flutter && /home/AdrielT87/sync_tooling/flutter/bin/flutter run -d chrome --dart-define=SYNC_API_BASE_URL=http://localhost:3000",
+    "dev:flutter:web:prod": "cd sync_flutter && /home/AdrielT87/sync_tooling/flutter/bin/flutter run -d chrome --dart-define=SYNC_API_BASE_URL=https://sync-app-621901234263.us-central1.run.app",
+    "dev:all": "bash sync_flutter/run_local.sh",
+    "build:flutter:web": "cd sync_flutter && /home/AdrielT87/sync_tooling/flutter/bin/flutter build web --release --base-href /flutter-web/ --dart-define=SYNC_API_BASE_URL=https://sync-app-621901234263.us-central1.run.app && rm -rf ../public/flutter-web && cp -r build/web ../public/flutter-web",
+    "build:flutter:web:local": "cd sync_flutter && /home/AdrielT87/sync_tooling/flutter/bin/flutter build web --release --base-href /flutter-web/ --dart-define=SYNC_API_BASE_URL=http://localhost:3000 && rm -rf ../public/flutter-web && cp -r build/web ../public/flutter-web",
+    "build:apk": "cd sync_flutter && /home/AdrielT87/sync_tooling/flutter/bin/flutter build apk --release --dart-define=SYNC_API_BASE_URL=https://sync-app-621901234263.us-central1.run.app",
+    "build:apk:debug": "cd sync_flutter && /home/AdrielT87/sync_tooling/flutter/bin/flutter build apk --debug --dart-define=SYNC_API_BASE_URL=https://sync-app-621901234263.us-central1.run.app",
+    "build:apk:split": "cd sync_flutter && /home/AdrielT87/sync_tooling/flutter/bin/flutter build apk --release --split-per-abi --dart-define=SYNC_API_BASE_URL=https://sync-app-621901234263.us-central1.run.app",
+    "install:apk": "adb install sync_flutter/build/app/outputs/flutter-apk/app-release.apk"
   },
   "prisma": {
     "seed": "node prisma/seed.mjs"

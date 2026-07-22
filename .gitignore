@@ -33,10 +33,17 @@ cloudrun.env.yaml
 tmp_*
 output/
 scratch/
+graphify-out/
+scripts/payloads_temp/
 
 # ── Flutter build artifacts ──
 sync_flutter/build/
 sync_flutter/.dart_tool/
+sync_flutter/android/build/
+sync_flutter/.idea/
+sync_flutter/output/
+sync_flutter/tmp_*
+sync_flutter/*.log
 
 # ── Python cache ──
 __pycache__/
@@ -56,5 +63,14 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# ── Documents ──
-documents/*.zip
+# ── Documentos de negócio ──
+# O lugar deles é ../Sync-Arquivos/, fora do repositório.
+# Ver docs/superpowers/specs/2026-07-22-reorganizacao-estrutura-design.md
+*.pdf
+!data/fnde/*.pdf
+*.doc
+*.docx
+/*.html
+relatorios_*/
+data/_sinopses/
+data/batch/
