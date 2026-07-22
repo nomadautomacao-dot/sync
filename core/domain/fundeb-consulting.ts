@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const fundebCommissionBaseSchema = z.enum(["profit", "revenue"]);
+const fundebCommissionBaseSchema = z.enum(["profit", "revenue"]);
 
 export const fundebConsultingProjectCreateSchema = z.object({
   municipalityAccountId: z.string().trim().min(1, "Municipio obrigatorio"),
@@ -17,7 +17,7 @@ export const fundebConsultingProjectCreateSchema = z.object({
   projectionNotes: z.string().trim().optional(),
 });
 
-export interface FundebConsultingOption {
+interface FundebConsultingOption {
   id: string;
   label: string;
   helper?: string;

@@ -12,7 +12,7 @@ interface IbgeMunicipioResponse {
   };
 }
 
-export interface SimecObrasRecord {
+interface SimecObrasRecord {
   codigoIBGE: string;
   municipio: string;
   uf: string;

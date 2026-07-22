@@ -21,7 +21,7 @@ interface PddeMunicipioResumo {
   consultaParcial: boolean;
 }
 
-export interface FndePublicEnrichment {
+interface FndePublicEnrichment {
   sistemas: SistemaHabilitacao[];
   obrasPAC2: ObraPAC2[];
   situacaoPAR: string;

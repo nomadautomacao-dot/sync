@@ -36,7 +36,7 @@ interface ObrasCache<T> {
   data: T;
 }
 
-export interface FndeObrasEnrichment {
+interface FndeObrasEnrichment {
   obrasPAC2: ObraPAC2[];
   observacoes: string[];
   fontes: string[];
@@ -522,31 +522,3 @@ export async function getFndeObrasEnrichment(params: { municipio: string; uf: st
   };
 }
 
-export async function searchFndeObrasMunicipios(query: string, uf?: string) {
-  const rows = await fetchPactoRetomadaRows();
-  const target = normalizeText(query);
-  const ufTarget = uf?.trim().toUpperCase();
-
-  return uniqueMunicipios(rows)
-    .filter((item) => {
-      const municipio = normalizeText(item.municipio);
-      return municipio.includes(target) && (!ufTarget || item.uf === ufTarget);
-    })
-    .slice(0, 25);
-}
-
-export async function getFndeObrasDatasetStatus() {
-  const [pactoRows, infraestruturaRows] = await Promise.all([
-    fetchPactoRetomadaRows(),
-    fetchInfraestruturaRepasseRows(),
-  ]);
-
-  return {
-    disponivel: pactoRows.length > 0,
-    arquivo: PACTO_RETORNADA_XLSX_URL,
-    linhasCarregadas: pactoRows.length,
-    municipiosComObras: uniqueMunicipios(pactoRows).length,
-    repassesInfraestrutura: infraestruturaRows.length,
-    carregadoEm: new Date().toISOString(),
-  };
-}

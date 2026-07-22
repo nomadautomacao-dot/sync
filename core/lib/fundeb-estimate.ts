@@ -24,8 +24,8 @@ function median(values: number[]) {
   return filtered.length % 2 === 0 ? (filtered[middle - 1] + filtered[middle]) / 2 : filtered[middle];
 }
 
-export type MissingVaatClassification = "zero-plausivel" | "positivo-moderado" | "positivo-alto";
-export type MissingVaarClassification = "zero-plausivel" | "potencial-moderado" | "potencial-alto";
+type MissingVaatClassification = "zero-plausivel" | "positivo-moderado" | "positivo-alto";
+type MissingVaarClassification = "zero-plausivel" | "potencial-moderado" | "potencial-alto";
 
 interface MissingVaatProfileInput {
   populacao: number | null;
@@ -41,7 +41,7 @@ interface MissingVaarProfileInput {
   ieiPercentual: number | null;
 }
 
-export function classifyMissingVaatProfile(input: MissingVaatProfileInput): {
+function classifyMissingVaatProfile(input: MissingVaatProfileInput): {
   classificacao: MissingVaatClassification;
   expectedVaatPct: number;
   justificativa: string;
@@ -92,7 +92,7 @@ export function classifyMissingVaatProfile(input: MissingVaatProfileInput): {
   };
 }
 
-export function classifyMissingVaarProfile(input: MissingVaarProfileInput): {
+function classifyMissingVaarProfile(input: MissingVaarProfileInput): {
   classificacao: MissingVaarClassification;
   expectedVaarPct: number;
   justificativa: string;

@@ -20,7 +20,7 @@ import { collectGeminiData } from "./collectors/gemini-collector";
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
-export interface ContratoAgentInput {
+interface ContratoAgentInput {
   municipioNome: string;
   uf: string;
   codigoIBGE?: string;
@@ -31,7 +31,7 @@ export interface ContratoAgentInput {
   skipGemini?: boolean;
 }
 
-export interface ContratoAgentOutput {
+interface ContratoAgentOutput {
   success: boolean;
   contrato: ContratosFundebData;
   metas: ContratoFundebCampoMeta[];

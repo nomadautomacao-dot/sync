@@ -221,7 +221,7 @@ export interface RelatorioFundeb {
   censoEscolar: CensoEscolar | null;
 }
 
-export type FonteStatus = "automatico" | "estimado" | "manual" | "indisponivel";
+type FonteStatus = "automatico" | "estimado" | "manual" | "indisponivel";
 
 export interface FonteColetaStatus {
   id: string;

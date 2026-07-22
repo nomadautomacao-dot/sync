@@ -30,14 +30,14 @@ interface IbgeMunicipioResponse {
   };
 }
 
-export interface PropostaPrefillRequest {
+interface PropostaPrefillRequest {
   codigo_ibge?: string;
   nome?: string;
   uf?: string;
   exercicio?: number;
 }
 
-export interface PropostaPrefillMunicipioData {
+interface PropostaPrefillMunicipioData {
   autofill: Omit<PropostaAutofillData, "publicValidation" | "publicValidationSource">;
   authorityName: string;
   authorityParty: string;

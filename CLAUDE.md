@@ -1,7 +1,7 @@
 # CLAUDE.md — Sync
 
 > Fonte única de verdade para qualquer agente de IA trabalhando neste projeto.
-> Atualizado: 2026-05-27.
+> Atualizado: 2026-07-22.
 
 ---
 
@@ -32,13 +32,10 @@
 - Python 3 + ReportLab/Pillow para geração de PDFs FUNDEB
 - Zod 4 para validação de schemas
 
-**Frontend Web (Next.js):**
-- Tailwind CSS 4 + design tokens customizados
-- TanStack Query 5 + Zustand 5 (estado)
-- Radix UI (avatar, dialog, dropdown, popover, separator, slot, scroll-area)
-- cmdk (command palette), Sonner (toasts), Recharts (gráficos)
-- Framer Motion (animações), Lucide React (ícones)
-- docx/docxtemplater + jsPDF/jspdf-autotable (geração de documentos)
+**O Next não tem interface própria.** O único `page.tsx` é o catch-all que
+redireciona para `/flutter-web/`; toda a UI é o app Flutter. O papel do Next é
+servir as rotas de API, gerar documentos (docx/docxtemplater, jsPDF, ReportLab
+via Python) e entregar o build web do Flutter em `public/flutter-web/`.
 
 **Frontend Mobile (Flutter):**
 - Flutter SDK ^3.10.7, Dart
@@ -58,54 +55,46 @@
 
 ```
 Sync/
-├── app/                          # Next.js App Router
+├── app/                          # Next.js App Router — só API + redirect
 │   ├── layout.tsx                # Root layout (Inter + JetBrains Mono, AppProviders)
-│   ├── globals.css               # Design tokens CSS
+│   ├── globals.css               # Base tipográfica mínima
 │   ├── [[...path]]/              # Catch-all → redireciona para /flutter-web/
-│   ├── flutter-web/              # Serve Flutter Web build
+│   ├── flutter-web/              # Serve o Flutter Web build
 │   └── api/                      # API Routes (BFF) — ver seção 3
 │
-├── core/                         # Código compartilhado
-│   ├── config/navigation.ts      # Itens da sidebar
+├── core/                         # Código compartilhado (server-side)
 │   ├── domain/                   # Modelos de domínio (Zod schemas + interfaces)
-│   │   ├── module.ts             # ModuleKey, ModuleDefinition, moduleCatalog
-│   │   ├── organization.ts       # Company, Employee schemas + validação CNPJ
-│   │   ├── collaboration.ts      # Collaborator, Municipality, Commission schemas
-│   │   ├── fundeb-consulting.ts  # FundebConsultingProject schemas
-│   │   └── rbac.ts               # GroupRole, CompanyRole, ModulePermission
-│   ├── hooks/                    # React hooks (TanStack Query)
+│   │   ├── module.ts             # moduleCatalog
+│   │   ├── organization.ts       # Company, Employee + validação CNPJ
+│   │   ├── collaboration.ts      # Collaborator, Municipality, Commission
+│   │   ├── fundeb-consulting.ts  # FundebConsultingProject
+│   │   └── rbac.ts               # GroupRole
 │   ├── lib/                      # Utilitários server-side (ver seção 3.3)
-│   ├── providers/app-providers.tsx
-│   └── stores/                   # Zustand (sidebar-store, workspace-store)
+│   └── providers/app-providers.tsx
 │
-├── components/                   # UI reutilizáveis
-│   ├── ui/                       # Primitivos Radix: button, input, badge, avatar, card, etc.
-│   ├── layout/                   # sidebar, header, three-pane-layout
-│   ├── shared/                   # data-table, stat-card, status-badge, etc.
-│   └── forms/                    # company-form, employee-form, module-config-form
+├── modules/                      # Lógica de negócio consumida pelas rotas
+│   ├── levantamento-fundeb/      # types + utils (cálculos, ptbr, relatório)
+│   ├── contrato-fundeb/          # services (agent, docx, collectors) + types
+│   └── propostas/                # types + utils de cálculo
 │
-├── modules/                      # Módulos de negócio isolados
-│   ├── dashboard/                # Dashboard consolidado do grupo
-│   ├── consultoria/              # Projetos de consultoria
-│   ├── fundeb/                   # Consultoria FUNDEB (municípios, comissões)
-│   ├── levantamento-fundeb/      # Diagnóstico automático por código IBGE
-│   ├── contrato-fundeb/          # Geração de processo administrativo (15 anexos)
-│   ├── case-de-sucesso/          # Análise evolução FUNDEB 2024-2025
-│   └── propostas/                # Propostas comerciais
-│
-├── lib/auth.ts                   # Login customizado por email/senha (Flutter)
 ├── prisma/schema.prisma          # Schema completo (ver seção 3.4)
-├── scripts/                      # Scripts auxiliares (ver seção 8)
+├── scripts/                      # Ferramentas — ver seção 8
+│   ├── deploy/                   # Cloud Run (Linux e Windows)
+│   ├── db/                       # Supabase (check, bootstrap, clean)
+│   ├── dados/                    # Pipelines INEP / IDEB / TSE
+│   └── pdf/                      # Comparação e análise de PDFs, templates DOCX
 ├── data/                         # JSONs derivados (IDEB, INEP, TSE) + fnde/*.csv
 │                                 #   Entram por `import from "@/data/..."` → bundlados
 │                                 #   no build. Fontes brutas ficam em Sync-Arquivos/.
 ├── kit_padrao_pdf_rocha_prime/   # Módulo Python de geração de PDFs FUNDEB
-├── docs/                         # Specs de negócio e roadmaps
-│   ├── specs/                    # Specs de produto (colaboradores, case sucesso)
+├── docs/                         # Specs, roadmaps e análises (kebab-case)
+│   ├── specs/                    # Specs de produto
 │   ├── roadmaps/                 # Roadmaps de automação
-│   └── flutter/                  # Docs específicos do Flutter
+│   ├── analises-fundeb/          # Auditorias e validações de modelo FUNDEB
+│   ├── flutter/                  # Docs do app Flutter
+│   └── superpowers/specs/        # Design docs de refatorações
 │
-├── sync_flutter/                 # App Flutter (ver seção 4)
+├── sync_flutter/                 # App Flutter — a interface do produto
 │   └── lib/src/
 │       ├── core/                 # Models, repositories, services, theme
 │       └── features/             # auth, dashboard, cities, modules, people, shell
@@ -162,13 +151,13 @@ Todas as rotas estão em `app/api/`. Autenticação obrigatória via `getSession
 | `/api/auth/[...nextauth]` | GET/POST | NextAuth (Google OAuth, JWT) |
 | `/api/auth/login` | POST | Login por email/senha (Flutter) — gera session_token cookie |
 | `/api/auth/logout` | POST | Invalida sessão customizada |
-| `/api/auth/session` | GET | Retorna sessão atual |
 
 **Organizacional:**
 | Rota | Método | Descrição |
 |------|--------|-----------|
 | `/api/companies` | GET/POST | Listar/criar empresas do grupo |
 | `/api/companies/[companyId]` | GET/PUT/DELETE | CRUD empresa específica |
+| `/api/companies/upload-logo` | POST | Upload de logo da empresa |
 | `/api/employees` | GET/POST | Listar/criar funcionários |
 | `/api/audit` | GET | Logs de auditoria |
 | `/api/dashboard/executive` | GET | KPIs executivos cross-empresa |
@@ -178,7 +167,12 @@ Todas as rotas estão em `app/api/`. Autenticação obrigatória via `getSession
 | Rota | Método | Descrição |
 |------|--------|-----------|
 | `/api/collaborators` | GET/POST | CRUD colaboradores (parceiros, articuladores) |
+| `/api/collaborators/[id]` | GET/PUT/DELETE | Colaborador específico |
+| `/api/collaborators/[id]/dashboard` | GET | Indicadores do colaborador |
+| `/api/collaborators/[id]/documents` | GET/POST | Documentos do colaborador |
+| `/api/collaborators/[id]/documents/[docId]` | GET/DELETE | Documento específico |
 | `/api/municipalities` | GET/POST | CRUD contas municipais |
+| `/api/municipalities/[id]` | PUT/DELETE | Conta municipal específica |
 | `/api/municipios/buscar` | GET | Busca de municípios por nome |
 | `/api/municipios/carteira` | GET | Carteira de municípios |
 | `/api/municipios/recentes` | GET | Municípios acessados recentemente |
@@ -194,17 +188,17 @@ Todas as rotas estão em `app/api/`. Autenticação obrigatória via `getSession
 | `/api/modulos/levantamento-fundeb/censo-inep` | GET | Dados do Censo INEP |
 | `/api/modulos/levantamento-fundeb/pdf` | POST | Geração de PDF (Python/ReportLab) |
 | `/api/modulos/levantamento-fundeb/relatorio-dirigido` | POST | Relatório dirigido com IA |
+| `/api/modulos/levantamento-fundeb/raio-x` | POST | Raio-X municipal em PDF |
+| `/api/modulos/contrato-fundeb` | POST | Monta contrato a partir do levantamento |
+| `/api/modulos/case-de-sucesso` | GET | Lista de cases |
+| `/api/modulos/case-de-sucesso/[municipio]` | GET | Case de um município |
+| `/api/modulos/slides` | GET | Templates de apresentação |
+| `/api/modulos/slides/gerar` | POST | Gera o deck em PDF |
+| `/api/contratos-fundeb/agent` | POST | Agent de coleta de dados do contrato |
+| `/api/contratos-fundeb/generate-kit` | POST | Kit documental (rota legada) |
 | `/api/modulos/contrato-fundeb/gerar-kit` | POST | Kit documental parcial |
 | `/api/modulos/contrato-fundeb/gerar-kit-completo` | POST | Kit completo (15 anexos) |
 | `/api/modulos/contrato-fundeb/gerar-proposta` | POST | Proposta comercial |
-| `/api/contratos-fundeb/agent/populate-municipality` | POST | Agent de população de dados |
-
-**Dados educacionais:**
-| Rota | Método | Descrição |
-|------|--------|-----------|
-| `/api/education/diagnostico` | GET | Diagnóstico educacional |
-| `/api/education/escolas` | GET | Dados de escolas |
-| `/api/education/oportunidades` | GET | Oportunidades educacionais |
 
 **Outros:**
 | Rota | Método | Descrição |
@@ -212,8 +206,8 @@ Todas as rotas estão em `app/api/`. Autenticação obrigatória via `getSession
 | `/api/health` | GET | Health check (status, timestamp, uptime) |
 | `/api/modules` | GET | Catálogo de módulos disponíveis |
 | `/api/propostas/prefill` | GET | Pre-fill de propostas com dados públicos |
+| `/api/propostas/validate-public-data` | POST | Valida dados públicos da proposta |
 | `/api/reference/brazil-minimum-wage` | GET | Salário mínimo vigente |
-| `/api/simec/obras` | GET | Obras SIMEC/FNDE |
 
 ### 3.2 Sistema de autenticação
 
@@ -229,10 +223,11 @@ Duas estratégias coexistem:
 
 | Arquivo | Descrição |
 |---------|-----------|
-| `auth.ts` | Config NextAuth, `getSessionUser()`, upsert de usuário |
+| `auth.ts` | Config NextAuth, `getSessionUser()` |
+| `session-auth.ts` | Login/logout por cookie (Flutter) — tabela `Session` |
+| `user-provisioning.ts` | `upsertSessionUser()` e grupo padrão — compartilhado pelas duas estratégias, evita ciclo de import |
+| `assets-paths.ts` | Resolve `CONTRATOS_ASSETS_DIR` |
 | `prisma.ts` | Singleton do Prisma Client |
-| `api-client.ts` | Wrapper fetch tipado para chamadas client-side |
-| `utils.ts` | `cn()` (clsx+tailwind-merge), formatters |
 | `data-access.ts` (19KB) | Acesso a dados organizacionais (empresas, funcionários, audit) |
 | `collaboration-data-access.ts` (22KB) | CRUD colaboradores, municípios, comissões |
 | `fundeb-consulting-data-access.ts` (7KB) | CRUD projetos FUNDEB |
@@ -337,11 +332,15 @@ PostgreSQL via Supabase. Dual connection: `DATABASE_URL` (pooler, porta 6543) + 
 | **Case de Sucesso** | `case-de-sucesso` | Evolução VAAF/VAAT/VAAR 2024-2025 |
 | **Propostas** | `propostas` | Propostas comerciais padronizadas |
 
+> `modules/` guarda apenas lógica server-side consumida pelas rotas de API.
+> A interface de cada módulo é uma tela em `sync_flutter/lib/src/features/`.
+
 ### Registrar novo módulo
-1. Adicionar key ao array `moduleKeys` em `core/domain/module.ts`
-2. Adicionar definição ao `moduleCatalog`
-3. Criar pasta em `modules/<nome>/`
-4. Criar API routes em `app/api/modulos/<nome>/`
+1. Adicionar a key ao `moduleCatalog` em `core/domain/module.ts` — o Flutter lê
+   esse catálogo via `/api/modules`
+2. Criar as rotas em `app/api/modulos/<nome>/`
+3. Se houver lógica de domínio reaproveitável, criar `modules/<nome>/`
+4. Criar a tela em `sync_flutter/lib/src/features/modules/presentation/`
 5. Migration Prisma se necessário
 
 ---
@@ -408,23 +407,23 @@ docker build -t sync-app . && docker run -p 3000:3000 sync-app
 ### Banco
 | Script | Comando npm | Descrição |
 |--------|------------|-----------|
-| `supabase-check.mjs` | `supabase:check` | Valida conexão |
-| `supabase-bootstrap.mjs` | `supabase:bootstrap` | Setup completo do banco |
-| `supabase-clean.mjs` | `supabase:clean` | Limpa e recria mínimo |
+| `db/supabase-check.mjs` | `supabase:check` | Valida conexão |
+| `db/supabase-bootstrap.mjs` | `supabase:bootstrap` | Setup completo do banco |
+| `db/supabase-clean.mjs` | `supabase:clean` | Limpa e recria mínimo |
 
 ### Deploy
 | Script | Descrição |
 |--------|-----------|
-| `deploy-cloudrun-linux.sh` | Deploy Cloud Run (Linux) |
-| `deploy-cloudrun.ps1` | Deploy Cloud Run (Windows) |
+| `deploy/deploy-cloudrun-linux.sh` | Deploy Cloud Run (Linux) |
+| `deploy/deploy-cloudrun.ps1` | Deploy Cloud Run (Windows) |
 
 ### Dados
 | Script | Descrição |
 |--------|-----------|
-| `build-inep-censo-municipal-dataset.py` | Dataset municipal INEP |
-| `gerar-tse-prefeitos.py` | Dados TSE prefeitos |
-| `gerar-ideb-municipios.py` | Dados IDEB |
-| `prepare-docx-templates.mjs` | Templates DOCX contratos |
+| `dados/build-inep-censo-municipal-dataset.py` | Dataset municipal INEP |
+| `dados/gerar-tse-prefeitos.py` | Dados TSE prefeitos |
+| `dados/gerar-ideb-municipios.py` | Dados IDEB |
+| `pdf/prepare-docx-templates.mjs` | Templates DOCX contratos |
 
 ---
 
@@ -449,7 +448,8 @@ docker build -t sync-app . && docker run -p 3000:3000 sync-app
 - **ModulePermission:** `admin > write > read`
 
 ### O que NÃO está implementado
-- Módulos: Terceirização, Formação, Atas, Tecnologia, RH, Financeiro
+- Módulos: Terceirização, Formação, Atas, Tecnologia, RH, Financeiro — existem
+  como chaves no `moduleCatalog` (o Flutter as exibe), sem rota nem tela
 - Testes automatizados (Vitest, Playwright)
 - CI/CD via GitHub Actions (usa Cloud Build manual)
 - Staging separado de produção

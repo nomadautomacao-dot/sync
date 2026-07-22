@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-export interface GoviaRegistryMunicipio {
+interface GoviaRegistryMunicipio {
   codigo_ibge: string;
   nome: string;
   uf: string;
@@ -96,24 +96,6 @@ export async function upsertGoviaCarteira(item: GoviaRegistryMunicipio) {
 
   await writeStore(store);
   return nextItem;
-}
-
-export async function removeGoviaCarteira(codigoIBGE: string) {
-  const store = await readStore();
-  const existingIndex = store.municipios.findIndex((entry) => entry.codigo_ibge === codigoIBGE);
-
-  if (existingIndex < 0) {
-    return false;
-  }
-
-  store.municipios[existingIndex] = normalizeItem({
-    ...store.municipios[existingIndex],
-    in_carteira: false,
-    updated_at: new Date().toISOString(),
-  });
-
-  await writeStore(store);
-  return true;
 }
 
 export async function listGoviaRecentes(limit = 20) {

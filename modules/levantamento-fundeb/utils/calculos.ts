@@ -90,7 +90,7 @@ export function formatDateTime(date = new Date()) {
   }).format(date);
 }
 
-export function calcularReceitas(receitas: Partial<ReceitasFundeb>): ReceitasFundeb {
+function calcularReceitas(receitas: Partial<ReceitasFundeb>): ReceitasFundeb {
   const receitaContribuicaoMunicipal = toNumber(receitas.receitaContribuicaoMunicipal);
   const complementacaoVAAF = toNumber(receitas.complementacaoVAAF);
   const complementacaoVAAT = toNumber(receitas.complementacaoVAAT);
@@ -106,7 +106,7 @@ export function calcularReceitas(receitas: Partial<ReceitasFundeb>): ReceitasFun
   };
 }
 
-export function calcularProjecao(receitas: ReceitasFundeb): ProjecaoRochaPrime {
+function calcularProjecao(receitas: ReceitasFundeb): ProjecaoRochaPrime {
   const possuiComplementacao =
     receitas.complementacaoVAAF > 0 || receitas.complementacaoVAAT > 0 || receitas.complementacaoVAAR > 0;
 
@@ -193,7 +193,7 @@ export function calcularProjecaoPorMultiplicador(
   };
 }
 
-export function calcularUpsideCondicionado(
+function calcularUpsideCondicionado(
   projecaoRecuperavel: ProjecaoRochaPrime,
   projecaoComercial: ProjecaoRochaPrime | null,
   perfilComercial: PerfilComercialFundeb | null,
@@ -295,7 +295,7 @@ function normalize(value: number | null, min: number, max: number) {
   return clamp((value - min) / (max - min), 0, 1);
 }
 
-export interface PerfilComercialInput {
+interface PerfilComercialInput {
   uf: string;
   totalReceitas: number;
   complementacaoVAAT: number;
@@ -532,7 +532,7 @@ function round2(value: number) {
   return Math.round(value * 100) / 100;
 }
 
-export function calcularCronogramaVAAF(vaafProjetado: number, totalFundeb: number): CronogramaVAAF[] {
+function calcularCronogramaVAAF(vaafProjetado: number, totalFundeb: number): CronogramaVAAF[] {
   if (vaafProjetado <= 0 || totalFundeb <= 0) {
     return [];
   }
@@ -546,7 +546,7 @@ export function calcularCronogramaVAAF(vaafProjetado: number, totalFundeb: numbe
   }));
 }
 
-export function createDefaultSistemas(): SistemaHabilitacao[] {
+function createDefaultSistemas(): SistemaHabilitacao[] {
   return [
     { instituicao: "MEC", sistema: "SIMEC", situacao: "Nao informado" },
     { instituicao: "FNDE", sistema: "Habilita", situacao: "Nao informado" },
@@ -555,7 +555,7 @@ export function createDefaultSistemas(): SistemaHabilitacao[] {
   ];
 }
 
-export function createDefaultObrasPAC2(): ObraPAC2[] {
+function createDefaultObrasPAC2(): ObraPAC2[] {
   return [
     {
       tipo: "Creches e pre-escolas",
@@ -576,18 +576,18 @@ export function createDefaultObrasPAC2(): ObraPAC2[] {
   ];
 }
 
-export function createDefaultCaminhoEscola(): VeiculoCaminhoEscola[] {
+function createDefaultCaminhoEscola(): VeiculoCaminhoEscola[] {
   return [
     { tipo: "Onibus escolar", quantidade: null, valor: null },
     { tipo: "Embarcacao escolar", quantidade: null, valor: null },
   ];
 }
 
-export function createDefaultPdde(): RepassePDDE[] {
+function createDefaultPdde(): RepassePDDE[] {
   return [2011, 2012, 2013, 2014, 2015].map((ano) => ({ ano, valor: 0 }));
 }
 
-export function createDefaultIdebSeries(): IDEBDado[] {
+function createDefaultIdebSeries(): IDEBDado[] {
   return IDEB_YEARS.map((ano) => ({
     ano,
     metaProjetada: null,

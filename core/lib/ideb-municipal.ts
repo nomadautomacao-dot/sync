@@ -7,7 +7,7 @@ const idebHistoricoMunicipios = idebHistoricoMunicipiosData as Record<string, {
   anosFinais: Array<{ ano: number; ideb: number }>;
 }>;
 
-export interface IdebMunicipalRecord {
+interface IdebMunicipalRecord {
   codigoIBGE: string;
   anosIniciaisPublica: number | null;
   anosFinaisPublica: number | null;
@@ -17,12 +17,12 @@ export interface IdebMunicipalRecord {
   anoReferencia: number;
 }
 
-export interface IdebHistoricoEntry {
+interface IdebHistoricoEntry {
   ano: number;
   ideb: number;
 }
 
-export interface IdebMunicipalHistorico {
+interface IdebMunicipalHistorico {
   anosIniciais: IdebHistoricoEntry[];
   anosFinais: IdebHistoricoEntry[];
 }

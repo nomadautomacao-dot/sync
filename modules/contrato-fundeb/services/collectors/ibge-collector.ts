@@ -4,7 +4,7 @@
  */
 import { findGoviaMunicipio } from "@/core/lib/govia-compat";
 
-export interface IbgeCollectorResult {
+interface IbgeCollectorResult {
   codigoIBGE: string;
   municipioNome: string;
   municipioUF: string;

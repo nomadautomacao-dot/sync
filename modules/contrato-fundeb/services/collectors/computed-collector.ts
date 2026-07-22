@@ -4,7 +4,7 @@
 import { format, addBusinessDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-export interface ComputedCollectorInput {
+interface ComputedCollectorInput {
   exercicio: number;
   municipioNome: string;
   municipioUF: string;
@@ -13,7 +13,7 @@ export interface ComputedCollectorInput {
   dataBase?: Date; // data de início do fluxo; padrão: hoje
 }
 
-export interface ComputedCollectorResult {
+interface ComputedCollectorResult {
   // Números de processo
   processoNumero: string;
   inexigibilidadeNumero: string;

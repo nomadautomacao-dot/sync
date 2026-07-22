@@ -3,7 +3,7 @@
  */
 import { getTsePrefeitoRecord } from "@/core/lib/tse-prefeitos";
 
-export interface TseCollectorResult {
+interface TseCollectorResult {
   prefeitoNome: string;
   partido: string;
   nomeUrna: string;

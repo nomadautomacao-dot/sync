@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-export interface PythonCommand {
+interface PythonCommand {
   command: string;
   argsPrefix: string[];
 }

@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 
-export type SlidesTemplateId = "institucional" | "proposta-fundeb" | "resumo-executivo";
+type SlidesTemplateId = "institucional" | "proposta-fundeb" | "resumo-executivo";
 
 const GERADORES: Record<SlidesTemplateId, string> = {
   "institucional": "gerador_institucional.py",
@@ -29,7 +29,7 @@ export function isSlidesTemplateId(value: string): value is SlidesTemplateId {
   return value === "institucional" || value === "proposta-fundeb" || value === "resumo-executivo";
 }
 
-export function buildSlidesPdfFilename(templateId: SlidesTemplateId, municipioNome?: string) {
+function buildSlidesPdfFilename(templateId: SlidesTemplateId, municipioNome?: string) {
   const base = FILENAMES[templateId];
   if (municipioNome) {
     const slug = slugify(municipioNome) || "municipio";

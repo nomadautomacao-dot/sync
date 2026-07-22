@@ -1,4 +1,4 @@
-export interface EmpresaConfig {
+interface EmpresaConfig {
   nome: string;
   cnpj: string;
   endereco: string;
@@ -11,7 +11,7 @@ export interface EmpresaConfig {
   representanteCpf: string;
 }
 
-export interface EscalonamentoConfig {
+interface EscalonamentoConfig {
   nivel1LimiteSm: number;
   nivel1Percentual: number;
   nivel2LimiteSm: number;
@@ -20,7 +20,7 @@ export interface EscalonamentoConfig {
   salarioMinimo: number;
 }
 
-export type DocumentoEscopo = "proposta" | "minuta" | "ambos";
+type DocumentoEscopo = "proposta" | "minuta" | "ambos";
 export type GeneroAutoridade = "masculino" | "feminino";
 
 export interface PropostaFormData {
@@ -128,64 +128,3 @@ export interface PropostaPublicValidationData {
   fields: Record<PropostaPublicValidationFieldKey, PropostaPublicValidationField>;
 }
 
-export const DEFAULT_EMPRESA_CONFIG: EmpresaConfig = {
-  nome: "ROCHA PRIME SERVIÇOS ESPECIALIZADOS LTDA",
-  cnpj: "29.342.691/0001-93",
-  endereco: "Rua Planalto, 305, Sandra Regina",
-  cep: "47.802-064",
-  cidade: "Barreiras",
-  uf: "BA",
-  representanteNome: "Paulo Ferreira da Rocha",
-  representanteCargo: "Sócio Administrador",
-  representanteRg: "984391703 SSP/BA",
-  representanteCpf: "014.815.995-85",
-};
-
-export const DEFAULT_PROPOSTA_FORM_DATA: PropostaFormData = {
-  escopoDocumento: "ambos",
-  codigoIbge: "",
-  municipioNome: "",
-  municipioUf: "",
-  estadoNome: "",
-  comarcaNome: "",
-  destinatarioTitulo: "Prefeitura Municipal de",
-  generoAutoridade: "masculino",
-  pronomeTratamento: "Exmo.",
-  tituloSocialAutoridade: "Sr.",
-  cargoAutoridade: "Prefeito Municipal",
-  nomeAutoridade: "",
-  partidoAutoridade: "",
-  saudacaoInicial: "Prezado Prefeito,",
-  rgAutoridade: "",
-  orgaoExpedidorAutoridade: "",
-  cpfAutoridade: "",
-  cnpjMunicipio: "",
-  enderecoMunicipio: "",
-  cepMunicipio: "",
-  usarFundoEducacao: false,
-  nomeFundoEducacao: "FUNDO MUNICIPAL DE EDUCAÇÃO",
-  siglaFundoEducacao: "FME",
-  cnpjFundoEducacao: "",
-  contratoNumero: "000/2026",
-  inexigibilidadeNumero: "000/2026",
-  processoAdministrativoNumero: "000/2026",
-  dataDocumento: new Date().toISOString().slice(0, 10),
-  vigenciaEncerramento: "2026-12-31",
-  prazoVigenciaMeses: 48,
-  prazoValidadePropostaDias: 60,
-  anoBase: 2026,
-  anoProjetado: 2027,
-  receitaAtual: 100000000,
-  receitaProjetada: 170000000,
-  escalonamento: {
-    nivel1LimiteSm: 200,
-    nivel1Percentual: 20,
-    nivel2LimiteSm: 2000,
-    nivel2Percentual: 10,
-    nivel3Percentual: 8,
-    salarioMinimo: 1621,
-  },
-  secretariaAcompanhamento: "Secretaria Municipal de Educação",
-  secretariaFiscalizacao: "Secretaria Municipal de Administração",
-  observacoesInternas: "",
-};

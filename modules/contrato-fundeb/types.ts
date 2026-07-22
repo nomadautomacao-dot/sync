@@ -24,7 +24,7 @@ export interface ContratoFundebContratante {
   fundoMunicipalCNPJ: string;
 }
 
-export interface ContratoFundebContratado {
+interface ContratoFundebContratado {
   empresaRazaoSocial: string;
   empresaCNPJ: string;
   empresaEndereco: string;
@@ -61,13 +61,6 @@ export interface ContratoFundebDados {
   valor: ContratoFundebValor;
   dotacaoOrcamentaria: ContratoFundebDotacaoOrcamentaria;
   foro: ContratoFundebForo;
-}
-
-export interface ContratoFundebGenerateRequest {
-  municipioNome: string;
-  codigoIbge?: string;
-  uf?: string;
-  exercicio?: number;
 }
 
 export interface ContratoFundebGenerateResponse {

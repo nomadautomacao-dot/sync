@@ -7,7 +7,7 @@
  */
 import valorAluno2026 from "@/data/fnde/valor-aluno-ano-2026.json";
 
-export interface ValorAlunoAnoUF {
+interface ValorAlunoAnoUF {
   /** Creche tempo integral - pública */
   crecheIntegralPublica: number;
   /** Creche tempo integral - conveniada */
@@ -62,36 +62,3 @@ export function getValorAlunoAno(uf: string): ValorAlunoAnoUF | null {
   return dataset[normalized] ?? null;
 }
 
-/**
- * Get the base VAAF value per student for a given UF.
- * This is the "Ensino Fundamental parcial - anos iniciais" value,
- * which is the reference value used in FUNDEB calculations.
- * @param uf - Two-letter state code
- * @returns Base VAAF value or null
- */
-export function getValorAlunoBase(uf: string): number | null {
-  const entry = getValorAlunoAno(uf);
-  return entry?.fundamentalParcialAnosIniciais ?? null;
-}
-
-/**
- * Get all UFs that receive VAAF complementation from the Union.
- * States where complementacaoVAAF > 0 are below the minimum national threshold.
- */
-export function getUFsComComplementacaoVAAF(): Array<{ uf: string; complementacao: number; valorBase: number }> {
-  return Object.entries(dataset)
-    .filter(([uf, entry]) => uf !== "BR" && entry.complementacaoVAAF > 0)
-    .map(([uf, entry]) => ({
-      uf,
-      complementacao: entry.complementacaoVAAF,
-      valorBase: entry.fundamentalParcialAnosIniciais,
-    }))
-    .sort((a, b) => b.complementacao - a.complementacao);
-}
-
-/**
- * Get the national total (BR) entry.
- */
-export function getValorAlunoBrasil(): ValorAlunoAnoUF | null {
-  return dataset["BR"] ?? null;
-}

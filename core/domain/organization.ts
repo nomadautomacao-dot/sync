@@ -117,10 +117,9 @@ export const companyCreateSchema = z.object({
   enabledModules: z.array(moduleKeySchema).default([]),
 });
 
-export const companySchema = companyCreateSchema;
 export const companyUpdateSchema = companyCreateSchema.partial();
 
-export const employeeSchema = z.object({
+const employeeSchema = z.object({
   companyId: z.string().trim().min(1, "Empresa obrigatoria"),
   name: z.string().trim().min(2, "Nome obrigatorio"),
   email: z.email("Email invalido"),

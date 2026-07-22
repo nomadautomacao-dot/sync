@@ -1,6 +1,6 @@
 type JsonRecord = Record<string, unknown>;
 
-export interface MunicipalXrayModel {
+interface MunicipalXrayModel {
   municipality: string;
   uf: string;
   ibgeCode: string;

@@ -39,14 +39,3 @@ export function requireContratosAsset(...segments: string[]): string {
   return target;
 }
 
-/**
- * Diretório das fontes de dados brutas (XLSX do INEP, sinopses, payloads).
- * Consumido pelos scripts de geração de dataset, nunca em runtime — os JSONs
- * derivados que o app usa são importados e bundlados no build.
- */
-export function dadosBrutosDir(): string {
-  const configured = process.env.DADOS_BRUTOS_DIR?.trim();
-  return configured
-    ? path.resolve(configured)
-    : path.join(process.cwd(), "data");
-}

@@ -100,7 +100,7 @@ function resolveMunicipioAlias(nome: string, uf?: string) {
   return MUNICIPIO_NOME_ALIASES[key] ?? nome;
 }
 
-export interface GoviaMunicipioSuggestion {
+interface GoviaMunicipioSuggestion {
   codigo_ibge: string;
   nome: string;
   uf: string;
@@ -108,7 +108,7 @@ export interface GoviaMunicipioSuggestion {
   regiaoIntermediaria?: string;
 }
 
-export interface GoviaBuscarMunicipioParams {
+interface GoviaBuscarMunicipioParams {
   codigo_ibge?: string;
   nome?: string;
   uf?: string;
@@ -228,7 +228,7 @@ export async function searchGoviaMunicipios(query: string, uf?: string): Promise
     }));
 }
 
-export interface GoviaMunicipioRegionalParams {
+interface GoviaMunicipioRegionalParams {
   uf: string;
   excludeCodigoIbge?: string;
   regiaoIntermediaria?: string;

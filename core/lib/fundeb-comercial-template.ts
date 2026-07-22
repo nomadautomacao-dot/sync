@@ -11,7 +11,7 @@
 // DATA INTERFACE
 // ---------------------------------------------------------------------------
 
-export interface ComercialPdfData {
+interface ComercialPdfData {
   municipio: string;
   uf: string;
   exercicio: number;
@@ -215,7 +215,7 @@ export interface ComercialPdfData {
  * Formats a number as BRL currency, automatically using millions abbreviation
  * for values ≥ 1 000 000. e.g. 257601696.97 → "R$ 257,60 mi"
  */
-export function formatBRL(value: number | null | undefined): string {
+function formatBRL(value: number | null | undefined): string {
   if (value == null || isNaN(value)) return '—';
   const abs = Math.abs(value);
   if (abs >= 1_000_000) {
@@ -242,7 +242,7 @@ function formatBRLShort(value: number | null | undefined): string {
 /**
  * Full BRL formatting with cents: 257601696.97 → "R$ 257.601.696,97"
  */
-export function formatBRLFull(value: number | null | undefined): string {
+function formatBRLFull(value: number | null | undefined): string {
   if (value == null || isNaN(value)) return '—';
   return `R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
@@ -274,7 +274,7 @@ export function formatInteger(value: number | null | undefined): string {
 /**
  * Format current date as DD/MM/YYYY
  */
-export function formatDate(d?: Date): string {
+function formatDate(d?: Date): string {
   const now = d || new Date();
   const dd = String(now.getDate()).padStart(2, '0');
   const mm = String(now.getMonth() + 1).padStart(2, '0');

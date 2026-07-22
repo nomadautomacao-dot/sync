@@ -116,7 +116,7 @@ const datasetsByYear = {
   2022: dataset2022,
 } as const;
 
-export function getInepCensoMunicipalRecordByYear(
+function getInepCensoMunicipalRecordByYear(
   codigoIBGE: string,
   anoReferencia: 2022 | 2023 | 2024 | 2025,
 ): InepCensoMunicipalRecord | null {

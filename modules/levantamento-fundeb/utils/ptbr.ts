@@ -69,7 +69,7 @@ function applyCommonRepairs(value: string) {
   return text;
 }
 
-export function repairPtBrText(value: string | null | undefined) {
+function repairPtBrText(value: string | null | undefined) {
   if (typeof value !== "string") {
     return "";
   }

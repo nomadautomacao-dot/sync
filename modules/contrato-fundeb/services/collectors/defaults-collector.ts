@@ -2,7 +2,7 @@
  * Defaults Collector — Valores fixos da empresa contratada e constantes legais
  */
 
-export interface DefaultsCollectorResult {
+interface DefaultsCollectorResult {
   // Empresa (Contratado)
   empresaRazaoSocial: string;
   empresaCNPJ: string;

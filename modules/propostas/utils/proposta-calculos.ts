@@ -1,6 +1,6 @@
 import type { GeneroAutoridade, PropostaFormData } from "../types";
 
-export const UF_STATE_NAMES: Record<string, string> = {
+const UF_STATE_NAMES: Record<string, string> = {
   AC: "Acre",
   AL: "Alagoas",
   AP: "Amapá",
@@ -130,37 +130,3 @@ export function inferAuthorityGender(name: string): GeneroAutoridade | null {
   return null;
 }
 
-export function calculateHonorarios(data: Pick<
-  PropostaFormData,
-  "receitaAtual" | "receitaProjetada" | "escalonamento"
->) {
-  const incremento = Math.max(0, data.receitaProjetada - data.receitaAtual);
-  const salarioMinimo = Math.max(data.escalonamento.salarioMinimo || 0, 1);
-  const nivel1Brl = data.escalonamento.nivel1LimiteSm * salarioMinimo;
-  const nivel2Brl = data.escalonamento.nivel2LimiteSm * salarioMinimo;
-  let honorarios = 0;
-
-  if (incremento > nivel2Brl) {
-    honorarios += nivel1Brl * (data.escalonamento.nivel1Percentual / 100);
-    honorarios += (nivel2Brl - nivel1Brl) * (data.escalonamento.nivel2Percentual / 100);
-    honorarios += (incremento - nivel2Brl) * (data.escalonamento.nivel3Percentual / 100);
-  } else if (incremento > nivel1Brl) {
-    honorarios += nivel1Brl * (data.escalonamento.nivel1Percentual / 100);
-    honorarios += (incremento - nivel1Brl) * (data.escalonamento.nivel2Percentual / 100);
-  } else {
-    honorarios += incremento * (data.escalonamento.nivel1Percentual / 100);
-  }
-
-  return {
-    incremento,
-    honorarios,
-    receitaAtualSm: data.receitaAtual / salarioMinimo,
-    receitaProjetadaSm: data.receitaProjetada / salarioMinimo,
-    incrementoSm: incremento / salarioMinimo,
-    honorariosSm: honorarios / salarioMinimo,
-    nivel1Brl,
-    nivel2Brl,
-    percentualIncremento: data.receitaAtual > 0 ? (incremento / data.receitaAtual) * 100 : 0,
-    percentualEfetivo: incremento > 0 ? (honorarios / incremento) * 100 : 0,
-  };
-}

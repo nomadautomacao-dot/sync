@@ -1,6 +1,6 @@
 import tsePrefeitos2024 from "@/data/tse-prefeitos-2024.json";
 
-export interface TsePrefeitoRecord {
+interface TsePrefeitoRecord {
   municipio: string;
   uf: string;
   prefeito: string;
@@ -28,7 +28,7 @@ export function getTsePrefeitoRecord(codigoIBGE: string): TsePrefeitoRecord | nu
   return null;
 }
 
-export interface TsePrefeitoMandatoContext {
+interface TsePrefeitoMandatoContext {
   atual: TsePrefeitoRecord | null;
   classificacaoMandato: "primeiro_mandato" | "segundo_mandato" | "indefinido";
   detalheMandato: string;

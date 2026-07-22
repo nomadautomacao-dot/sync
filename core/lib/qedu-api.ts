@@ -30,13 +30,13 @@ interface QeduIdebApprovalApiItem {
   serie?: number | string | null;
 }
 
-export interface QeduIdebHistoryPoint {
+interface QeduIdebHistoryPoint {
   ano: number;
   metaProjetada: number | null;
   idebVerificado: number | null;
 }
 
-export interface QeduMunicipalIdebHistory {
+interface QeduMunicipalIdebHistory {
   anosIniciais: QeduIdebHistoryPoint[];
   anosFinais: QeduIdebHistoryPoint[];
   ensinoMedio: QeduIdebHistoryPoint[];
@@ -44,21 +44,21 @@ export interface QeduMunicipalIdebHistory {
   dependenciaIdPreferida: number | null;
 }
 
-export interface QeduMunicipalIdebProjection {
+interface QeduMunicipalIdebProjection {
   ano: number | null;
   dependenciaId: number | null;
   ciclos: Record<string, number | null>;
   fonte: string;
 }
 
-export interface QeduMunicipalIdebApproval {
+interface QeduMunicipalIdebApproval {
   ano: number | null;
   dependenciaId: number | null;
   ciclos: Record<string, number | null>;
   fonte: string;
 }
 
-export interface QeduMunicipalApiSnapshot {
+interface QeduMunicipalApiSnapshot {
   historicoIdeb: QeduMunicipalIdebHistory | null;
   idebProjecoes: QeduMunicipalIdebProjection | null;
   idebAprovacoes: QeduMunicipalIdebApproval | null;

@@ -45,7 +45,7 @@ interface SiconfiEntregaSelecionada {
   dataStatus: string | null;
 }
 
-export interface SiconfiFiscalRecord {
+interface SiconfiFiscalRecord {
   codigoIBGE: string;
   anoReferencia: number;
   instituicao: string;

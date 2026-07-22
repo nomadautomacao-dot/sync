@@ -10,7 +10,7 @@
  * Custo estimado: ~$0.025 por contrato (5 queries × ~$0.005 cada)
  */
 
-export interface GeminiCollectorResult {
+interface GeminiCollectorResult {
   prefeitoCPF: string;
   prefeitoRG: string;
   prefeitoRGOrgao: string;

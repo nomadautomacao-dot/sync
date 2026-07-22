@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const collaboratorTypeSchema = z.enum([
+const collaboratorTypeSchema = z.enum([
   "internal_consultant",
   "external_partner",
   "municipal_articulator",
@@ -11,7 +11,7 @@ export const collaboratorTypeSchema = z.enum([
   "hybrid",
 ]);
 
-export const partnershipStatusSchema = z.enum([
+const partnershipStatusSchema = z.enum([
   "prospect",
   "active",
   "paused",
@@ -35,7 +35,7 @@ export const municipalityStageSchema = z.enum([
   "lost",
 ]);
 
-export const commissionBaseTypeSchema = z.enum([
+const commissionBaseTypeSchema = z.enum([
   "gross_revenue",
   "gross_margin",
   "recurring_profit_pre_commission",
@@ -43,7 +43,7 @@ export const commissionBaseTypeSchema = z.enum([
   "net_profit",
 ]);
 
-export const commissionTriggerTypeSchema = z.enum([
+const commissionTriggerTypeSchema = z.enum([
   "on_signature",
   "on_go_live",
   "on_fidelization",

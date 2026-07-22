@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const moduleKeys = [
+const moduleKeys = [
   "consultoria",
   "fundeb",
   "levantamento-fundeb",
@@ -19,9 +19,9 @@ export const moduleKeys = [
 
 export const moduleKeySchema = z.enum(moduleKeys);
 
-export type ModuleKey = z.infer<typeof moduleKeySchema>;
+type ModuleKey = z.infer<typeof moduleKeySchema>;
 
-export interface ModuleDefinition {
+interface ModuleDefinition {
   key: ModuleKey;
   label: string;
   description: string;

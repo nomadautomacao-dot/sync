@@ -40,7 +40,7 @@ export function isFundebPdfTipo(value: string): value is FundebPdfTipo {
   return value === "levantamento" || value === "executiva" || value === "comparativa" || value === "comercial-premium";
 }
 
-export function buildFundebPdfFilename(relatorio: FundebPdfFilenameSource, tipo: FundebPdfTipo) {
+function buildFundebPdfFilename(relatorio: FundebPdfFilenameSource, tipo: FundebPdfTipo) {
   const municipio =
     relatorio.identificacao.municipioNome ||
     relatorio.identificacao.municipio ||

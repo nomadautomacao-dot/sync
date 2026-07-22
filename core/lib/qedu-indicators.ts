@@ -63,7 +63,7 @@ interface QeduDataset {
   distorcao: Map<string, DistorcaoMunicipioMap>;
 }
 
-export interface QeduMunicipalIndicators {
+interface QeduMunicipalIndicators {
   codigoIBGE: string;
   municipio: string;
   uf: string;

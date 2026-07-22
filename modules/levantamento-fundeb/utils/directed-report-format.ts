@@ -7,7 +7,7 @@
 import { formatCurrency, formatInteger } from "./calculos";
 import { normalizePtBrText } from "./ptbr";
 
-export function getDirectedReportReadinessLabel(status: RelatorioDirigidoProntidaoStatus) {
+function getDirectedReportReadinessLabel(status: RelatorioDirigidoProntidaoStatus) {
   if (status === "aprovado_gestor") {
     return "Aprovado para gestor";
   }
@@ -17,7 +17,7 @@ export function getDirectedReportReadinessLabel(status: RelatorioDirigidoProntid
   return "Bloqueado";
 }
 
-export function countDirectedReportStatuses(report: RelatorioDirigidoMunicipio) {
+function countDirectedReportStatuses(report: RelatorioDirigidoMunicipio) {
   return report.itens.reduce(
     (acc, item) => {
       acc[item.status] += 1;

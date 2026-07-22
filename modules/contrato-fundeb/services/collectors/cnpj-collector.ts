@@ -8,7 +8,7 @@
  *  3. Se não → busca no CasaSul/CNPJ.ws por nome da prefeitura
  */
 
-export interface CnpjRecord {
+interface CnpjRecord {
   cnpj: string;
   razaoSocial: string;
   endereco: string;
@@ -18,7 +18,7 @@ export interface CnpjRecord {
   bairro: string;
 }
 
-export interface CnpjCollectorResult {
+interface CnpjCollectorResult {
   prefeitura: CnpjRecord | null;
   fundoEducacao: CnpjRecord | null;
 }

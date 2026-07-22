@@ -30,7 +30,7 @@ export function normalizeGroupRole(role: string): GroupRole {
   return "member";
 }
 
-export async function ensureDefaultGroup() {
+async function ensureDefaultGroup() {
   return prisma.group.upsert({
     where: { slug: DEFAULT_GROUP_SLUG },
     update: { name: DEFAULT_GROUP_NAME },

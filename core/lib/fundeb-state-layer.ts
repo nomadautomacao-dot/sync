@@ -1,4 +1,4 @@
-export interface FundebStateLayerInput {
+interface FundebStateLayerInput {
   uf: string;
   totalReceitas: number;
   complementacaoVAAT: number;
