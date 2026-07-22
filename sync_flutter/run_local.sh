@@ -34,12 +34,16 @@ NC='\033[0m'
 
 # ── Auto-detect Flutter binary ─────────────────────────────────────
 detect_flutter() {
-  if command -v flutter &>/dev/null; then
-    echo "flutter"
-  elif [ -f "$HOME/sync_tooling/flutter/bin/flutter" ]; then
+  # O SDK pinado (~/sync_tooling/flutter, 3.38.7) vem PRIMEIRO de proposito.
+  # O flutter do PATH costuma ser uma versao mais nova (3.44+) onde IconData
+  # virou 'final class' e lucide_icons_flutter nao compila. Preferir o pinado
+  # mantem dev:all consistente com os scripts npm dev:flutter:*.
+  if [ -f "$HOME/sync_tooling/flutter/bin/flutter" ]; then
     echo "$HOME/sync_tooling/flutter/bin/flutter"
   elif [ -f "$HOME/flutter/bin/flutter" ]; then
     echo "$HOME/flutter/bin/flutter"
+  elif command -v flutter &>/dev/null; then
+    echo "flutter"
   else
     echo ""
   fi
