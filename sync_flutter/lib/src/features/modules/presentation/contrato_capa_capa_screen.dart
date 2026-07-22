@@ -524,7 +524,7 @@ class _ContratoCapaCapaScreenState extends State<ContratoCapaCapaScreen> with Si
       'quantidadeMeses': int.tryParse(quantidadeMesesController.text) ?? 12,
     };
 
-    // Timer de progresso para feedback visual (Gemini pode levar ~60s)
+    // Timer de progresso para feedback visual (IA pode levar ~60s)
     final progressMessages = [
       '🤖 Agente IA buscando dados em diários oficiais, IBGE, TSE...',
       '🔍 Pesquisando CNPJ da Prefeitura e do Fundo Municipal de Educação...',
@@ -541,7 +541,7 @@ class _ContratoCapaCapaScreenState extends State<ContratoCapaCapaScreen> with Si
     });
 
     try {
-      // 1. Attempt calling the AI Agent route (Gemini 3.5 + Google Search Grounding)
+      // 1. Attempt calling the AI Agent route (OpenRouter/Qwen 3.7 Plus)
       final response = await widget.repository.obterDadosContratoFundeb(body);
       if (!mounted) return;
       
@@ -573,7 +573,7 @@ class _ContratoCapaCapaScreenState extends State<ContratoCapaCapaScreen> with Si
         }
         
         final msg = viaIA > 0
-            ? '🤖 Agente IA preencheu $pct% dos campos ($viaIA via Gemini + Google Search)'
+            ? '🤖 Agente IA preencheu $pct% dos campos ($viaIA via IA)'
             : '✅ Preenchimento automático via IBGE/TSE ($pct% concluído)';
         _showSnackBar(msg);
         

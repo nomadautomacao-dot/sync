@@ -11,6 +11,7 @@ import '../../dashboard/presentation/dashboard_screen.dart';
 import '../../inbox/presentation/inbox_screen.dart';
 import '../../modules/presentation/modules_screen.dart';
 import '../../people/presentation/people_screen.dart';
+import '../../pipeline/presentation/pipeline_screen.dart';
 import '../../settings/presentation/settings_screen.dart';
 import '../../shared/presentation/shared_widgets.dart';
 
@@ -127,6 +128,7 @@ class _SyncShellState extends State<SyncShell> {
         currentUser: widget.controller.user,
       ),
       AppSection.people => PeopleScreen(repository: repository),
+      AppSection.pipeline => PipelineScreen(repository: repository),
       AppSection.modules => ModulesScreen(
         repository: repository,
         selectedKey: widget.controller.selectedModuleKey,

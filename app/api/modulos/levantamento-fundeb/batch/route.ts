@@ -5,6 +5,7 @@ import { buildDirectedFundebReportBase } from "@/core/lib/fundeb-directed-report
 import { buildFundebComparativeSnapshot } from "@/core/lib/fundeb-comparative";
 import { generateFundebPdfBuffer, isFundebPdfTipo, type FundebPdfTipo } from "@/core/lib/fundeb-pdf";
 import { markGoviaMunicipioAccess } from "@/core/lib/govia-storage";
+import type { FundebRelatorioParametros } from "@/modules/levantamento-fundeb/types";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -13,6 +14,7 @@ interface BatchItem {
   codigo_ibge?: string;
   nome?: string;
   uf?: string;
+  parametros?: FundebRelatorioParametros;
 }
 
 interface BatchRequestBody {
@@ -20,6 +22,7 @@ interface BatchRequestBody {
   exercicio: number;
   tipos: FundebPdfTipo[];
   modo: "completo" | "rapido";
+  parametros?: FundebRelatorioParametros;
 }
 
 interface BatchResultItem {
@@ -50,6 +53,7 @@ async function processOneMunicipio(
   tipos: FundebPdfTipo[],
   modo: "completo" | "rapido",
   zip: JSZip,
+  parametros?: FundebRelatorioParametros,
 ): Promise<BatchResultItem> {
   const data = await withTimeout(
     buildGoviaMunicipioCompleto({
@@ -57,6 +61,10 @@ async function processOneMunicipio(
       nome: item.nome,
       uf: item.uf,
       exercicio,
+      parametros: {
+        ...(parametros ?? {}),
+        ...(item.parametros ?? {}),
+      },
     }),
     PER_ITEM_TIMEOUT_MS,
     `dados ${item.nome || item.codigo_ibge}`,
@@ -180,7 +188,7 @@ export async function POST(request: NextRequest) {
       const chunkResults = await Promise.all(
         chunk.map((item) =>
           withTimeout(
-            processOneMunicipio(item, exercicio, tipos, modo, zip),
+            processOneMunicipio(item, exercicio, tipos, modo, zip, body.parametros),
             modo === "rapido" ? 45_000 : 120_000,
             item.nome || item.codigo_ibge || "municipio",
           ).catch((error): BatchResultItem => ({

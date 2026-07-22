@@ -77,6 +77,17 @@ class SyncApiClient {
     return _decodeObject(response.body);
   }
 
+  Future<Map<String, dynamic>> delete(
+    String path, {
+    Duration timeout = const Duration(seconds: 20),
+  }) async {
+    final response = await _send('DELETE', path, timeout: timeout);
+    if (response.body.trim().isEmpty) {
+      return <String, dynamic>{};
+    }
+    return _decodeObject(response.body);
+  }
+
   Future<List<dynamic>> getList(
     String path, {
     Duration timeout = const Duration(seconds: 20),
@@ -148,6 +159,9 @@ class SyncApiClient {
                 body: jsonEncode(body ?? <String, dynamic>{}),
               )
               .timeout(timeout);
+          break;
+        case 'DELETE':
+          response = await _client.delete(uri, headers: headers).timeout(timeout);
           break;
         default:
           throw ApiException('Metodo HTTP nao suportado: $method');

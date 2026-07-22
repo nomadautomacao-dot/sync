@@ -266,10 +266,95 @@ class RemoteSyncRepository implements SyncRepository {
   }
 
   @override
-  Future<CollaboratorSummary> createCollaborator(Map<String, dynamic> data) async {
+  Future<CollaboratorSummary> createCollaborator(
+    Map<String, dynamic> data,
+  ) async {
     _assertConfigured();
     final result = await _apiClient.post('/api/collaborators', body: data);
     return _mapCollaboratorSummary(result);
+  }
+
+  @override
+  Future<CollaboratorDetails> getCollaboratorDetails(String id) async {
+    _assertConfigured();
+    final result = await _apiClient.getObject('/api/collaborators/$id');
+    return CollaboratorDetails.fromJson(result);
+  }
+
+  @override
+  Future<CollaboratorDetails> updateCollaboratorDetails(
+    String id,
+    Map<String, dynamic> data,
+  ) async {
+    _assertConfigured();
+    final result = await _apiClient.put('/api/collaborators/$id', body: data);
+    return CollaboratorDetails.fromJson(result);
+  }
+
+  @override
+  Future<List<CollaboratorDocument>> getCollaboratorDocuments(String id) async {
+    _assertConfigured();
+    final list = await _apiClient.getList('/api/collaborators/$id/documents');
+    return list
+        .whereType<Map<String, dynamic>>()
+        .map(CollaboratorDocument.fromJson)
+        .toList();
+  }
+
+  @override
+  Future<CollaboratorDocument> uploadCollaboratorDocument({
+    required String id,
+    required String category,
+    required String documentType,
+    required String name,
+    required String fileName,
+    required Uint8List fileBytes,
+    String? issuedAt,
+    String? expiresAt,
+    String? notes,
+  }) async {
+    _assertConfigured();
+    final uri = Uri.parse(
+      '${_apiClient.apiBaseUrl}/api/collaborators/$id/documents',
+    );
+    final request = http.MultipartRequest('POST', uri);
+
+    final headers = await _apiClient.getAuthHeaders();
+    request.headers.addAll(headers);
+
+    request.fields['category'] = category;
+    request.fields['documentType'] = documentType;
+    request.fields['name'] = name;
+    if (issuedAt != null && issuedAt.isNotEmpty)
+      request.fields['issuedAt'] = issuedAt;
+    if (expiresAt != null && expiresAt.isNotEmpty)
+      request.fields['expiresAt'] = expiresAt;
+    if (notes != null && notes.isNotEmpty) request.fields['notes'] = notes;
+
+    request.files.add(
+      http.MultipartFile.fromBytes('file', fileBytes, filename: fileName),
+    );
+
+    final streamedResponse = await request.send().timeout(
+      const Duration(seconds: 120),
+    );
+    final responseBody = await streamedResponse.stream.bytesToString();
+
+    if (streamedResponse.statusCode != 200) {
+      throw ApiException(
+        'Erro ao enviar documento: ${streamedResponse.statusCode} - $responseBody',
+        statusCode: streamedResponse.statusCode,
+      );
+    }
+
+    final decoded = jsonDecode(responseBody) as Map<String, dynamic>;
+    return CollaboratorDocument.fromJson(decoded);
+  }
+
+  @override
+  Future<void> deleteCollaboratorDocument(String id, String docId) async {
+    _assertConfigured();
+    await _apiClient.delete('/api/collaborators/$id/documents/$docId');
   }
 
   @override
@@ -293,6 +378,24 @@ class RemoteSyncRepository implements SyncRepository {
         .whereType<Map<String, dynamic>>()
         .map((json) => CityAccount.fromJson(json))
         .toList();
+  }
+
+  @override
+  Future<void> updateCityStage(String cityId, String stage) async {
+    _assertConfigured();
+    await _apiClient.put(
+      '/api/municipalities/$cityId',
+      body: {'currentStage': stage},
+    );
+  }
+
+  @override
+  Future<void> updateCityPipeline(
+    String cityId,
+    Map<String, dynamic> data,
+  ) async {
+    _assertConfigured();
+    await _apiClient.put('/api/municipalities/$cityId', body: data);
   }
 
   @override
@@ -386,36 +489,62 @@ class RemoteSyncRepository implements SyncRepository {
     required String uf,
     required int exercicio,
   }) async {
-    final geoUri = Uri.https('servicodados.ibge.gov.br', '/api/v1/localidades/municipios/$codigoIbge');
+    final geoUri = Uri.https(
+      'servicodados.ibge.gov.br',
+      '/api/v1/localidades/municipios/$codigoIbge',
+    );
 
     // Fetch 5 years of SICONFI data + geo + IBGE profile + INEP censo in parallel
     final parallel = await Future.wait([
-      _fetchSiconfiFundebYear(codigoIbge, exercicio).catchError((_) => null),       // [0] current year
-      _fetchSiconfiFundebYear(codigoIbge, exercicio - 1).catchError((_) => null),   // [1] year-1
-      _fetchSiconfiFundebYear(codigoIbge, exercicio - 2).catchError((_) => null),   // [2] year-2
-      _fetchSiconfiFundebYear(codigoIbge, exercicio - 3).catchError((_) => null),   // [3] year-3
-      _fetchSiconfiFundebYear(codigoIbge, exercicio - 4).catchError((_) => null),   // [4] year-4
-      http.get(geoUri).timeout(const Duration(seconds: 15)).catchError((_) => http.Response('{}', 200)), // [5]
-      _fetchIbgePerfil(nome, uf).catchError((_) => null),                           // [6]
-      _fetchCensoInepData(codigoIbge).catchError((_) => null),                      // [7]
+      _fetchSiconfiFundebYear(
+        codigoIbge,
+        exercicio,
+      ).catchError((_) => null), // [0] current year
+      _fetchSiconfiFundebYear(
+        codigoIbge,
+        exercicio - 1,
+      ).catchError((_) => null), // [1] year-1
+      _fetchSiconfiFundebYear(
+        codigoIbge,
+        exercicio - 2,
+      ).catchError((_) => null), // [2] year-2
+      _fetchSiconfiFundebYear(
+        codigoIbge,
+        exercicio - 3,
+      ).catchError((_) => null), // [3] year-3
+      _fetchSiconfiFundebYear(
+        codigoIbge,
+        exercicio - 4,
+      ).catchError((_) => null), // [4] year-4
+      http
+          .get(geoUri)
+          .timeout(const Duration(seconds: 15))
+          .catchError((_) => http.Response('{}', 200)), // [5]
+      _fetchIbgePerfil(nome, uf).catchError((_) => null), // [6]
+      _fetchCensoInepData(codigoIbge).catchError((_) => null), // [7]
     ]);
 
     final siconfiYears = <RelatorioDirigidoSerieHistoricaAno?>[
-      parallel[4] as RelatorioDirigidoSerieHistoricaAno?,  // oldest first
+      parallel[4] as RelatorioDirigidoSerieHistoricaAno?, // oldest first
       parallel[3] as RelatorioDirigidoSerieHistoricaAno?,
       parallel[2] as RelatorioDirigidoSerieHistoricaAno?,
       parallel[1] as RelatorioDirigidoSerieHistoricaAno?,
-      parallel[0] as RelatorioDirigidoSerieHistoricaAno?,  // most recent
+      parallel[0] as RelatorioDirigidoSerieHistoricaAno?, // most recent
     ];
     final geoResp = parallel[5] as http.Response;
     final ibgePerfil = parallel[6] as IbgeMunicipioPerfil?;
     final censoInepData = parallel[7] as Map<String, dynamic>?;
 
     // Use the most recent year with data for the main receitas
-    final siconfi = siconfiYears.lastWhere((y) => y != null, orElse: () => null);
+    final siconfi = siconfiYears.lastWhere(
+      (y) => y != null,
+      orElse: () => null,
+    );
     // Use the second most recent for YoY comparison
     final filledYears = siconfiYears.where((y) => y != null).toList();
-    final siconfiPrev = filledYears.length >= 2 ? filledYears[filledYears.length - 2] : null;
+    final siconfiPrev = filledYears.length >= 2
+        ? filledYears[filledYears.length - 2]
+        : null;
 
     // Parse Censo historical data for enriching SICONFI years
     final censoHistoricoAnual = <int, Map<String, dynamic>>{};
@@ -432,7 +561,9 @@ class RemoteSyncRepository implements SyncRepository {
 
     // Parse geo
     Map<String, dynamic> geo = {};
-    try { geo = jsonDecode(geoResp.body) as Map<String, dynamic>; } catch (_) {}
+    try {
+      geo = jsonDecode(geoResp.body) as Map<String, dynamic>;
+    } catch (_) {}
     final micro = geo['microrregiao'];
     final meso = micro is Map ? micro['mesorregiao'] : null;
     final regIm = geo['regiao-imediata'];
@@ -466,95 +597,177 @@ class RemoteSyncRepository implements SyncRepository {
 
     // Cronograma
     final mensal = totalP > 0 ? (totalP / 12).round().toDouble() : 0.0;
-    final cron = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez']
-      .map((m) => CronogramaVAAF(mes: m, valorProjetado: mensal, percentual: 1.0 / 12)).toList();
+    final cron =
+        [
+              'Jan',
+              'Fev',
+              'Mar',
+              'Abr',
+              'Mai',
+              'Jun',
+              'Jul',
+              'Ago',
+              'Set',
+              'Out',
+              'Nov',
+              'Dez',
+            ]
+            .map(
+              (m) => CronogramaVAAF(
+                mes: m,
+                valorProjetado: mensal,
+                percentual: 1.0 / 12,
+              ),
+            )
+            .toList();
 
     // YoY
     final prev = siconfiPrev?.totalReceitasFundeb ?? 0;
-    final yoy = prev > 0 ? ((total - prev) / prev * 100).toStringAsFixed(1) : null;
+    final yoy = prev > 0
+        ? ((total - prev) / prev * 100).toStringAsFixed(1)
+        : null;
 
     final pop = ibgePerfil?.populacaoEstimada ?? 0;
 
     final proj = ProjecaoRochaPrime(
-      vaafAtual: vaaf, vaafProjetado: vaafP, vaafGanho: vaafP - vaaf,
-      vaatAtual: vaat, vaatProjetado: vaatP, vaatGanho: vaatP - vaat,
-      vaarAtual: vaar, vaarProjetado: vaarP, vaarGanho: vaarP - vaar,
-      totalAtual: total, totalProjetado: totalP, totalGanho: ganho,
-      ganhoPercentual: pct, possuiComplementacao: compl,
-      metodologia: 'Projecao Rocha Prime (SICONFI direto)', multiplicadorAplicado: 1.04, natureza: 'recuperavel',
+      vaafAtual: vaaf,
+      vaafProjetado: vaafP,
+      vaafGanho: vaafP - vaaf,
+      vaatAtual: vaat,
+      vaatProjetado: vaatP,
+      vaatGanho: vaatP - vaat,
+      vaarAtual: vaar,
+      vaarProjetado: vaarP,
+      vaarGanho: vaarP - vaar,
+      totalAtual: total,
+      totalProjetado: totalP,
+      totalGanho: ganho,
+      ganhoPercentual: pct,
+      possuiComplementacao: compl,
+      metodologia: 'Projecao Rocha Prime (SICONFI direto)',
+      multiplicadorAplicado: 1.04,
+      natureza: 'recuperavel',
     );
 
     final relatorio = RelatorioFundeb(
       geradoEm: DateTime.now().toIso8601String(),
       identificacao: MunicipioIdentificacao(
-        municipio: '$nome/$uf', municipioNome: nome, uf: uf, codigoIBGE: codigoIbge,
-        prefeito: 'Consultar TSE/DivulgaCand', partido: '-', exercicio: exercicio,
+        municipio: '$nome/$uf',
+        municipioNome: nome,
+        uf: uf,
+        codigoIBGE: codigoIbge,
+        prefeito: 'Consultar TSE/DivulgaCand',
+        partido: '-',
+        exercicio: exercicio,
         fonte: 'SICONFI + IBGE (direto)',
         mesorregiao: meso is Map ? (meso['nome'] ?? '').toString() : '',
         microrregiao: micro is Map ? (micro['nome'] ?? '').toString() : '',
-        regiaoIntermediaria: regInt is Map ? (regInt['nome'] ?? '').toString() : '',
+        regiaoIntermediaria: regInt is Map
+            ? (regInt['nome'] ?? '').toString()
+            : '',
         regiao: regMap is Map ? (regMap['nome'] ?? '').toString() : '',
       ),
       receitas: ReceitasFundeb(
-        receitaContribuicaoMunicipal: contrib, complementacaoVAAF: vaaf,
-        complementacaoVAAT: vaat, complementacaoVAAR: vaar, totalReceitas: total,
+        receitaContribuicaoMunicipal: contrib,
+        complementacaoVAAF: vaaf,
+        complementacaoVAAT: vaat,
+        complementacaoVAAR: vaar,
+        totalReceitas: total,
       ),
-      projecao: proj, projecaoRecuperavel: proj,
+      projecao: proj,
+      projecaoRecuperavel: proj,
       projecaoComercial: ProjecaoRochaPrime(
-        vaafAtual: vaaf, vaafProjetado: vaafP6, vaafGanho: vaafP6 - vaaf,
-        vaatAtual: vaat, vaatProjetado: vaatP6, vaatGanho: vaatP6 - vaat,
-        vaarAtual: vaar, vaarProjetado: vaarP6, vaarGanho: vaarP6 - vaar,
-        totalAtual: total, totalProjetado: totalP6, totalGanho: ganho6,
-        ganhoPercentual: pct6, possuiComplementacao: compl,
-        metodologia: 'Benchmark comercial Rocha Prime', multiplicadorAplicado: 1.06, natureza: 'benchmark',
+        vaafAtual: vaaf,
+        vaafProjetado: vaafP6,
+        vaafGanho: vaafP6 - vaaf,
+        vaatAtual: vaat,
+        vaatProjetado: vaatP6,
+        vaatGanho: vaatP6 - vaat,
+        vaarAtual: vaar,
+        vaarProjetado: vaarP6,
+        vaarGanho: vaarP6 - vaar,
+        totalAtual: total,
+        totalProjetado: totalP6,
+        totalGanho: ganho6,
+        ganhoPercentual: pct6,
+        possuiComplementacao: compl,
+        metodologia: 'Benchmark comercial Rocha Prime',
+        multiplicadorAplicado: 1.06,
+        natureza: 'benchmark',
         ressalva: 'Requer fechamento documental para captura integral.',
       ),
       upsideCondicionado: UpsideCondicionadoFundeb(
-        totalProjetado: totalP6, ganhoAdicional: ganho6 - ganho,
+        totalProjetado: totalP6,
+        ganhoAdicional: ganho6 - ganho,
         ganhoPercentual: total > 0 ? (ganho6 - ganho) / total : 0,
         metodologia: 'Upside condicionado por benchmark regional',
-        vetores: const ['Tempo integral', 'Regularizacao VAAT', 'Ajustes de base'],
+        vetores: const [
+          'Tempo integral',
+          'Regularizacao VAAT',
+          'Ajustes de base',
+        ],
       ),
       censoEscolar: censoInepData != null
-          ? CensoEscolar.fromJson(censoInepData['censoEscolar'] as Map<String, dynamic>)
+          ? CensoEscolar.fromJson(
+              censoInepData['censoEscolar'] as Map<String, dynamic>,
+            )
           : null,
       perfilComercial: PerfilComercialFundeb(
-        score: compl ? 75 : 45, faixa: compl ? 'padrao' : 'basico', confianca: 0.75,
+        score: compl ? 75 : 45,
+        faixa: compl ? 'padrao' : 'basico',
+        confianca: 0.75,
         habilitacaoVaat: 'Verificar portal Habilita/FNDE',
-        populacaoEstimada: pop, fundebPerCapita: pop > 0 ? (total / pop).round().toDouble() : 0,
+        populacaoEstimada: pop,
+        fundebPerCapita: pop > 0 ? (total / pop).round().toDouble() : 0,
         matriculasMunicipaisPorHabitante: pop > 0
-            ? ((censoInepData?['matriculasMunicipaisTotal'] as num?)?.toDouble() ?? 0) / pop
+            ? ((censoInepData?['matriculasMunicipaisTotal'] as num?)
+                          ?.toDouble() ??
+                      0) /
+                  pop
             : 0,
         educacaoInfantilMunicipalPorHabitante: pop > 0
-            ? ((censoInepData?['educacaoInfantilMunicipal'] as num?)?.toDouble() ?? 0) / pop
+            ? ((censoInepData?['educacaoInfantilMunicipal'] as num?)
+                          ?.toDouble() ??
+                      0) /
+                  pop
             : 0,
         crecheMunicipalPorHabitante: pop > 0
-            ? ((censoInepData?['crecheMunicipal'] as num?)?.toDouble() ?? 0) / pop
+            ? ((censoInepData?['crecheMunicipal'] as num?)?.toDouble() ?? 0) /
+                  pop
             : 0,
       ),
       cronogramaVAAF: cron,
-      sistemas: const [], obrasPAC2: const [],
+      sistemas: const [],
+      obrasPAC2: const [],
       situacaoPAR: 'FNDE/SIGEF temporariamente indisponivel',
-      caminhoEscola: const [], pdde: const [],
+      caminhoEscola: const [],
+      pdde: const [],
       observacoesOperacionais: [
         'Receitas FUNDEB reais via SICONFI/Tesouro Nacional (exercicio ${exercicio - 1}).',
         'Dados de PAR, PDDE, Caminho da Escola: FNDE fora do ar.',
-        if (yoy != null) 'Variacao FUNDEB ${exercicio - 2} → ${exercicio - 1}: $yoy%.',
+        if (yoy != null)
+          'Variacao FUNDEB ${exercicio - 2} → ${exercicio - 1}: $yoy%.',
       ],
-      idebAnosIniciais: censoInepData != null && (censoInepData['idebAnosIniciais'] as List?)?.isNotEmpty == true
+      idebAnosIniciais:
+          censoInepData != null &&
+              (censoInepData['idebAnosIniciais'] as List?)?.isNotEmpty == true
           ? (censoInepData['idebAnosIniciais'] as List)
-              .map((item) => IDEBDado.fromJson(item as Map<String, dynamic>))
-              .toList()
+                .map((item) => IDEBDado.fromJson(item as Map<String, dynamic>))
+                .toList()
           : const [],
-      idebAnosFinais: censoInepData != null && (censoInepData['idebAnosFinais'] as List?)?.isNotEmpty == true
+      idebAnosFinais:
+          censoInepData != null &&
+              (censoInepData['idebAnosFinais'] as List?)?.isNotEmpty == true
           ? (censoInepData['idebAnosFinais'] as List)
-              .map((item) => IDEBDado.fromJson(item as Map<String, dynamic>))
-              .toList()
+                .map((item) => IDEBDado.fromJson(item as Map<String, dynamic>))
+                .toList()
           : const [],
-      idebEnsinoMedio: censoInepData != null && (censoInepData['idebEnsinoMedio'] as List?)?.isNotEmpty == true
+      idebEnsinoMedio:
+          censoInepData != null &&
+              (censoInepData['idebEnsinoMedio'] as List?)?.isNotEmpty == true
           ? (censoInepData['idebEnsinoMedio'] as List)
-              .map((item) => IDEBDado.fromJson(item as Map<String, dynamic>))
-              .toList()
+                .map((item) => IDEBDado.fromJson(item as Map<String, dynamic>))
+                .toList()
           : const [],
     );
 
@@ -563,27 +776,41 @@ class RemoteSyncRepository implements SyncRepository {
     for (final year in siconfiYears) {
       if (year == null) continue;
       final censo = censoHistoricoAnual[year.ano];
-      hist.add(RelatorioDirigidoSerieHistoricaAno(
-        ano: year.ano,
-        anoBaseCenso: censo != null ? (censo['ano'] as int?) : null,
-        totalReceitasFundeb: year.totalReceitasFundeb,
-        contribuicaoMunicipal: year.contribuicaoMunicipal,
-        complementacaoVAAF: year.complementacaoVAAF,
-        complementacaoVAAT: year.complementacaoVAAT,
-        complementacaoVAAR: year.complementacaoVAAR,
-        totalMatriculasMunicipais: censo != null ? (censo['totalMatriculas'] as num?)?.toInt() : year.totalMatriculasMunicipais,
-        totalEscolas: censo != null ? (censo['totalEscolas'] as num?)?.toInt() : year.totalEscolas,
-        tempoIntegral: censo != null ? (censo['tempoIntegral'] as num?)?.toInt() : year.tempoIntegral,
-        educacaoEspecial: censo != null ? (censo['educacaoEspecial'] as num?)?.toInt() : year.educacaoEspecial,
-        eja: censo != null ? (censo['eja'] as num?)?.toInt() : year.eja,
-      ));
+      hist.add(
+        RelatorioDirigidoSerieHistoricaAno(
+          ano: year.ano,
+          anoBaseCenso: censo != null ? (censo['ano'] as int?) : null,
+          totalReceitasFundeb: year.totalReceitasFundeb,
+          contribuicaoMunicipal: year.contribuicaoMunicipal,
+          complementacaoVAAF: year.complementacaoVAAF,
+          complementacaoVAAT: year.complementacaoVAAT,
+          complementacaoVAAR: year.complementacaoVAAR,
+          totalMatriculasMunicipais: censo != null
+              ? (censo['totalMatriculas'] as num?)?.toInt()
+              : year.totalMatriculasMunicipais,
+          totalEscolas: censo != null
+              ? (censo['totalEscolas'] as num?)?.toInt()
+              : year.totalEscolas,
+          tempoIntegral: censo != null
+              ? (censo['tempoIntegral'] as num?)?.toInt()
+              : year.tempoIntegral,
+          educacaoEspecial: censo != null
+              ? (censo['educacaoEspecial'] as num?)?.toInt()
+              : year.educacaoEspecial,
+          eja: censo != null ? (censo['eja'] as num?)?.toInt() : year.eja,
+        ),
+      );
     }
 
     final dirigido = RelatorioDirigidoMunicipio(
-      municipio: nome, uf: uf, codigoIbge: codigoIbge,
+      municipio: nome,
+      uf: uf,
+      codigoIbge: codigoIbge,
       geradoEm: DateTime.now().toIso8601String(),
-      modo: 'siconfi_direto', modeloPrincipal: 'siconfi_local',
-      resumoExecutivo: 'Levantamento FUNDEB com receitas reais do SICONFI/Tesouro Nacional. '
+      modo: 'siconfi_direto',
+      modeloPrincipal: 'siconfi_local',
+      resumoExecutivo:
+          'Levantamento FUNDEB com receitas reais do SICONFI/Tesouro Nacional. '
           'Dados de PAR, PDDE e sistemas FNDE temporariamente indisponiveis.',
       searchQueries: const [],
       itens: const [],
@@ -601,10 +828,15 @@ class RemoteSyncRepository implements SyncRepository {
       prontidao: const RelatorioDirigidoProntidao(
         status: 'parcial',
         score: 65,
-        resumo: 'Dados financeiros completos via SICONFI. Dados operacionais FNDE pendentes.',
+        resumo:
+            'Dados financeiros completos via SICONFI. Dados operacionais FNDE pendentes.',
         bloqueios: ['FNDE/SIGEF temporariamente fora do ar.'],
         avisos: ['Dados de PAR, PDDE e Caminho da Escola indisponiveis.'],
-        criterios: ['Receitas FUNDEB validadas', 'Projecao Rocha Prime aplicada', 'Geografia IBGE confirmada'],
+        criterios: [
+          'Receitas FUNDEB validadas',
+          'Projecao Rocha Prime aplicada',
+          'Geografia IBGE confirmada',
+        ],
       ),
       contextoPolitico: const RelatorioDirigidoContextoPolitico(
         prefeitoAtual: 'Consultar TSE/DivulgaCand',
@@ -612,15 +844,16 @@ class RemoteSyncRepository implements SyncRepository {
         classificacaoMandato: 'Nao classificado',
         detalheMandato: 'Mandato 2025-2028. Dados indisponiveis via FNDE.',
         estrategiaComercial: 'Abordagem direta com secretaria de educacao.',
-        resumoComparativoGestao: 'Comparativo de gestao indisponivel (FNDE offline).',
+        resumoComparativoGestao:
+            'Comparativo de gestao indisponivel (FNDE offline).',
       ),
       historico: RelatorioDirigidoHistorico(
         anos: hist,
         resumo: hist.length > 1
             ? 'Serie historica com ${hist.length} exercicios (${hist.first.ano}-${hist.last.ano}) via SICONFI/Tesouro.${censoHistoricoAnual.isNotEmpty ? ' Base escolar enriquecida com Censo INEP.' : ''}'
             : hist.isNotEmpty
-                ? 'Exercicio ${hist.first.ano} disponivel no SICONFI.'
-                : 'Nenhum exercicio disponivel no SICONFI.',
+            ? 'Exercicio ${hist.first.ano} disponivel no SICONFI.'
+            : 'Nenhum exercicio disponivel no SICONFI.',
       ),
       benchmarkRegional: const RelatorioDirigidoBenchmarkRegional(
         criterio: 'Mesma mesorregiao e faixa populacional',
@@ -632,16 +865,40 @@ class RemoteSyncRepository implements SyncRepository {
     return LevantamentoFundebBundle(
       relatorio: relatorio,
       fontes: [
-        const FonteColetaStatus(id: 'ibge', label: 'IBGE', status: 'automatico', descricao: 'Busca territorial e identificacao municipal resolvidas automaticamente.'),
-        const FonteColetaStatus(id: 'fnde-siconfi', label: 'FNDE / SICONFI', status: 'automatico', descricao: 'Base fiscal consolidada automaticamente com suporte do SICONFI/Tesouro.'),
-        const FonteColetaStatus(id: 'simec', label: 'MEC / FNDE operacional', status: 'manual', descricao: 'Fluxo operacional ainda depende de fechamento assistido.'),
-        FonteColetaStatus(id: 'inep-qedu', label: 'INEP / QEdu',
+        const FonteColetaStatus(
+          id: 'ibge',
+          label: 'IBGE',
+          status: 'automatico',
+          descricao:
+              'Busca territorial e identificacao municipal resolvidas automaticamente.',
+        ),
+        const FonteColetaStatus(
+          id: 'fnde-siconfi',
+          label: 'FNDE / SICONFI',
+          status: 'automatico',
+          descricao:
+              'Base fiscal consolidada automaticamente com suporte do SICONFI/Tesouro.',
+        ),
+        const FonteColetaStatus(
+          id: 'simec',
+          label: 'MEC / FNDE operacional',
+          status: 'manual',
+          descricao: 'Fluxo operacional ainda depende de fechamento assistido.',
+        ),
+        FonteColetaStatus(
+          id: 'inep-qedu',
+          label: 'INEP / QEdu',
           status: censoInepData != null ? 'automatico' : 'manual',
           descricao: censoInepData != null
               ? 'Censo escolar carregado automaticamente pela base interna.'
               : 'Indicadores educacionais ainda sem automacao suficiente.',
         ),
-        const FonteColetaStatus(id: 'pdde-fnde', label: 'PDDE / FNDE', status: 'manual', descricao: 'PDDE ainda sem consolidacao automatica neste recorte.'),
+        const FonteColetaStatus(
+          id: 'pdde-fnde',
+          label: 'PDDE / FNDE',
+          status: 'manual',
+          descricao: 'PDDE ainda sem consolidacao automatica neste recorte.',
+        ),
       ],
       relatorioDirigidoBase: dirigido,
       ibgePerfil: ibgePerfil,
@@ -891,6 +1148,7 @@ class RemoteSyncRepository implements SyncRepository {
       caminhoEscola: report.caminhoEscola,
       cenarioEstruturacao: report.cenarioEstruturacao,
       recursosPorAluno: report.recursosPorAluno,
+      valorAlunoOficial: report.valorAlunoOficial,
       contextoPolitico: report.contextoPolitico,
       historico: RelatorioDirigidoHistorico(
         anos: enrichedYears,
@@ -918,7 +1176,9 @@ class RemoteSyncRepository implements SyncRepository {
           current.complementacaoVAAT ?? siconfi.complementacaoVAAT,
       complementacaoVAAR:
           current.complementacaoVAAR ?? siconfi.complementacaoVAAR,
-      totalMatriculasMunicipais: current.totalMatriculasMunicipais ?? siconfi.totalMatriculasMunicipais,
+      totalMatriculasMunicipais:
+          current.totalMatriculasMunicipais ??
+          siconfi.totalMatriculasMunicipais,
       totalEscolas: current.totalEscolas ?? siconfi.totalEscolas,
       eja: current.eja ?? siconfi.eja,
       tempoIntegral: current.tempoIntegral ?? siconfi.tempoIntegral,
@@ -992,8 +1252,12 @@ class RemoteSyncRepository implements SyncRepository {
       return RelatorioDirigidoSerieHistoricaAno(
         ano: year,
         totalReceitasFundeb: total,
-        contribuicaoMunicipal: contribuicao > 0 ? contribuicao : total - complementacaoUniao,
-        complementacaoVAAF: complementacaoUniao > 0 ? complementacaoUniao : null,
+        contribuicaoMunicipal: contribuicao > 0
+            ? contribuicao
+            : total - complementacaoUniao,
+        complementacaoVAAF: complementacaoUniao > 0
+            ? complementacaoUniao
+            : null,
         complementacaoVAAT: 0,
         complementacaoVAAR: 0,
       );
@@ -1224,7 +1488,8 @@ class RemoteSyncRepository implements SyncRepository {
     final ibgePerfil =
         dirigidoBase['perfilIBGE'] as Map<String, dynamic>? ?? const {};
     final perfil = IbgeMunicipioPerfil(
-      populacaoEstimada: _readNullableInt(demografia['populacao']) ??
+      populacaoEstimada:
+          _readNullableInt(demografia['populacao']) ??
           _readNullableInt(ibgePerfil['populacaoEstimada']),
       populacaoEstimadaAnoReferencia: _readNullableString(
         demografia['populacao_ano_referencia'],
@@ -1234,7 +1499,9 @@ class RemoteSyncRepository implements SyncRepository {
       receitasBrutasRealizadas: _readNullableDouble(fiscal['receita_total']),
       pibPerCapita: _readNullableDouble(fiscal['pib_per_capita']),
       areaTerritorial: _readNullableDouble(ibgePerfil['areaTerritorial']),
-      mortalidadeInfantil: _readNullableDouble(ibgePerfil['mortalidadeInfantil']),
+      mortalidadeInfantil: _readNullableDouble(
+        ibgePerfil['mortalidadeInfantil'],
+      ),
       escolarizacao614: _readNullableDouble(ibgePerfil['escolarizacao614']),
     );
     return perfil.hasAny ? perfil : null;
@@ -1780,23 +2047,37 @@ class RemoteSyncRepository implements SyncRepository {
   }
 
   @override
-  Future<Map<String, dynamic>> obterDadosContratoFundeb(Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> obterDadosContratoFundeb(
+    Map<String, dynamic> body,
+  ) async {
     _assertConfigured();
-    // Usa o agente completo: IBGE → TSE → Gemini → CNPJ → Computed
-    // Timeout longo (120s) pois o agente IA (Gemini 3.5 + Google Search) pode levar ~60s
-    return _apiClient.post('/api/contratos-fundeb/agent', body: body, timeout: const Duration(seconds: 120));
+    // Usa o agente completo: IBGE → TSE → IA (OpenRouter/Qwen) → CNPJ → Computed
+    // Timeout longo (120s) pois o agente IA pode levar ~60s
+    return _apiClient.post(
+      '/api/contratos-fundeb/agent',
+      body: body,
+      timeout: const Duration(seconds: 120),
+    );
   }
 
   @override
   Future<Uint8List> gerarKitContratosFundeb(Map<String, dynamic> data) async {
     _assertConfigured();
-    return _apiClient.postBytes('/api/modulos/contrato-fundeb/gerar-kit', body: data, timeout: const Duration(seconds: 120));
+    return _apiClient.postBytes(
+      '/api/modulos/contrato-fundeb/gerar-kit',
+      body: data,
+      timeout: const Duration(seconds: 120),
+    );
   }
 
   @override
   Future<Uint8List> gerarPropostaDocx(Map<String, dynamic> data) async {
     _assertConfigured();
-    return _apiClient.postBytes('/api/modulos/contrato-fundeb/gerar-proposta', body: data, timeout: const Duration(seconds: 60));
+    return _apiClient.postBytes(
+      '/api/modulos/contrato-fundeb/gerar-proposta',
+      body: data,
+      timeout: const Duration(seconds: 60),
+    );
   }
 
   @override
@@ -1813,7 +2094,9 @@ class RemoteSyncRepository implements SyncRepository {
     }
 
     // Montar multipart request
-    final uri = Uri.parse('${_apiClient.apiBaseUrl}/api/modulos/contrato-fundeb/gerar-kit-completo');
+    final uri = Uri.parse(
+      '${_apiClient.apiBaseUrl}/api/modulos/contrato-fundeb/gerar-kit-completo',
+    );
     final request = http.MultipartRequest('POST', uri);
 
     // Adicionar headers de autenticação
@@ -1838,11 +2121,15 @@ class RemoteSyncRepository implements SyncRepository {
     }
 
     // Enviar com timeout generoso
-    final streamedResponse = await request.send().timeout(const Duration(seconds: 180));
+    final streamedResponse = await request.send().timeout(
+      const Duration(seconds: 180),
+    );
 
     if (streamedResponse.statusCode != 200) {
       final body = await streamedResponse.stream.bytesToString();
-      throw Exception('Erro ao gerar kit completo: ${streamedResponse.statusCode} - $body');
+      throw Exception(
+        'Erro ao gerar kit completo: ${streamedResponse.statusCode} - $body',
+      );
     }
 
     final bytes = await streamedResponse.stream.toBytes();

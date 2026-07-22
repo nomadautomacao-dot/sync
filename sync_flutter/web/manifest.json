@@ -1,11 +1,11 @@
 {
-    "name": "sync_flutter",
-    "short_name": "sync_flutter",
+    "name": "PrimeOS",
+    "short_name": "PrimeOS",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#0d1117",
+    "theme_color": "#f54a00",
+    "description": "PrimeOS — Plataforma de gestão municipal e empresarial integrada.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

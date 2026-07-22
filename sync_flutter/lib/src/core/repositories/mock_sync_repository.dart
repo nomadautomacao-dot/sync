@@ -28,6 +28,93 @@ class SyncPalette {
 }
 
 class MockSyncRepository implements SyncRepository {
+  final List<CityAccount> _cities = [
+    const CityAccount(
+      id: '1',
+      name: 'Arapiraca',
+      uf: 'AL',
+      codigoIbge: '2700300',
+      status: 'ativo',
+      stage: 'mapping',
+      collaboratorId: '1',
+      collaboratorName: 'Rafael Costa',
+      estimatedAnnualRevenue: 150000.0,
+      probability: 20,
+      nextStepDescription: 'Mapear dados do IBGE para o relatório técnico',
+      nextStepDueDate: '2026-07-05',
+    ),
+    const CityAccount(
+      id: '2',
+      name: 'Delmiro Gouveia',
+      uf: 'AL',
+      codigoIbge: '2702405',
+      status: 'ativo',
+      stage: 'first_contact',
+      collaboratorId: '1',
+      collaboratorName: 'Rafael Costa',
+      estimatedAnnualRevenue: 180000.0,
+      probability: 30,
+      nextStepDescription: 'Apresentar apresentação comercial para o prefeito',
+      nextStepDueDate: '2026-07-02',
+    ),
+    const CityAccount(
+      id: '3',
+      name: 'Cristalina',
+      uf: 'GO',
+      codigoIbge: '5206205',
+      status: 'ativo',
+      stage: 'institutional_validation',
+      collaboratorId: '2',
+      collaboratorName: 'Mayra Sousa',
+      estimatedAnnualRevenue: 240000.0,
+      probability: 45,
+      nextStepDescription: 'Validar checklist de certidões e atos oficiais',
+      nextStepDueDate: '2026-07-10',
+    ),
+    const CityAccount(
+      id: '4',
+      name: 'Serra do Ramalho',
+      uf: 'BA',
+      codigoIbge: '2930156',
+      status: 'ativo',
+      stage: 'technical_diagnosis',
+      collaboratorId: '1',
+      collaboratorName: 'Rafael Costa',
+      estimatedAnnualRevenue: 300000.0,
+      probability: 60,
+      nextStepDescription: 'Gerar diagnóstico de VAAT/VAAR do FUNDEB',
+      nextStepDueDate: '2026-07-08',
+    ),
+    const CityAccount(
+      id: '5',
+      name: 'Pocoes',
+      uf: 'BA',
+      codigoIbge: '2924902',
+      status: 'ativo',
+      stage: 'contractual',
+      collaboratorId: '3',
+      collaboratorName: 'Fabio Mendes',
+      estimatedAnnualRevenue: 350000.0,
+      probability: 80,
+      nextStepDescription: 'Minuta de inexigibilidade enviada para a procuradoria',
+      nextStepDueDate: '2026-06-30',
+    ),
+    const CityAccount(
+      id: '6',
+      name: 'Juazeiro',
+      uf: 'BA',
+      codigoIbge: '2918409',
+      status: 'ativo',
+      stage: 'implementation',
+      collaboratorId: '2',
+      collaboratorName: 'Mayra Sousa',
+      estimatedAnnualRevenue: 480000.0,
+      probability: 100,
+      nextStepDescription: 'Kick-off e acesso ao SIMEC municipal liberados',
+      nextStepDueDate: '2026-07-15',
+    ),
+  ];
+
   @override
   bool get remoteEnabled => false;
 
@@ -411,16 +498,161 @@ class MockSyncRepository implements SyncRepository {
   }
 
   @override
-  Future<CollaboratorSummary> createCollaborator(Map<String, dynamic> data) async {
+  Future<CollaboratorSummary> createCollaborator(
+    Map<String, dynamic> data,
+  ) async {
     throw UnsupportedError('Mock nao suporta criacao.');
   }
+
+  @override
+  Future<CollaboratorDetails> getCollaboratorDetails(String id) async {
+    final summary = loadCollaborators().firstWhere((item) => item.id == id, orElse: () => loadCollaborators().first);
+    return CollaboratorDetails(
+      id: summary.id,
+      fullName: summary.fullName,
+      shortName: summary.fullName.split(' ').first,
+      email: '${summary.fullName.toLowerCase().replaceAll(' ', '.')}@sync.com',
+      phone: '(77) 98888-1111',
+      whatsapp: '(77) 98888-1111',
+      cpfOrDocument: '111.222.333-44',
+      city: 'Conquista',
+      state: summary.state,
+      companyOrOrganization: 'Costa & Associados',
+      title: 'Diretor de Operações',
+      collaboratorType: 'external_partner',
+      primaryRole: summary.role,
+      partnershipStatus: summary.status == 'Ativo' ? 'active' : 'prospect',
+      trustLevel: 5,
+      averageInfluenceScore: 9,
+      defaultCommissionPercent: 12.5,
+      defaultProfitBaseType: 'base_margin',
+      defaultTriggerType: 'on_receipt',
+      payoutCycle: 'Mensal',
+      payoutMethod: 'Pix',
+      notes: 'Parceiro estratégico principal no estado.',
+      confidentialNotes: 'Acesso total aos módulos fiscais.',
+      documents: const [
+        CollaboratorDocument(
+          id: 'doc1',
+          collaboratorId: '1',
+          category: 'pessoal',
+          documentType: 'rg_cpf',
+          name: 'RG e CPF',
+          fileName: 'rg_cpf_rafael.pdf',
+          fileUrl: 'https://supabase.com/storage/rg_cpf.pdf',
+          fileSize: 1024500,
+          mimeType: 'application/pdf',
+          issuedAt: '2022-01-10',
+          expiresAt: '2032-01-10',
+          notes: 'Cópia autenticada',
+        ),
+      ],
+    );
+  }
+
+  @override
+  Future<CollaboratorDetails> updateCollaboratorDetails(
+    String id,
+    Map<String, dynamic> data,
+  ) async {
+    return getCollaboratorDetails(id);
+  }
+
+  @override
+  Future<List<CollaboratorDocument>> getCollaboratorDocuments(String id) async {
+    final details = await getCollaboratorDetails(id);
+    return details.documents;
+  }
+
+  @override
+  Future<CollaboratorDocument> uploadCollaboratorDocument({
+    required String id,
+    required String category,
+    required String documentType,
+    required String name,
+    required String fileName,
+    required Uint8List fileBytes,
+    String? issuedAt,
+    String? expiresAt,
+    String? notes,
+  }) async {
+    return CollaboratorDocument(
+      id: 'doc_new',
+      collaboratorId: id,
+      category: category,
+      documentType: documentType,
+      name: name,
+      fileName: fileName,
+      fileUrl: 'https://supabase.com/storage/$fileName',
+      fileSize: fileBytes.length,
+      mimeType: 'application/pdf',
+      issuedAt: issuedAt,
+      expiresAt: expiresAt,
+      notes: notes,
+    );
+  }
+
+  @override
+  Future<void> deleteCollaboratorDocument(String id, String docId) async {}
 
   @override
   Future<List<CityAccount>> getCities({
     String search = '',
     String stage = '',
   }) async {
-    return const <CityAccount>[];
+    return _cities.where((city) {
+      final matchesSearch = search.isEmpty ||
+          city.name.toLowerCase().contains(search.toLowerCase()) ||
+          city.uf.toLowerCase().contains(search.toLowerCase());
+      final matchesStage = stage.isEmpty || city.stage == stage;
+      return matchesSearch && matchesStage;
+    }).toList();
+  }
+
+  @override
+  Future<void> updateCityStage(String cityId, String stage) async {
+    final index = _cities.indexWhere((c) => c.id == cityId);
+    if (index != -1) {
+      final oldCity = _cities[index];
+      _cities[index] = CityAccount(
+        id: oldCity.id,
+        name: oldCity.name,
+        uf: oldCity.uf,
+        codigoIbge: oldCity.codigoIbge,
+        status: oldCity.status,
+        stage: stage,
+        collaboratorId: oldCity.collaboratorId,
+        collaboratorName: oldCity.collaboratorName,
+        estimatedAnnualRevenue: oldCity.estimatedAnnualRevenue,
+        probability: oldCity.probability,
+        nextStepDescription: oldCity.nextStepDescription,
+        nextStepDueDate: oldCity.nextStepDueDate,
+        lastActivityAt: DateTime.now().toIso8601String(),
+      );
+    }
+  }
+
+  @override
+  Future<void> updateCityPipeline(String cityId, Map<String, dynamic> data) async {
+    final index = _cities.indexWhere((c) => c.id == cityId);
+    if (index != -1) {
+      final oldCity = _cities[index];
+      _cities[index] = CityAccount(
+        id: oldCity.id,
+        name: data['name']?.toString() ?? oldCity.name,
+        uf: data['uf']?.toString() ?? oldCity.uf,
+        codigoIbge: data['codigoIbge']?.toString() ?? oldCity.codigoIbge,
+        status: data['status']?.toString() ?? oldCity.status,
+        stage: data['stage']?.toString() ?? oldCity.stage,
+        collaboratorId: data['collaboratorId']?.toString() ?? oldCity.collaboratorId,
+        collaboratorName: data['collaboratorName']?.toString() ?? oldCity.collaboratorName,
+        estimatedAnnualRevenue: (data['estimatedAnnualRevenue'] as num?)?.toDouble() ?? oldCity.estimatedAnnualRevenue,
+        probability: (data['probability'] as num?)?.toInt() ?? oldCity.probability,
+        nextStepDescription: data['nextStepDescription']?.toString() ?? oldCity.nextStepDescription,
+        nextStepDueDate: data['nextStepDueDate']?.toString() ?? oldCity.nextStepDueDate,
+        lastActivityAt: DateTime.now().toIso8601String(),
+      );
+    }
   }
 
   @override
@@ -496,9 +728,15 @@ class MockSyncRepository implements SyncRepository {
   }
 
   @override
-  Future<Map<String, dynamic>> obterDadosContratoFundeb(Map<String, dynamic> body) async {
-    final double valorMensalVal = body['valorMensal'] != null ? double.parse(body['valorMensal'].toString()) : 15000.0;
-    final int qtdMesesVal = body['quantidadeMeses'] != null ? int.parse(body['quantidadeMeses'].toString()) : 12;
+  Future<Map<String, dynamic>> obterDadosContratoFundeb(
+    Map<String, dynamic> body,
+  ) async {
+    final double valorMensalVal = body['valorMensal'] != null
+        ? double.parse(body['valorMensal'].toString())
+        : 15000.0;
+    final int qtdMesesVal = body['quantidadeMeses'] != null
+        ? int.parse(body['quantidadeMeses'].toString())
+        : 12;
     return <String, dynamic>{
       'success': true,
       'contrato': <String, dynamic>{
@@ -530,7 +768,7 @@ class MockSyncRepository implements SyncRepository {
         'valorGlobal': valorMensalVal * qtdMesesVal,
         'percentualInsumos': 40,
         'percentualPessoal': 60,
-      }
+      },
     };
   }
 
@@ -762,6 +1000,7 @@ class MockSyncRepository implements SyncRepository {
         regiaoIntermediaria: 'Vitoria da Conquista',
         regiao: 'Nordeste',
       ),
+      parametros: request.parametros ?? const <String, dynamic>{},
       receitas: const ReceitasFundeb(
         receitaContribuicaoMunicipal: 21340000,
         complementacaoVAAF: 2840000,

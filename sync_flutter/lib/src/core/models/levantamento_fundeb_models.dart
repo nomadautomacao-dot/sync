@@ -3,12 +3,14 @@ class MunicipioLookupRequest {
     this.codigoIbge,
     this.nome,
     this.uf,
+    this.parametros,
     required this.exercicio,
   });
 
   final String? codigoIbge;
   final String? nome;
   final String? uf;
+  final Map<String, dynamic>? parametros;
   final int exercicio;
 
   bool get hasCodigoIbge => _normalizeCode(codigoIbge).length == 7;
@@ -16,18 +18,23 @@ class MunicipioLookupRequest {
       _normalizeText(nome).length >= 2 && _normalizeUf(uf).length == 2;
 
   Map<String, dynamic> toJson() {
-    if (hasCodigoIbge) {
-      return {
-        'codigo_ibge': _normalizeCode(codigoIbge),
-        'exercicio': exercicio,
-      };
+    final base = hasCodigoIbge
+        ? <String, dynamic>{
+            'codigo_ibge': _normalizeCode(codigoIbge),
+            'exercicio': exercicio,
+          }
+        : <String, dynamic>{
+            'nome': _normalizeText(nome),
+            'uf': _normalizeUf(uf),
+            'exercicio': exercicio,
+          };
+
+    final reportParams = parametros;
+    if (reportParams != null && reportParams.isNotEmpty) {
+      base['parametros'] = reportParams;
     }
 
-    return {
-      'nome': _normalizeText(nome),
-      'uf': _normalizeUf(uf),
-      'exercicio': exercicio,
-    };
+    return base;
   }
 
   static String _normalizeCode(String? value) {
@@ -558,12 +565,14 @@ class CensoMatriculasDetalhadas {
     required this.preEscola,
     required this.anosIniciais,
     required this.anosFinais,
+    this.anosFinaisPublica,
   });
 
   final int creche;
   final int preEscola;
   final int anosIniciais;
   final int anosFinais;
+  final int? anosFinaisPublica;
 
   factory CensoMatriculasDetalhadas.fromJson(Map<String, dynamic> json) {
     return CensoMatriculasDetalhadas(
@@ -571,6 +580,7 @@ class CensoMatriculasDetalhadas {
       preEscola: _readInt(json, 'preEscola'),
       anosIniciais: _readInt(json, 'anosIniciais'),
       anosFinais: _readInt(json, 'anosFinais'),
+      anosFinaisPublica: _readNullableInt(json['anosFinaisPublica']),
     );
   }
 }
@@ -583,8 +593,10 @@ class CensoTempoIntegral {
     this.preEscola,
     this.anosIniciais,
     this.anosFinais,
+    this.anosFinaisPublica,
     this.ensinoFundamental,
     this.ensinoMedio,
+    this.ensinoMedioPublica,
     this.eja,
     this.educacaoEspecial,
   });
@@ -595,8 +607,10 @@ class CensoTempoIntegral {
   final int? preEscola;
   final int? anosIniciais;
   final int? anosFinais;
+  final int? anosFinaisPublica;
   final int? ensinoFundamental;
   final int? ensinoMedio;
+  final int? ensinoMedioPublica;
   final int? eja;
   final int? educacaoEspecial;
 
@@ -608,8 +622,10 @@ class CensoTempoIntegral {
       preEscola: _readNullableInt(json['preEscola']),
       anosIniciais: _readNullableInt(json['anosIniciais']),
       anosFinais: _readNullableInt(json['anosFinais']),
+      anosFinaisPublica: _readNullableInt(json['anosFinaisPublica']),
       ensinoFundamental: _readNullableInt(json['ensinoFundamental']),
       ensinoMedio: _readNullableInt(json['ensinoMedio']),
+      ensinoMedioPublica: _readNullableInt(json['ensinoMedioPublica']),
       eja: _readNullableInt(json['eja']),
       educacaoEspecial: _readNullableInt(json['educacaoEspecial']),
     );
@@ -684,6 +700,7 @@ class RelatorioFundeb {
   const RelatorioFundeb({
     required this.geradoEm,
     required this.identificacao,
+    this.parametros = const <String, dynamic>{},
     required this.receitas,
     required this.projecao,
     required this.projecaoRecuperavel,
@@ -705,6 +722,7 @@ class RelatorioFundeb {
 
   final String geradoEm;
   final MunicipioIdentificacao identificacao;
+  final Map<String, dynamic> parametros;
   final ReceitasFundeb receitas;
   final ProjecaoRochaPrime projecao;
   final ProjecaoRochaPrime projecaoRecuperavel;
@@ -732,6 +750,7 @@ class RelatorioFundeb {
       identificacao: MunicipioIdentificacao.fromJson(
         _readMap(json, 'identificacao'),
       ),
+      parametros: _readDynamicMap(json, 'parametros'),
       receitas: ReceitasFundeb.fromJson(_readMap(json, 'receitas')),
       projecao: ProjecaoRochaPrime.fromJson(_readMap(json, 'projecao')),
       projecaoRecuperavel: ProjecaoRochaPrime.fromJson(
@@ -1107,9 +1126,7 @@ class SaudeFiscal {
       limiteAlertaPessoal: _readNullableDouble(json['limiteAlertaPessoal']),
       espacoFiscalPessoal: _readNullableDouble(json['espacoFiscalPessoal']),
       situacaoLrf: _readNullableString(json, 'situacaoLrf'),
-      receitaTotalRealizada: _readNullableDouble(
-        json['receitaTotalRealizada'],
-      ),
+      receitaTotalRealizada: _readNullableDouble(json['receitaTotalRealizada']),
       caixaEquivalentes: _readNullableDouble(json['caixaEquivalentes']),
       patrimonioLiquido: _readNullableDouble(json['patrimonioLiquido']),
     );
@@ -1290,6 +1307,53 @@ class RecursosPorAluno {
   }
 }
 
+class ValorAlunoOficial {
+  const ValorAlunoOficial({
+    required this.uf,
+    required this.fundamentalAnosIniciais,
+    required this.fundamentalAnosFinais,
+    required this.fundamentalIntegral,
+    required this.crecheIntegralPublica,
+    required this.crecheParcialPublica,
+    required this.preEscolaIntegralPublica,
+    required this.preEscolaParcialPublica,
+    required this.eja,
+    required this.receitaEstadosMunicipios,
+    required this.complementacaoVAAF,
+    required this.totalReceitasVAAF,
+  });
+
+  final String uf;
+  final double fundamentalAnosIniciais;
+  final double fundamentalAnosFinais;
+  final double fundamentalIntegral;
+  final double crecheIntegralPublica;
+  final double crecheParcialPublica;
+  final double preEscolaIntegralPublica;
+  final double preEscolaParcialPublica;
+  final double eja;
+  final double receitaEstadosMunicipios;
+  final double complementacaoVAAF;
+  final double totalReceitasVAAF;
+
+  factory ValorAlunoOficial.fromJson(Map<String, dynamic> json) {
+    return ValorAlunoOficial(
+      uf: _readString(json, 'uf'),
+      fundamentalAnosIniciais: _readDouble(json, 'fundamentalAnosIniciais'),
+      fundamentalAnosFinais: _readDouble(json, 'fundamentalAnosFinais'),
+      fundamentalIntegral: _readDouble(json, 'fundamentalIntegral'),
+      crecheIntegralPublica: _readDouble(json, 'crecheIntegralPublica'),
+      crecheParcialPublica: _readDouble(json, 'crecheParcialPublica'),
+      preEscolaIntegralPublica: _readDouble(json, 'preEscolaIntegralPublica'),
+      preEscolaParcialPublica: _readDouble(json, 'preEscolaParcialPublica'),
+      eja: _readDouble(json, 'eja'),
+      receitaEstadosMunicipios: _readDouble(json, 'receitaEstadosMunicipios'),
+      complementacaoVAAF: _readDouble(json, 'complementacaoVAAF'),
+      totalReceitasVAAF: _readDouble(json, 'totalReceitasVAAF'),
+    );
+  }
+}
+
 class RelatorioDirigidoMunicipio {
   const RelatorioDirigidoMunicipio({
     required this.municipio,
@@ -1319,6 +1383,7 @@ class RelatorioDirigidoMunicipio {
     this.caminhoEscola = const [],
     this.cenarioEstruturacao,
     this.recursosPorAluno,
+    this.valorAlunoOficial,
   });
 
   final String municipio;
@@ -1345,6 +1410,7 @@ class RelatorioDirigidoMunicipio {
   final List<VeiculoCaminhoEscola> caminhoEscola;
   final CenarioEstruturacao? cenarioEstruturacao;
   final RecursosPorAluno? recursosPorAluno;
+  final ValorAlunoOficial? valorAlunoOficial;
   final RelatorioDirigidoContextoPolitico contextoPolitico;
   final RelatorioDirigidoHistorico historico;
   final RelatorioDirigidoBenchmarkRegional benchmarkRegional;
@@ -1379,18 +1445,9 @@ class RelatorioDirigidoMunicipio {
         json['infraestruturaEscolar'],
         InfraestruturaEscolar.fromJson,
       ),
-      narrativas: _mapOrNull(
-        json['narrativas'],
-        NarrativasRelatorio.fromJson,
-      ),
-      saudeFiscal: _mapOrNull(
-        json['saudeFiscal'],
-        SaudeFiscal.fromJson,
-      ),
-      perfilIBGE: _mapOrNull(
-        json['perfilIBGE'],
-        PerfilIBGE.fromJson,
-      ),
+      narrativas: _mapOrNull(json['narrativas'], NarrativasRelatorio.fromJson),
+      saudeFiscal: _mapOrNull(json['saudeFiscal'], SaudeFiscal.fromJson),
+      perfilIBGE: _mapOrNull(json['perfilIBGE'], PerfilIBGE.fromJson),
       obrasPAC2: _readList(json['obrasPAC2'], ObraPAC2.fromJson),
       caminhoEscola: _readList(
         json['caminhoEscola'],
@@ -1403,6 +1460,10 @@ class RelatorioDirigidoMunicipio {
       recursosPorAluno: _mapOrNull(
         json['recursosPorAluno'],
         RecursosPorAluno.fromJson,
+      ),
+      valorAlunoOficial: _mapOrNull(
+        json['valorAlunoOficial'],
+        ValorAlunoOficial.fromJson,
       ),
       contextoPolitico: RelatorioDirigidoContextoPolitico.fromJson(
         _readMap(json, 'contextoPolitico'),
@@ -1498,10 +1559,7 @@ class IndicadoresAprendizagem {
         json['anosIniciais'],
         AprendizagemEtapa.fromJson,
       ),
-      anosFinais: _mapOrNull(
-        json['anosFinais'],
-        AprendizagemEtapa.fromJson,
-      ),
+      anosFinais: _mapOrNull(json['anosFinais'], AprendizagemEtapa.fromJson),
       distorcaoIdadeSerie: _mapOrNull(
         json['distorcaoIdadeSerie'],
         DistorcaoIdadeSerie.fromJson,
@@ -1605,6 +1663,15 @@ class FonteColetaStatus {
 Map<String, dynamic> _readMap(Map<String, dynamic> json, String key) {
   final value = json[key];
   if (value is Map<String, dynamic>) return value;
+  return <String, dynamic>{};
+}
+
+Map<String, dynamic> _readDynamicMap(Map<String, dynamic> json, String key) {
+  final value = json[key];
+  if (value is Map<String, dynamic>) return value;
+  if (value is Map) {
+    return Map<String, dynamic>.from(value);
+  }
   return <String, dynamic>{};
 }
 

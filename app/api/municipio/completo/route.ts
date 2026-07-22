@@ -10,6 +10,7 @@ export async function POST(request: NextRequest) {
       nome: body.nome,
       uf: body.uf,
       exercicio: body.exercicio,
+      parametros: body.parametros,
     });
 
     if (!data) {

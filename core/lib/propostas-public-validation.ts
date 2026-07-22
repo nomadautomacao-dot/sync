@@ -5,6 +5,11 @@ import type {
   PropostaPublicValidationStatus,
 } from "@/modules/propostas/types";
 
+// ── OpenRouter Config (primary) ────────────────────────────────────────────
+const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1/chat/completions";
+const OPENROUTER_MODEL = "qwen/qwen3.7-plus";
+
+// ── Gemini Fallback Config ─────────────────────────────────────────────────
 const GEMINI_MODEL = "gemini-2.5-flash";
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
@@ -63,6 +68,10 @@ interface GeminiGenerateContentResponse {
     };
     groundingMetadata?: GeminiGroundingMetadata;
   }>;
+}
+
+function getOpenRouterApiKey() {
+  return process.env.OPENROUTER_API_KEY?.trim() || "";
 }
 
 function getGeminiApiKey() {
@@ -193,6 +202,63 @@ function extractFallbackSources(payload: GeminiGenerateContentResponse) {
     .filter((item) => item.url);
 }
 
+// ── OpenRouter Request (Primary) ──────────────────────────────────────────
+
+async function requestOpenRouter(prompt: string, apiKey: string) {
+  const response = await fetch(OPENROUTER_BASE_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${apiKey}`,
+      "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+      "X-Title": "Sync - Propostas Validation",
+    },
+    body: JSON.stringify({
+      model: OPENROUTER_MODEL,
+      messages: [
+        {
+          role: "system",
+          content: "Você é um assistente especializado em administração pública municipal brasileira. Use a busca web para verificar dados atuais. Responda APENAS em formato JSON válido, sem markdown, sem explicações adicionais fora do JSON.",
+        },
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+      // Web Search Plugin — busca dados reais em tempo real
+      plugins: [
+        {
+          id: "web",
+          max_results: 8,
+          search_prompt: `Busca web realizada em ${new Date().toLocaleDateString("pt-BR")}. Use os resultados para validar dados institucionais do município.`,
+        },
+      ],
+      temperature: 0.1,
+      max_tokens: 4096,
+    }),
+    signal: AbortSignal.timeout(45000),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`OpenRouter respondeu ${response.status}: ${errorText.slice(0, 400)}`);
+  }
+
+  const result = await response.json();
+  const text = result?.choices?.[0]?.message?.content ?? "";
+  
+  // Converter para o formato GeminiGenerateContentResponse para compatibilidade
+  return {
+    candidates: [{
+      content: {
+        parts: [{ text }],
+      },
+    }],
+  } as GeminiGenerateContentResponse;
+}
+
+// ── Gemini Request (Fallback) ─────────────────────────────────────────────
+
 async function requestGemini(prompt: string, apiKey: string, preferJsonMode: boolean) {
   const response = await fetch(GEMINI_ENDPOINT, {
     method: "POST",
@@ -316,23 +382,46 @@ function parseGeminiJson(text: string) {
 export async function validateMunicipioPublicDataWithAi(
   context: ValidationContext,
 ): Promise<PropostaPublicValidationData> {
-  const apiKey = getGeminiApiKey();
-  if (!apiKey) {
-    throw new Error("GEMINI_API_KEY nao configurada.");
+  const openRouterKey = getOpenRouterApiKey();
+  const geminiKey = getGeminiApiKey();
+
+  if (!openRouterKey && !geminiKey) {
+    throw new Error("OPENROUTER_API_KEY ou GEMINI_API_KEY nao configurada.");
   }
 
   const prompt = buildPrompt(context);
   let payload: GeminiGenerateContentResponse | null = null;
   let parsed: RawGeminiValidationResponse | null = null;
   let lastError: Error | null = null;
+  let modelUsed = OPENROUTER_MODEL;
 
-  for (const preferJsonMode of [true, false]) {
+  // Tenta OpenRouter primeiro (se configurado)
+  if (openRouterKey) {
     try {
-      payload = await requestGemini(prompt, apiKey, preferJsonMode);
+      console.log(`[propostas-validation] Usando OpenRouter (${OPENROUTER_MODEL})...`);
+      payload = await requestOpenRouter(prompt, openRouterKey);
       parsed = parseGeminiJson(extractCandidateText(payload));
-      break;
+      modelUsed = OPENROUTER_MODEL;
     } catch (error) {
-      lastError = error instanceof Error ? error : new Error("Falha ao consultar a IA.");
+      console.warn("[propostas-validation] OpenRouter falhou, tentando Gemini fallback...", error);
+      lastError = error instanceof Error ? error : new Error("Falha OpenRouter.");
+      payload = null;
+      parsed = null;
+    }
+  }
+
+  // Fallback para Gemini (se OpenRouter não funcionou)
+  if (!parsed && geminiKey) {
+    for (const preferJsonMode of [true, false]) {
+      try {
+        console.log(`[propostas-validation] Usando Gemini fallback (${GEMINI_MODEL})...`);
+        payload = await requestGemini(prompt, geminiKey, preferJsonMode);
+        parsed = parseGeminiJson(extractCandidateText(payload));
+        modelUsed = GEMINI_MODEL;
+        break;
+      } catch (error) {
+        lastError = error instanceof Error ? error : new Error("Falha ao consultar a IA.");
+      }
     }
   }
 
@@ -369,7 +458,7 @@ export async function validateMunicipioPublicDataWithAi(
     municipioUf: context.municipioUf,
     estadoNome: context.estadoNome,
     validatedAt: new Date().toISOString(),
-    model: GEMINI_MODEL,
+    model: modelUsed,
     summary: normalizeText(parsed.summary) || "Validacao publica concluida pela camada de IA.",
     searchQueries: extractSearchQueries(payload),
     warnings: parsed.warnings?.map((item) => normalizeText(item)).filter(Boolean) ?? [],

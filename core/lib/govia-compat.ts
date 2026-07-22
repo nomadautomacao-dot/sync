@@ -3,7 +3,7 @@ import {
   hydrateRelatorioFundeb,
   normalizarIBGE,
 } from "@/modules/levantamento-fundeb/utils/calculos";
-import type { RelatorioFundeb } from "@/modules/levantamento-fundeb/types";
+import type { FundebRelatorioParametros, RelatorioFundeb } from "@/modules/levantamento-fundeb/types";
 import { getFundebReceitasOficiais, getFundebVaatContext } from "@/core/lib/fundeb-fnde";
 import { getInepCensoMunicipalRecord, getInepCensoMunicipalHistory } from "@/core/lib/inep-censo";
 import type { InepCensoMunicipalRecord } from "@/core/lib/inep-censo";
@@ -13,11 +13,12 @@ import { estimateFundebReceitas } from "@/core/lib/fundeb-estimate";
 import { getFndePublicEnrichment } from "@/core/lib/fnde-public";
 import { buildFundebComparativeSnapshot } from "@/core/lib/fundeb-comparative";
 import { getTsePrefeitoRecord } from "@/core/lib/tse-prefeitos";
-import { getIdebMunicipalRecord, getIdebMetasNacionais } from "@/core/lib/ideb-municipal";
+import { getIdebMunicipalRecord, getIdebMetasNacionais, getIdebMunicipalHistorico } from "@/core/lib/ideb-municipal";
 import { getQeduMunicipalIndicators } from "@/core/lib/qedu-indicators";
 import { getQeduMunicipalApiSnapshot } from "@/core/lib/qedu-api";
 import { getSiconfiFiscalRecord } from "@/core/lib/siconfi-fiscal";
 import { getSimecObrasRecord } from "@/core/lib/simec-obras";
+import { getValorAlunoAno } from "@/core/lib/fundeb-valor-aluno";
 
 interface IbgeMunicipioResponse {
   id: number;
@@ -112,6 +113,7 @@ export interface GoviaBuscarMunicipioParams {
   nome?: string;
   uf?: string;
   exercicio?: number;
+  parametros?: FundebRelatorioParametros;
 }
 
 interface GoviaOpportunity {
@@ -142,6 +144,41 @@ interface GoviaOpportunity {
 
 let municipiosCache: IbgeMunicipioResponse[] | null = null;
 let municipiosCacheTime = 0;
+
+function sanitizeFundebParametros(value: unknown): FundebRelatorioParametros | undefined {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return undefined;
+  }
+
+  const result: FundebRelatorioParametros = {};
+  for (const [key, rawValue] of Object.entries(value as Record<string, unknown>)) {
+    const cleanKey = key.trim();
+    if (!cleanKey || rawValue === undefined) {
+      continue;
+    }
+
+    if (
+      rawValue === null ||
+      typeof rawValue === "string" ||
+      typeof rawValue === "number" ||
+      typeof rawValue === "boolean"
+    ) {
+      result[cleanKey] = typeof rawValue === "string" ? rawValue.trim() : rawValue;
+      continue;
+    }
+
+    if (cleanKey === "camposAdicionais" && rawValue && typeof rawValue === "object" && !Array.isArray(rawValue)) {
+      result.camposAdicionais = Object.fromEntries(
+        Object.entries(rawValue as Record<string, unknown>)
+          .filter(([, item]) => item === null || ["string", "number", "boolean"].includes(typeof item))
+          .map(([itemKey, item]) => [itemKey.trim(), typeof item === "string" ? item.trim() : item])
+          .filter(([itemKey]) => itemKey),
+      ) as Record<string, string | number | boolean | null>;
+    }
+  }
+
+  return Object.keys(result).length > 0 ? result : undefined;
+}
 
 async function fetchAllIbgeMunicipios(): Promise<IbgeMunicipioResponse[]> {
   const now = Date.now();
@@ -533,6 +570,36 @@ function buildRelatorioDirigidoBase({
   const ident = relatorio.identificacao;
   const exercicio = ident.exercicio;
   const tseRecord = getTsePrefeitoRecord(ident.codigoIBGE);
+  const isPlaceholderText = (value: string | null | undefined) => {
+    const normalized = (value ?? "").trim().toLowerCase();
+    if (!normalized) return true;
+    return (
+      normalized === "undefined" ||
+      normalized === "null" ||
+      normalized === "nan" ||
+      normalized === "-" ||
+      normalized === "uf" ||
+      normalized === "undefined/uf" ||
+      normalized === "undefined - uf" ||
+      normalized === "null/uf" ||
+      normalized === "null - uf" ||
+      normalized.includes("undefined") && normalized.includes("uf") ||
+      normalized.includes("null") && normalized.includes("uf")
+    );
+  };
+  const cleanDisplayText = (value: string | null | undefined, fallback = "") => {
+    if (isPlaceholderText(value)) return fallback;
+    return (value ?? "").trim();
+  };
+  const municipioNome = cleanDisplayText(ident.municipioNome);
+  const municipioCompleto = cleanDisplayText(ident.municipio);
+  const uf = cleanDisplayText(ident.uf, "UF");
+  const municipioLabel = municipioNome || municipioCompleto || "Município";
+  const municipioResumo =
+    municipioLabel.toUpperCase().includes(`/${uf.toUpperCase()}`) ||
+    municipioLabel.toUpperCase().includes(` - ${uf.toUpperCase()}`)
+      ? municipioLabel
+      : `${municipioLabel}/${uf}`;
 
   // Build census data lookup by year
   const censoByYear = new Map<number, InepCensoMunicipalRecord>();
@@ -647,13 +714,13 @@ function buildRelatorioDirigidoBase({
       : `Nenhum exercicio historico disponivel.`;
 
   return {
-    municipio: ident.municipioNome,
-    uf: ident.uf,
+    municipio: municipioCompleto || municipioNome || "Município",
+    uf,
     codigoIbge: ident.codigoIBGE,
     geradoEm: new Date().toISOString(),
     modo: "autonomo_completo",
     modeloPrincipal: "sync_next_govia",
-    resumoExecutivo: `Levantamento FUNDEB completo para ${ident.municipioNome}/${ident.uf}, exercicio ${exercicio}. ` +
+    resumoExecutivo: `Levantamento FUNDEB completo para ${municipioResumo}, exercicio ${exercicio}. ` +
       `${anos.length} exercicio(s) na serie historica.`,
     searchQueries: [],
     itens: [],
@@ -673,7 +740,7 @@ function buildRelatorioDirigidoBase({
     prontidao: {
       status: "completo",
       score: 85,
-      resumo: `Dados financeiros e educacionais consolidados para ${ident.municipioNome}.`,
+      resumo: `Dados financeiros e educacionais consolidados para ${municipioLabel}.`,
       bloqueios: [],
       avisos: [],
       criterios: [
@@ -784,13 +851,10 @@ function buildRelatorioDirigidoBase({
       populacaoEstimada: ibgeIndicators.populacaoEstimada,
       populacaoAnoReferencia: ibgeIndicators.populacaoAnoReferencia,
       populacaoUltimoCenso: ibgeIndicators.populacaoUltimoCenso,
-      idhm: ibgeIndicators.idhm,
-      idhmAnoReferencia: ibgeIndicators.idhmAnoReferencia,
       pibPerCapita: ibgeIndicators.pibPerCapita,
       pibAnoReferencia: ibgeIndicators.pibAnoReferencia,
       areaTerritorial: ibgeIndicators.areaTerritorial,
       escolarizacao614: ibgeIndicators.escolarizacao614,
-      mortalidadeInfantil: ibgeIndicators.mortalidadeInfantil,
       receitasBrutasMunicipais: ibgeIndicators.receitasBrutasMunicipais,
     } : { disponivel: false },
     obrasPAC2: relatorio.obrasPAC2 ?? [],
@@ -809,11 +873,32 @@ function buildRelatorioDirigidoBase({
         anoReferencia: exercicio,
       };
     })(),
+    valorAlunoOficial: (() => {
+      const ufCode = ident.uf;
+      if (!ufCode) return null;
+      const vaaf = getValorAlunoAno(ufCode);
+      if (!vaaf) return null;
+      return {
+        uf: ufCode,
+        fundamentalAnosIniciais: vaaf.fundamentalParcialAnosIniciais,
+        fundamentalAnosFinais: vaaf.fundamentalParcialAnosFinais,
+        fundamentalIntegral: vaaf.fundamentalIntegral,
+        crecheIntegralPublica: vaaf.crecheIntegralPublica,
+        crecheParcialPublica: vaaf.crecheParcialPublica,
+        preEscolaIntegralPublica: vaaf.preEscolaIntegralPublica,
+        preEscolaParcialPublica: vaaf.preEscolaParcialPublica,
+        eja: vaaf.eja,
+        receitaEstadosMunicipios: vaaf.receitaEstadosMunicipios,
+        complementacaoVAAF: vaaf.complementacaoVAAF,
+        totalReceitasVAAF: vaaf.totalReceitasVAAF,
+      };
+    })(),
   };
 }
 
 export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioParams) {
   const exercicio = params.exercicio && params.exercicio > 2000 ? params.exercicio : new Date().getFullYear();
+  const parametros = sanitizeFundebParametros(params.parametros);
   const municipio = await findGoviaMunicipio(params);
 
   if (!municipio) {
@@ -873,6 +958,7 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
   const idebRecord = getIdebMunicipalRecord(String(municipio.id));
 
   const relatorio = buildRelatorioBase(municipio, exercicio, receitasBase, {
+    ...(parametros ? { parametros } : {}),
     censoEscolar,
     perfilComercial: comercial.perfil,
     projecaoComercial: comercial.projecao,
@@ -888,25 +974,36 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
     ]),
     idebAnosIniciais: (() => {
       const apiHistory = qeduApiSnapshot?.historicoIdeb?.anosIniciais;
+      const localHistorico = getIdebMunicipalHistorico(String(municipio.id));
       const localVerificado = qeduIndicators?.anosIniciais?.idebObservado ?? idebRecord?.anosIniciaisPublica ?? null;
       const localAnoRef = idebRecord?.anoReferencia ?? 2023;
       const metasNacionais = getIdebMetasNacionais();
 
       if (apiHistory?.length) {
-        // Extract the latest verified value from API as additional fallback
         const latestApiVerificado = [...apiHistory]
           .filter((a) => a.idebVerificado != null)
           .sort((a, b) => b.ano - a.ano)[0];
         const effectiveLocal = localVerificado ?? latestApiVerificado?.idebVerificado ?? null;
         const effectiveAnoRef = localVerificado ? localAnoRef : (latestApiVerificado?.ano ?? localAnoRef);
 
-        // Merge: use API data as base, fill gaps with local data + national goals
         return metasNacionais.anosIniciais.map((entry) => {
           const apiEntry = apiHistory.find((a) => a.ano === entry.ano);
           return {
             ano: entry.ano,
             metaProjetada: apiEntry?.metaProjetada ?? entry.meta,
             idebVerificado: apiEntry?.idebVerificado ?? (entry.ano === effectiveAnoRef ? effectiveLocal : null),
+          };
+        });
+      }
+
+      // Fallback: use local historical dataset (pre-cached from QEdu)
+      if (localHistorico?.anosIniciais?.length) {
+        return metasNacionais.anosIniciais.map((entry) => {
+          const localEntry = localHistorico.anosIniciais.find((a) => a.ano === entry.ano);
+          return {
+            ano: entry.ano,
+            metaProjetada: entry.meta,
+            idebVerificado: localEntry?.ideb ?? (entry.ano === localAnoRef ? localVerificado : null),
           };
         });
       }
@@ -920,25 +1017,36 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
     })(),
     idebAnosFinais: (() => {
       const apiHistory = qeduApiSnapshot?.historicoIdeb?.anosFinais;
+      const localHistorico = getIdebMunicipalHistorico(String(municipio.id));
       const localVerificado = qeduIndicators?.anosFinais?.idebObservado ?? idebRecord?.anosFinaisPublica ?? null;
       const localAnoRef = idebRecord?.anoReferencia ?? 2023;
       const metasNacionais = getIdebMetasNacionais();
 
       if (apiHistory?.length) {
-        // Extract the latest verified value from API as additional fallback
         const latestApiVerificado = [...apiHistory]
           .filter((a) => a.idebVerificado != null)
           .sort((a, b) => b.ano - a.ano)[0];
         const effectiveLocal = localVerificado ?? latestApiVerificado?.idebVerificado ?? null;
         const effectiveAnoRef = localVerificado ? localAnoRef : (latestApiVerificado?.ano ?? localAnoRef);
 
-        // Merge: use API data as base, fill gaps with local data + national goals
         return metasNacionais.anosFinais.map((entry) => {
           const apiEntry = apiHistory.find((a) => a.ano === entry.ano);
           return {
             ano: entry.ano,
             metaProjetada: apiEntry?.metaProjetada ?? entry.meta,
             idebVerificado: apiEntry?.idebVerificado ?? (entry.ano === effectiveAnoRef ? effectiveLocal : null),
+          };
+        });
+      }
+
+      // Fallback: use local historical dataset (pre-cached from QEdu)
+      if (localHistorico?.anosFinais?.length) {
+        return metasNacionais.anosFinais.map((entry) => {
+          const localEntry = localHistorico.anosFinais.find((a) => a.ano === entry.ano);
+          return {
+            ano: entry.ano,
+            metaProjetada: entry.meta,
+            idebVerificado: localEntry?.ideb ?? (entry.ano === localAnoRef ? localVerificado : null),
           };
         });
       }
@@ -1038,6 +1146,7 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
       fontes: fontesDedupe,
       timestamp: formatDateTime(new Date()),
       cache: true,
+      parametros_relatorio: parametros ?? null,
     },
     dados_basicos: {
       codigo_ibge: relatorio.identificacao.codigoIBGE,
@@ -1057,8 +1166,8 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
     demografia: {
       populacao: ibgeIndicators?.populacaoEstimada ?? ibgeIndicators?.populacaoUltimoCenso ?? 0,
       populacao_ano_referencia: ibgeIndicators?.populacaoAnoReferencia ?? "Nao informado",
-      idh: ibgeIndicators?.idhm ?? 0,
-      idh_ano_referencia: ibgeIndicators?.idhmAnoReferencia ?? "Nao informado",
+      idh: 0,
+      idh_ano_referencia: "Nao informado",
       populacao_0_17: 0,
     },
     educacao: {

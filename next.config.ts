@@ -15,6 +15,25 @@ const nextConfig: NextConfig = {
           { key: "Access-Control-Max-Age", value: "86400" },
         ],
       },
+      {
+        // Allow Flutter Web to load its assets cross-origin if embedded
+        source: "/flutter-web/:path*",
+        headers: [
+          { key: "Cross-Origin-Embedder-Policy", value: "require-corp" },
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+        ],
+      },
+    ];
+  },
+  async rewrites() {
+    return [
+      // Flutter Web — serve the Flutter SPA for all subroutes
+      // The static files are served directly from public/flutter-web/
+      // Deep-links inside Flutter (client routing) resolve to index.html
+      {
+        source: "/flutter-web/:path+",
+        destination: "/flutter-web/index.html",
+      },
     ];
   },
 };

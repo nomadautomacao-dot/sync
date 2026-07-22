@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import '../../../core/models/sync_models.dart';
 import '../../../core/repositories/sync_repository.dart';
 import '../../../core/repositories/mock_sync_repository.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../shared/presentation/shared_widgets.dart';
+import 'collaborator_detail_screen.dart';
+import 'new_collaborator_dialog.dart';
 
 class PeopleScreen extends StatefulWidget {
   const PeopleScreen({
@@ -86,13 +89,38 @@ class _PeopleScreenState extends State<PeopleScreen> {
               SyncSectionHeader(
                 title: 'Colaboradores',
                 description: 'Rede real de parceiros e articuladores via /api/collaborators.',
-                trailing: OutlinedButton(
-                  onPressed: () {
-                    setState(() {
-                      future = widget.repository.getCollaborators();
-                    });
-                  },
-                  child: const Text('Atualizar'),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    OutlinedButton(
+                      onPressed: () {
+                        setState(() {
+                          future = widget.repository.getCollaborators();
+                        });
+                      },
+                      child: const Text('Atualizar'),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton.icon(
+                      onPressed: () async {
+                        final created = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => NewCollaboratorDialog(repository: widget.repository),
+                        );
+                        if (created == true) {
+                          setState(() {
+                            future = widget.repository.getCollaborators();
+                          });
+                        }
+                      },
+                      icon: const Icon(Icons.add_rounded, size: 16),
+                      label: const Text('Novo Colaborador'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: SaaSTokens.primary,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 20),
@@ -155,54 +183,71 @@ class _PeopleScreenState extends State<PeopleScreen> {
                     ),
                     const SizedBox(height: 18),
                     for (final collaborator in filtered) ...[
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        margin: const EdgeInsets.only(bottom: 12),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(16),
-                          color: SyncPalette.bgSurface,
-                          border: Border.all(color: SyncPalette.borderSubtle),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        collaborator.fullName,
-                                        style: Theme.of(context).textTheme.titleMedium,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        '${collaborator.role} - ${collaborator.type} - ${collaborator.state}',
-                                      ),
-                                    ],
+                      GestureDetector(
+                        onTap: () async {
+                          final refresh = await Navigator.of(context).push<bool>(
+                            MaterialPageRoute(
+                              builder: (context) => CollaboratorDetailScreen(
+                                collaboratorId: collaborator.id,
+                                repository: widget.repository,
+                              ),
+                            ),
+                          );
+                          if (refresh == true) {
+                            setState(() {
+                              future = widget.repository.getCollaborators();
+                            });
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(16),
+                            color: SyncPalette.bgSurface,
+                            border: Border.all(color: SyncPalette.borderSubtle),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          collaborator.fullName,
+                                          style: Theme.of(context).textTheme.titleMedium,
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          '${collaborator.role} - ${collaborator.type} - ${collaborator.state}',
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                                StatusPill(
-                                  label: collaborator.status,
-                                  color: collaborator.status == 'Ativo'
-                                      ? SyncPalette.statusActive
-                                      : SyncPalette.statusWarning,
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            Wrap(
-                              spacing: 18,
-                              runSpacing: 8,
-                              children: [
-                                Text('Cidades: ${collaborator.cities}'),
-                                Text('Fidelizadas: ${collaborator.fidelized}'),
-                                Text('Lucro YTD: ${_formatCurrency(collaborator.profitYtd)}'),
-                                Text('Comissao: ${_formatCurrency(collaborator.commissionYtd)}'),
-                              ],
-                            ),
-                          ],
+                                  StatusPill(
+                                    label: collaborator.status,
+                                    color: collaborator.status == 'Ativo'
+                                        ? SyncPalette.statusActive
+                                        : SyncPalette.statusWarning,
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Wrap(
+                                spacing: 18,
+                                runSpacing: 8,
+                                children: [
+                                  Text('Cidades: ${collaborator.cities}'),
+                                  Text('Fidelizadas: ${collaborator.fidelized}'),
+                                  Text('Lucro YTD: ${_formatCurrency(collaborator.profitYtd)}'),
+                                  Text('Comissao: ${_formatCurrency(collaborator.commissionYtd)}'),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
@@ -216,3 +261,4 @@ class _PeopleScreenState extends State<PeopleScreen> {
     );
   }
 }
+

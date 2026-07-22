@@ -43,12 +43,12 @@ const FNDE_RECEITAS_SOURCES: Record<number, FndeReceitasSource> = {
   2022: {
     kind: "csv",
     url: "https://www.gov.br/fnde/pt-br/acesso-a-informacao/acoes-e-programas/financiamento/fundeb/novo-fundeb/2022/copy2_of_ReceitaeComplementaoporentefederadoFundeb2022.pdf",
-    sourceLabel: "Portaria FNDE / MEC - VAAF FUNDEB 2022 (3a publicacao)",
+    sourceLabel: "Portaria FNDE / MEC - VAAF FUNDEB 2022 (3ª publicação)",
   },
   2023: {
     kind: "csv",
     url: "https://www.gov.br/fnde/pt-br/acesso-a-informacao/acoes-e-programas/financiamento/fundeb/vaaf/copy2_of_ReceitaeComplementaoporentefederadoFundeb2023.pdf",
-    sourceLabel: "Portaria FNDE / MEC - VAAF FUNDEB 2023 (4a publicacao)",
+    sourceLabel: "Portaria FNDE / MEC - VAAF FUNDEB 2023 (4ª publicação)",
   },
   2024: {
     kind: "csv",
@@ -88,6 +88,10 @@ const FNDE_LOCAL_RECEITAS: Record<number, string> = {
 
 const FNDE_LOCAL_VAAT: Record<number, string> = {
   2026: "data/fnde/vaat-2026.csv",
+};
+
+const FNDE_LOCAL_HABILITACAO: Record<number, string> = {
+  2026: "data/fnde/habilitacao-vaat-2026.csv",
 };
 
 const receitasCache = new Map<number, Promise<Map<string, FndeFundebReceitas>>>();
@@ -413,7 +417,7 @@ function parseHabilitacaoCsv(csvText: string) {
     }
 
     map.set(codigoIBGE, {
-      habilitacao: habilitacao || "Nao informado",
+      habilitacao: (habilitacao || "Nao informado").replace(/\.+$/, ""),
       pendencia: pendencia || null,
     });
   }
@@ -490,7 +494,8 @@ async function loadHabilitacaoByYear(exercicio: number) {
 
   const promise = (async () => {
     try {
-      return parseHabilitacaoCsv(await fetchCsv(url, FNDE_LOCAL_VAAT[exercicio]));
+      // Use the dedicated habilitação CSV as fallback — NOT the vaat monetary CSV
+      return parseHabilitacaoCsv(await fetchCsv(url, FNDE_LOCAL_HABILITACAO[exercicio]));
     } catch (error) {
       habilitacaoCache.delete(exercicio);
       throw error;

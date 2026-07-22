@@ -156,6 +156,7 @@ class AppController extends ChangeNotifier {
       AppSection.inbox => 'Buscar eventos recentes',
       AppSection.companies => 'Buscar empresa, CNPJ ou segmento',
       AppSection.people => 'Buscar colaborador, cidade ou papel',
+      AppSection.pipeline => 'Buscar no plano de ação',
       AppSection.modules => 'Buscar modulo operacional',
       AppSection.settings => 'Buscar configuracao do workspace',
     };

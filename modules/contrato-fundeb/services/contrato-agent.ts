@@ -27,7 +27,7 @@ export interface ContratoAgentInput {
   exercicio?: number;
   valorMensal?: number;
   quantidadeMeses?: number;
-  /** Se true, pula a busca por IA (Gemini) — útil para testes rápidos */
+  /** Se true, pula a busca por IA (OpenRouter/Qwen) — útil para testes rápidos */
   skipGemini?: boolean;
 }
 
@@ -77,8 +77,8 @@ function meta(
  * Fluxo:
  *  1. IBGE → resolve município oficial
  *  2. TSE → identifica prefeito
- *  3. Gemini → busca dados públicos (RG, CPF, secretário, fiscal, CNPJs, dotação)
- *  4. CNPJ → enriquece/valida CNPJs encontrados pelo Gemini
+ *  3. IA (OpenRouter/Qwen) → busca dados públicos (RG, CPF, secretário, fiscal, CNPJs, dotação)
+ *  4. CNPJ → enriquece/valida CNPJs encontrados pela IA
  *  5. Defaults → valores fixos da empresa e constantes legais
  *  6. Computed → cálculos financeiros e datas cronológicas
  *  7. Merge → consolida tudo em ContratosFundebData
@@ -126,9 +126,9 @@ export async function executeContratoAgent(
     console.log(`[contrato-agent] TSE: Prefeito ${prefeitoNome} (${tse.partido})`);
   }
 
-  // ── 3. Gemini (IA) + CNPJ (paralelo) ─────────────────────────────────
+  // ── 3. IA (OpenRouter/Qwen) + CNPJ (paralelo) ──────────────────────────
   // Rodam em paralelo para economizar tempo:
-  //  - Gemini busca secretário, fiscal, assessor, dotação, CPF/RG do prefeito
+  //  - IA busca secretário, fiscal, assessor, dotação, CPF/RG do prefeito
   //  - CNPJ Collector busca CNPJ/endereço/CEP da Prefeitura e FME por nome
   let gemini: Awaited<ReturnType<typeof collectGeminiData>> = null;
   let cnpjData: Awaited<ReturnType<typeof collectCnpjData>> = {
@@ -138,7 +138,7 @@ export async function executeContratoAgent(
 
   const geminiPromise = !input.skipGemini
     ? (async () => {
-        console.log("[contrato-agent] Iniciando busca por IA (Gemini + Google Search)...");
+        console.log("[contrato-agent] Iniciando busca por IA (OpenRouter/Qwen 3.7 Plus)...");
         return collectGeminiData({
           municipioNome: ibge.municipioNome,
           uf: ibge.municipioUF,
@@ -163,25 +163,25 @@ export async function executeContratoAgent(
   cnpjData = cnpjResult;
 
   if (gemini) {
-    console.log(`[contrato-agent] Gemini: confiança ${gemini.confiancaGeral}%, ${gemini.camposNaoEncontrados.length} campos não encontrados`);
+    console.log(`[contrato-agent] IA: confiança ${gemini.confiancaGeral}%, ${gemini.camposNaoEncontrados.length} campos não encontrados`);
     if (gemini.camposNaoEncontrados.length > 0) {
       warnings.push(
-        `Gemini não localizou: ${gemini.camposNaoEncontrados.join(", ")}. Esses campos precisam de preenchimento manual.`,
+        `IA não localizou: ${gemini.camposNaoEncontrados.join(", ")}. Esses campos precisam de preenchimento manual.`,
       );
     }
 
-    // Se Gemini encontrou CNPJs que o collector não achou, validar e enriquecer
+    // Se IA encontrou CNPJs que o collector não achou, validar e enriquecer
     if (!cnpjData.prefeitura && gemini.cnpjPrefeitura) {
-      console.log("[contrato-agent] Validando CNPJ da Prefeitura encontrado pelo Gemini...");
+      console.log("[contrato-agent] Validando CNPJ da Prefeitura encontrado pela IA...");
       cnpjData.prefeitura = await validateAndEnrichCnpj(gemini.cnpjPrefeitura);
     }
     if (!cnpjData.fundoEducacao && gemini.cnpjFundoEducacao) {
-      console.log("[contrato-agent] Validando CNPJ do FME encontrado pelo Gemini...");
+      console.log("[contrato-agent] Validando CNPJ do FME encontrado pela IA...");
       cnpjData.fundoEducacao = await validateAndEnrichCnpj(gemini.cnpjFundoEducacao);
     }
   } else if (!input.skipGemini) {
     warnings.push(
-      "Busca por IA (Gemini) indisponível — dados do prefeito, secretário e fiscal não foram preenchidos automaticamente.",
+      "Busca por IA indisponível — dados do prefeito, secretário e fiscal não foram preenchidos automaticamente.",
     );
   }
 

@@ -61,10 +61,37 @@ abstract class SyncRepository {
 
   Future<CollaboratorSummary> createCollaborator(Map<String, dynamic> data);
 
+  Future<CollaboratorDetails> getCollaboratorDetails(String id);
+
+  Future<CollaboratorDetails> updateCollaboratorDetails(
+    String id,
+    Map<String, dynamic> data,
+  );
+
+  Future<List<CollaboratorDocument>> getCollaboratorDocuments(String id);
+
+  Future<CollaboratorDocument> uploadCollaboratorDocument({
+    required String id,
+    required String category,
+    required String documentType,
+    required String name,
+    required String fileName,
+    required Uint8List fileBytes,
+    String? issuedAt,
+    String? expiresAt,
+    String? notes,
+  });
+
+  Future<void> deleteCollaboratorDocument(String id, String docId);
+
   Future<List<CityAccount>> getCities({
     String search = '',
     String stage = '',
   });
+
+  Future<void> updateCityStage(String cityId, String stage);
+
+  Future<void> updateCityPipeline(String cityId, Map<String, dynamic> data);
 
   Future<List<MunicipioSearchItem>> searchMunicipios(
     String query, {

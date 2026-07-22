@@ -58,6 +58,7 @@ import {
   generateLevantamentoFundebPdf,
   generateLevantamentoFundebPdfAutonomo,
   generateLevantamentoFundebPdfPackageAutonomo,
+  generateMunicipalXrayPdfAutonomo,
   type LevantamentoFundebAutonomoParams,
   type TipoRelatorio,
 } from "./utils/generate-levantamento-fundeb-pdf";
@@ -498,6 +499,26 @@ export function LevantamentoFundebPage() {
     }
   }
 
+  async function handleExportMunicipalXray() {
+    const params = buildAutonomousRequest();
+
+    if (!params) {
+      toast.error("Informe um código IBGE válido ou selecione um município para gerar o Raio-X.");
+      return;
+    }
+
+    setExportingAutonomous(true);
+    try {
+      await generateMunicipalXrayPdfAutonomo(params);
+      toast.success(`Raio-X ${Number(exercicio) - 1} × ${exercicio} gerado com sucesso.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Não foi possível gerar o Raio-X municipal.";
+      toast.error(message);
+    } finally {
+      setExportingAutonomous(false);
+    }
+  }
+
   function rehydrateWithDerivedFields(base: RelatorioFundeb) {
     const receitas = calcularReceitas(base.receitas);
     const multiplicadorBase =
@@ -856,6 +877,17 @@ export function LevantamentoFundebPage() {
                 >
                   {exportingAutonomous ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
                   {exportingAutonomous ? "Gerando PDF autonomo..." : "Gerar diagnostico autonomo"}
+                </Button>
+                <Button
+                  variant="outline"
+                  className="w-full gap-2 border-[var(--sync-accent)] text-[var(--sync-accent)] hover:bg-[var(--sync-accent)]/10"
+                  onClick={handleExportMunicipalXray}
+                  disabled={!canExportAutonomous}
+                >
+                  {exportingAutonomous ? <Loader2 className="h-4 w-4 animate-spin" /> : <BarChart3 className="h-4 w-4" />}
+                  {exportingAutonomous
+                    ? "Pesquisando e montando o Raio-X..."
+                    : `Gerar Raio-X ${Number(exercicio) - 1} × ${exercicio}`}
                 </Button>
                 <Button
                   variant="outline"

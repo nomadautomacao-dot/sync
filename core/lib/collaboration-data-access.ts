@@ -568,3 +568,184 @@ export async function getExecutiveDashboard(groupId: string, year: number): Prom
     alerts: [...new Set(alerts)].slice(0, 8),
   };
 }
+
+export async function getCollaborator(groupId: string, id: string) {
+  return prisma.collaborator.findFirst({
+    where: { id, groupId },
+    include: {
+      documents: {
+        orderBy: { createdAt: "desc" }
+      }
+    }
+  });
+}
+
+export async function updateCollaborator(
+  groupId: string,
+  id: string,
+  actorUserId: string,
+  input: {
+    fullName?: string;
+    shortName?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    whatsapp?: string | null;
+    cpfOrDocument?: string | null;
+    city?: string | null;
+    state?: string | null;
+    companyOrOrganization?: string | null;
+    title?: string | null;
+    collaboratorType?: string;
+    primaryRole?: string;
+    partnershipStatus?: string;
+    trustLevel?: number | null;
+    averageInfluenceScore?: number | null;
+    defaultCommissionPercent?: number;
+    defaultProfitBaseType?: string | null;
+    defaultTriggerType?: string | null;
+    payoutCycle?: string | null;
+    payoutMethod?: string | null;
+    notes?: string | null;
+    confidentialNotes?: string | null;
+  },
+) {
+  const original = await prisma.collaborator.findFirst({
+    where: { id, groupId },
+  });
+
+  if (!original) {
+    throw new Error("Collaborator not found");
+  }
+
+  const updated = await prisma.collaborator.update({
+    where: { id },
+    data: {
+      fullName: input.fullName !== undefined ? input.fullName.trim() : undefined,
+      shortName: input.shortName !== undefined ? (input.shortName ? input.shortName.trim() : null) : undefined,
+      email: input.email !== undefined ? (input.email ? input.email.trim().toLowerCase() : null) : undefined,
+      phone: input.phone !== undefined ? (input.phone ? input.phone.trim() : null) : undefined,
+      whatsapp: input.whatsapp !== undefined ? (input.whatsapp ? input.whatsapp.trim() : null) : undefined,
+      cpfOrDocument: input.cpfOrDocument !== undefined ? (input.cpfOrDocument ? input.cpfOrDocument.trim() : null) : undefined,
+      city: input.city !== undefined ? (input.city ? input.city.trim() : null) : undefined,
+      state: input.state !== undefined ? (input.state ? input.state.trim().toUpperCase() : null) : undefined,
+      companyOrOrganization: input.companyOrOrganization !== undefined ? (input.companyOrOrganization ? input.companyOrOrganization.trim() : null) : undefined,
+      title: input.title !== undefined ? (input.title ? input.title.trim() : null) : undefined,
+      collaboratorType: input.collaboratorType !== undefined ? (input.collaboratorType as any) : undefined,
+      primaryRole: input.primaryRole !== undefined ? input.primaryRole.trim() : undefined,
+      partnershipStatus: input.partnershipStatus !== undefined ? (input.partnershipStatus as any) : undefined,
+      trustLevel: input.trustLevel !== undefined ? input.trustLevel : undefined,
+      averageInfluenceScore: input.averageInfluenceScore !== undefined ? input.averageInfluenceScore : undefined,
+      defaultCommissionPercent: input.defaultCommissionPercent !== undefined ? input.defaultCommissionPercent : undefined,
+      defaultProfitBaseType: input.defaultProfitBaseType !== undefined ? (input.defaultProfitBaseType as any) : undefined,
+      defaultTriggerType: input.defaultTriggerType !== undefined ? (input.defaultTriggerType as any) : undefined,
+      payoutCycle: input.payoutCycle !== undefined ? input.payoutCycle : undefined,
+      payoutMethod: input.payoutMethod !== undefined ? input.payoutMethod : undefined,
+      notes: input.notes !== undefined ? input.notes : undefined,
+      confidentialNotes: input.confidentialNotes !== undefined ? input.confidentialNotes : undefined,
+    },
+  });
+
+  const changes: Record<string, any> = {};
+  if (input.fullName !== undefined && original.fullName !== updated.fullName) changes.fullName = updated.fullName;
+  if (input.defaultCommissionPercent !== undefined && Number(original.defaultCommissionPercent) !== Number(updated.defaultCommissionPercent)) {
+    changes.defaultCommissionPercent = Number(updated.defaultCommissionPercent);
+  }
+  if (input.partnershipStatus !== undefined && original.partnershipStatus !== updated.partnershipStatus) {
+    changes.partnershipStatus = updated.partnershipStatus;
+  }
+
+  await prisma.auditLog.create({
+    data: {
+      action: "collaborator.updated",
+      userId: actorUserId,
+      targetId: id,
+      metadata: { fullName: updated.fullName, changes },
+    },
+  });
+
+  return updated;
+}
+
+export async function listCollaboratorDocuments(collaboratorId: string) {
+  return prisma.collaboratorDocument.findMany({
+    where: { collaboratorId },
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+export async function createCollaboratorDocument(
+  collaboratorId: string,
+  actorUserId: string,
+  input: {
+    category: string;
+    documentType: string;
+    name: string;
+    fileName: string;
+    fileUrl: string;
+    fileSize?: number;
+    mimeType?: string;
+    issuedAt?: string;
+    expiresAt?: string;
+    notes?: string;
+  },
+) {
+  const doc = await prisma.collaboratorDocument.create({
+    data: {
+      collaboratorId,
+      category: input.category,
+      documentType: input.documentType,
+      name: input.name,
+      fileName: input.fileName,
+      fileUrl: input.fileUrl,
+      fileSize: input.fileSize,
+      mimeType: input.mimeType,
+      issuedAt: input.issuedAt ? new Date(input.issuedAt) : null,
+      expiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
+      notes: input.notes,
+      uploadedByUserId: actorUserId,
+    },
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      action: "collaborator.document_uploaded",
+      userId: actorUserId,
+      targetId: collaboratorId,
+      metadata: { documentId: doc.id, documentName: doc.name, category: doc.category },
+    },
+  });
+
+  return doc;
+}
+
+export async function deleteCollaboratorDocument(collaboratorId: string, docId: string, actorUserId: string) {
+  const doc = await prisma.collaboratorDocument.findFirst({
+    where: { id: docId, collaboratorId },
+  });
+
+  if (!doc) {
+    throw new Error("Document not found");
+  }
+
+  await prisma.collaboratorDocument.delete({
+    where: { id: docId },
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      action: "collaborator.document_deleted",
+      userId: actorUserId,
+      targetId: collaboratorId,
+      metadata: { documentId: docId, documentName: doc.name },
+    },
+  });
+
+  return doc;
+}
+
+export async function getCollaboratorDocument(collaboratorId: string, docId: string) {
+  return prisma.collaboratorDocument.findFirst({
+    where: { id: docId, collaboratorId },
+  });
+}
+

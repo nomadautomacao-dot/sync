@@ -101,12 +101,15 @@ export interface CensoEscolar {
     ensinoMedio: number;
     eja: number;
     educacaoEspecial: number;
+    ensinoMedioPublica?: number | null;
+    ensinoMedioTotal?: number | null;
   };
   matriculasDetalhadas: {
     creche: number;
     preEscola: number;
     anosIniciais: number;
     anosFinais: number;
+    anosFinaisPublica?: number | null;
   };
   tempoIntegral: {
     total: number | null;
@@ -115,8 +118,10 @@ export interface CensoEscolar {
     preEscola: number | null;
     anosIniciais: number | null;
     anosFinais: number | null;
+    anosFinaisPublica?: number | null;
     ensinoFundamental: number | null;
     ensinoMedio: number | null;
+    ensinoMedioPublica?: number | null;
     eja: number | null;
     educacaoEspecial: number | null;
   };
@@ -177,9 +182,26 @@ export interface PerfilComercialFundeb {
   camadaEstadual: FundebStateLayer;
 }
 
+export interface FundebRelatorioParametros {
+  tituloRelatorio?: string;
+  subtituloRelatorio?: string;
+  responsavelTecnico?: string;
+  orgaoDemandante?: string;
+  secretarioEducacao?: string;
+  numeroProcesso?: string;
+  periodoReferencia?: string;
+  cenarioAnalise?: string;
+  fonteComplementar?: string;
+  observacaoAnalise?: string;
+  metodologiaComplementar?: string;
+  camposAdicionais?: Record<string, string | number | boolean | null>;
+  [key: string]: unknown;
+}
+
 export interface RelatorioFundeb {
   geradoEm: string;
   identificacao: MunicipioIdentificacao;
+  parametros?: FundebRelatorioParametros;
   receitas: ReceitasFundeb;
   projecao: ProjecaoRochaPrime;
   projecaoRecuperavel: ProjecaoRochaPrime;
@@ -195,6 +217,7 @@ export interface RelatorioFundeb {
   observacoesOperacionais: string[];
   idebAnosIniciais: IDEBDado[];
   idebAnosFinais: IDEBDado[];
+  idebEnsinoMedio: IDEBDado[];
   censoEscolar: CensoEscolar | null;
 }
 
@@ -265,6 +288,7 @@ export interface RelatorioDirigidoBenchmarkRegional {
 }
 
 export interface RelatorioDirigidoMunicipio {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any;
   identificacao: MunicipioIdentificacao;
   relatorio: RelatorioFundeb;

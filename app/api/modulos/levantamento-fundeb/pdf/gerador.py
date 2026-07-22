@@ -85,6 +85,29 @@ def safe_row(cells):
     """Apply safe_text to all cells in a row."""
     return [safe_text(c) for c in cells]
 
+def get_parametros_relatorio(relatorio):
+    parametros = relatorio.get("parametros") or relatorio.get("parametrosRelatorio") or {}
+    return parametros if isinstance(parametros, dict) else {}
+
+def append_param_row(rows, parametros, key, label):
+    value = f_str(parametros.get(key), "")
+    if value:
+        rows.append([label, value])
+
+def append_campos_adicionais(rows, parametros, limit=8):
+    campos = parametros.get("camposAdicionais") or {}
+    if not isinstance(campos, dict):
+        return
+    added = 0
+    for key, value in campos.items():
+        label = f_str(key, "")
+        text = f_str(value, "")
+        if label and text:
+            rows.append([label, text])
+            added += 1
+            if added >= limit:
+                break
+
 def draw_bullets_box(c, x, y, w, label, bullets):
     """Draw a table-style box with word-wrapped bullet lines using Paragraph.
     Handles full Unicode (accents, cedillas) correctly.
@@ -217,9 +240,12 @@ def gerar_pdf(relatorio_raw) -> str:
     ideb_fin = relatorio.get("idebAnosFinais") or []
     censo = relatorio.get("censoEscolar") or {}
     perfil_ibge = relatorio.get("perfilIBGE") or {}
+    parametros = get_parametros_relatorio(relatorio)
 
-    TITLE = "Diagnóstico Estratégico Educacional"
-    FONTE = "FNDE / INEP / IBGE"
+    TITLE = f_str(parametros.get("tituloRelatorio"), "Diagnóstico Estratégico Educacional")
+    COVER_TITLE = f_str(parametros.get("tituloCapa") or parametros.get("tituloRelatorio"), "DIAGNÓSTICO ESTRATÉGICO EDUCACIONAL")
+    COVER_SUBTITLE = f_str(parametros.get("subtituloRelatorio"), "Avaliação financeira, operacional e educacional")
+    FONTE = f_str(parametros.get("fonteComplementar"), "FNDE / INEP / IBGE")
     W = PAGE_W - 2 * MARGIN_X
     prefeito = f_str(ident.get("prefeito"), "Gestor Municipal")
     partido = f_str(ident.get("partido"), "-")
@@ -237,12 +263,14 @@ def gerar_pdf(relatorio_raw) -> str:
     pendencia_vaat = f_str(perfil.get("pendenciaVaat"), "")
     habilitacao_vaat = f_str(perfil.get("habilitacaoVaat"), "")
     vetores_upside = upside.get("vetores") or []
+    observacao_analise = f_str(parametros.get("observacaoAnalise"), "")
+    metodologia_complementar = f_str(parametros.get("metodologiaComplementar"), "")
 
     # ===================== CAPA =====================
     draw_cover(
         c,
-        title="DIAGNÓSTICO ESTRATÉGICO EDUCACIONAL",
-        subtitle="Avaliação financeira, operacional e educacional",
+        title=COVER_TITLE,
+        subtitle=COVER_SUBTITLE,
         municipality=mun_upper,
         year_label=f"Exercício {exercicio}"
     )
@@ -262,6 +290,7 @@ def gerar_pdf(relatorio_raw) -> str:
         f"Este relatório apresenta a leitura executiva e técnica do FUNDEB para o exercício de {exercicio}, "
         "com foco na projeção comercial histórica do levantamento Rocha Prime, preservando em camada secundária o ganho recuperável "
         "já evidenciado nas bases oficiais para suporte técnico da tomada de decisão."
+        + (f" {observacao_analise}" if observacao_analise else "")
     )
     y = draw_analysis_box(c, MARGIN_X, y, W, carta)
 
@@ -343,6 +372,14 @@ def gerar_pdf(relatorio_raw) -> str:
         ["Microrregião", f_str(ident.get("microrregiao"))],
         ["Método principal", "Benchmark comercial calibrado"],
     ]]
+    append_param_row(id_rows, parametros, "secretarioEducacao", "Secretário(a) de Educação")
+    append_param_row(id_rows, parametros, "orgaoDemandante", "Órgão demandante")
+    append_param_row(id_rows, parametros, "responsavelTecnico", "Responsável técnico")
+    append_param_row(id_rows, parametros, "numeroProcesso", "Processo administrativo")
+    append_param_row(id_rows, parametros, "periodoReferencia", "Período de referência")
+    append_param_row(id_rows, parametros, "cenarioAnalise", "Cenário de análise")
+    append_campos_adicionais(id_rows, parametros)
+    id_rows = [safe_row(r) for r in id_rows]
     # Campo 38% | Valor 62% - left_cols={1} para que o header e o texto fiquem alinhados a esquerda
     y = draw_kv_table(c, MARGIN_X, y, W, safe_row(["Campo", "Valor"]), id_rows, [W * 0.38, W * 0.62], row_h=20, left_cols={1})
 
@@ -460,6 +497,7 @@ def gerar_pdf(relatorio_raw) -> str:
         "para acesso às complementações federais. O ganho projetado em VAAR está condicionado ao atendimento dos indicadores de "
         "desempenho educacional e à regularidade das informações junto ao MEC/FNDE. "
         + (f"Metodologia aplicada: {met_txt}." if met_txt else "A metodologia adota parâmetros conservadores, respeitando os limites regulatórios estabelecidos pela legislação do FUNDEB.")
+        + (f" Metodologia complementar: {metodologia_complementar}." if metodologia_complementar else "")
         + (
             f" Como camada técnica secundária, o ganho recuperável já evidenciado nas bases atuais soma {f_money(ganho_recuperavel)}."
             if ganho_recuperavel > 0 and abs(ganho_recuperavel - ganho) > 0.01
@@ -574,13 +612,12 @@ def gerar_pdf(relatorio_raw) -> str:
         ibge_card_h = 55
         ibge_row1 = [
             ("POPULAÇÃO ESTIMADA", f_int(perfil_ibge.get("populacaoEstimada")), perfil_ibge.get("populacaoAnoReferencia") or ""),
-            ("IDHM", f"{perfil_ibge.get('idhm', 0):.3f}".replace(".", ",") if perfil_ibge.get("idhm") else "-", perfil_ibge.get("idhmAnoReferencia") or ""),
             ("PIB PER CAPITA", f_money(perfil_ibge.get("pibPerCapita")) if perfil_ibge.get("pibPerCapita") else "-", perfil_ibge.get("pibAnoReferencia") or ""),
+            ("ESCOLARIZAÇÃO 6-14", f_pct(perfil_ibge.get("escolarizacao614")) if perfil_ibge.get("escolarizacao614") else "-", ""),
         ]
         ibge_row2 = [
             ("ÁREA TERRITORIAL", f"{float(perfil_ibge.get('areaTerritorial') or 0):,.1f} km²".replace(",", "X").replace(".", ",").replace("X", ".") if perfil_ibge.get("areaTerritorial") else "-", ""),
-            ("ESCOLARIZAÇÃO 6-14", f_pct(perfil_ibge.get("escolarizacao614")) if perfil_ibge.get("escolarizacao614") else "-", ""),
-            ("MORTALIDADE INFANTIL", f"{float(perfil_ibge.get('mortalidadeInfantil') or 0):.1f}".replace(".", ",") + " por mil" if perfil_ibge.get("mortalidadeInfantil") else "-", ""),
+            ("RECEITAS BRUTAS", f_money(perfil_ibge.get("receitasBrutasMunicipais")) if perfil_ibge.get("receitasBrutasMunicipais") else "-", perfil_ibge.get("receitasAnoReferencia") or ""),
         ]
 
         for row_data in [ibge_row1, ibge_row2]:
@@ -741,7 +778,7 @@ def gerar_pdf(relatorio_raw) -> str:
                 ["Educação Especial", f_int(etapas.get("educacaoEspecial"))],
             ]
             y = check_y(c, y, 170, TITLE, mun_label)
-            draw_section_title(c, "8.2", "Detalhamento da Rede Publica", y - 20)
+            draw_section_title(c, "8.2", "Detalhamento da Rede Pública", y - 20)
             y -= 40
             y = draw_kv_table(
                 c,
@@ -755,7 +792,7 @@ def gerar_pdf(relatorio_raw) -> str:
 
             tempo_rows = []
             tempo_specs = [
-                ("Rede publica total", tempo_integral.get("total"), censo.get("totalMatriculas")),
+                ("Rede pública total", tempo_integral.get("total"), censo.get("totalMatriculas")),
                 ("Educação Infantil", tempo_integral.get("educacaoInfantil"), etapas.get("educacaoInfantil")),
                 ("Creche", tempo_integral.get("creche"), detalhadas.get("creche")),
                 ("Pré-escola", tempo_integral.get("preEscola"), detalhadas.get("preEscola")),
@@ -795,7 +832,7 @@ def gerar_pdf(relatorio_raw) -> str:
                 total_censo = censo.get("totalMatriculas")
                 cobertura_total = calc_pct(total_integral, total_censo)
                 analise_ti = (
-                    f"A rede publica de {mun_label} registra {f_int_na(total_integral)} matriculas em tempo integral "
+                    f"A rede pública de {mun_label} registra {f_int_na(total_integral)} matrículas em tempo integral "
                     f"sobre uma base de {f_int_na(total_censo)} matriculas publicas no Censo Escolar. "
                     f"Isto representa cobertura aproximada de {f_pct(cobertura_total) if cobertura_total is not None else '-'} "
                     "e ajuda a qualificar a leitura da oferta de jornada ampliada por etapa."

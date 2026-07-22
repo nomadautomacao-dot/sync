@@ -26,6 +26,35 @@ function parseBrazilianNumber(value: string | null | undefined) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+/**
+ * Parses numbers returned by the IBGE indicadores API.
+ * The API returns values in American/international format: "13567.92", "98.1"
+ * (dots are decimal separators, NOT thousand separators).
+ *
+ * If the string contains a comma, falls back to Brazilian format parsing.
+ */
+function parseApiNumber(value: string | null | undefined) {
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  // If comma exists → Brazilian format (e.g. "13.567,92")
+  if (trimmed.includes(",")) {
+    return parseBrazilianNumber(trimmed);
+  }
+
+  // Otherwise → international format (e.g. "13567.92", "98.1", "191.817")
+  // In this context dots are DECIMAL separators, not thousand separators
+  const cleaned = trimmed.replace(/[^\d.-]/g, "");
+  const parsed = Number(cleaned);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 function decodeHtml(value: string) {
   return value
     .replace(/&ccedil;/gi, "c")
@@ -101,10 +130,6 @@ export interface IbgeCidadeIndicators {
   escolarizacao614: number | null;
   pibPerCapita: number | null;
   pibAnoReferencia: string | null;
-  idhm: number | null;
-  idhmAnoReferencia: string | null;
-  mortalidadeInfantil: number | null;
-  mortalidadeAnoReferencia: string | null;
   areaTerritorial: number | null;
 }
 
@@ -156,21 +181,24 @@ async function fetchSidraValue(
  *
  * Indicator IDs used by cidades-e-estados panorama:
  *  - 29171 = População estimada
- *  - 29167 = População no último Censo
+ *  - 29167 = Área da unidade territorial (km²)
  *  - 47001 = PIB per capita
- *  - 30255 = IDHM
- *  - 60048 = Mortalidade infantil
+ *  - 30255 = IDHM (unused but kept for reference)
  *  - 60045 = Escolarização 6 a 14 anos
- *  - 28141 = Área da unidade territorial
- *  - 29170 = Total de receitas brutas realizadas
+ *  - 28141 = Receitas orçamentárias brutas realizadas (R$)
  */
+interface IndicadorResultEntry {
+  localidade: string;
+  res: Record<string, string>;
+}
+
 interface IndicadorResult {
-  id: string;
-  res: Record<string, Record<string, string>> | null;
+  id: number | string;
+  res: IndicadorResultEntry[] | null;
 }
 
 async function fetchIndicadoresApi(codigoIBGE: string): Promise<IbgeCidadeIndicators | null> {
-  const indicadorIds = "29171|29167|47001|30255|60048|60045|28141|29170";
+  const indicadorIds = "29171|29167|47001|30255|60045|28141";
   const url =
     `https://servicodados.ibge.gov.br/api/v1/pesquisas/indicadores/${indicadorIds}/resultados/${codigoIBGE}`;
 
@@ -191,10 +219,14 @@ async function fetchIndicadoresApi(codigoIBGE: string): Promise<IbgeCidadeIndica
    */
   function extractLatest(indicadorId: string): { value: number; year: string } | null {
     const entry = data.find((d) => String(d.id) === indicadorId);
-    if (!entry?.res) return null;
+    if (!entry?.res || !Array.isArray(entry.res) || entry.res.length === 0) return null;
 
-    // The res can have the municipio code as key, or nested differently
-    const municipioData = entry.res[codigoIBGE] ?? Object.values(entry.res)[0];
+    // The res is an array of { localidade, res: { year: value } } objects.
+    // localidade uses 6 digits (IBGE without check digit), our codigoIBGE has 7.
+    const ibge6 = codigoIBGE.slice(0, 6);
+    const municipioEntry = entry.res.find((e) => e.localidade === ibge6 || e.localidade === codigoIBGE)
+      ?? entry.res[0];
+    const municipioData = municipioEntry?.res;
     if (!municipioData || typeof municipioData !== "object") return null;
 
     // Find the most recent year with valid data
@@ -205,37 +237,33 @@ async function fetchIndicadoresApi(codigoIBGE: string): Promise<IbgeCidadeIndica
     for (const year of years) {
       const raw = municipioData[year];
       if (!raw || raw === "-" || raw === "..." || raw === "X") continue;
-      const parsed = parseBrazilianNumber(raw);
+      const parsed = parseApiNumber(raw);
       if (parsed != null) return { value: parsed, year };
     }
     return null;
   }
 
   const populacaoEstimada = extractLatest("29171");
-  const populacaoUltimoCenso = extractLatest("29167");
+  const areaTerritorial = extractLatest("29167");  // km²
   const pibPerCapita = extractLatest("47001");
-  const idhm = extractLatest("30255");
-  const mortalidadeInfantil = extractLatest("60048");
+  const idhm = extractLatest("30255"); // Still extracted but unused — kept for future reference
+  // NOTE: indicator 60048 is NOT mortality — it's "Transferências correntes brutas (%)"
+  // Mortality data comes from the HTML scraper fallback (DataSUS source)
   const escolarizacao614 = extractLatest("60045");
-  const areaTerritorial = extractLatest("28141");
-  const receitas = extractLatest("29170");
+  const receitas = extractLatest("28141");  // Receitas orçamentárias brutas (R$)
 
   // Only consider it successful if we got at least population data
-  if (!populacaoEstimada && !populacaoUltimoCenso) return null;
+  if (!populacaoEstimada) return null;
 
   return {
     populacaoEstimada: populacaoEstimada?.value ?? null,
-    populacaoAnoReferencia: populacaoEstimada?.year ?? populacaoUltimoCenso?.year ?? null,
-    populacaoUltimoCenso: populacaoUltimoCenso?.value ?? null,
+    populacaoAnoReferencia: populacaoEstimada?.year ?? null,
+    populacaoUltimoCenso: null,  // Not available from this API source
     receitasBrutasMunicipais: receitas?.value ?? null,
     receitasAnoReferencia: receitas?.year ?? null,
     escolarizacao614: escolarizacao614?.value ?? null,
     pibPerCapita: pibPerCapita?.value ?? null,
     pibAnoReferencia: pibPerCapita?.year ?? null,
-    idhm: idhm?.value ?? null,
-    idhmAnoReferencia: idhm?.year ?? null,
-    mortalidadeInfantil: mortalidadeInfantil?.value ?? null,
-    mortalidadeAnoReferencia: mortalidadeInfantil?.year ?? null,
     areaTerritorial: areaTerritorial?.value ?? null,
   } satisfies IbgeCidadeIndicators;
 }
@@ -333,10 +361,6 @@ async function fetchFromHtmlScraper(
     escolarizacao614: parseBrazilianNumber(escolarizacao?.value),
     pibPerCapita: parseBrazilianNumber(pibPerCapita?.value),
     pibAnoReferencia: pibPerCapita?.year ?? null,
-    idhm: parseBrazilianNumber(idhm?.value),
-    idhmAnoReferencia: idhm?.year ?? null,
-    mortalidadeInfantil: parseBrazilianNumber(mortalidadeInfantil?.value),
-    mortalidadeAnoReferencia: mortalidadeInfantil?.year ?? null,
     areaTerritorial: parseBrazilianNumber(areaTerritorial?.value),
   };
 
@@ -417,10 +441,6 @@ export async function getIbgeCidadeIndicators(
             escolarizacao614: sidraResult.escolarizacao614 ?? null,
             pibPerCapita: sidraResult.pibPerCapita ?? null,
             pibAnoReferencia: sidraResult.pibAnoReferencia ?? null,
-            idhm: sidraResult.idhm ?? null,
-            idhmAnoReferencia: sidraResult.idhmAnoReferencia ?? null,
-            mortalidadeInfantil: sidraResult.mortalidadeInfantil ?? null,
-            mortalidadeAnoReferencia: sidraResult.mortalidadeAnoReferencia ?? null,
             areaTerritorial: sidraResult.areaTerritorial ?? null,
           } satisfies IbgeCidadeIndicators;
         }
@@ -463,10 +483,6 @@ export async function getIbgeCidadeIndicators(
         escolarizacao614: null,
         pibPerCapita: null,
         pibAnoReferencia: null,
-        idhm: null,
-        idhmAnoReferencia: null,
-        mortalidadeInfantil: null,
-        mortalidadeAnoReferencia: null,
         areaTerritorial: null,
       } satisfies IbgeCidadeIndicators;
     }

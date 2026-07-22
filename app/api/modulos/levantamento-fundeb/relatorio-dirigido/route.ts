@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { buildDirectedFundebReportBase } from "@/core/lib/fundeb-directed-report";
 import { buildGoviaMunicipioCompleto } from "@/core/lib/govia-compat";
 import { buildDirectedReportMarkdown } from "@/modules/levantamento-fundeb/utils/directed-report-format";
+import type { FundebRelatorioParametros } from "@/modules/levantamento-fundeb/types";
 
 interface DirectedReportRequestBody {
   codigo_ibge?: string;
   nome?: string;
   uf?: string;
   exercicio?: number;
+  parametros?: FundebRelatorioParametros;
 }
 
 export async function POST(request: NextRequest) {
@@ -28,6 +30,7 @@ export async function POST(request: NextRequest) {
       nome: body.nome,
       uf: body.uf,
       exercicio: body.exercicio,
+      parametros: body.parametros,
     });
 
     if (!data) {

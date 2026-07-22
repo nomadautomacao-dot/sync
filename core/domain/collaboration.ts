@@ -77,6 +77,45 @@ export const collaboratorCreateSchema = z.object({
   notes: z.string().trim().optional(),
 });
 
+export const collaboratorUpdateSchema = z.object({
+  fullName: z.string().trim().min(3, "Nome obrigatorio").optional(),
+  shortName: z.string().trim().nullable().optional(),
+  email: z.union([z.email("Email invalido"), z.literal("")]).nullable().optional(),
+  phone: z.string().trim().nullable().optional(),
+  whatsapp: z.string().trim().nullable().optional(),
+  cpfOrDocument: z.string().trim().nullable().optional(),
+  city: z.string().trim().nullable().optional(),
+  state: z.string().trim().max(2, "UF invalida").transform((value) => value ? value.toUpperCase() : null).nullable().optional(),
+  companyOrOrganization: z.string().trim().nullable().optional(),
+  title: z.string().trim().nullable().optional(),
+  collaboratorType: collaboratorTypeSchema.optional(),
+  primaryRole: z.string().trim().min(2, "Papel principal obrigatorio").optional(),
+  partnershipStatus: partnershipStatusSchema.optional(),
+  trustLevel: z.coerce.number().int().min(1).max(5).nullable().optional(),
+  averageInfluenceScore: z.coerce.number().int().min(1).max(10).nullable().optional(),
+  defaultCommissionPercent: z.coerce.number().min(0).max(100).optional(),
+  defaultProfitBaseType: commissionBaseTypeSchema.nullable().optional(),
+  defaultTriggerType: commissionTriggerTypeSchema.nullable().optional(),
+  payoutCycle: z.string().trim().nullable().optional(),
+  payoutMethod: z.string().trim().nullable().optional(),
+  notes: z.string().trim().nullable().optional(),
+  confidentialNotes: z.string().trim().nullable().optional(),
+});
+
+export const collaboratorDocumentCreateSchema = z.object({
+  category: z.string().trim().min(1, "Categoria obrigatoria"),
+  documentType: z.string().trim().min(1, "Tipo de documento obrigatorio"),
+  name: z.string().trim().min(1, "Nome obrigatorio"),
+  fileName: z.string().trim().min(1, "Nome do arquivo obrigatorio"),
+  fileUrl: z.string().trim().url("URL invalida"),
+  fileSize: z.coerce.number().int().nonnegative().optional(),
+  mimeType: z.string().trim().optional(),
+  issuedAt: z.preprocess((val) => val === "" ? undefined : val, z.iso.date().optional()),
+  expiresAt: z.preprocess((val) => val === "" ? undefined : val, z.iso.date().optional()),
+  notes: z.string().trim().optional(),
+});
+
+
 export const collaboratorQuerySchema = z.object({
   search: z.string().optional(),
   status: partnershipStatusSchema.optional(),

@@ -293,6 +293,36 @@ function buildQeduSnapshot(
 export async function buildFundebComparativeSnapshot(relatorio: RelatorioFundeb) {
   const codigoIBGE = relatorio.identificacao.codigoIBGE;
   const exercicio = relatorio.identificacao.exercicio;
+  const isPlaceholderText = (value: string | null | undefined) => {
+    const normalized = (value ?? "").trim().toLowerCase();
+    if (!normalized) return true;
+    return (
+      normalized === "undefined" ||
+      normalized === "null" ||
+      normalized === "nan" ||
+      normalized === "-" ||
+      normalized === "uf" ||
+      normalized === "undefined/uf" ||
+      normalized === "undefined - uf" ||
+      normalized === "null/uf" ||
+      normalized === "null - uf" ||
+      (normalized.includes("undefined") && normalized.includes("uf")) ||
+      (normalized.includes("null") && normalized.includes("uf"))
+    );
+  };
+  const cleanDisplayText = (value: string | null | undefined, fallback = "") => {
+    if (isPlaceholderText(value)) return fallback;
+    return (value ?? "").trim();
+  };
+  const municipioNome = cleanDisplayText(relatorio.identificacao.municipioNome);
+  const municipioCompleto = cleanDisplayText(relatorio.identificacao.municipio);
+  const uf = cleanDisplayText(relatorio.identificacao.uf, "UF");
+  const municipioLabel = municipioNome || municipioCompleto || "Município";
+  const municipioResumo =
+    municipioLabel.toUpperCase().includes(`/${uf.toUpperCase()}`) ||
+    municipioLabel.toUpperCase().includes(` - ${uf.toUpperCase()}`)
+      ? municipioLabel
+      : `${municipioLabel}/${uf}`;
   const idebRecord = getIdebMunicipalRecord(codigoIBGE);
   const censoHistory = getInepCensoMunicipalHistory(codigoIBGE).sort((a, b) => a.anoReferencia - b.anoReferencia);
   const [receitasHistoricas, qeduIndicators] = await Promise.all([
@@ -300,8 +330,8 @@ export async function buildFundebComparativeSnapshot(relatorio: RelatorioFundeb)
       anosRetroativos: 4,
       atualOverride: {
         codigoIBGE,
-        municipio: relatorio.identificacao.municipioNome,
-        uf: relatorio.identificacao.uf,
+        municipio: municipioLabel,
+        uf,
         ...relatorio.receitas,
         fonte: relatorio.identificacao.fonte,
       },
@@ -371,14 +401,14 @@ export async function buildFundebComparativeSnapshot(relatorio: RelatorioFundeb)
 
   const textoSintese =
     receitaAnoBase1 && receitaAnoBase2
-      ? `A comparação entre ${receitaAnoBase1.ano} e ${receitaAnoBase2.ano} mostra a evolução oficial da receita total do Fundeb para ${relatorio.identificacao.municipioNome}. A receita passou de ${receitaAnoBase1.totalReceitas.toLocaleString("pt-BR", {
+      ? `A comparação entre ${receitaAnoBase1.ano} e ${receitaAnoBase2.ano} mostra a evolução oficial da receita total do Fundeb para ${municipioNome || municipioLabel}. A receita passou de ${receitaAnoBase1.totalReceitas.toLocaleString("pt-BR", {
           style: "currency",
           currency: "BRL",
         })} para ${receitaAnoBase2.totalReceitas.toLocaleString("pt-BR", {
           style: "currency",
           currency: "BRL",
         })}, com variação de ${deltaTotalPercent !== null ? formatPercent(deltaTotalPercent) : "-"}.`
-      : `O comparativo financeiro ainda depende de séries oficiais completas para ${relatorio.identificacao.municipioNome}, mas o Sync já consolidou a base disponível para análise do exercício ${exercicio}.`;
+      : `O comparativo financeiro ainda depende de séries oficiais completas para ${municipioNome || municipioLabel}, mas o Sync já consolidou a base disponível para análise do exercício ${exercicio}.`;
 
   const textoQedu =
     qeduIndicators
@@ -395,12 +425,12 @@ export async function buildFundebComparativeSnapshot(relatorio: RelatorioFundeb)
         })} entre ${receitaAnoBase1.ano} e ${receitaAnoBase2.ano}, puxada pela composição das complementações federais e pela linha de contribuição do fundo estadual. No entanto, a leitura do Censo mostra que a base de matrículas públicas não evoluiu na mesma intensidade, abrindo espaço para uma agenda corretiva e expansiva com foco em EJA, integral e educação especial.`
       : "O principal movimento técnico desta rodada é a consolidação da série histórica oficial do Fundeb dentro do próprio Sync.";
 
-  const textoComoEntra =
-    `A Rocha Prime entra na leitura comparativa validando as bases oficiais, cruzando Censo, FNDE e indicadores territoriais para transformar histórico fraco em agenda de virada. No caso atual, a prioridade passa por oficinas, reorganização de jornada, busca ativa de EJA, saneamento cadastral e monitoramento técnico para que ${relatorio.identificacao.municipioNome} entre em ${cenarioEstruturacao.anoAlvo} com uma base mais forte e financeiramente melhor posicionada.`;
+    const textoComoEntra =
+    `A Rocha Prime entra na leitura comparativa validando as bases oficiais, cruzando Censo, FNDE e indicadores territoriais para transformar histórico fraco em agenda de virada. No caso atual, a prioridade passa por oficinas, reorganização de jornada, busca ativa de EJA, saneamento cadastral e monitoramento técnico para que ${municipioLabel} entre em ${cenarioEstruturacao.anoAlvo} com uma base mais forte e financeiramente melhor posicionada.`;
 
-  const textoConclusao =
+    const textoConclusao =
     receitaAnoBase1 && receitaAnoBase2 && deltaTotalAbsolute !== null
-      ? `No cenário comparado, ${relatorio.identificacao.municipioNome} apresenta variação oficial de ${Math.abs(deltaTotalAbsolute).toLocaleString("pt-BR", {
+      ? `No cenário comparado, ${municipioLabel} apresenta variação oficial de ${Math.abs(deltaTotalAbsolute).toLocaleString("pt-BR", {
           style: "currency",
           currency: "BRL",
         })} entre ${receitaAnoBase1.ano} e ${receitaAnoBase2.ano}. A leitura comparativa agora não para no retrovisor: ela projeta uma agenda ${cenarioEstruturacao.anoAlvo} com meta de ${cenarioEstruturacao.metas.eja.toLocaleString("pt-BR")} matrículas em EJA e ${cenarioEstruturacao.metas.integral.toLocaleString("pt-BR")} matrículas em tempo integral. Com a Rocha Prime, a comparativa passa a defender melhora de base, ganho de indicador e faixa indicativa de ${cenarioEstruturacao.impactoFinanceiroIndicativo.minimo.toLocaleString("pt-BR", {
@@ -410,7 +440,7 @@ export async function buildFundebComparativeSnapshot(relatorio: RelatorioFundeb)
           style: "currency",
           currency: "BRL",
         })} se a reestruturação for bem executada.` 
-      : `O comparativo de ${relatorio.identificacao.municipioNome} já está preparado para receber as próximas séries oficiais, com agenda projetada de reestruturação da rede para o próximo exercício.`;
+      : `O comparativo de ${municipioLabel} já está preparado para receber as próximas séries oficiais, com agenda projetada de reestruturação da rede para o próximo exercício.`;
 
   return {
     receitasHistoricas,

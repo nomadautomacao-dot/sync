@@ -214,6 +214,80 @@ class HybridSyncRepository implements SyncRepository {
   }
 
   @override
+  Future<CollaboratorDetails> getCollaboratorDetails(String id) async {
+    if (_mustUseRemote) {
+      return _remote.getCollaboratorDetails(id);
+    }
+    return _local.getCollaboratorDetails(id);
+  }
+
+  @override
+  Future<CollaboratorDetails> updateCollaboratorDetails(
+    String id,
+    Map<String, dynamic> data,
+  ) async {
+    if (_mustUseRemote) {
+      return _remote.updateCollaboratorDetails(id, data);
+    }
+    return _local.updateCollaboratorDetails(id, data);
+  }
+
+  @override
+  Future<List<CollaboratorDocument>> getCollaboratorDocuments(String id) async {
+    if (_mustUseRemote) {
+      return _remote.getCollaboratorDocuments(id);
+    }
+    return _local.getCollaboratorDocuments(id);
+  }
+
+  @override
+  Future<CollaboratorDocument> uploadCollaboratorDocument({
+    required String id,
+    required String category,
+    required String documentType,
+    required String name,
+    required String fileName,
+    required Uint8List fileBytes,
+    String? issuedAt,
+    String? expiresAt,
+    String? notes,
+  }) async {
+    if (_mustUseRemote) {
+      return _remote.uploadCollaboratorDocument(
+        id: id,
+        category: category,
+        documentType: documentType,
+        name: name,
+        fileName: fileName,
+        fileBytes: fileBytes,
+        issuedAt: issuedAt,
+        expiresAt: expiresAt,
+        notes: notes,
+      );
+    }
+    return _local.uploadCollaboratorDocument(
+      id: id,
+      category: category,
+      documentType: documentType,
+      name: name,
+      fileName: fileName,
+      fileBytes: fileBytes,
+      issuedAt: issuedAt,
+      expiresAt: expiresAt,
+      notes: notes,
+    );
+  }
+
+  @override
+  Future<void> deleteCollaboratorDocument(String id, String docId) async {
+    if (_mustUseRemote) {
+      return _remote.deleteCollaboratorDocument(id, docId);
+    }
+    return _local.deleteCollaboratorDocument(id, docId);
+  }
+
+
+  @override
   Future<List<CityAccount>> getCities({
     String search = '',
     String stage = '',
@@ -222,6 +296,22 @@ class HybridSyncRepository implements SyncRepository {
       return _remote.getCities(search: search, stage: stage);
     }
     return _local.getCities(search: search, stage: stage);
+  }
+
+  @override
+  Future<void> updateCityStage(String cityId, String stage) async {
+    if (_mustUseRemote) {
+      return _remote.updateCityStage(cityId, stage);
+    }
+    return _local.updateCityStage(cityId, stage);
+  }
+
+  @override
+  Future<void> updateCityPipeline(String cityId, Map<String, dynamic> data) async {
+    if (_mustUseRemote) {
+      return _remote.updateCityPipeline(cityId, data);
+    }
+    return _local.updateCityPipeline(cityId, data);
   }
 
   @override

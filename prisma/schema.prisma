@@ -273,6 +273,7 @@ model Collaborator {
   commissionAccruals        CommissionAccrual[]
   commissionPayouts         CommissionPayout[]
   fundebConsultingProjects  FundebConsultingProject[]
+  documents                 CollaboratorDocument[]
   createdAt                 DateTime              @default(now())
   updatedAt                 DateTime              @updatedAt
 
@@ -558,3 +559,26 @@ model FundebConsultingProject {
   @@index([municipalityAccountId, collaboratorId])
   @@index([collaboratorId, baseYear])
 }
+
+model CollaboratorDocument {
+  id               String        @id @default(cuid())
+  collaboratorId   String
+  collaborator     Collaborator  @relation(fields: [collaboratorId], references: [id], onDelete: Cascade)
+  category         String        // habilitacao_fiscal | habilitacao_juridica | habilitacao_tecnica | pessoal | contratual | financeiro
+  documentType     String        // cnd_federal | cnd_estadual | fgts | contrato_social | balanco | atestado | etc
+  name             String        // Nome exibido: "Certidão Negativa Federal"
+  fileName         String        // Nome do arquivo original
+  fileUrl          String        // URL do storage
+  fileSize         Int?          // bytes
+  mimeType         String?       // application/pdf, image/jpeg, etc
+  issuedAt         DateTime?     // Data de emissão
+  expiresAt        DateTime?     // Data de validade (null = sem validade)
+  notes            String?
+  uploadedByUserId String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([collaboratorId, category])
+  @@index([collaboratorId, documentType])
+}
+

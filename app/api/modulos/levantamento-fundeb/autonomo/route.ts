@@ -2,15 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { buildFundebComparativeSnapshot } from "@/core/lib/fundeb-comparative";
 import { buildGoviaMunicipioCompleto } from "@/core/lib/govia-compat";
 import { markGoviaMunicipioAccess } from "@/core/lib/govia-storage";
-import { generateFundebPdfBuffer, isFundebPdfTipo, buildFundebPdfFilename } from "@/core/lib/fundeb-pdf";
+import { generateFundebPdfBuffer, isFundebPdfTipo } from "@/core/lib/fundeb-pdf";
 import { generateComercialHtml, mapPayloadToComercialData } from "@/core/lib/fundeb-comercial-template";
 import { generateComercialPremiumPdf } from "@/core/lib/fundeb-comercial-pdf";
+import type { FundebRelatorioParametros } from "@/modules/levantamento-fundeb/types";
 
 interface AutonomoRequestBody {
   codigo_ibge?: string;
   nome?: string;
   uf?: string;
   exercicio?: number;
+  parametros?: FundebRelatorioParametros;
 }
 
 export async function POST(request: NextRequest) {
@@ -49,6 +51,7 @@ export async function POST(request: NextRequest) {
       nome: body.nome,
       uf: body.uf,
       exercicio: body.exercicio,
+      parametros: body.parametros,
     });
 
     if (!data) {
@@ -124,4 +127,3 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-

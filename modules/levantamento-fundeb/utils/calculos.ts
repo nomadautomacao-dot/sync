@@ -681,6 +681,7 @@ export function hydrateRelatorioFundeb(input: Partial<RelatorioFundeb> & { ident
   return {
     geradoEm: input.geradoEm ?? formatDateTime(new Date()),
     identificacao: input.identificacao,
+    ...(input.parametros ? { parametros: input.parametros } : {}),
     receitas,
     projecao: input.projecao ?? projecao,
     projecaoRecuperavel,
@@ -698,6 +699,7 @@ export function hydrateRelatorioFundeb(input: Partial<RelatorioFundeb> & { ident
     observacoesOperacionais: input.observacoesOperacionais ?? [],
     idebAnosIniciais: input.idebAnosIniciais ?? createDefaultIdebSeries(),
     idebAnosFinais: input.idebAnosFinais ?? createDefaultIdebSeries(),
+    idebEnsinoMedio: input.idebEnsinoMedio ?? [],
     censoEscolar: input.censoEscolar ?? createEmptyCensoEscolar(),
   } satisfies RelatorioFundeb;
 }

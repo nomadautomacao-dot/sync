@@ -86,6 +86,7 @@ class FundebLevantamentoPdfBuilder {
 
     return pdf.save();
   }
+
   static Future<Uint8List> buildLiteFromBundle(
     LevantamentoFundebBundle bundle, {
     RelatorioDirigidoMunicipio? directedReport,
@@ -220,7 +221,8 @@ class FundebLevantamentoPdfBuilder {
           rochaLogoSvg: rochaLogoSvg,
           contentFont: contentFont,
         ),
-        build: (context) => _buildEducationalBasePage(relatorio, report: report),
+        build: (context) =>
+            _buildEducationalBasePage(relatorio, report: report),
       ),
     );
     if (_tempoIntegralRows(relatorio).isNotEmpty) {
@@ -471,7 +473,7 @@ class FundebLevantamentoPdfBuilder {
           ],
         ),
       ),
-      pw.SizedBox(height: 14),
+      pw.SizedBox(height: 10),
       pw.Row(
         children: [
           pw.Expanded(
@@ -507,7 +509,7 @@ class FundebLevantamentoPdfBuilder {
           ),
         ],
       ),
-      pw.SizedBox(height: 12),
+      pw.SizedBox(height: 8),
       pw.Row(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
@@ -554,10 +556,10 @@ class FundebLevantamentoPdfBuilder {
           ),
         ],
       ),
-      pw.SizedBox(height: 12),
+      pw.SizedBox(height: 8),
       if (ibge != null && ibge.hasAny) ...[
         _liteGridPanel('IBGE oficial', _ibgeLiteRows(ibge).take(10).toList()),
-        pw.SizedBox(height: 12),
+        pw.SizedBox(height: 8),
       ],
       pw.NewPage(),
       _pageTitle('Leitura para reunião'),
@@ -609,7 +611,7 @@ class FundebLevantamentoPdfBuilder {
           ),
         ],
       ),
-      pw.SizedBox(height: 12),
+      pw.SizedBox(height: 8),
       if (timeline.isNotEmpty) ...[
         _sectionHeading('1', 'Série recente'),
         pw.SizedBox(height: 8),
@@ -637,7 +639,7 @@ class FundebLevantamentoPdfBuilder {
             3: pw.FlexColumnWidth(),
           },
         ),
-        pw.SizedBox(height: 12),
+        pw.SizedBox(height: 8),
       ],
       // Benchmark regional removido do Lite
       _sectionHeading('2', 'Checklist de abordagem'),
@@ -730,6 +732,8 @@ class FundebLevantamentoPdfBuilder {
             report.resumoExecutivo.isNotEmpty
                 ? report.resumoExecutivo
                 : report.historico.resumo,
+            fallback:
+                'Documento executivo para decisão técnica, com leitura financeira, operacional e educacional do FUNDEB.',
           );
     final metricLeftLabel = 'Receita ${relatorio.identificacao.exercicio}';
     final metricLeftValue = _moneyCompact(receitas.totalReceitas);
@@ -745,6 +749,21 @@ class FundebLevantamentoPdfBuilder {
     final metricRightValue = _moneyCompact(totalProjected);
     final metricRightHelper =
         'valor estimado com ganho potencial dos servicos especializados';
+    final responsavelTecnico = _paramText(relatorio, 'responsavelTecnico');
+    final layoutVersion = responsavelTecnico.isEmpty
+        ? _layoutVersion
+        : 'TECNICO RESPONSAVEL:${responsavelTecnico.toUpperCase()}';
+    final coverTitle = _paramText(
+      relatorio,
+      'tituloRelatorio',
+      fallback: 'Diagnóstico e análise\ncorporativa do FUNDEB',
+    );
+    final coverSubtitle = _paramText(
+      relatorio,
+      'subtituloRelatorio',
+      fallback:
+          'Leitura executiva, financeira e comparativa com base oficial consolidada no PrimeOS.',
+    );
     final rightBullets = <String>[
       'receita oficial do FUNDEB e composição das complementações federais',
       'base pública comparável por ano disponível no histórico consolidado',
@@ -821,7 +840,7 @@ class FundebLevantamentoPdfBuilder {
                                     borderRadius: pw.BorderRadius.circular(10),
                                   ),
                                   child: pw.Text(
-                                    '$_layoutVersion  |  EMITIDO $generatedAtLabel',
+                                    '$layoutVersion  |  EMITIDO $generatedAtLabel',
                                     style: pw.TextStyle(
                                       color: _orange,
                                       fontSize: 6.4,
@@ -829,7 +848,7 @@ class FundebLevantamentoPdfBuilder {
                                     ),
                                   ),
                                 ),
-                                pw.SizedBox(height: 14),
+                                pw.SizedBox(height: 10),
                                 pw.Text(
                                   'ANALISE CORPORATIVA FUNDEB',
                                   style: pw.TextStyle(
@@ -852,7 +871,7 @@ class FundebLevantamentoPdfBuilder {
                         ),
                         pw.SizedBox(height: 34),
                         pw.Text(
-                          'Diagnóstico e análise\ncorporativa do FUNDEB',
+                          coverTitle,
                           style: pw.TextStyle(
                             color: _navy,
                             fontSize: 25,
@@ -860,9 +879,9 @@ class FundebLevantamentoPdfBuilder {
                             lineSpacing: 2,
                           ),
                         ),
-                        pw.SizedBox(height: 14),
+                        pw.SizedBox(height: 10),
                         pw.Text(
-                          'Leitura executiva, financeira e comparativa com base oficial consolidada no PrimeOS.',
+                          coverSubtitle,
                           style: const pw.TextStyle(
                             color: _text,
                             fontSize: 10,
@@ -933,7 +952,7 @@ class FundebLevantamentoPdfBuilder {
                             ),
                           ],
                         ),
-                        pw.SizedBox(height: 18),
+                        pw.SizedBox(height: 8),
                         pw.Container(height: 1, color: _line),
                         pw.SizedBox(height: 8),
                         pw.Text(
@@ -967,7 +986,7 @@ class FundebLevantamentoPdfBuilder {
                             fontWeight: pw.FontWeight.bold,
                           ),
                         ),
-                        pw.SizedBox(height: 18),
+                        pw.SizedBox(height: 8),
                         pw.Text(
                           'Uma leitura clara do que evoluiu, do que recuou e de onde esta a alavanca financeira.',
                           style: pw.TextStyle(
@@ -977,7 +996,7 @@ class FundebLevantamentoPdfBuilder {
                             lineSpacing: 2,
                           ),
                         ),
-                        pw.SizedBox(height: 18),
+                        pw.SizedBox(height: 8),
                         pw.Text(
                           thesis,
                           style: const pw.TextStyle(
@@ -1105,6 +1124,7 @@ class FundebLevantamentoPdfBuilder {
     final upside = relatorio.upsideCondicionado;
     final gainRecuperavel = relatorio.projecaoRecuperavel.totalGanho;
     final gainRecuperavelPct = relatorio.projecaoRecuperavel.ganhoPercentual;
+    final observacaoAnalise = _paramText(relatorio, 'observacaoAnalise');
 
     final bullets = <String>[
       'Gestor identificado na base atual: $prefeito ($partido).',
@@ -1125,7 +1145,8 @@ class FundebLevantamentoPdfBuilder {
     final opening =
         'Ilmo(a). Sr(a). $prefeito, gestor(a) municipal de ${_municipioLabel(relatorio)}. '
         'Este relatório organiza a leitura do FUNDEB de ${relatorio.identificacao.exercicio} em linguagem direta: quanto o município recebeu, '
-        'qual é a estimativa para o próximo ciclo e quais pontos precisam ser conferidos nas bases oficiais antes de qualquer decisão.';
+        'qual é a estimativa para o próximo ciclo e quais pontos precisam ser conferidos nas bases oficiais antes de qualquer decisão.'
+        '${observacaoAnalise.isNotEmpty ? ' $observacaoAnalise' : ''}';
 
     final analysis =
         'Para ${relatorio.identificacao.exercicio}, a receita considerada é de ${_money(receitas.totalReceitas)}. '
@@ -1135,9 +1156,9 @@ class FundebLevantamentoPdfBuilder {
 
     return [
       _pageTitle('Abertura Executiva'),
-      pw.SizedBox(height: 18),
+      pw.SizedBox(height: 8),
       _callout(opening, accent: _blue, background: _softBlue),
-      pw.SizedBox(height: 18),
+      pw.SizedBox(height: 8),
       pw.Row(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
@@ -1162,15 +1183,15 @@ class FundebLevantamentoPdfBuilder {
           ),
         ],
       ),
-      pw.SizedBox(height: 12),
+      pw.SizedBox(height: 8),
       _highlightBox(
         'Ganho potencial anual estimado',
         _money(gain),
         '${_percent(gainPct)} sobre a base oficial atual do FUNDEB.',
       ),
-      pw.SizedBox(height: 18),
+      pw.SizedBox(height: 8),
       _callout(analysis, accent: _orange, background: _softOrange),
-      pw.SizedBox(height: 18),
+      pw.SizedBox(height: 8),
       _bulletBox('Leitura executiva', bullets),
     ];
   }
@@ -1193,6 +1214,33 @@ class FundebLevantamentoPdfBuilder {
       ['Microrregiao', _safe(ident.microrregiao)],
       ['Metodologia', 'Análise comparativa baseada em dados oficiais'],
     ];
+    _appendParamRow(
+      rows,
+      relatorio,
+      'secretarioEducacao',
+      'Secretário(a) de Educação',
+    );
+    _appendParamRow(rows, relatorio, 'orgaoDemandante', 'Órgão demandante');
+    _appendParamRow(
+      rows,
+      relatorio,
+      'responsavelTecnico',
+      'Responsável técnico',
+    );
+    _appendParamRow(
+      rows,
+      relatorio,
+      'numeroProcesso',
+      'Processo administrativo',
+    );
+    _appendParamRow(
+      rows,
+      relatorio,
+      'periodoReferencia',
+      'Período de referência',
+    );
+    _appendParamRow(rows, relatorio, 'cenarioAnalise', 'Cenário de análise');
+    _appendAdditionalParamRows(rows, relatorio);
     final receitasRows = [
       [
         'Contribuição do Município',
@@ -1237,7 +1285,7 @@ class FundebLevantamentoPdfBuilder {
       _mutedText(
         'Valores estimados conforme Portaria FNDE vigente e dados consolidados do exercício.',
       ),
-      pw.SizedBox(height: 12),
+      pw.SizedBox(height: 8),
       _table(
         headers: const [
           'Componente da Receita',
@@ -1264,15 +1312,20 @@ class FundebLevantamentoPdfBuilder {
     final totalProjected = proj.totalProjetado;
     final gainRecuperavel = recuperavel.totalGanho;
     final gainRecuperavelPct = recuperavel.ganhoPercentual;
+    final metodologiaComplementar = _paramText(
+      relatorio,
+      'metodologiaComplementar',
+    );
     final methodologyText =
         'A estimativa abaixo mostra uma leitura possível para o próximo ciclo, usando a receita atual, o histórico disponível e os pontos de conferência do FUNDEB. '
         'Ela não substitui a validação nas bases oficiais: serve para mostrar onde pode haver diferença de receita e o que precisa ser revisado. '
         'Referência usada: ${_safe(proj.metodologia, fallback: 'dados oficiais e histórico disponível')}.'
+        '${metodologiaComplementar.isNotEmpty ? ' Metodologia complementar: $metodologiaComplementar.' : ''}'
         '${gainRecuperavel > 0 && (gainRecuperavel - gain).abs() > 0.01 ? ' Os valores já sinalizados nas bases atuais somam ${_money(gainRecuperavel)}.' : ''}';
 
     return [
       _sectionHeading('3', 'Estimativa para o próximo ciclo'),
-      pw.SizedBox(height: 14),
+      pw.SizedBox(height: 10),
       pw.Row(
         children: [
           pw.Expanded(
@@ -1308,7 +1361,7 @@ class FundebLevantamentoPdfBuilder {
           ),
         ],
       ),
-      pw.SizedBox(height: 14),
+      pw.SizedBox(height: 10),
       _table(
         headers: const [
           'Componente',
@@ -1358,7 +1411,7 @@ class FundebLevantamentoPdfBuilder {
         'Potencial de incremento: ${_money(gain)} (+${_percent(gainPct)})',
       ),
       if (gainRecuperavel > 0 && (gainRecuperavel - gain).abs() > 0.01) ...[
-        pw.SizedBox(height: 14),
+        pw.SizedBox(height: 10),
         _callout(
           'Camada recuperavel evidenciada nas bases oficiais: ${_money(gainRecuperavel)} (+${_percent(gainRecuperavelPct)} sobre a base atual). '
           'Os valores projetados têm caráter estimativo e dependem de validação documental nas bases oficiais do FUNDEB e dos sistemas MEC/FNDE.',
@@ -1400,7 +1453,7 @@ class FundebLevantamentoPdfBuilder {
     if (perfil != null &&
         _safe(perfil.habilitacaoVaat, fallback: '').isNotEmpty) {
       bullets.add(
-        'Habilitacao VAAT atual: ${_simplifyVaatStatus(perfil.habilitacaoVaat)}.',
+        'Habilitação VAAT atual: ${_simplifyVaatStatus(perfil.habilitacaoVaat)}.',
       );
     }
     if (bullets.isEmpty) {
@@ -1410,8 +1463,8 @@ class FundebLevantamentoPdfBuilder {
     }
 
     return [
-      _pageTitle('PARTE I - RECEITA E PROJECAO'),
-      pw.SizedBox(height: 14),
+      _pageTitle('PARTE I - RECEITA E PROJEÇÃO'),
+      pw.SizedBox(height: 10),
       _sectionHeading('5', 'Indicadores de Eficiência Arrecadatória'),
       pw.SizedBox(height: 10),
       _table(
@@ -1452,7 +1505,7 @@ class FundebLevantamentoPdfBuilder {
                 : _percent(perfil!.crecheMunicipalPorHabitante!),
           ],
           [
-            'Habilitacao VAAT',
+            'Habilitação VAAT',
             perfil == null ? '-' : _simplifyVaatStatus(perfil.habilitacaoVaat),
           ],
           [
@@ -1468,9 +1521,9 @@ class FundebLevantamentoPdfBuilder {
         ],
         widths: const {0: pw.FlexColumnWidth(60), 1: pw.FlexColumnWidth(40)},
       ),
-      pw.SizedBox(height: 18),
+      pw.SizedBox(height: 8),
       _sectionHeading('5.1', 'Fundamentação dos Indicadores'),
-      pw.SizedBox(height: 12),
+      pw.SizedBox(height: 8),
       _bulletBox('Análise Técnica', bullets),
       if (report != null) ..._buildPerfilIBGEGrid(report),
     ];
@@ -1500,7 +1553,7 @@ class FundebLevantamentoPdfBuilder {
 
     return [
       _pageTitle('ANEXO - RASTREABILIDADE E FONTES'),
-      pw.SizedBox(height: 12),
+      pw.SizedBox(height: 8),
       _sectionHeading('A.1', 'Mapa de fontes'),
       pw.SizedBox(height: 10),
       _table(
@@ -1521,9 +1574,9 @@ class FundebLevantamentoPdfBuilder {
     final proj = _projection(relatorio);
     return [
       _sectionHeading('4', 'Cronograma Mensal Projetado'),
-      pw.SizedBox(height: 12),
+      pw.SizedBox(height: 8),
       _table(
-        headers: const ['Mes', 'Valor Projetado (R\$)', 'Participacao (%)'],
+        headers: const ['Mês', 'Valor Projetado (R\$)', 'Participação (%)'],
         rows: relatorio.cronogramaVAAF
             .map(
               (item) => [
@@ -1560,12 +1613,12 @@ class FundebLevantamentoPdfBuilder {
 
     return [
       _pageTitle('PARTE II - SITUAÇÃO OPERACIONAL MEC/FNDE'),
-      pw.SizedBox(height: 12),
+      pw.SizedBox(height: 8),
       _sectionHeading('6', 'Sistemas, Obras e Programas Federais'),
       pw.SizedBox(height: 10),
       if (systemsRows.isNotEmpty)
         _table(
-          headers: const ['Instituicao', 'Sistema', 'Situacao Cadastral'],
+          headers: const ['Instituição', 'Sistema', 'Situação Cadastral'],
           rows: systemsRows,
           widths: const {
             0: pw.FlexColumnWidth(12),
@@ -1580,15 +1633,15 @@ class FundebLevantamentoPdfBuilder {
           background: _softOrange,
         ),
       if (pddeRows.isNotEmpty) ...[
-        pw.SizedBox(height: 18),
-        _sectionHeading('7', 'Historico de Repasses PDDE'),
+        pw.SizedBox(height: 8),
+        _sectionHeading('7', 'Histórico de Repasses PDDE'),
         pw.SizedBox(height: 10),
         _table(
           headers: const ['Ano', 'Valor Repassado'],
           rows: pddeRows,
           widths: const {0: pw.FlexColumnWidth(20), 1: pw.FlexColumnWidth(80)},
         ),
-        pw.SizedBox(height: 12),
+        pw.SizedBox(height: 8),
         _callout(
           'O histórico de repasses do PDDE reforça a leitura operacional do ente e oferece evidência concreta da movimentação recente de recursos federais na rede pública local.',
           accent: _orange,
@@ -1602,14 +1655,14 @@ class FundebLevantamentoPdfBuilder {
 
   static List<pw.Widget> _buildObservacoesPage(RelatorioFundeb relatorio) {
     return [
-      _sectionHeading('8', 'Observacoes Operacionais'),
+      _sectionHeading('8', 'Observações Operacionais'),
       pw.SizedBox(height: 10),
       ...relatorio.observacoesOperacionais.map(
         (obs) => pw.Padding(
           padding: const pw.EdgeInsets.only(bottom: 10),
           child: _callout(
             obs,
-            title: 'Observacao Operacional',
+            title: 'Observação Operacional',
             accent: _orange,
             background: _softOrange,
           ),
@@ -1626,7 +1679,7 @@ class FundebLevantamentoPdfBuilder {
     if (censo == null) {
       return [
         _pageTitle('PARTE III - INDICADORES EDUCACIONAIS'),
-        pw.SizedBox(height: 12),
+        pw.SizedBox(height: 8),
         _callout(
           'Os dados de Censo Escolar ainda não foram consolidados para esta versão.',
           accent: _orange,
@@ -1641,7 +1694,7 @@ class FundebLevantamentoPdfBuilder {
       _pageTitle('PARTE III - INDICADORES EDUCACIONAIS'),
       pw.SizedBox(height: 10),
       _sectionHeading('9', 'Censo Escolar e IDEB'),
-      pw.SizedBox(height: 12),
+      pw.SizedBox(height: 8),
       pw.Row(
         children: [
           pw.Expanded(
@@ -1670,12 +1723,13 @@ class FundebLevantamentoPdfBuilder {
               background: _softBlue,
             ),
           ),
-          if (report?.recursosPorAluno?.valor != null) ...[
+          if (report?.recursosPorAluno != null &&
+              report!.recursosPorAluno!.valor > 0) ...[
             pw.SizedBox(width: 10),
             pw.Expanded(
               child: _metricCard(
-                'RECURSO POR ALUNO MUNICIPAL',
-                _money(report!.recursosPorAluno!.valor!),
+                'RECURSO POR ALUNO MUNICIPAL (R\$)',
+                _integerFromDouble(report.recursosPorAluno!.valor),
                 null,
                 background: _softGreen,
                 valueColor: _green,
@@ -1684,24 +1738,33 @@ class FundebLevantamentoPdfBuilder {
           ],
         ],
       ),
-      pw.SizedBox(height: 18),
+      pw.SizedBox(height: 8),
       _sectionHeading('9.1', 'Distribuição de Matrículas por Etapa'),
       pw.SizedBox(height: 10),
       _table(
-        headers: const ['Etapa de Ensino', 'Matrículas'],
+        headers: const ['Etapa de Ensino', 'Municipal', 'Rede Pública'],
         rows: [
-          ['Educação Infantil', _integer(etapas.educacaoInfantil)],
-          ['Ensino Fundamental', _integer(etapas.ensinoFundamental)],
-          ['Ensino Médio', _integer(etapas.ensinoMedio)],
-          ['EJA', _integer(etapas.eja)],
-          ['Educação Especial', _integer(etapas.educacaoEspecial)],
+          ['Educação Infantil', _integer(etapas.educacaoInfantil), '—'],
+          ['Ensino Fundamental', _integer(etapas.ensinoFundamental), '—'],
+          [
+            'Ensino Médio',
+            _integer(etapas.ensinoMedio),
+            etapas.ensinoMedioPublica != null && etapas.ensinoMedioPublica! > 0
+                ? _integer(etapas.ensinoMedioPublica!)
+                : '—',
+          ],
+          ['EJA', _integer(etapas.eja), '—'],
+          ['Educação Especial', _integer(etapas.educacaoEspecial), '—'],
         ],
-        widths: const {0: pw.FlexColumnWidth(58), 1: pw.FlexColumnWidth(42)},
+        widths: const {
+          0: pw.FlexColumnWidth(46),
+          1: pw.FlexColumnWidth(27),
+          2: pw.FlexColumnWidth(27),
+        },
       ),
       if (censo.recorte == 'municipal' && etapas.ensinoMedio == 0) ...[
         pw.SizedBox(height: 10),
-        if (etapas.ensinoMedioPublica != null &&
-            etapas.ensinoMedioPublica! > 0)
+        if (etapas.ensinoMedioPublica != null && etapas.ensinoMedioPublica! > 0)
           _callout(
             'A rede pública de ${_municipioLabel(relatorio)} conta com ${_integer(etapas.ensinoMedioPublica!)} matrículas no Ensino Médio (rede estadual/federal). '
             'Essas matrículas não são consideradas no cálculo do FUNDEB municipal.',
@@ -1715,23 +1778,150 @@ class FundebLevantamentoPdfBuilder {
             background: _softBlue,
           ),
       ],
-      pw.SizedBox(height: 18),
-      _sectionHeading('9.2', 'Detalhamento da Rede Publica'),
+      pw.SizedBox(height: 8),
+      _sectionHeading('9.2', 'Detalhamento da Rede Pública'),
       pw.SizedBox(height: 10),
       _table(
-        headers: const ['Recorte detalhado', 'Matrículas'],
+        headers: const ['Recorte detalhado', 'Municipal', 'Rede Pública'],
         rows: [
-          ['Creche', _integer(detalhadas.creche)],
-          ['Pre-escola', _integer(detalhadas.preEscola)],
-          ['Anos iniciais do Fundamental', _integer(detalhadas.anosIniciais)],
-          ['Anos finais do Fundamental', _integer(detalhadas.anosFinais)],
-          if (!(censo.recorte == 'municipal' && etapas.ensinoMedio == 0))
-            ['Ensino Médio', _integer(etapas.ensinoMedio)],
-          ['EJA', _integer(etapas.eja)],
-          ['Educação Especial', _integer(etapas.educacaoEspecial)],
+          ['Creche', _integer(detalhadas.creche), '—'],
+          ['Pré-escola', _integer(detalhadas.preEscola), '—'],
+          [
+            'Anos iniciais do Fundamental',
+            _integer(detalhadas.anosIniciais),
+            '—',
+          ],
+          [
+            'Anos finais do Fundamental',
+            _integer(detalhadas.anosFinais),
+            detalhadas.anosFinaisPublica != null &&
+                    detalhadas.anosFinaisPublica! > 0
+                ? _integer(detalhadas.anosFinaisPublica!)
+                : '—',
+          ],
+          [
+            'Ensino Médio',
+            _integer(etapas.ensinoMedio),
+            etapas.ensinoMedioPublica != null && etapas.ensinoMedioPublica! > 0
+                ? _integer(etapas.ensinoMedioPublica!)
+                : '—',
+          ],
+          ['EJA', _integer(etapas.eja), '—'],
+          ['Educação Especial', _integer(etapas.educacaoEspecial), '—'],
         ],
-        widths: const {0: pw.FlexColumnWidth(64), 1: pw.FlexColumnWidth(36)},
+        widths: const {
+          0: pw.FlexColumnWidth(46),
+          1: pw.FlexColumnWidth(27),
+          2: pw.FlexColumnWidth(27),
+        },
       ),
+      if (detalhadas.anosFinais == 0 &&
+          detalhadas.anosFinaisPublica != null &&
+          detalhadas.anosFinaisPublica! > 0) ...[
+        pw.SizedBox(height: 8),
+        _callout(
+          'Os anos finais do Ensino Fundamental (${_integer(detalhadas.anosFinaisPublica!)} matrículas) '
+          'são operados pela rede estadual/federal neste município.',
+          accent: _blue,
+          background: _softBlue,
+        ),
+      ],
+      // Valor Aluno Oficial VAAF (MEC/FNDE)
+      if (report?.valorAlunoOficial != null) ...[
+        pw.SizedBox(height: 8),
+        _sectionHeading(
+          '9.3',
+          'Valor Aluno/Ano Oficial VAAF — ${report!.valorAlunoOficial!.uf}',
+        ),
+        pw.SizedBox(height: 6),
+        _mutedText(
+          'Portaria Interministerial MEC/MF nº 14, de 29/12/2025 (Anexo I) — Exercício 2026',
+        ),
+        pw.SizedBox(height: 10),
+        _table(
+          headers: const ['Etapa de Ensino', 'Valor/Aluno Ano (R\$)'],
+          rows: [
+            [
+              'Creche Integral (pública)',
+              _money(report.valorAlunoOficial!.crecheIntegralPublica),
+            ],
+            [
+              'Creche Parcial (pública)',
+              _money(report.valorAlunoOficial!.crecheParcialPublica),
+            ],
+            [
+              'Pré-Escola Integral (pública)',
+              _money(report.valorAlunoOficial!.preEscolaIntegralPublica),
+            ],
+            [
+              'Pré-Escola Parcial (pública)',
+              _money(report.valorAlunoOficial!.preEscolaParcialPublica),
+            ],
+            [
+              'Fundamental Integral',
+              _money(report.valorAlunoOficial!.fundamentalIntegral),
+            ],
+            [
+              'Fundamental Anos Iniciais (parcial)',
+              _money(report.valorAlunoOficial!.fundamentalAnosIniciais),
+            ],
+            [
+              'Fundamental Anos Finais (parcial)',
+              _money(report.valorAlunoOficial!.fundamentalAnosFinais),
+            ],
+            ['EJA', _money(report.valorAlunoOficial!.eja)],
+          ],
+          widths: const {0: pw.FlexColumnWidth(60), 1: pw.FlexColumnWidth(40)},
+        ),
+        // Comparison: actual vs official
+        if (report.recursosPorAluno != null) ...[
+          pw.SizedBox(height: 8),
+          pw.Row(
+            children: [
+              pw.Expanded(
+                child: _metricCard(
+                  'RECURSO REAL POR ALUNO',
+                  _money(report.recursosPorAluno!.valor),
+                  'Receita FUNDEB ÷ Matrículas',
+                  background: _softBlue,
+                ),
+              ),
+              pw.SizedBox(width: 8),
+              pw.Expanded(
+                child: _metricCard(
+                  'VAAF OFICIAL (Fund. AI)',
+                  _money(report.valorAlunoOficial!.fundamentalAnosIniciais),
+                  'Referência MEC para ${report.valorAlunoOficial!.uf}',
+                  background: _softGreen,
+                  valueColor: _green,
+                ),
+              ),
+              pw.SizedBox(width: 8),
+              pw.Expanded(
+                child: (() {
+                  final diff =
+                      report.recursosPorAluno!.valor -
+                      report.valorAlunoOficial!.fundamentalAnosIniciais;
+                  final pct =
+                      (diff /
+                      report.valorAlunoOficial!.fundamentalAnosIniciais *
+                      100);
+                  final label = diff >= 0
+                      ? '+${pct.toStringAsFixed(1)}% acima'
+                      : '${pct.toStringAsFixed(1)}% abaixo';
+                  return _metricCard(
+                    'DIFERENÇA',
+                    _money(diff.abs()),
+                    label,
+                    background: diff >= 0 ? _softGreen : _softOrange,
+                    valueColor: diff >= 0 ? _green : _orange,
+                  );
+                })(),
+              ),
+            ],
+          ),
+        ],
+      ],
     ];
   }
 
@@ -1739,7 +1929,7 @@ class FundebLevantamentoPdfBuilder {
     final censo = relatorio.censoEscolar;
     final tempo = censo?.tempoIntegral;
     return [
-      _pageTitle('PARTE III - INDICADORES EDUCACIONAIS'),
+      _pageTitle('PARTE III - INDICADORES EDUCACIONAIS (cont.)'),
       pw.SizedBox(height: 10),
       _sectionHeading('10', 'Cobertura em Tempo Integral'),
       pw.SizedBox(height: 10),
@@ -1753,7 +1943,7 @@ class FundebLevantamentoPdfBuilder {
           3: pw.FlexColumnWidth(18),
         },
       ),
-      pw.SizedBox(height: 14),
+      pw.SizedBox(height: 10),
       _callout(
         'A rede pública de ${_municipioLabel(relatorio)} registra ${_integerNullable(tempo?.total)} matrículas em tempo integral '
         'sobre uma base de ${_integerNullable(censo?.totalMatriculas)} matrículas públicas no Censo Escolar. '
@@ -1786,24 +1976,36 @@ class FundebLevantamentoPdfBuilder {
       final filtered = items.where(
         (i) => i.metaProjetada != null || i.idebVerificado != null,
       );
-      return filtered.map((item) => [
-        '${item.ano}',
-        _nullableNumber(item.metaProjetada),
-        _nullableNumber(item.idebVerificado),
-        _idebStatusLabel(item),
-      ]).toList();
+      return filtered
+          .map(
+            (item) => [
+              '${item.ano}',
+              _nullableNumber(item.metaProjetada),
+              _nullableNumber(item.idebVerificado),
+              _idebStatusLabel(item),
+            ],
+          )
+          .toList();
     }
 
     final rowsIniciais = buildEtapaRows(relatorio.idebAnosIniciais);
     final rowsFinais = buildEtapaRows(relatorio.idebAnosFinais);
     final rowsEM = buildEtapaRows(relatorio.idebEnsinoMedio);
-    final hasAnyData = rowsIniciais.isNotEmpty || rowsFinais.isNotEmpty || rowsEM.isNotEmpty;
-    final hasOnlyLatest = hasAnyData &&
-        relatorio.idebAnosIniciais.where((i) => i.idebVerificado != null).length <= 1 &&
-        relatorio.idebAnosFinais.where((i) => i.idebVerificado != null).length <= 1;
+    final hasAnyData =
+        rowsIniciais.isNotEmpty || rowsFinais.isNotEmpty || rowsEM.isNotEmpty;
+    final hasOnlyLatest =
+        hasAnyData &&
+        relatorio.idebAnosIniciais
+                .where((i) => i.idebVerificado != null)
+                .length <=
+            1 &&
+        relatorio.idebAnosFinais
+                .where((i) => i.idebVerificado != null)
+                .length <=
+            1;
 
     return [
-      _pageTitle('PARTE III - INDICADORES EDUCACIONAIS'),
+      _pageTitle('PARTE III - INDICADORES EDUCACIONAIS (cont.)'),
       pw.SizedBox(height: 10),
       _sectionHeading('11', 'Série Histórica do IDEB'),
       pw.SizedBox(height: 10),
@@ -1814,25 +2016,15 @@ class FundebLevantamentoPdfBuilder {
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
             if (latestIniciais != null)
-              pw.Expanded(
-                child: _idebKpiCard(
-                  'Anos Iniciais',
-                  latestIniciais,
-                ),
-              ),
+              pw.Expanded(child: _idebKpiCard('Anos Iniciais', latestIniciais)),
             if (latestIniciais != null && latestFinais != null)
               pw.SizedBox(width: 12),
             if (latestFinais != null)
-              pw.Expanded(
-                child: _idebKpiCard(
-                  'Anos Finais',
-                  latestFinais,
-                ),
-              ),
+              pw.Expanded(child: _idebKpiCard('Anos Finais', latestFinais)),
           ],
         ),
       if (latestIniciais != null || latestFinais != null)
-        pw.SizedBox(height: 14),
+        pw.SizedBox(height: 10),
 
       // Context callout if only latest year available
       if (hasOnlyLatest)
@@ -1843,15 +2035,19 @@ class FundebLevantamentoPdfBuilder {
           accent: _orange,
           background: _softOrange,
         ),
-      if (hasOnlyLatest)
-        pw.SizedBox(height: 12),
+      if (hasOnlyLatest) pw.SizedBox(height: 8),
 
       // Tables
       if (rowsIniciais.isNotEmpty) ...[
         _sectionHeading('11.1', 'Anos Iniciais do Ensino Fundamental'),
         pw.SizedBox(height: 8),
         _table(
-          headers: const ['Ano', 'Meta Projetada', 'IDEB Verificado', 'Situação'],
+          headers: const [
+            'Ano',
+            'Meta Projetada',
+            'IDEB Verificado',
+            'Situação',
+          ],
           rows: rowsIniciais,
           widths: const {
             0: pw.FlexColumnWidth(15),
@@ -1860,13 +2056,18 @@ class FundebLevantamentoPdfBuilder {
             3: pw.FlexColumnWidth(35),
           },
         ),
-        pw.SizedBox(height: 14),
+        pw.SizedBox(height: 10),
       ],
       if (rowsFinais.isNotEmpty) ...[
         _sectionHeading('11.2', 'Anos Finais do Ensino Fundamental'),
         pw.SizedBox(height: 8),
         _table(
-          headers: const ['Ano', 'Meta Projetada', 'IDEB Verificado', 'Situação'],
+          headers: const [
+            'Ano',
+            'Meta Projetada',
+            'IDEB Verificado',
+            'Situação',
+          ],
           rows: rowsFinais,
           widths: const {
             0: pw.FlexColumnWidth(15),
@@ -1878,7 +2079,7 @@ class FundebLevantamentoPdfBuilder {
       ],
       // Ensino Médio (informational — state/federal network)
       if (rowsEM.isNotEmpty) ...[
-        pw.SizedBox(height: 14),
+        pw.SizedBox(height: 10),
         _sectionHeading('11.3', 'Ensino Médio (Rede Estadual/Federal)'),
         pw.SizedBox(height: 4),
         _callout(
@@ -1888,7 +2089,12 @@ class FundebLevantamentoPdfBuilder {
         ),
         pw.SizedBox(height: 8),
         _table(
-          headers: const ['Ano', 'Meta Projetada', 'IDEB Verificado', 'Situação'],
+          headers: const [
+            'Ano',
+            'Meta Projetada',
+            'IDEB Verificado',
+            'Situação',
+          ],
           rows: rowsEM,
           widths: const {
             0: pw.FlexColumnWidth(15),
@@ -1921,10 +2127,7 @@ class FundebLevantamentoPdfBuilder {
       decoration: pw.BoxDecoration(
         color: abaixo ? _softOrange : _softGreen,
         borderRadius: pw.BorderRadius.circular(6),
-        border: pw.Border.all(
-          color: abaixo ? _orange : _green,
-          width: 0.5,
-        ),
+        border: pw.Border.all(color: abaixo ? _orange : _green, width: 0.5),
       ),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.center,
@@ -1959,8 +2162,8 @@ class FundebLevantamentoPdfBuilder {
               acima
                   ? '+${(verificado! - meta).toStringAsFixed(1).replaceAll('.', ',')} acima da meta'
                   : abaixo
-                      ? '${(verificado! - meta).toStringAsFixed(1).replaceAll('.', ',')} abaixo da meta'
-                      : 'Meta: ${meta.toStringAsFixed(1).replaceAll('.', ',')}',
+                  ? '${(verificado! - meta).toStringAsFixed(1).replaceAll('.', ',')} abaixo da meta'
+                  : 'Meta: ${meta.toStringAsFixed(1).replaceAll('.', ',')}',
               style: pw.TextStyle(
                 fontSize: 7,
                 fontWeight: pw.FontWeight.bold,
@@ -1987,8 +2190,8 @@ class FundebLevantamentoPdfBuilder {
     final ind = report.indicadoresAprendizagem;
     if (ind == null || !ind.disponivel) {
       return [
-        _pageTitle('PARTE III - INDICADORES EDUCACIONAIS'),
-        pw.SizedBox(height: 12),
+        _pageTitle('PARTE III - INDICADORES EDUCACIONAIS (cont.)'),
+        pw.SizedBox(height: 8),
         _callout(
           'Os indicadores de aprendizagem ainda não estão disponíveis para este município.',
           accent: _orange,
@@ -2014,10 +2217,10 @@ class FundebLevantamentoPdfBuilder {
     }
 
     return [
-      _pageTitle('PARTE III - INDICADORES EDUCACIONAIS'),
+      _pageTitle('PARTE III - INDICADORES EDUCACIONAIS (cont.)'),
       pw.SizedBox(height: 10),
       _sectionHeading('11.1', 'Indicadores de Aprendizagem$anoLabel'),
-      pw.SizedBox(height: 12),
+      pw.SizedBox(height: 8),
       _sectionHeading('11.1a', 'Anos Iniciais'),
       pw.SizedBox(height: 8),
       _table(
@@ -2025,7 +2228,7 @@ class FundebLevantamentoPdfBuilder {
         rows: etapaRows(ind.anosIniciais),
         widths: const {0: pw.FlexColumnWidth(60), 1: pw.FlexColumnWidth(40)},
       ),
-      pw.SizedBox(height: 14),
+      pw.SizedBox(height: 10),
       _sectionHeading('11.1b', 'Anos Finais'),
       pw.SizedBox(height: 8),
       _table(
@@ -2034,7 +2237,7 @@ class FundebLevantamentoPdfBuilder {
         widths: const {0: pw.FlexColumnWidth(60), 1: pw.FlexColumnWidth(40)},
       ),
       if (ind.distorcaoIdadeSerie != null) ...[
-        pw.SizedBox(height: 14),
+        pw.SizedBox(height: 10),
         _sectionHeading('11.1c', 'Distorção Idade-Série'),
         pw.SizedBox(height: 8),
         _table(
@@ -2053,15 +2256,11 @@ class FundebLevantamentoPdfBuilder {
               _nullableNumber(ind.distorcaoIdadeSerie!.anosFinais),
             ],
           ],
-          widths: const {
-            0: pw.FlexColumnWidth(60),
-            1: pw.FlexColumnWidth(40),
-          },
+          widths: const {0: pw.FlexColumnWidth(60), 1: pw.FlexColumnWidth(40)},
         ),
       ],
-      pw.SizedBox(height: 12),
-      if (ind.fonte != null)
-        _mutedText('Fonte: ${ind.fonte}'),
+      pw.SizedBox(height: 8),
+      if (ind.fonte != null) _mutedText('Fonte: ${ind.fonte}'),
       if (ind.fonteDistorcao != null) ...[
         pw.SizedBox(height: 4),
         _mutedText('Fonte distorção: ${ind.fonteDistorcao}'),
@@ -2075,8 +2274,8 @@ class FundebLevantamentoPdfBuilder {
     final infra = report.infraestruturaEscolar;
     if (infra == null || !infra.disponivel) {
       return [
-        _pageTitle('PARTE III - INDICADORES EDUCACIONAIS'),
-        pw.SizedBox(height: 12),
+        _pageTitle('PARTE III - INDICADORES EDUCACIONAIS (cont.)'),
+        pw.SizedBox(height: 8),
         _callout(
           'Os dados de infraestrutura escolar ainda não estão disponíveis para este município.',
           accent: _orange,
@@ -2090,17 +2289,17 @@ class FundebLevantamentoPdfBuilder {
         : '';
 
     return [
-      _pageTitle('PARTE III - INDICADORES EDUCACIONAIS'),
+      _pageTitle('PARTE III - INDICADORES EDUCACIONAIS (cont.)'),
       pw.SizedBox(height: 10),
       _sectionHeading('11.2', 'Infraestrutura da Rede Pública$anoLabel'),
-      pw.SizedBox(height: 12),
+      pw.SizedBox(height: 8),
       _callout(
-        'Total de escolas públicas: ${_integerNullable(infra.totalEscolasPublicas)}'
+        'Total de escolas públicas (todas as redes): ${_integerNullable(infra.totalEscolasPublicas)}'
         '${infra.anoReferencia != null ? '  |  Ano de referência: ${infra.anoReferencia}' : ''}',
         accent: _blue,
         background: _softBlue,
       ),
-      pw.SizedBox(height: 12),
+      pw.SizedBox(height: 8),
       _table(
         headers: const ['Indicador', 'Escolas', 'Cobertura (%)'],
         rows: infra.indicadores
@@ -2149,7 +2348,7 @@ class FundebLevantamentoPdfBuilder {
       _pageTitle('PARTE IV - ANÁLISE ESTRATÉGICA'),
       pw.SizedBox(height: 10),
       _sectionHeading('12', 'Análise Estratégica'),
-      pw.SizedBox(height: 12),
+      pw.SizedBox(height: 8),
       ...sections.expand(
         (item) => [
           pw.Text(
@@ -2169,7 +2368,7 @@ class FundebLevantamentoPdfBuilder {
               lineSpacing: 1.8,
             ),
           ),
-          pw.SizedBox(height: 14),
+          pw.SizedBox(height: 10),
         ],
       ),
     ];
@@ -2179,39 +2378,37 @@ class FundebLevantamentoPdfBuilder {
     RelatorioDirigidoMunicipio report,
   ) {
     return [
-      _pageTitle('PARTE V - CADERNO TECNICO'),
-      pw.SizedBox(height: 12),
+      _pageTitle('PARTE V - CADERNO TÉCNICO'),
+      pw.SizedBox(height: 8),
       _callout(
         report.resumoExecutivo,
         title: 'Nota técnica de validação',
         accent: _blue,
         background: _softBlue,
       ),
-      pw.SizedBox(height: 14),
-      _sectionHeading('16', 'Recomendacoes Tecnicas'),
       pw.SizedBox(height: 10),
-      _bulletBox('Recomendacoes Tecnicas', const <String>[
-        'Validar a base de calculo do ICMS e a aplicacao do percentual minimo de 28% com assessoria juridico-tributaria especializada.',
+      _sectionHeading('16', 'Recomendações Técnicas'),
+      pw.SizedBox(height: 10),
+      _bulletBox('Recomendações Técnicas', const <String>[
+        'Validar a base de cálculo do ICMS e a aplicação do percentual mínimo de 28% com assessoria jurídico-tributária especializada.',
         'Conferir documentalmente as bases que determinam a captura de VAAF, VAAT e VAAR junto ao FNDE.',
         'Verificar atos normativos locais referentes à oferta de EJA, educação em tempo integral e eventuais parcerias intersetoriais com impacto no Censo Escolar.',
       ]),
-      pw.SizedBox(height: 14),
-      _sectionHeading('17', 'Proximos Passos'),
+      pw.SizedBox(height: 10),
+      _sectionHeading('17', 'Próximos Passos'),
       pw.SizedBox(height: 10),
       _bulletBox(
-        'Proximos Passos',
+        'Próximos Passos',
         report.proximosPassos.isEmpty
             ? const <String>['Sem proximos passos formalizados nesta versao.']
             : report.proximosPassos,
       ),
-      pw.SizedBox(height: 14),
-      _sectionHeading('18', 'Alertas Tecnicos'),
-      pw.SizedBox(height: 10),
-      _bulletBox('Alertas Tecnicos', [
-        'Os valores projetados têm caráter estimativo e dependem de validação documental nas bases oficiais do FUNDEB e dos sistemas MEC/FNDE.',
-        'Não atribuir variação de receita a falha de gestão sem evidência oficial devidamente apurada.',
-        ...report.alertasJuridicos,
-      ]),
+      if (report.alertasJuridicos.isNotEmpty) ...[
+        pw.SizedBox(height: 10),
+        _sectionHeading('18', 'Alertas Técnicos'),
+        pw.SizedBox(height: 10),
+        _bulletBox('Alertas Técnicos', report.alertasJuridicos),
+      ],
     ];
   }
 
@@ -2219,8 +2416,8 @@ class FundebLevantamentoPdfBuilder {
     RelatorioDirigidoMunicipio report,
   ) {
     return [
-      _pageTitle('PARTE V - CADERNO TECNICO'),
-      pw.SizedBox(height: 12),
+      _pageTitle('PARTE V - CADERNO TÉCNICO (cont.)'),
+      pw.SizedBox(height: 8),
       _sectionHeading('15', 'Perfil da Gestão Municipal'),
       pw.SizedBox(height: 10),
       _table(
@@ -2237,7 +2434,7 @@ class FundebLevantamentoPdfBuilder {
         ],
         widths: const {0: pw.FlexColumnWidth(28), 1: pw.FlexColumnWidth(72)},
       ),
-      pw.SizedBox(height: 12),
+      pw.SizedBox(height: 8),
       _callout(
         report.contextoPolitico.detalheMandato,
         accent: _green,
@@ -2265,7 +2462,7 @@ class FundebLevantamentoPdfBuilder {
 
     return [
       _pageTitle('Parte IV - Comparativo por Ano'),
-      pw.SizedBox(height: 12),
+      pw.SizedBox(height: 8),
       _sectionHeading(
         '12',
         'Linha do tempo 2022 a ${_comparisonEndYear(relatorio)}',
@@ -2277,7 +2474,7 @@ class FundebLevantamentoPdfBuilder {
         accent: _blue,
         background: _softBlue,
       ),
-      pw.SizedBox(height: 12),
+      pw.SizedBox(height: 8),
       if (historyRows.isNotEmpty)
         _table(
           headers: const [
@@ -2302,7 +2499,7 @@ class FundebLevantamentoPdfBuilder {
           accent: _orange,
           background: _softOrange,
         ),
-      pw.SizedBox(height: 12),
+      pw.SizedBox(height: 8),
       _callout(
         _plainHistoricalSummary(report.historico.resumo),
         title: 'Resumo em linguagem simples',
@@ -2363,7 +2560,7 @@ class FundebLevantamentoPdfBuilder {
 
     return [
       _pageTitle('Parte IV - Comparativo por Ano'),
-      pw.SizedBox(height: 12),
+      pw.SizedBox(height: 8),
       _sectionHeading('13', 'Comparativo anual ${comparison.seriesLabel}'),
       pw.SizedBox(height: 10),
       _callout(
@@ -2372,7 +2569,7 @@ class FundebLevantamentoPdfBuilder {
         accent: _blue,
         background: _softBlue,
       ),
-      pw.SizedBox(height: 14),
+      pw.SizedBox(height: 10),
       pw.Row(
         children: [
           pw.Expanded(
@@ -2432,7 +2629,7 @@ class FundebLevantamentoPdfBuilder {
           4: pw.FlexColumnWidth(24),
         },
       ),
-      pw.SizedBox(height: 14),
+      pw.SizedBox(height: 10),
       _callout(
         'O comparativo considera somente anos com valores preenchidos. Quando um ano aparece sem valor, ele fica na linha do tempo como pendência, mas não entra no cálculo da variação.',
         title: 'Regra de comparação',
@@ -2583,8 +2780,8 @@ class FundebLevantamentoPdfBuilder {
         )
         .toList();
     return [
-      _pageTitle('PARTE IV - ANALISE COMPARATIVA'),
-      pw.SizedBox(height: 12),
+      _pageTitle('PARTE IV - ANÁLISE COMPARATIVA'),
+      pw.SizedBox(height: 8),
       _sectionHeading('14', 'Benchmark Regional'),
       pw.SizedBox(height: 10),
       _callout(
@@ -2592,7 +2789,7 @@ class FundebLevantamentoPdfBuilder {
         accent: _green,
         background: _softGreen,
       ),
-      pw.SizedBox(height: 12),
+      pw.SizedBox(height: 8),
       if (benchmarkRows.isNotEmpty)
         _table(
           headers: const ['Município', 'Receita', 'Vantagem', 'Insight'],
@@ -2617,8 +2814,8 @@ class FundebLevantamentoPdfBuilder {
     RelatorioDirigidoMunicipio report,
   ) {
     return [
-      _pageTitle('PARTE IV - ANALISE COMPARATIVA'),
-      pw.SizedBox(height: 12),
+      _pageTitle('PARTE IV - ANÁLISE COMPARATIVA (cont.)'),
+      pw.SizedBox(height: 8),
       _sectionHeading('14', 'Benchmark Regional'),
       pw.SizedBox(height: 10),
       _callout(
@@ -2626,7 +2823,7 @@ class FundebLevantamentoPdfBuilder {
         accent: _green,
         background: _softGreen,
       ),
-      pw.SizedBox(height: 12),
+      pw.SizedBox(height: 8),
       if (report.benchmarkRegional.municipios.isNotEmpty)
         ...report.benchmarkRegional.municipios.map(
           (item) => pw.Padding(
@@ -2890,7 +3087,7 @@ class FundebLevantamentoPdfBuilder {
     PdfColor labelColor = _navy,
     PdfColor helperColor = _muted,
   }) {
-    final safeValue = _safe(value, fallback: '');
+    final safeValue = (value ?? '').trim().isEmpty ? '-' : value;
     final valueFontSize = safeValue.length > 18
         ? 12.6
         : safeValue.length > 14
@@ -3562,7 +3759,12 @@ class FundebLevantamentoPdfBuilder {
     for (var year = startYear; year <= endYear; year++) {
       final historical = historyByYear[year];
       if (historical != null) {
-        rows.add(_AnnualFundebRow.fromHistorical(historical, historical.fonteReceita ?? 'Histórico'));
+        rows.add(
+          _AnnualFundebRow.fromHistorical(
+            historical,
+            historical.fonteReceita ?? 'Histórico',
+          ),
+        );
         continue;
       }
       if (year == relatorio.identificacao.exercicio) {
@@ -3783,14 +3985,94 @@ class FundebLevantamentoPdfBuilder {
 
   static String _municipioLabel(RelatorioFundeb relatorio) {
     final ident = relatorio.identificacao;
-    return '${_safe(ident.municipioNome.isNotEmpty ? ident.municipioNome : ident.municipio)} - ${_safe(ident.uf)}';
+    final municipio = _safe(
+      ident.municipioNome.isNotEmpty ? ident.municipioNome : ident.municipio,
+      fallback: '',
+    );
+    final uf = _safe(ident.uf, fallback: '');
+
+    if (municipio.isEmpty && uf.isEmpty) {
+      return 'Município';
+    }
+    if (municipio.isEmpty) {
+      return uf.isEmpty ? 'Município' : 'Município - $uf';
+    }
+    if (uf.isEmpty) {
+      return municipio;
+    }
+
+    final upperMunicipio = municipio.toUpperCase();
+    final upperUf = uf.toUpperCase();
+    if (upperMunicipio.contains(' - $upperUf') ||
+        upperMunicipio.endsWith('/$upperUf')) {
+      return municipio;
+    }
+
+    return '$municipio - $uf';
   }
 
   static String _safe(String? value, {String fallback = '-'}) {
     final normalized = _sanitizeReportLanguage(
       _normalizeRawText(value ?? ''),
     ).trim();
-    return normalized.isEmpty ? fallback : normalized;
+    if (normalized.isEmpty) return fallback;
+
+    final lower = normalized.toLowerCase();
+    const placeholderValues = {
+      'undefined',
+      'null',
+      'nan',
+      '-',
+      'uf',
+      'undefined/uf',
+      'undefined - uf',
+      'null/uf',
+      'null - uf',
+    };
+    if (placeholderValues.contains(lower)) return fallback;
+    if (lower.contains('undefined')) return fallback;
+    if (lower.contains('null')) return fallback;
+    if (RegExp(r'\bnan\b').hasMatch(lower)) return fallback;
+    return normalized;
+  }
+
+  static String _paramText(
+    RelatorioFundeb relatorio,
+    String key, {
+    String fallback = '',
+  }) {
+    final value = relatorio.parametros[key];
+    if (value == null) return fallback;
+    return _safe(value.toString(), fallback: fallback);
+  }
+
+  static void _appendParamRow(
+    List<List<String>> rows,
+    RelatorioFundeb relatorio,
+    String key,
+    String label,
+  ) {
+    final value = _paramText(relatorio, key);
+    if (value.isNotEmpty) {
+      rows.add([label, value]);
+    }
+  }
+
+  static void _appendAdditionalParamRows(
+    List<List<String>> rows,
+    RelatorioFundeb relatorio,
+  ) {
+    final fields = relatorio.parametros['camposAdicionais'];
+    if (fields is! Map) return;
+    var added = 0;
+    for (final entry in fields.entries) {
+      final label = _safe(entry.key.toString(), fallback: '');
+      final value = _safe(entry.value?.toString(), fallback: '');
+      if (label.isEmpty || value.isEmpty) continue;
+      rows.add([label, value]);
+      added += 1;
+      if (added >= 8) break;
+    }
   }
 
   static String _money(double value) {
@@ -4144,6 +4426,16 @@ class FundebLevantamentoPdfBuilder {
   static String _integerNullable(int? value) =>
       value == null ? '-' : _integer(value);
 
+  /// Formats a double as "13.249,09" using only ASCII-safe characters.
+  static String _integerFromDouble(double value) {
+    final parts = value.toStringAsFixed(2).split('.');
+    final intPart = parts[0].replaceAllMapped(
+      RegExp(r'\B(?=(\d{3})+(?!\d))'),
+      (match) => '.',
+    );
+    return '$intPart,${parts[1]}';
+  }
+
   static String _number(double value, {int digits = 2}) =>
       value.toStringAsFixed(digits).replaceAll('.', ',');
 
@@ -4181,7 +4473,7 @@ class FundebLevantamentoPdfBuilder {
       ),
       (label: 'Creche', integral: tempo.creche, total: detalhadas.creche),
       (
-        label: 'Pre-escola',
+        label: 'Pré-escola',
         integral: tempo.preEscola,
         total: detalhadas.preEscola,
       ),
@@ -4197,13 +4489,21 @@ class FundebLevantamentoPdfBuilder {
       ),
       (
         label: 'Anos finais',
-        integral: tempo.anosFinais,
-        total: detalhadas.anosFinais,
+        integral: (tempo.anosFinais == null || tempo.anosFinais == 0)
+            ? tempo.anosFinaisPublica
+            : tempo.anosFinais,
+        total: detalhadas.anosFinais > 0
+            ? detalhadas.anosFinais
+            : detalhadas.anosFinaisPublica,
       ),
       (
         label: 'Ensino Médio',
-        integral: tempo.ensinoMedio,
-        total: etapas.ensinoMedio,
+        integral: (tempo.ensinoMedio == null || tempo.ensinoMedio == 0)
+            ? tempo.ensinoMedioPublica
+            : tempo.ensinoMedio,
+        total: etapas.ensinoMedio > 0
+            ? etapas.ensinoMedio
+            : etapas.ensinoMedioPublica,
       ),
       (label: 'EJA', integral: tempo.eja, total: etapas.eja),
       (
@@ -4258,7 +4558,7 @@ class FundebLevantamentoPdfBuilder {
       _pageTitle('SAÚDE FISCAL'),
       pw.SizedBox(height: 10),
       _sectionHeading('§', 'Saúde Fiscal do Município'),
-      pw.SizedBox(height: 12),
+      pw.SizedBox(height: 8),
       pw.Container(
         padding: const pw.EdgeInsets.all(14),
         decoration: pw.BoxDecoration(
@@ -4288,17 +4588,37 @@ class FundebLevantamentoPdfBuilder {
           ],
         ),
       ),
-      pw.SizedBox(height: 14),
+      pw.SizedBox(height: 10),
       _table(
         headers: const ['Indicador', 'Valor'],
         rows: [
           ['Receita Corrente Líquida (RCL)', _moneyNullable(sf.rcl)],
           ['RCL Ajustada', _moneyNullable(sf.rclAjustada)],
           ['Despesa com Pessoal', _moneyNullable(sf.despesaPessoalTotal)],
-          ['% Despesa Pessoal / RCL', sf.percentualDespesaPessoal == null ? '-' : '${sf.percentualDespesaPessoal!.toStringAsFixed(2)}%'],
-          ['Limite Máximo LRF (54%)', sf.limiteMaximoPessoal == null ? '-' : '${sf.limiteMaximoPessoal!.toStringAsFixed(2)}%'],
-          ['Limite Prudencial LRF (51,3%)', sf.limitePrudencialPessoal == null ? '-' : '${sf.limitePrudencialPessoal!.toStringAsFixed(2)}%'],
-          ['Espaço Fiscal', _moneyNullable(sf.espacoFiscalPessoal)],
+          [
+            '% Despesa Pessoal / RCL',
+            sf.percentualDespesaPessoal == null
+                ? '-'
+                : '${sf.percentualDespesaPessoal!.toStringAsFixed(2)}%',
+          ],
+          [
+            'Limite Máximo LRF (54%)',
+            sf.limiteMaximoPessoal == null
+                ? '-'
+                : '${sf.limiteMaximoPessoal!.toStringAsFixed(2)}%',
+          ],
+          [
+            'Limite Prudencial LRF (51,3%)',
+            sf.limitePrudencialPessoal == null
+                ? '-'
+                : '${sf.limitePrudencialPessoal!.toStringAsFixed(2)}%',
+          ],
+          [
+            'Espaço Fiscal',
+            sf.espacoFiscalPessoal == null
+                ? '-'
+                : '${sf.espacoFiscalPessoal!.toStringAsFixed(2)}%',
+          ],
           ['Caixa e Equivalentes', _moneyNullable(sf.caixaEquivalentes)],
           ['Patrimônio Líquido', _moneyNullable(sf.patrimonioLiquido)],
         ],
@@ -4310,7 +4630,7 @@ class FundebLevantamentoPdfBuilder {
   static List<pw.Widget> _buildObrasPAC2Section(RelatorioFundeb relatorio) {
     if (relatorio.obrasPAC2.isEmpty) return const <pw.Widget>[];
     return [
-      pw.SizedBox(height: 18),
+      pw.SizedBox(height: 8),
       _sectionHeading('7.1', 'Obras PAC2 / Pacto de Retomada'),
       pw.SizedBox(height: 10),
       _table(
@@ -4349,7 +4669,7 @@ class FundebLevantamentoPdfBuilder {
   static List<pw.Widget> _buildCaminhoEscolaSection(RelatorioFundeb relatorio) {
     if (relatorio.caminhoEscola.isEmpty) return const <pw.Widget>[];
     return [
-      pw.SizedBox(height: 18),
+      pw.SizedBox(height: 8),
       _sectionHeading('7.2', 'Frota Caminho da Escola'),
       pw.SizedBox(height: 10),
       _table(
@@ -4382,7 +4702,7 @@ class FundebLevantamentoPdfBuilder {
       _pageTitle('CENÁRIO DE ESTRUTURAÇÃO'),
       pw.SizedBox(height: 10),
       _sectionHeading('CE', 'Cenário de Estruturação ${ce.anoAlvo}'),
-      pw.SizedBox(height: 12),
+      pw.SizedBox(height: 8),
       _table(
         headers: const [
           'Modalidade',
@@ -4411,9 +4731,15 @@ class FundebLevantamentoPdfBuilder {
           ],
           [
             'TOTAL',
-            '-',
-            '-',
-            _integerNullable(ce.ganhosMatriculas?.total),
+            _integer(
+              ce.baseAtual.eja +
+                  ce.baseAtual.integral +
+                  ce.baseAtual.educacaoEspecial,
+            ),
+            _integer(
+              ce.metas.eja + ce.metas.integral + ce.metas.educacaoEspecial,
+            ),
+            _integerNullable(ce.ganhosMatriculas.total),
           ],
         ],
         widths: const {
@@ -4423,7 +4749,7 @@ class FundebLevantamentoPdfBuilder {
           3: pw.FlexColumnWidth(24),
         },
       ),
-      pw.SizedBox(height: 14),
+      pw.SizedBox(height: 10),
       _highlightBox(
         'IMPACTO FINANCEIRO INDICATIVO',
         '${_moneyNullable(ce.impactoFinanceiroIndicativo?.minimo)} — ${_moneyNullable(ce.impactoFinanceiroIndicativo?.maximo)}',
@@ -4432,7 +4758,7 @@ class FundebLevantamentoPdfBuilder {
             : 'Base: ${_moneyNullable(ce.impactoFinanceiroIndicativo?.basePorMatricula)} por matrícula',
       ),
       if (ce.leituraExecutiva != null && ce.leituraExecutiva!.isNotEmpty) ...[
-        pw.SizedBox(height: 14),
+        pw.SizedBox(height: 10),
         _callout(
           ce.leituraExecutiva!,
           title: 'Leitura executiva',
@@ -4441,7 +4767,7 @@ class FundebLevantamentoPdfBuilder {
         ),
       ],
       if (ce.frentes != null && ce.frentes!.isNotEmpty) ...[
-        pw.SizedBox(height: 14),
+        pw.SizedBox(height: 10),
         _bulletBox('Frentes de atuação', ce.frentes!),
       ],
     ];
@@ -4453,85 +4779,80 @@ class FundebLevantamentoPdfBuilder {
     final perfil = report.perfilIBGE;
     if (perfil == null || !perfil.disponivel) return const <pw.Widget>[];
 
+    // Build a dynamic list of available metric cards — skip indicators without data
+    final cards = <pw.Widget>[];
+
+    // 1. População (always present if perfil is disponivel)
+    cards.add(
+      _metricCard(
+        'POPULAÇÃO',
+        _integerNullable(perfil.populacaoEstimada?.toInt()),
+        perfil.populacaoAnoReferencia != null
+            ? 'Estimativa ${perfil.populacaoAnoReferencia}'
+            : null,
+        background: _softBlue,
+      ),
+    );
+
+    // 2. PIB per capita
+    if (perfil.pibPerCapita != null) {
+      cards.add(
+        _metricCard(
+          'PIB PER CAPITA',
+          _moneyNullable(perfil.pibPerCapita),
+          perfil.pibAnoReferencia != null
+              ? 'Ref. ${perfil.pibAnoReferencia}'
+              : null,
+          background: _softGreen,
+        ),
+      );
+    }
+
+    // 3. Área territorial
+    if (perfil.areaTerritorial != null) {
+      cards.add(
+        _metricCard(
+          'ÁREA TERRITORIAL',
+          '${perfil.areaTerritorial!.toStringAsFixed(1)} km²',
+          null,
+          background: _softBlue,
+        ),
+      );
+    }
+
+    // 4. Escolarização 6-14
+    if (perfil.escolarizacao614 != null) {
+      cards.add(
+        _metricCard(
+          'ESCOLARIZAÇÃO 6-14',
+          '${perfil.escolarizacao614!.toStringAsFixed(1)}%',
+          null,
+          background: _softGreen,
+        ),
+      );
+    }
+
+    if (cards.isEmpty) return const <pw.Widget>[];
+
+    // Arrange cards in rows of 3
+    final rows = <pw.Widget>[];
+    for (var i = 0; i < cards.length; i += 3) {
+      final rowCards = <pw.Widget>[];
+      for (var j = i; j < i + 3; j++) {
+        if (j > i) rowCards.add(pw.SizedBox(width: 8));
+        rowCards.add(
+          pw.Expanded(child: j < cards.length ? cards[j] : pw.SizedBox()),
+        );
+      }
+      if (i > 0) rows.add(pw.SizedBox(height: 8));
+      rows.add(pw.Row(children: rowCards));
+    }
+
     return [
-      pw.SizedBox(height: 18),
-      _sectionHeading('5.2', 'Perfil IBGE do Município'),
-      pw.SizedBox(height: 12),
-      pw.Row(
-        children: [
-          pw.Expanded(
-            child: _metricCard(
-              'POPULAÇÃO',
-              _integerNullable(perfil.populacaoEstimada?.toInt()),
-              perfil.populacaoAnoReferencia != null
-                  ? 'Estimativa ${perfil.populacaoAnoReferencia}'
-                  : null,
-              background: _softBlue,
-            ),
-          ),
-          pw.SizedBox(width: 8),
-          pw.Expanded(
-            child: _metricCard(
-              'IDHM',
-              perfil.idhm == null
-                  ? '-'
-                  : perfil.idhm!.toStringAsFixed(3),
-              perfil.idhmAnoReferencia != null
-                  ? 'Ref. ${perfil.idhmAnoReferencia}'
-                  : null,
-              background: _softBlue,
-            ),
-          ),
-          pw.SizedBox(width: 8),
-          pw.Expanded(
-            child: _metricCard(
-              'PIB PER CAPITA',
-              _moneyNullable(perfil.pibPerCapita),
-              perfil.pibAnoReferencia != null
-                  ? 'Ref. ${perfil.pibAnoReferencia}'
-                  : null,
-              background: _softGreen,
-            ),
-          ),
-        ],
-      ),
       pw.SizedBox(height: 8),
-      pw.Row(
-        children: [
-          pw.Expanded(
-            child: _metricCard(
-              'ÁREA TERRITORIAL',
-              perfil.areaTerritorial == null
-                  ? '-'
-                  : '${perfil.areaTerritorial!.toStringAsFixed(1)} km²',
-              null,
-              background: _softBlue,
-            ),
-          ),
-          pw.SizedBox(width: 8),
-          pw.Expanded(
-            child: _metricCard(
-              'ESCOLARIZAÇÃO 6-14',
-              perfil.escolarizacao614 == null
-                  ? '-'
-                  : '${perfil.escolarizacao614!.toStringAsFixed(1)}%',
-              null,
-              background: _softGreen,
-            ),
-          ),
-          pw.SizedBox(width: 8),
-          pw.Expanded(
-            child: _metricCard(
-              'MORTALIDADE INFANTIL',
-              perfil.mortalidadeInfantil == null
-                  ? '-'
-                  : '${perfil.mortalidadeInfantil!.toStringAsFixed(1)} ‰',
-              null,
-              background: _softOrange,
-            ),
-          ),
-        ],
-      ),
+      _sectionHeading('5.2', 'Perfil IBGE do Município'),
+      pw.SizedBox(height: 8),
+      ...rows,
     ];
   }
 }
@@ -4567,13 +4888,14 @@ class _AnnualFundebRow {
     // the row year. Prevents repeating a previous year's numbers.
     final schoolDataValid =
         item.anoBaseCenso == null || item.anoBaseCenso == item.ano;
-    final hasAnyCensusData = schoolDataValid &&
+    final hasAnyCensusData =
+        schoolDataValid &&
         (item.totalMatriculasMunicipais != null ||
             item.tempoIntegral != null ||
             item.educacaoEspecial != null ||
             item.eja != null);
-    final effectiveStatus = !hasAnyCensusData &&
-            item.totalReceitasFundeb == null
+    final effectiveStatus =
+        !hasAnyCensusData && item.totalReceitasFundeb == null
         ? 'Censo não publicado'
         : status;
     return _AnnualFundebRow(
@@ -4586,7 +4908,9 @@ class _AnnualFundebRow {
         item,
       ),
       totalEscolas: schoolDataValid ? item.totalEscolas : null,
-      totalMatriculasMunicipais: schoolDataValid ? item.totalMatriculasMunicipais : null,
+      totalMatriculasMunicipais: schoolDataValid
+          ? item.totalMatriculasMunicipais
+          : null,
       eja: schoolDataValid ? item.eja : null,
       tempoIntegral: schoolDataValid ? item.tempoIntegral : null,
       educacaoEspecial: schoolDataValid ? item.educacaoEspecial : null,
@@ -4599,8 +4923,7 @@ class _AnnualFundebRow {
     // Only attach school data when the censo reference year matches
     // the exercise year. Otherwise school columns would repeat
     // a previous year's numbers in the current-year row.
-    final censoMatchesYear =
-        censo != null && censo.anoReferencia == exercicio;
+    final censoMatchesYear = censo != null && censo.anoReferencia == exercicio;
     return _AnnualFundebRow(
       year: exercicio,
       status: 'Levantamento atual',
@@ -4612,10 +4935,14 @@ class _AnnualFundebRow {
           relatorio.receitas.complementacaoVAAT +
           relatorio.receitas.complementacaoVAAR,
       totalEscolas: censoMatchesYear ? censo.totalEscolas : null,
-      totalMatriculasMunicipais: censoMatchesYear ? censo.totalMatriculas : null,
+      totalMatriculasMunicipais: censoMatchesYear
+          ? censo.totalMatriculas
+          : null,
       eja: censoMatchesYear ? censo.matriculasEtapa.eja : null,
       tempoIntegral: censoMatchesYear ? censo.tempoIntegral.total : null,
-      educacaoEspecial: censoMatchesYear ? censo.matriculasEtapa.educacaoEspecial : null,
+      educacaoEspecial: censoMatchesYear
+          ? censo.matriculasEtapa.educacaoEspecial
+          : null,
     );
   }
 

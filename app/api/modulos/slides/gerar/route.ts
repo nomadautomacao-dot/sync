@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
           prefeito: prefeitoRecord?.prefeito ?? prefeitoRecord?.nomeCompleto ?? null,
           partido: prefeitoRecord?.partido ?? null,
           pibPerCapita: resolvedIbgeIndicators?.pibPerCapita ?? null,
-          idhm: resolvedIbgeIndicators?.idhm ?? null,
+          idhm: null,
         },
         fundeb: {
           receitas: receitasHistoricas,

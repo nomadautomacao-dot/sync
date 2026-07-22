@@ -1,4 +1,4 @@
-import type { RelatorioFundeb } from "../types";
+import type { FundebRelatorioParametros, RelatorioFundeb } from "../types";
 
 export type TipoRelatorio = "levantamento" | "executiva" | "comparativa";
 export interface LevantamentoFundebAutonomoParams {
@@ -6,6 +6,7 @@ export interface LevantamentoFundebAutonomoParams {
   nome?: string;
   uf?: string;
   exercicio: number;
+  parametros?: FundebRelatorioParametros;
 }
 
 const TIPOS_RELATORIO: TipoRelatorio[] = ["levantamento", "executiva", "comparativa"];
@@ -108,4 +109,25 @@ export async function generateLevantamentoFundebPdfPackageAutonomo(
   for (const tipo of tipos) {
     await generateLevantamentoFundebPdfAutonomo(params, tipo);
   }
+}
+
+export async function generateMunicipalXrayPdfAutonomo(
+  params: LevantamentoFundebAutonomoParams,
+) {
+  const response = await fetch("/api/modulos/levantamento-fundeb/raio-x", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(params),
+  });
+
+  const baseName = params.nome || params.codigo_ibge || "municipio";
+  const safeName = baseName
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9]/g, "-")
+    .toLowerCase();
+
+  await downloadPdfResponse(response, `raio-x-municipal-${safeName}.pdf`);
 }

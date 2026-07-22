@@ -2,7 +2,8 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:printing/printing.dart';
+
+import '../../../core/utils/pdf_download_helper.dart';
 
 import '../application/slides_institucional_pdf_builder.dart';
 
@@ -604,7 +605,7 @@ class _SlidesScreenState extends State<SlidesScreen> {
                               onPressed: () async {
                                 final name = _selectedTemplate?.id ?? 'slides';
                                 final filename = 'rocha-prime-$name.pdf';
-                                await Printing.sharePdf(
+                                await PdfDownloadHelper.downloadPdf(
                                   bytes: _generatedPdf!,
                                   filename: filename,
                                 );

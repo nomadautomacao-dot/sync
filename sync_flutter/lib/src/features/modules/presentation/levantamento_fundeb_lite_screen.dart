@@ -2,7 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:printing/printing.dart';
+
+import '../../../core/utils/pdf_download_helper.dart';
 
 import '../../../core/models/levantamento_fundeb_models.dart';
 import '../../../core/models/sync_models.dart';
@@ -206,7 +207,7 @@ class _LevantamentoFundebLiteScreenState
         currentBundle,
         directedReport: currentBundle.relatorioDirigidoBase,
       );
-      await Printing.sharePdf(
+      await PdfDownloadHelper.downloadPdf(
         bytes: pdfBytes,
         filename: _litePdfFilename(currentBundle.relatorio),
       );

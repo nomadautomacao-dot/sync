@@ -14,15 +14,25 @@ export function buildCensoEscolarFromInep(record: InepCensoMunicipalRecord | nul
     return createEmptyCensoEscolar();
   }
 
-  // FUNDEB: usar dados da rede MUNICIPAL (não pública que soma estadual+federal)
-  const totalEscolas = record.escolasMunicipaisTotal ?? record.escolasPublicasTotal ?? record.escolasTotal;
-  const totalMatriculas = record.matriculasMunicipaisTotal ?? record.matriculasPublicasTotal ?? record.matriculasBasicaTotal;
-  const totalDocentes = record.docentesMunicipaisTotal ?? record.docentesPublicosTotal ?? record.docentesTotal;
+  // FUNDEB/QEdu alignment: prioritize Rede Pública (Municipal + Estadual) totals 
+  // to match the standard QEdu "Visão Geral" that clients use as benchmark.
+  const totalEscolas = record.escolasPublicasTotal ?? record.escolasMunicipaisTotal ?? record.escolasTotal;
+  const totalMatriculas = record.matriculasPublicasTotal ?? record.matriculasMunicipaisTotal ?? record.matriculasBasicaTotal;
+  const totalDocentes = record.docentesPublicosTotal ?? record.docentesMunicipaisTotal ?? record.docentesTotal;
   const educacaoInfantil = record.educacaoInfantilMunicipal ?? record.educacaoInfantilPublica ?? record.educacaoInfantilTotal;
   const creche = record.crecheMunicipal ?? record.crechePublica ?? record.crecheTotal;
   const preEscola = record.preEscolaMunicipal ?? record.preEscolaPublica ?? record.preEscolaTotal;
-  const anosIniciais = record.anosIniciaisFundamentalMunicipal ?? record.anosIniciaisFundamentalPublica ?? record.anosIniciaisFundamentalTotal ?? 0;
-  const anosFinais = record.anosFinaisFundamentalMunicipal ?? record.anosFinaisFundamentalPublica ?? record.anosFinaisFundamentalTotal ?? 0;
+  let anosIniciais = record.anosIniciaisFundamentalMunicipal ?? record.anosIniciaisFundamentalPublica ?? record.anosIniciaisFundamentalTotal ?? 0;
+  let anosFinais = record.anosFinaisFundamentalMunicipal ?? record.anosFinaisFundamentalPublica ?? record.anosFinaisFundamentalTotal ?? 0;
+  // When AI/AF breakdown is unavailable but total fundamental exists,
+  // assign all to anos iniciais (typical for municipal networks that don't operate AF)
+  const ensinoFundamentalRaw =
+    record.ensinoFundamentalMunicipal ??
+    record.ensinoFundamentalPublica ??
+    record.ensinoFundamentalTotal ?? 0;
+  if (anosIniciais === 0 && anosFinais === 0 && ensinoFundamentalRaw > 0) {
+    anosIniciais = ensinoFundamentalRaw;
+  }
   const ensinoFundamental =
     record.ensinoFundamentalMunicipal ??
     record.ensinoFundamentalPublica ??
@@ -70,6 +80,7 @@ export function buildCensoEscolarFromInep(record: InepCensoMunicipalRecord | nul
       preEscola,
       anosIniciais,
       anosFinais,
+      anosFinaisPublica: record.anosFinaisFundamentalPublica ?? null,
     },
     tempoIntegral: {
       total: record.tempoIntegralBasicaMunicipal ?? record.tempoIntegralBasicaPublica ?? record.tempoIntegralBasicaTotal ?? null,
@@ -78,8 +89,10 @@ export function buildCensoEscolarFromInep(record: InepCensoMunicipalRecord | nul
       preEscola: tempoIntegralPreEscola,
       anosIniciais: tempoIntegralAnosIniciais,
       anosFinais: tempoIntegralAnosFinais,
+      anosFinaisPublica: record.tempoIntegralAnosFinaisPublica ?? null,
       ensinoFundamental: tempoIntegralEnsinoFundamental,
       ensinoMedio: record.tempoIntegralEnsinoMedioMunicipal ?? 0,
+      ensinoMedioPublica: record.tempoIntegralEnsinoMedioPublica ?? null,
       eja: record.tempoIntegralEjaMunicipal ?? record.tempoIntegralEjaPublica ?? record.tempoIntegralEjaTotal ?? null,
       educacaoEspecial:
         record.tempoIntegralEducacaoEspecialMunicipal ?? record.tempoIntegralEducacaoEspecialPublica ?? record.tempoIntegralEducacaoEspecialTotal ?? null,

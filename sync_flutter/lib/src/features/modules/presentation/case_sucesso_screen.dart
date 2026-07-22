@@ -1,7 +1,6 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:printing/printing.dart';
+
+import '../../../core/utils/pdf_download_helper.dart';
 
 import '../../../core/models/case_sucesso_models.dart';
 import '../../../core/models/sync_models.dart';
@@ -163,11 +162,9 @@ class _CaseSucessoScreenState extends State<CaseSucessoScreen> {
     try {
       final bundle = _buildBundle();
       final bytes = await CaseSucessoPdfBuilder.build(bundle);
-      final dir = await getApplicationDocumentsDirectory();
-      final file = File('${dir.path}/case_sucesso_fundeb_${_anoBase}_${_anoAtual}.pdf');
-      await file.writeAsBytes(bytes);
+      final filename = 'case_sucesso_fundeb_${_anoBase}_$_anoAtual.pdf';
       if (!mounted) return;
-      await Printing.sharePdf(bytes: bytes, filename: file.uri.pathSegments.last);
+      await PdfDownloadHelper.downloadPdf(bytes: bytes, filename: filename);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Erro ao gerar PDF: $e')));

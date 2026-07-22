@@ -1,12 +1,12 @@
 import 'dart:async';
-import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:printing/printing.dart';
+
+import '../../../core/utils/pdf_download_helper.dart';
 
 import '../../../core/models/levantamento_fundeb_models.dart';
 import '../../../core/models/sync_models.dart';
@@ -40,6 +40,12 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
   final ufController = TextEditingController();
   final batchMunicipioController = TextEditingController();
   final batchUfController = TextEditingController();
+  final responsavelTecnicoController = TextEditingController();
+  final secretarioEducacaoController = TextEditingController();
+  final numeroProcessoController = TextEditingController();
+  final periodoReferenciaController = TextEditingController();
+  final observacaoAnaliseController = TextEditingController();
+  final camposAdicionaisController = TextEditingController();
   late final TextEditingController exercicioController;
 
   Timer? searchDebounce;
@@ -85,6 +91,12 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
     ufController.dispose();
     batchMunicipioController.dispose();
     batchUfController.dispose();
+    responsavelTecnicoController.dispose();
+    secretarioEducacaoController.dispose();
+    numeroProcessoController.dispose();
+    periodoReferenciaController.dispose();
+    observacaoAnaliseController.dispose();
+    camposAdicionaisController.dispose();
     exercicioController.dispose();
     super.dispose();
   }
@@ -202,11 +214,47 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
       nome: municipioController.text,
       uf: ufController.text,
       exercicio: exercicio,
+      parametros: _buildReportParametros(),
     );
     if (!request.hasCodigoIbge && !request.hasNameLookup) {
       return null;
     }
     return request;
+  }
+
+  Map<String, dynamic>? _buildReportParametros() {
+    final params = <String, dynamic>{};
+
+    void addText(String key, TextEditingController controller) {
+      final value = controller.text.trim();
+      if (value.isNotEmpty) {
+        params[key] = value;
+      }
+    }
+
+    addText('responsavelTecnico', responsavelTecnicoController);
+    addText('secretarioEducacao', secretarioEducacaoController);
+    addText('numeroProcesso', numeroProcessoController);
+    addText('periodoReferencia', periodoReferenciaController);
+    addText('observacaoAnalise', observacaoAnaliseController);
+
+    final extraFields = <String, String>{};
+    for (final line in camposAdicionaisController.text.split('\n')) {
+      final trimmed = line.trim();
+      if (trimmed.isEmpty || !trimmed.contains('=')) continue;
+      final separator = trimmed.indexOf('=');
+      final key = trimmed.substring(0, separator).trim();
+      final value = trimmed.substring(separator + 1).trim();
+      if (key.isNotEmpty && value.isNotEmpty) {
+        extraFields[key] = value;
+      }
+    }
+
+    if (extraFields.isNotEmpty) {
+      params['camposAdicionais'] = extraFields;
+    }
+
+    return params.isEmpty ? null : params;
   }
 
   void _setLoadingStep(int index, _StepStatus status, {String? detail}) {
@@ -264,7 +312,11 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
       _setLoadingStep(0, _StepStatus.done);
 
       // Step 2 — API call
-      _setLoadingStep(1, _StepStatus.running, detail: 'Conectando ao servidor...');
+      _setLoadingStep(
+        1,
+        _StepStatus.running,
+        detail: 'Conectando ao servidor...',
+      );
       final result = await widget.repository.getLevantamentoFundeb(request);
       if (!mounted) return;
       _setLoadingStep(1, _StepStatus.done, detail: 'Dados recebidos');
@@ -302,7 +354,11 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
         (s) => s.status == _StepStatus.running,
       );
       if (activeIndex >= 0) {
-        _setLoadingStep(activeIndex, _StepStatus.error, detail: _cleanErrorMessage(error));
+        _setLoadingStep(
+          activeIndex,
+          _StepStatus.error,
+          detail: _cleanErrorMessage(error),
+        );
       }
       setState(() => errorMessage = error.toString());
     } finally {
@@ -315,7 +371,6 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
       }
     }
   }
-
 
   void _selectSuggestion(MunicipioSearchItem item) {
     setState(() {
@@ -413,133 +468,133 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
 
     return ExcludeSemantics(
       child: SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SyncSectionHeader(
-            title: 'Levantamento FUNDEB',
-            description:
-                'Busque o municipio, valide a leitura e acompanhe a previa do PDF final em tempo real.',
-            trailing: Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: [
-                OutlinedButton(
-                  onPressed: widget.onBack,
-                  child: const Text('Voltar ao catalogo'),
-                ),
-                FilledButton.icon(
-                  onPressed: isLoading ? null : _loadMunicipio,
-                  icon: isLoading
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.search_rounded),
-                  label: Text(isLoading ? 'Carregando...' : 'Atualizar previa'),
-                ),
-                OutlinedButton.icon(
-                  onPressed: relatorio == null || isExportingPdf
-                      ? null
-                      : _exportTecnicoPdf,
-                  icon: isExportingPdf
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.description_outlined),
-                  label: Text(
-                    isExportingPdf ? 'Gerando...' : 'PDF Técnico',
-                  ),
-                ),
-                OutlinedButton.icon(
-                  onPressed: relatorio == null || isExportingComercialPdf
-                      ? null
-                      : _exportComercialPdf,
-                  icon: isExportingComercialPdf
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.auto_awesome_outlined),
-                  label: Text(
-                    isExportingComercialPdf ? 'Gerando...' : 'PDF Comercial',
-                  ),
-                ),
-                OutlinedButton.icon(
-                  onPressed: relatorio == null || isExportingLitePdf
-                      ? null
-                      : _exportLitePdf,
-                  icon: isExportingLitePdf
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.summarize_outlined),
-                  label: Text(
-                    isExportingLitePdf ? 'Gerando...' : 'Resumo (2 pgs)',
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          if (isLoading && loadingSteps.isNotEmpty) ...[
-            _buildLoadingPanel(),
-            const SizedBox(height: 18),
-          ],
-          _buildSearchCard(),
-          const SizedBox(height: 18),
-          if (errorMessage != null) ...[
-            SyncSurfaceCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SyncSectionHeader(
+              title: 'Levantamento FUNDEB',
+              description:
+                  'Busque o municipio, valide a leitura e acompanhe a previa do PDF final em tempo real.',
+              trailing: Wrap(
+                spacing: 10,
+                runSpacing: 10,
                 children: [
-                  Text(
-                    'Falha ao carregar o levantamento',
-                    style: Theme.of(context).textTheme.titleLarge,
+                  OutlinedButton(
+                    onPressed: widget.onBack,
+                    child: const Text('Voltar ao catalogo'),
                   ),
-                  const SizedBox(height: 8),
-                  Text(errorMessage!),
+                  FilledButton.icon(
+                    onPressed: isLoading ? null : _loadMunicipio,
+                    icon: isLoading
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.search_rounded),
+                    label: Text(
+                      isLoading ? 'Carregando...' : 'Atualizar previa',
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: relatorio == null || isExportingPdf
+                        ? null
+                        : _exportTecnicoPdf,
+                    icon: isExportingPdf
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.description_outlined),
+                    label: Text(isExportingPdf ? 'Gerando...' : 'PDF Técnico'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: relatorio == null || isExportingComercialPdf
+                        ? null
+                        : _exportComercialPdf,
+                    icon: isExportingComercialPdf
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.auto_awesome_outlined),
+                    label: Text(
+                      isExportingComercialPdf ? 'Gerando...' : 'PDF Comercial',
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: relatorio == null || isExportingLitePdf
+                        ? null
+                        : _exportLitePdf,
+                    icon: isExportingLitePdf
+                        ? const SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.summarize_outlined),
+                    label: Text(
+                      isExportingLitePdf ? 'Gerando...' : 'Resumo (2 pgs)',
+                    ),
+                  ),
                 ],
               ),
             ),
+            const SizedBox(height: 20),
+            if (isLoading && loadingSteps.isNotEmpty) ...[
+              _buildLoadingPanel(),
+              const SizedBox(height: 18),
+            ],
+            _buildSearchCard(),
             const SizedBox(height: 18),
-          ],
-          if (relatorio == null && !isLoading)
-            SyncSurfaceCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Pronto para montar a previa',
-                    style: Theme.of(context).textTheme.titleLarge,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Informe um codigo IBGE ou pesquise um municipio para abrir a leitura que depois sera exportada em PDF.',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  ),
-                ],
+            if (errorMessage != null) ...[
+              SyncSurfaceCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Falha ao carregar o levantamento',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(errorMessage!),
+                  ],
+                ),
               ),
-            )
-          else if (relatorio != null) ...[
-            _buildPreviewLead(relatorio, activeDirected),
-            const SizedBox(height: 18),
-            _buildOverview(relatorio),
-            const SizedBox(height: 18),
-            _buildFontesAndContext(relatorio),
-            const SizedBox(height: 18),
-            if (activeDirected != null) _buildDirectedReport(activeDirected),
+              const SizedBox(height: 18),
+            ],
+            if (relatorio == null && !isLoading)
+              SyncSurfaceCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Pronto para montar a previa',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Informe um codigo IBGE ou pesquise um municipio para abrir a leitura que depois sera exportada em PDF.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ],
+                ),
+              )
+            else if (relatorio != null) ...[
+              _buildPreviewLead(relatorio, activeDirected),
+              const SizedBox(height: 18),
+              _buildOverview(relatorio),
+              const SizedBox(height: 18),
+              _buildFontesAndContext(relatorio),
+              const SizedBox(height: 18),
+              if (activeDirected != null) _buildDirectedReport(activeDirected),
+            ],
           ],
-        ],
+        ),
       ),
-    ),
     );
   }
 
@@ -628,6 +683,75 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
                       onPressed: isLoading ? null : _loadMunicipio,
                       icon: const Icon(Icons.play_arrow_rounded),
                       label: const Text('Montar previa'),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 18),
+              Text(
+                '2. Parametros do relatorio',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  SizedBox(
+                    width: compact ? width : 260,
+                    child: TextField(
+                      controller: responsavelTecnicoController,
+                      decoration: const InputDecoration(
+                        labelText: 'Responsavel tecnico',
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: compact ? width : 280,
+                    child: TextField(
+                      controller: secretarioEducacaoController,
+                      decoration: const InputDecoration(
+                        labelText: 'Secretario(a) de Educacao',
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: compact ? width : 220,
+                    child: TextField(
+                      controller: numeroProcessoController,
+                      decoration: const InputDecoration(
+                        labelText: 'Processo administrativo',
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: compact ? width : 220,
+                    child: TextField(
+                      controller: periodoReferenciaController,
+                      decoration: const InputDecoration(
+                        labelText: 'Periodo de referencia',
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: compact ? width : 380,
+                    child: TextField(
+                      controller: observacaoAnaliseController,
+                      maxLines: 2,
+                      decoration: const InputDecoration(
+                        labelText: 'Observacao da analise',
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: compact ? width : 380,
+                    child: TextField(
+                      controller: camposAdicionaisController,
+                      maxLines: 2,
+                      decoration: const InputDecoration(
+                        labelText: 'Campos adicionais',
+                        hintText: 'Campo=valor, um por linha',
+                      ),
                     ),
                   ),
                 ],
@@ -949,35 +1073,61 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
                     Text(
                       '${ident.municipioNome} — ${ident.uf}'.toUpperCase(),
                       style: const TextStyle(
-                        color: Colors.white, fontSize: 22, fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
                         letterSpacing: 0.5,
                       ),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       'IBGE ${ident.codigoIBGE}  •  ${ident.regiao.isNotEmpty ? ident.regiao : ident.mesorregiao}  •  Exercício ${ident.exercicio}',
-                      style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 13),
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.7),
+                        fontSize: 13,
+                      ),
                     ),
                   ],
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.15),
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text('Ganho potencial', style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 11)),
+                    Text(
+                      'Ganho potencial',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.7),
+                        fontSize: 11,
+                      ),
+                    ),
                     const SizedBox(height: 4),
                     Text(
                       _currency(projection.totalGanho),
-                      style: const TextStyle(color: Color(0xFF4ADE80), fontSize: 18, fontWeight: FontWeight.w700),
+                      style: const TextStyle(
+                        color: Color(0xFF4ADE80),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                    Text('+${_percent(projection.ganhoPercentual)}', style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 11)),
+                    Text(
+                      '+${_percent(projection.ganhoPercentual)}',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.6),
+                        fontSize: 11,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -988,16 +1138,27 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
             spacing: 10,
             runSpacing: 10,
             children: [
-              _HeroBadge(label: 'Exercício ${ident.exercicio}', icon: Icons.calendar_today_rounded),
-              _HeroBadge(label: '${bundle?.fontes.length ?? 0} fontes oficiais', icon: Icons.verified_outlined),
+              _HeroBadge(
+                label: 'Exercício ${ident.exercicio}',
+                icon: Icons.calendar_today_rounded,
+              ),
+              _HeroBadge(
+                label: '${bundle?.fontes.length ?? 0} fontes oficiais',
+                icon: Icons.verified_outlined,
+              ),
               if (report != null)
                 _HeroBadge(
                   label: 'Prontidão ${report.prontidao.score}/100',
-                  icon: report.prontidao.score >= 70 ? Icons.check_circle_outline : Icons.warning_amber_rounded,
+                  icon: report.prontidao.score >= 70
+                      ? Icons.check_circle_outline
+                      : Icons.warning_amber_rounded,
                   highlight: report.prontidao.score >= 70,
                 ),
               if (ident.prefeito.isNotEmpty && ident.prefeito != '--')
-                _HeroBadge(label: '${ident.prefeito} (${ident.partido})', icon: Icons.person_outline_rounded),
+                _HeroBadge(
+                  label: '${ident.prefeito} (${ident.partido})',
+                  icon: Icons.person_outline_rounded,
+                ),
             ],
           ),
         ],
@@ -1055,8 +1216,12 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
                   width: compact ? width : (width - 42) / 4,
                   child: _PremiumKpi(
                     label: 'Matrículas',
-                    value: censo == null ? '--' : _integer(censo.totalMatriculas),
-                    helper: censo == null ? 'Censo indisponível' : 'Censo ${censo.anoReferencia ?? '--'}',
+                    value: censo == null
+                        ? '--'
+                        : _integer(censo.totalMatriculas),
+                    helper: censo == null
+                        ? 'Censo indisponível'
+                        : 'Censo ${censo.anoReferencia ?? '--'}',
                     icon: Icons.school_outlined,
                     accent: const Color(0xFF8B5CF6),
                   ),
@@ -1069,11 +1234,30 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               child: Row(
                 children: [
-                  Expanded(child: _CompactInfo(label: 'Município', value: ident.municipioNome)),
-                  Expanded(child: _CompactInfo(label: 'UF', value: ident.uf)),
-                  Expanded(child: _CompactInfo(label: 'IBGE', value: ident.codigoIBGE)),
-                  Expanded(child: _CompactInfo(label: 'Prefeito', value: _fallbackValue(ident.prefeito))),
-                  Expanded(child: _CompactInfo(label: 'Partido', value: _fallbackValue(ident.partido))),
+                  Expanded(
+                    child: _CompactInfo(
+                      label: 'Município',
+                      value: ident.municipioNome,
+                    ),
+                  ),
+                  Expanded(
+                    child: _CompactInfo(label: 'UF', value: ident.uf),
+                  ),
+                  Expanded(
+                    child: _CompactInfo(label: 'IBGE', value: ident.codigoIBGE),
+                  ),
+                  Expanded(
+                    child: _CompactInfo(
+                      label: 'Prefeito',
+                      value: _fallbackValue(ident.prefeito),
+                    ),
+                  ),
+                  Expanded(
+                    child: _CompactInfo(
+                      label: 'Partido',
+                      value: _fallbackValue(ident.partido),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -1102,12 +1286,26 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
                   Row(
                     children: [
                       Container(
-                        width: 32, height: 32,
-                        decoration: BoxDecoration(color: const Color(0xFF3B82F6).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-                        child: const Icon(Icons.pie_chart_outline_rounded, size: 16, color: Color(0xFF3B82F6)),
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.pie_chart_outline_rounded,
+                          size: 16,
+                          color: Color(0xFF3B82F6),
+                        ),
                       ),
                       const SizedBox(width: 10),
-                      const Text('Composição da receita FUNDEB', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                      const Text(
+                        'Composição da receita FUNDEB',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -1119,7 +1317,9 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
                         width: compact ? width : (width - 42) / 4,
                         child: _RevenueItem(
                           label: 'Contribuição municipal',
-                          value: _currency(relatorio.receitas.receitaContribuicaoMunicipal),
+                          value: _currency(
+                            relatorio.receitas.receitaContribuicaoMunicipal,
+                          ),
                           color: const Color(0xFF3B82F6),
                         ),
                       ),
@@ -1127,7 +1327,9 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
                         width: compact ? width : (width - 42) / 4,
                         child: _RevenueItem(
                           label: 'VAAF',
-                          value: _currency(relatorio.receitas.complementacaoVAAF),
+                          value: _currency(
+                            relatorio.receitas.complementacaoVAAF,
+                          ),
                           color: const Color(0xFF10B981),
                         ),
                       ),
@@ -1135,7 +1337,9 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
                         width: compact ? width : (width - 42) / 4,
                         child: _RevenueItem(
                           label: 'VAAT',
-                          value: _currency(relatorio.receitas.complementacaoVAAT),
+                          value: _currency(
+                            relatorio.receitas.complementacaoVAAT,
+                          ),
                           color: const Color(0xFFF59E0B),
                         ),
                       ),
@@ -1143,7 +1347,9 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
                         width: compact ? width : (width - 42) / 4,
                         child: _RevenueItem(
                           label: 'VAAR',
-                          value: _currency(relatorio.receitas.complementacaoVAAR),
+                          value: _currency(
+                            relatorio.receitas.complementacaoVAAR,
+                          ),
                           color: const Color(0xFF8B5CF6),
                         ),
                       ),
@@ -1157,15 +1363,27 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
                       children: [
                         SizedBox(
                           width: compact ? width : (width - 28) / 3,
-                          child: _RevenueItem(label: 'Escolas', value: _integer(censo.totalEscolas), color: const Color(0xFF6366F1)),
+                          child: _RevenueItem(
+                            label: 'Escolas',
+                            value: _integer(censo.totalEscolas),
+                            color: const Color(0xFF6366F1),
+                          ),
                         ),
                         SizedBox(
                           width: compact ? width : (width - 28) / 3,
-                          child: _RevenueItem(label: 'Docentes', value: _integer(censo.totalDocentes), color: const Color(0xFF0EA5E9)),
+                          child: _RevenueItem(
+                            label: 'Docentes',
+                            value: _integer(censo.totalDocentes),
+                            color: const Color(0xFF0EA5E9),
+                          ),
                         ),
                         SizedBox(
                           width: compact ? width : (width - 28) / 3,
-                          child: _RevenueItem(label: 'Tempo integral', value: _nullableInteger(censo.tempoIntegral.total), color: const Color(0xFF14B8A6)),
+                          child: _RevenueItem(
+                            label: 'Tempo integral',
+                            value: _nullableInteger(censo.tempoIntegral.total),
+                            color: const Color(0xFF14B8A6),
+                          ),
                         ),
                       ],
                     ),
@@ -1181,9 +1399,21 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFF64748B)),
+                          const Icon(
+                            Icons.info_outline_rounded,
+                            size: 16,
+                            color: Color(0xFF64748B),
+                          ),
                           const SizedBox(width: 8),
-                          Expanded(child: Text('PAR: ${_fallbackValue(relatorio.situacaoPAR)}', style: const TextStyle(fontSize: 12.5, color: Color(0xFF475569)))),
+                          Expanded(
+                            child: Text(
+                              'PAR: ${_fallbackValue(relatorio.situacaoPAR)}',
+                              style: const TextStyle(
+                                fontSize: 12.5,
+                                color: Color(0xFF475569),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -1207,13 +1437,34 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
                         Row(
                           children: [
                             Container(
-                              width: 32, height: 32,
-                              decoration: BoxDecoration(color: const Color(0xFF10B981).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-                              child: const Icon(Icons.verified_outlined, size: 16, color: Color(0xFF10B981)),
+                              width: 32,
+                              height: 32,
+                              decoration: BoxDecoration(
+                                color: const Color(
+                                  0xFF10B981,
+                                ).withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(
+                                Icons.verified_outlined,
+                                size: 16,
+                                color: Color(0xFF10B981),
+                              ),
                             ),
                             const SizedBox(width: 10),
-                            const Expanded(child: Text('Fontes e rastreabilidade', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15))),
-                            StatusPill(label: '${fontes.length}', color: SyncPalette.statusActive),
+                            const Expanded(
+                              child: Text(
+                                'Fontes e rastreabilidade',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ),
+                            StatusPill(
+                              label: '${fontes.length}',
+                              color: SyncPalette.statusActive,
+                            ),
                           ],
                         ),
                         const SizedBox(height: 14),
@@ -1247,12 +1498,28 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
                           Row(
                             children: [
                               Container(
-                                width: 32, height: 32,
-                                decoration: BoxDecoration(color: const Color(0xFFF59E0B).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-                                child: const Icon(Icons.assignment_outlined, size: 16, color: Color(0xFFF59E0B)),
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: const Color(
+                                    0xFFF59E0B,
+                                  ).withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(
+                                  Icons.assignment_outlined,
+                                  size: 16,
+                                  color: Color(0xFFF59E0B),
+                                ),
                               ),
                               const SizedBox(width: 10),
-                              const Text('Observações operacionais', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                              const Text(
+                                'Observações operacionais',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 15,
+                                ),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 14),
@@ -1264,10 +1531,23 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
                                 children: [
                                   const Padding(
                                     padding: EdgeInsets.only(top: 6),
-                                    child: Icon(Icons.circle, size: 5, color: Color(0xFF94A3B8)),
+                                    child: Icon(
+                                      Icons.circle,
+                                      size: 5,
+                                      color: Color(0xFF94A3B8),
+                                    ),
                                   ),
                                   const SizedBox(width: 8),
-                                  Expanded(child: Text(item, style: const TextStyle(fontSize: 13, color: Color(0xFF475569), height: 1.5))),
+                                  Expanded(
+                                    child: Text(
+                                      item,
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        color: Color(0xFF475569),
+                                        height: 1.5,
+                                      ),
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
@@ -1284,7 +1564,10 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
   }
 
   String _sanitize(String text) {
-    return text.replaceAll(RegExp(r'[◆◇♦\uFFFD]'), '').replaceAll('  ', ' ').trim();
+    return text
+        .replaceAll(RegExp(r'[◆◇♦\uFFFD]'), '')
+        .replaceAll('  ', ' ')
+        .trim();
   }
 
   Widget _buildDirectedReport(RelatorioDirigidoMunicipio report) {
@@ -1293,9 +1576,7 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildHistoricExpander(report),
-      ],
+      children: [_buildHistoricExpander(report)],
     );
   }
 
@@ -1303,16 +1584,45 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
     return Theme(
       data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
       child: Container(
-        decoration: BoxDecoration(color: SaaSTokens.cardWhite, borderRadius: BorderRadius.circular(12), border: Border.all(color: SaaSTokens.borderLight)),
+        decoration: BoxDecoration(
+          color: SaaSTokens.cardWhite,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: SaaSTokens.borderLight),
+        ),
         child: ExpansionTile(
           tilePadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
           childrenPadding: const EdgeInsets.fromLTRB(20, 0, 20, 18),
-          leading: Container(width: 28, height: 28, decoration: BoxDecoration(color: const Color(0xFF6366F1).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(7)), child: const Icon(Icons.timeline_rounded, size: 15, color: Color(0xFF6366F1))),
-          title: const Text('Série histórica', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-          subtitle: Text('${report.historico.anos.length} exercícios', style: TextStyle(fontSize: 12, color: SaaSTokens.textMuted)),
+          leading: Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: const Color(0xFF6366F1).withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(7),
+            ),
+            child: const Icon(
+              Icons.timeline_rounded,
+              size: 15,
+              color: Color(0xFF6366F1),
+            ),
+          ),
+          title: const Text(
+            'Série histórica',
+            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+          ),
+          subtitle: Text(
+            '${report.historico.anos.length} exercícios',
+            style: TextStyle(fontSize: 12, color: SaaSTokens.textMuted),
+          ),
           children: [
             if (report.historico.resumo.isNotEmpty) ...[
-              Text(_sanitize(report.historico.resumo), style: const TextStyle(fontSize: 13, height: 1.55, color: Color(0xFF475569))),
+              Text(
+                _sanitize(report.historico.resumo),
+                style: const TextStyle(
+                  fontSize: 13,
+                  height: 1.55,
+                  color: Color(0xFF475569),
+                ),
+              ),
               const SizedBox(height: 14),
             ],
             _buildHistoricTab(report),
@@ -1321,7 +1631,6 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
       ),
     );
   }
-
 
   Widget _buildHistoricTab(RelatorioDirigidoMunicipio report) {
     return LayoutBuilder(
@@ -1336,13 +1645,40 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(children: [
-                    Container(width: 28, height: 28, decoration: BoxDecoration(color: const Color(0xFF6366F1).withValues(alpha: 0.1), borderRadius: BorderRadius.circular(7)), child: const Icon(Icons.timeline_rounded, size: 15, color: Color(0xFF6366F1))),
-                    const SizedBox(width: 10),
-                    const Text('Síntese histórica', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-                  ]),
+                  Row(
+                    children: [
+                      Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF6366F1).withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(7),
+                        ),
+                        child: const Icon(
+                          Icons.timeline_rounded,
+                          size: 15,
+                          color: Color(0xFF6366F1),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      const Text(
+                        'Síntese histórica',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 12),
-                  Text(report.historico.resumo, style: const TextStyle(fontSize: 13.5, height: 1.6, color: Color(0xFF374151))),
+                  Text(
+                    report.historico.resumo,
+                    style: const TextStyle(
+                      fontSize: 13.5,
+                      height: 1.6,
+                      color: Color(0xFF374151),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -1359,17 +1695,36 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
                   children: [
                     // Year header
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 14,
+                      ),
                       decoration: BoxDecoration(
                         color: const Color(0xFFF8FAFC),
-                        borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                        border: Border(bottom: BorderSide(color: SaaSTokens.borderLight)),
+                        borderRadius: const BorderRadius.vertical(
+                          top: Radius.circular(12),
+                        ),
+                        border: Border(
+                          bottom: BorderSide(color: SaaSTokens.borderLight),
+                        ),
                       ),
-                      child: Row(children: [
-                        Text('Exercício ${year.ano}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Color(0xFF1E293B))),
-                        const Spacer(),
-                        StatusPill(label: 'Censo ${year.anoBaseCenso ?? '--'}', color: SyncPalette.statusInfo),
-                      ]),
+                      child: Row(
+                        children: [
+                          Text(
+                            'Exercício ${year.ano}',
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFF1E293B),
+                            ),
+                          ),
+                          const Spacer(),
+                          StatusPill(
+                            label: 'Censo ${year.anoBaseCenso ?? '--'}',
+                            color: SyncPalette.statusInfo,
+                          ),
+                        ],
+                      ),
                     ),
                     Padding(
                       padding: const EdgeInsets.all(18),
@@ -1377,26 +1732,122 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Revenue grid
-                          Wrap(spacing: 12, runSpacing: 12, children: [
-                            SizedBox(width: compact ? width : (width - 72) / 4, child: _RevenueItem(label: 'Receita FUNDEB', value: _nullableCurrency(year.totalReceitasFundeb), color: const Color(0xFF3B82F6))),
-                            SizedBox(width: compact ? width : (width - 72) / 4, child: _RevenueItem(label: 'Contribuição', value: _nullableCurrency(year.contribuicaoMunicipal), color: const Color(0xFF10B981))),
-                            SizedBox(width: compact ? width : (width - 72) / 4, child: _RevenueItem(label: 'Matrículas', value: _nullableInteger(year.totalMatriculasMunicipais), color: const Color(0xFF8B5CF6))),
-                            SizedBox(width: compact ? width : (width - 72) / 4, child: _RevenueItem(label: 'Tempo integral', value: _nullableInteger(year.tempoIntegral), color: const Color(0xFF14B8A6))),
-                          ]),
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 12,
+                            children: [
+                              SizedBox(
+                                width: compact ? width : (width - 72) / 4,
+                                child: _RevenueItem(
+                                  label: 'Receita FUNDEB',
+                                  value: _nullableCurrency(
+                                    year.totalReceitasFundeb,
+                                  ),
+                                  color: const Color(0xFF3B82F6),
+                                ),
+                              ),
+                              SizedBox(
+                                width: compact ? width : (width - 72) / 4,
+                                child: _RevenueItem(
+                                  label: 'Contribuição',
+                                  value: _nullableCurrency(
+                                    year.contribuicaoMunicipal,
+                                  ),
+                                  color: const Color(0xFF10B981),
+                                ),
+                              ),
+                              SizedBox(
+                                width: compact ? width : (width - 72) / 4,
+                                child: _RevenueItem(
+                                  label: 'Matrículas',
+                                  value: _nullableInteger(
+                                    year.totalMatriculasMunicipais,
+                                  ),
+                                  color: const Color(0xFF8B5CF6),
+                                ),
+                              ),
+                              SizedBox(
+                                width: compact ? width : (width - 72) / 4,
+                                child: _RevenueItem(
+                                  label: 'Tempo integral',
+                                  value: _nullableInteger(year.tempoIntegral),
+                                  color: const Color(0xFF14B8A6),
+                                ),
+                              ),
+                            ],
+                          ),
                           const SizedBox(height: 14),
                           // Complementações
-                          Wrap(spacing: 12, runSpacing: 12, children: [
-                            SizedBox(width: compact ? width : (width - 60) / 3, child: _RevenueItem(label: 'VAAF', value: _nullableCurrency(year.complementacaoVAAF), color: const Color(0xFF0EA5E9))),
-                            SizedBox(width: compact ? width : (width - 60) / 3, child: _RevenueItem(label: 'VAAT', value: _nullableCurrency(year.complementacaoVAAT), color: const Color(0xFFF59E0B))),
-                            SizedBox(width: compact ? width : (width - 60) / 3, child: _RevenueItem(label: 'VAAR', value: _nullableCurrency(year.complementacaoVAAR), color: const Color(0xFFF97316))),
-                          ]),
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 12,
+                            children: [
+                              SizedBox(
+                                width: compact ? width : (width - 60) / 3,
+                                child: _RevenueItem(
+                                  label: 'VAAF',
+                                  value: _nullableCurrency(
+                                    year.complementacaoVAAF,
+                                  ),
+                                  color: const Color(0xFF0EA5E9),
+                                ),
+                              ),
+                              SizedBox(
+                                width: compact ? width : (width - 60) / 3,
+                                child: _RevenueItem(
+                                  label: 'VAAT',
+                                  value: _nullableCurrency(
+                                    year.complementacaoVAAT,
+                                  ),
+                                  color: const Color(0xFFF59E0B),
+                                ),
+                              ),
+                              SizedBox(
+                                width: compact ? width : (width - 60) / 3,
+                                child: _RevenueItem(
+                                  label: 'VAAR',
+                                  value: _nullableCurrency(
+                                    year.complementacaoVAAR,
+                                  ),
+                                  color: const Color(0xFFF97316),
+                                ),
+                              ),
+                            ],
+                          ),
                           const SizedBox(height: 14),
                           // Education data
-                          Wrap(spacing: 12, runSpacing: 12, children: [
-                            SizedBox(width: compact ? width : (width - 60) / 3, child: _RevenueItem(label: 'Escolas', value: _nullableInteger(year.totalEscolas), color: const Color(0xFF6366F1))),
-                            SizedBox(width: compact ? width : (width - 60) / 3, child: _RevenueItem(label: 'EJA', value: _nullableInteger(year.eja), color: const Color(0xFFEC4899))),
-                            SizedBox(width: compact ? width : (width - 60) / 3, child: _RevenueItem(label: 'Ed. especial', value: _nullableInteger(year.educacaoEspecial), color: const Color(0xFF14B8A6))),
-                          ]),
+                          Wrap(
+                            spacing: 12,
+                            runSpacing: 12,
+                            children: [
+                              SizedBox(
+                                width: compact ? width : (width - 60) / 3,
+                                child: _RevenueItem(
+                                  label: 'Escolas',
+                                  value: _nullableInteger(year.totalEscolas),
+                                  color: const Color(0xFF6366F1),
+                                ),
+                              ),
+                              SizedBox(
+                                width: compact ? width : (width - 60) / 3,
+                                child: _RevenueItem(
+                                  label: 'EJA',
+                                  value: _nullableInteger(year.eja),
+                                  color: const Color(0xFFEC4899),
+                                ),
+                              ),
+                              SizedBox(
+                                width: compact ? width : (width - 60) / 3,
+                                child: _RevenueItem(
+                                  label: 'Ed. especial',
+                                  value: _nullableInteger(
+                                    year.educacaoEspecial,
+                                  ),
+                                  color: const Color(0xFF14B8A6),
+                                ),
+                              ),
+                            ],
+                          ),
                         ],
                       ),
                     ),
@@ -1566,17 +2017,38 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
     setState(() => isExportingPdf = true);
     try {
       final relatorio = bundle!.relatorio;
-      final report = relatorioDirigido ?? bundle!.relatorioDirigidoBase;
       final filename = _singlePdfFilename(relatorio);
 
+      try {
+        final request = _buildRequest();
+        if (request == null) {
+          throw const FormatException('Requisicao do relatorio invalida.');
+        }
+        final pdfBytes = await widget.repository.generateLevantamentoFundebPdf(
+          request,
+          tipo: 'levantamento',
+        );
+        await PdfDownloadHelper.downloadPdf(
+          bytes: pdfBytes,
+          filename: filename,
+        );
+        return;
+      } catch (serverError) {
+        debugPrint(
+          'Server levantamento failed, using local fallback: $serverError',
+        );
+      }
+
+      final report = relatorioDirigido ?? bundle!.relatorioDirigidoBase;
       final pdfBytes = await FundebLevantamentoPdfBuilder.buildFromBundle(
         bundle!,
         directedReport: report,
       );
-
-      await Printing.sharePdf(bytes: pdfBytes, filename: filename);
+      await PdfDownloadHelper.downloadPdf(bytes: pdfBytes, filename: filename);
     } catch (error) {
-      _showSnackBar('Falha ao gerar o PDF tecnico: ${_cleanErrorMessage(error)}');
+      _showSnackBar(
+        'Falha ao gerar o PDF tecnico: ${_cleanErrorMessage(error)}',
+      );
     } finally {
       if (mounted) {
         setState(() => isExportingPdf = false);
@@ -1586,7 +2058,9 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
 
   Future<void> _exportComercialPdf() async {
     if (bundle == null) {
-      _showSnackBar('Carregue um municipio valido antes de gerar o PDF comercial.');
+      _showSnackBar(
+        'Carregue um municipio valido antes de gerar o PDF comercial.',
+      );
       return;
     }
 
@@ -1596,9 +2070,13 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
       final rawCity = relatorio.identificacao.municipioNome.isEmpty
           ? municipioController.text.trim()
           : relatorio.identificacao.municipioNome;
-      final city = _sanitizeFilenameSegment(rawCity.isEmpty ? 'Municipio' : rawCity);
+      final city = _sanitizeFilenameSegment(
+        rawCity.isEmpty ? 'Municipio' : rawCity,
+      );
       final uf = _sanitizeFilenameSegment(
-        relatorio.identificacao.uf.isEmpty ? ufController.text : relatorio.identificacao.uf,
+        relatorio.identificacao.uf.isEmpty
+            ? ufController.text
+            : relatorio.identificacao.uf,
       ).toUpperCase();
       final filename = 'COMERCIAL_$city - ${uf.isEmpty ? 'UF' : uf}.pdf';
 
@@ -1610,17 +2088,25 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
               : relatorio.identificacao.codigoIBGE,
           nome: relatorio.identificacao.municipioNome,
           uf: relatorio.identificacao.uf,
-          exercicio: int.tryParse(exercicioController.text.trim()) ?? relatorio.identificacao.exercicio,
+          exercicio:
+              int.tryParse(exercicioController.text.trim()) ??
+              relatorio.identificacao.exercicio,
+          parametros: _buildReportParametros(),
         );
         final pdfBytes = await widget.repository.generateLevantamentoFundebPdf(
           request,
           tipo: 'comercial-premium',
         );
-        await Printing.sharePdf(bytes: pdfBytes, filename: filename);
+        await PdfDownloadHelper.downloadPdf(
+          bytes: pdfBytes,
+          filename: filename,
+        );
         return;
       } catch (serverError) {
         // Fallback to local Dart builder if server fails
-        debugPrint('Server comercial-premium failed, using local fallback: $serverError');
+        debugPrint(
+          'Server comercial-premium failed, using local fallback: $serverError',
+        );
       }
 
       // Fallback: local Dart builder
@@ -1629,9 +2115,14 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
         bundle!,
         directedReport: report,
       );
-      await Printing.sharePdf(bytes: comercialBytes, filename: filename);
+      await PdfDownloadHelper.downloadPdf(
+        bytes: comercialBytes,
+        filename: filename,
+      );
     } catch (error) {
-      _showSnackBar('Falha ao gerar o PDF comercial: ${_cleanErrorMessage(error)}');
+      _showSnackBar(
+        'Falha ao gerar o PDF comercial: ${_cleanErrorMessage(error)}',
+      );
     } finally {
       if (mounted) {
         setState(() => isExportingComercialPdf = false);
@@ -1652,9 +2143,13 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
       final rawCity = relatorio.identificacao.municipioNome.isEmpty
           ? municipioController.text.trim()
           : relatorio.identificacao.municipioNome;
-      final city = _sanitizeFilenameSegment(rawCity.isEmpty ? 'Municipio' : rawCity);
+      final city = _sanitizeFilenameSegment(
+        rawCity.isEmpty ? 'Municipio' : rawCity,
+      );
       final uf = _sanitizeFilenameSegment(
-        relatorio.identificacao.uf.isEmpty ? ufController.text : relatorio.identificacao.uf,
+        relatorio.identificacao.uf.isEmpty
+            ? ufController.text
+            : relatorio.identificacao.uf,
       ).toUpperCase();
       final filename = 'RESUMO_$city - ${uf.isEmpty ? 'UF' : uf}.pdf';
 
@@ -1663,7 +2158,7 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
         directedReport: report,
       );
 
-      await Printing.sharePdf(bytes: pdfBytes, filename: filename);
+      await PdfDownloadHelper.downloadPdf(bytes: pdfBytes, filename: filename);
     } catch (error) {
       _showSnackBar('Falha ao gerar o resumo: ${_cleanErrorMessage(error)}');
     } finally {
@@ -1676,6 +2171,7 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
   List<MunicipioLookupRequest> _buildBatchRequests() {
     final exercicio =
         int.tryParse(exercicioController.text.trim()) ?? DateTime.now().year;
+    final parametros = _buildReportParametros();
     return batchSelections
         .map(
           (item) => MunicipioLookupRequest(
@@ -1683,6 +2179,7 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
             nome: item.nome,
             uf: item.uf,
             exercicio: exercicio,
+            parametros: parametros,
           ),
         )
         .toList();
@@ -1739,7 +2236,9 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
         final chunk = requests.sublist(start, end);
 
         if (mounted) {
-          final labels = chunk.map((r) => r.nome ?? r.codigoIbge ?? '').join(', ');
+          final labels = chunk
+              .map((r) => r.nome ?? r.codigoIbge ?? '')
+              .join(', ');
           setState(() => batchCurrentLabel = labels);
         }
 
@@ -1791,7 +2290,11 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
           directedReport: report,
         );
         final comercialFilename = _comercialPdfFilename(batchBundle.relatorio);
-        final comercialArchiveFile = ArchiveFile(comercialFilename, comercialBytes.length, comercialBytes);
+        final comercialArchiveFile = ArchiveFile(
+          comercialFilename,
+          comercialBytes.length,
+          comercialBytes,
+        );
         archive.addFile(comercialArchiveFile);
       }
 
@@ -1804,11 +2307,10 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
       final zipFilename =
           'LEVANTAMENTO_LOTE_${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}.zip';
 
-      final tempDir = await getTemporaryDirectory();
-      final zipFile = File('${tempDir.path}/$zipFilename');
-      await zipFile.writeAsBytes(zipData);
-
-      await Share.shareXFiles([XFile(zipFile.path)], text: 'Levantamentos FUNDEB em Lote');
+      await PdfDownloadHelper.downloadZip(
+        bytes: Uint8List.fromList(zipData),
+        filename: zipFilename,
+      );
 
       if (!mounted) return;
       final summary = failures.isEmpty
@@ -1839,9 +2341,12 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
     final rawCity = ident.municipioNome.isEmpty
         ? municipioController.text.trim()
         : ident.municipioNome;
-    final city = _sanitizeFilenameSegment(rawCity.isEmpty ? 'Municipio' : rawCity);
-    final uf = _sanitizeFilenameSegment(ident.uf.isEmpty ? ufController.text : ident.uf)
-        .toUpperCase();
+    final city = _sanitizeFilenameSegment(
+      rawCity.isEmpty ? 'Municipio' : rawCity,
+    );
+    final uf = _sanitizeFilenameSegment(
+      ident.uf.isEmpty ? ufController.text : ident.uf,
+    ).toUpperCase();
     return 'LEVANTAMENTO_$city - ${uf.isEmpty ? 'UF' : uf}.pdf';
   }
 
@@ -1850,9 +2355,12 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
     final rawCity = ident.municipioNome.isEmpty
         ? municipioController.text.trim()
         : ident.municipioNome;
-    final city = _sanitizeFilenameSegment(rawCity.isEmpty ? 'Municipio' : rawCity);
-    final uf = _sanitizeFilenameSegment(ident.uf.isEmpty ? ufController.text : ident.uf)
-        .toUpperCase();
+    final city = _sanitizeFilenameSegment(
+      rawCity.isEmpty ? 'Municipio' : rawCity,
+    );
+    final uf = _sanitizeFilenameSegment(
+      ident.uf.isEmpty ? ufController.text : ident.uf,
+    ).toUpperCase();
     return 'DIAGNOSTICO_$city - ${uf.isEmpty ? 'UF' : uf}.pdf';
   }
 
@@ -1957,7 +2465,11 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
 
     if (isDone) {
       iconColor = const Color(0xFF15803D);
-      leadingIcon = Icon(Icons.check_circle_rounded, size: 20, color: iconColor);
+      leadingIcon = Icon(
+        Icons.check_circle_rounded,
+        size: 20,
+        color: iconColor,
+      );
     } else if (isActive) {
       iconColor = theme.colorScheme.primary;
       leadingIcon = SizedBox(
@@ -1970,7 +2482,11 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
       leadingIcon = Icon(Icons.error_rounded, size: 20, color: iconColor);
     } else {
       iconColor = const Color(0xFFCBD5E1);
-      leadingIcon = Icon(Icons.radio_button_unchecked, size: 20, color: iconColor);
+      leadingIcon = Icon(
+        Icons.radio_button_unchecked,
+        size: 20,
+        color: iconColor,
+      );
     }
 
     return Padding(
@@ -2013,9 +2529,6 @@ class _LevantamentoFundebScreenState extends State<LevantamentoFundebScreen> {
     );
   }
 }
-
-
-
 
 class _StatusLine extends StatelessWidget {
   const _StatusLine({
@@ -2097,8 +2610,6 @@ class _MiniMetric extends StatelessWidget {
   }
 }
 
-
-
 class _BatchLevantamentoResult {
   const _BatchLevantamentoResult.success({
     required this.bundle,
@@ -2155,7 +2666,11 @@ class _LoadingStep {
 }
 
 class _HeroBadge extends StatelessWidget {
-  const _HeroBadge({required this.label, required this.icon, this.highlight = false});
+  const _HeroBadge({
+    required this.label,
+    required this.icon,
+    this.highlight = false,
+  });
   final String label;
   final IconData icon;
   final bool highlight;
@@ -2165,16 +2680,37 @@ class _HeroBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       decoration: BoxDecoration(
-        color: highlight ? const Color(0xFF10B981).withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.1),
+        color: highlight
+            ? const Color(0xFF10B981).withValues(alpha: 0.2)
+            : Colors.white.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: highlight ? const Color(0xFF10B981).withValues(alpha: 0.4) : Colors.white.withValues(alpha: 0.15)),
+        border: Border.all(
+          color: highlight
+              ? const Color(0xFF10B981).withValues(alpha: 0.4)
+              : Colors.white.withValues(alpha: 0.15),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: highlight ? const Color(0xFF4ADE80) : Colors.white.withValues(alpha: 0.8)),
+          Icon(
+            icon,
+            size: 14,
+            color: highlight
+                ? const Color(0xFF4ADE80)
+                : Colors.white.withValues(alpha: 0.8),
+          ),
           const SizedBox(width: 6),
-          Text(label, style: TextStyle(color: highlight ? const Color(0xFF4ADE80) : Colors.white.withValues(alpha: 0.9), fontSize: 12, fontWeight: FontWeight.w500)),
+          Text(
+            label,
+            style: TextStyle(
+              color: highlight
+                  ? const Color(0xFF4ADE80)
+                  : Colors.white.withValues(alpha: 0.9),
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
         ],
       ),
     );
@@ -2182,7 +2718,13 @@ class _HeroBadge extends StatelessWidget {
 }
 
 class _PremiumKpi extends StatelessWidget {
-  const _PremiumKpi({required this.label, required this.value, required this.helper, required this.icon, required this.accent});
+  const _PremiumKpi({
+    required this.label,
+    required this.value,
+    required this.helper,
+    required this.icon,
+    required this.accent,
+  });
   final String label;
   final String value;
   final String helper;
@@ -2197,7 +2739,13 @@ class _PremiumKpi extends StatelessWidget {
         color: SaaSTokens.cardWhite,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: SaaSTokens.borderLight),
-        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 8, offset: const Offset(0, 2))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2205,7 +2753,8 @@ class _PremiumKpi extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 36, height: 36,
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
                   color: accent.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
@@ -2214,14 +2763,33 @@ class _PremiumKpi extends StatelessWidget {
               ),
               const SizedBox(width: 10),
               Expanded(
-                child: Text(label, style: TextStyle(color: SaaSTokens.textMuted, fontSize: 12, fontWeight: FontWeight.w500)),
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    color: SaaSTokens.textMuted,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ),
             ],
           ),
           const SizedBox(height: 14),
-          Text(value, style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700, color: SaaSTokens.textTitle)),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 19,
+              fontWeight: FontWeight.w700,
+              color: SaaSTokens.textTitle,
+            ),
+          ),
           const SizedBox(height: 4),
-          Text(helper, style: TextStyle(fontSize: 11.5, color: SaaSTokens.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text(
+            helper,
+            style: TextStyle(fontSize: 11.5, color: SaaSTokens.textMuted),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ],
       ),
     );
@@ -2238,11 +2806,22 @@ class _CompactInfo extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(fontSize: 11, color: SaaSTokens.textMuted, fontWeight: FontWeight.w500)),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            color: SaaSTokens.textMuted,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
         const SizedBox(height: 3),
         Text(
           value.isEmpty || value == '--' ? '—' : value,
-          style: const TextStyle(fontSize: 13.5, fontWeight: FontWeight.w600, color: SaaSTokens.textTitle),
+          style: const TextStyle(
+            fontSize: 13.5,
+            fontWeight: FontWeight.w600,
+            color: SaaSTokens.textTitle,
+          ),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
@@ -2252,7 +2831,11 @@ class _CompactInfo extends StatelessWidget {
 }
 
 class _RevenueItem extends StatelessWidget {
-  const _RevenueItem({required this.label, required this.value, required this.color});
+  const _RevenueItem({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
   final String label;
   final String value;
   final Color color;
@@ -2271,13 +2854,31 @@ class _RevenueItem extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              ),
               const SizedBox(width: 8),
-              Text(label, style: TextStyle(fontSize: 12, color: SaaSTokens.textMuted, fontWeight: FontWeight.w500)),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: SaaSTokens.textMuted,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
-          Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: SaaSTokens.textTitle)),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: SaaSTokens.textTitle,
+            ),
+          ),
         ],
       ),
     );

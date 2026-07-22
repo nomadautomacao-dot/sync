@@ -338,9 +338,62 @@ class LocalSyncRepository implements SyncRepository {
   }
 
   @override
-  Future<CollaboratorSummary> createCollaborator(Map<String, dynamic> data) async {
-    throw const ApiException('Criacao de colaborador requer conexao com a API.');
+  Future<CollaboratorSummary> createCollaborator(
+    Map<String, dynamic> data,
+  ) async {
+    throw const ApiException(
+      'Criacao de colaborador requer conexao com a API.',
+    );
   }
+
+  @override
+  Future<CollaboratorDetails> getCollaboratorDetails(String id) async {
+    return MockSyncRepository().getCollaboratorDetails(id);
+  }
+
+  @override
+  Future<CollaboratorDetails> updateCollaboratorDetails(
+    String id,
+    Map<String, dynamic> data,
+  ) async {
+    return MockSyncRepository().updateCollaboratorDetails(id, data);
+  }
+
+  @override
+  Future<List<CollaboratorDocument>> getCollaboratorDocuments(String id) async {
+    return MockSyncRepository().getCollaboratorDocuments(id);
+  }
+
+  @override
+  Future<CollaboratorDocument> uploadCollaboratorDocument({
+    required String id,
+    required String category,
+    required String documentType,
+    required String name,
+    required String fileName,
+    required Uint8List fileBytes,
+    String? issuedAt,
+    String? expiresAt,
+    String? notes,
+  }) async {
+    return MockSyncRepository().uploadCollaboratorDocument(
+      id: id,
+      category: category,
+      documentType: documentType,
+      name: name,
+      fileName: fileName,
+      fileBytes: fileBytes,
+      issuedAt: issuedAt,
+      expiresAt: expiresAt,
+      notes: notes,
+    );
+  }
+
+  @override
+  Future<void> deleteCollaboratorDocument(String id, String docId) async {
+    return MockSyncRepository().deleteCollaboratorDocument(id, docId);
+  }
+
 
   @override
   Future<List<CityAccount>> getCities({
@@ -349,6 +402,16 @@ class LocalSyncRepository implements SyncRepository {
   }) async {
     // Cities are server-side data; local mode returns empty
     return const <CityAccount>[];
+  }
+
+  @override
+  Future<void> updateCityStage(String cityId, String stage) async {
+    // Local mode does not store stateful municipalities
+  }
+
+  @override
+  Future<void> updateCityPipeline(String cityId, Map<String, dynamic> data) async {
+    // Local mode does not store stateful municipalities
   }
 
   @override
@@ -406,6 +469,7 @@ class LocalSyncRepository implements SyncRepository {
       nome: (municipio['nome'] ?? '').toString(),
       uf: _getMunicipioUf(municipio),
       exercicio: request.exercicio,
+      parametros: request.parametros,
     );
 
     return MockSyncRepository().getLevantamentoFundeb(resolvedRequest);
@@ -427,6 +491,7 @@ class LocalSyncRepository implements SyncRepository {
       nome: (municipio['nome'] ?? '').toString(),
       uf: _getMunicipioUf(municipio),
       exercicio: request.exercicio,
+      parametros: request.parametros,
     );
 
     return MockSyncRepository().refreshRelatorioDirigido(resolvedRequest);
@@ -451,7 +516,9 @@ class LocalSyncRepository implements SyncRepository {
   }
 
   @override
-  Future<Map<String, dynamic>> obterDadosContratoFundeb(Map<String, dynamic> body) async {
+  Future<Map<String, dynamic>> obterDadosContratoFundeb(
+    Map<String, dynamic> body,
+  ) async {
     return MockSyncRepository().obterDadosContratoFundeb(body);
   }
 

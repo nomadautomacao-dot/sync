@@ -1,0 +1,259 @@
+{
+  "material_date": "30/06/2026",
+  "municipio": "Águas Lindas de Goiás",
+  "uf": "GO",
+  "exercicio": 2026,
+  "hero": {
+    "headline": "Águas Lindas de Goiás conquistou um avanço expressivo no FUNDEB em 2026.",
+    "description": "Material executivo estruturado para reunião com foco em serviço, racional técnico e potencial de resultado para o município do Entorno de Brasília.",
+    "points": "Receita saltou de R$ 178,6 mi para R$ 257,6 mi (+44,2%), com VAAT retomado em R$ 62,4 mi. Rede municipal robusta com 23.847 matrículas e expansão de 104% em tempo integral. Há espaço claro para ampliar VAAR e otimizar a complementação."
+  },
+  "guide_panels": {
+    "message": {
+      "title": "COMO CONDUZIR",
+      "lines": [
+        "Abrir com porte do município e relevância do Entorno de Brasília.",
+        "Enfatizar o salto de receita e a conquista do VAAT em 2026.",
+        "Destacar a oportunidade de capturar VAAR e ampliar ainda mais."
+      ]
+    },
+    "scope": {
+      "title": "CHAVE DA FALA",
+      "lines": [
+        "Vender método, não promessa vaga.",
+        "Mostrar que a Rocha Prime entra em execução.",
+        "Reforçar acompanhamento e disciplina de agenda."
+      ]
+    },
+    "base": {
+      "title": "PONTO DE APOIO",
+      "lines": [
+        "Usar esta página para dar lastro técnico.",
+        "Rede grande, 50 escolas municipais e base organizada.",
+        "Serve para sustentar credibilidade na fala."
+      ]
+    },
+    "projection": {
+      "title": "TESE OFENSIVA",
+      "lines": [
+        "Apresentar como alavanca ofertável.",
+        "Integral com multiplicador de 2,5x sobre a base municipal.",
+        "EJA com potencial de até 5x via incentivos e busca ativa."
+      ]
+    },
+    "comparison": {
+      "title": "LEITURA CRÍTICA",
+      "lines": [
+        "Mostrar que a base educacional cresceu consistentemente.",
+        "Receita finalmente capturou parte dessa evolução.",
+        "Abrir espaço para agenda de expansão e consolidação."
+      ]
+    },
+    "financial": {
+      "title": "MENSAGEM-CHAVE",
+      "lines": [
+        "Receita forte, com VAAT retomado.",
+        "VAAR ainda zerado — oportunidade não capturada.",
+        "O ganho vem de estruturação técnica e defesa de complementação."
+      ]
+    },
+    "method": {
+      "title": "PASSAR SEGURANÇA",
+      "lines": [
+        "Falar de rito, governança e execução.",
+        "Equipe técnica e honorário por êxito.",
+        "Tirar sensação de risco do gestor."
+      ]
+    },
+    "closing": {
+      "title": "PEDIDO FINAL",
+      "lines": [
+        "Fechar pedindo mesa técnica.",
+        "Levar para próximos passos concretos.",
+        "Sair da reunião com abertura operacional."
+      ]
+    }
+  },
+  "metrics": {
+    "receita_2025": 178657482.88,
+    "receita_prevista": 257601696.97,
+    "receita_com_rocha_prime": 432770850.91,
+    "ganho_estimado": 175169153.94,
+    "matriculas_qedu": 23847,
+    "crescimento_receita_pct": 44.2,
+    "vaar_atual": 0
+  },
+  "network_summary": {
+    "escolas_publicas": 69,
+    "escolas_municipais": 50,
+    "matriculas_publicas": 50071,
+    "integral_publica": 6375,
+    "eja_publica": 1498
+  },
+  "executive_message": {
+    "eyebrow": "Por que Águas Lindas de Goiás justifica uma agenda mais robusta",
+    "title": "Leitura executiva do caso",
+    "body": "A tese de abertura da reunião é direta: Águas Lindas de Goiás é o maior município do Entorno de Brasília e protagonizou um avanço de +44,2% na receita FUNDEB em 2026, saltando de R$ 178,6 mi para R$ 257,6 mi, com a conquista de R$ 62,4 mi em VAAT. O tempo integral cresceu 104% em 4 anos, mas o município ainda não captura VAAR — e a projeção com a Rocha Prime pode elevar a receita para R$ 432,7 mi no próximo ciclo.",
+    "deliverables": [
+      "Leitura clara do que a Rocha Prime faz e onde ela agrega valor.",
+      "Tradução executiva dos números de Águas Lindas para contexto de decisão.",
+      "Conexão entre rede, repasse, elegibilidade e agenda técnica."
+    ]
+  },
+  "history": {
+    "title": "Evolução da receita FUNDEB de 2022 a 2026",
+    "intro": "A série histórica confirma uma trajetória de crescimento acelerado: a receita FUNDEB de Águas Lindas saiu de R$ 127,8 mi em 2022 para R$ 257,6 mi em 2026, com destaque para a retomada do VAAT em 2024 (R$ 16,4 mi) e a expressiva ampliação em 2026 (R$ 62,4 mi). A complementação federal consolidou-se como vetor estratégico da receita municipal.",
+    "series": [
+      [2022, 127812516.88],
+      [2023, 137669743.78],
+      [2024, 168263912.51],
+      [2025, 178657482.88],
+      [2026, 257601696.97]
+    ],
+    "legal_sources": [
+      "Portaria Interministerial FNDE/MEC — Receitas FUNDEB 2022 a 2026.",
+      "Lei nº 14.113/2020 — Novo FUNDEB permanente.",
+      "Dados consolidados no PrimeOS a partir de bases oficiais.",
+      "Censo Escolar INEP — séries 2022 a 2025."
+    ],
+    "reading": "Em 5 anos, Águas Lindas dobrou sua receita FUNDEB (+101,5%). O salto mais expressivo ocorreu entre 2025 e 2026 (+44,2%), impulsionado pela conquista plena do VAAT. A trajetória confirma potencial estrutural para captura adicional no próximo ciclo."
+  },
+  "scope": {
+    "title": "O que a Rocha Prime faz na prática",
+    "subtitle": "Serviços centrais da entrega",
+    "cards": [
+      {
+        "title": "Levantamento completo",
+        "description": "Coleta e organização das bases educacionais, financeiras, cadastrais e operacionais do município."
+      },
+      {
+        "title": "Cruzamento técnico",
+        "description": "Leitura integrada entre MEC, FNDE, INEP, QEdu e sistemas locais para localizar incoerências e oportunidades."
+      },
+      {
+        "title": "Correções priorizadas",
+        "description": "Apoio técnico para saneamento, habilitação e medidas com maior impacto sobre elegibilidade e repasse."
+      },
+      {
+        "title": "Monitoramento executivo",
+        "description": "Acompanhamento da agenda e dos efeitos sobre receita, conformidade e evolução do caso."
+      }
+    ],
+    "closing": "A mensagem desta página deve ser objetiva: a Rocha Prime não vende relatório; vende execução, correção priorizada e acompanhamento até o resultado."
+  },
+  "base": {
+    "intro": "A base disponível confirma uma rede pública robusta, com 69 escolas públicas (50 municipais), 23.847 matrículas municipais, 2.607 em educação especial e 7.447 em tempo integral. O município está habilitado para o VAAT e os principais sistemas MEC/FNDE estão ativos, favorecendo uma agenda rápida de estruturação e ampliação.",
+    "qedu": [
+      ["Escolas municipais", "50"],
+      ["Matrículas municipais", "23.847"],
+      ["Docentes municipais", "798"],
+      ["Creche municipal", "1.134"],
+      ["Pré-escola municipal", "5.318"],
+      ["Anos iniciais municipal", "17.054"],
+      ["Ensino fundamental municipal", "17.054"],
+      ["EJA municipal", "341"],
+      ["Educação especial municipal", "1.391"],
+      ["Tempo integral municipal", "3.653"]
+    ],
+    "systems": [
+      ["MEC", "SIMEC", "Requer credencial do ente"],
+      ["FNDE", "Habilita", "Habilitado VAAT"],
+      ["FNDE", "SIGARPWEB", "Consulta pública disponível"],
+      ["FNDE", "SIGPC", "Consulta pública disponível"],
+      ["FNDE", "PDDE Info", "48 escolas localizadas"]
+    ],
+    "reading": "Esta é a página de sustentação técnica da conversa: rede amplíssima, 50 escolas municipais, avanço expressivo em tempo integral (+104% em 4 anos), habilitação VAAT ativa e base organizada. O caso tem lastro operacional para uma abordagem firme e profissional."
+  },
+  "comparison": {
+    "title": "O que mudou na base considerada pelo Fundeb",
+    "subtitle": "Matrículas e implicações executivas",
+    "rows": [
+      ["Matrículas municipais totais", "+836", "Rede municipal ganha escala de 23.011 para 23.847."],
+      ["Tempo integral pública", "+1.452", "Expansão expressiva em modalidade com maior peso no FUNDEB."],
+      ["Tempo integral municipal", "+2.966", "Salto de 687 para 3.653 (+431%) na rede do município."],
+      ["Educação especial municipal", "+511", "Crescimento material de 880 para 1.391 em frente sensível."],
+      ["Creche municipal", "+420", "Expansão de 714 para 1.134 na base de creche."],
+      ["EJA municipal", "+68", "Leve avanço de 273 para 341 — ainda há margem."]
+    ],
+    "matricula_base_1": 23011,
+    "matricula_base_2": 23847,
+    "critical_title": "LEITURA CRÍTICA",
+    "critical_label": "Águas Lindas conquistou VAAT mas segue sem VAAR",
+    "critical_text": "O município fez avanços significativos na base educacional, conquistou o VAAT com R$ 62,4 mi, mas permanece sem VAAR. A captura do VAAR representaria um acréscimo estimado de R$ 3 mi já no primeiro ciclo e tendência de crescimento. Com a Rocha Prime, essa oportunidade deixa de ser teórica.",
+    "summary": "A leitura para reunião é de consolidação: a rede se moveu fortemente, a receita acompanhou, mas há camada de complementação federal não explorada (VAAR). Com a Rocha Prime, a conversa migra de crescimento para maximização de resultado."
+  },
+  "projection": {
+    "title": "Tese de expansão orientada da rede",
+    "subtitle": "Leitura comercial para reunião com base na rede municipal atual",
+    "assumption_text": "A proposta comercial pode ser conduzida com uma tese objetiva de expansão: na rede municipal atual, a Rocha Prime pode defender uma alavanca de 2,5x para o tempo integral e potencial de até 5x para a EJA, apoiada por incentivos, programas, busca ativa e reorganização de oferta.",
+    "integral": {
+      "escolas_priorizadas": 25,
+      "media_por_escola": 120,
+      "alunos_adicionais": 5472,
+      "base_atual": 3653,
+      "base_projetada": 9125,
+      "percentual_atual": 15.3,
+      "percentual_projetado": 38.3
+    },
+    "eja": {
+      "escolas_priorizadas": 20,
+      "media_por_escola": 50,
+      "alunos_adicionais": 1364,
+      "base_atual": 341,
+      "base_projetada": 1705,
+      "percentual_atual": 1.4,
+      "percentual_projetado": 7.1
+    },
+    "closing": "Na condução comercial, a mensagem é clara: hoje Águas Lindas já opera acima da média em tempo integral, mas pode ir muito mais longe. Com a Rocha Prime, o município pode migrar de 3.653 para 9.125 matrículas em tempo integral e de 341 para 1.705 matrículas em EJA, consolidando a rede como referência no Entorno de Brasília."
+  },
+  "financial": {
+    "current_rows": [
+      ["Contribuição municipal", 195192212.89, "75,8%"],
+      ["Complementação VAAF", 0, "0,0%"],
+      ["Complementação VAAT", 62409484.08, "24,2%"],
+      ["Complementação VAAR", 0, "0,0%"],
+      ["Total previsto 2026", 257601696.97, "100,0%"]
+    ],
+    "projection_rows": [
+      ["VAAF", 0, 0, 0],
+      ["VAAT", 62409484.08, 104847933.25, 42438449.17],
+      ["VAAR", 0, 3029395.96, 3029395.96],
+      ["Total geral", 257601696.97, 432770850.91, 175169153.94]
+    ],
+    "highlight_title": "POTENCIAL ESTRUTURADO DE GANHO",
+    "highlight_value": 175169153.94,
+    "narrative": "Na fala do gestor, esta lâmina precisa fechar o raciocínio com contraste: Águas Lindas já conquistou um avanço de R$ 79 mi em 2026 graças ao VAAT. Mas o cenário projetado com a Rocha Prime mostra que o município pode saltar de R$ 257,6 mi para R$ 432,7 mi no próximo ciclo — um ganho potencial de R$ 175,1 mi (+68%) via ampliação de VAAT e captura inédita de VAAR."
+  },
+  "method": {
+    "title": "Como a Rocha Prime conduz a agenda",
+    "subtitle": "Fluxo de trabalho e diferenciais executivos",
+    "steps": [
+      ["Levantamento", "Organização das bases e documentação."],
+      ["Cruzamento", "Leitura integrada de rede, receita e sistemas."],
+      ["Correção", "Foco nas medidas que mais alteram resultado."],
+      ["Monitoramento", "Rito técnico com acompanhamento executivo."]
+    ],
+    "differentials": [
+      "Especialização em FUNDEB, Censo Escolar e sistemas FNDE.",
+      "Leitura integrada entre rede, receita, habilitação e evidências.",
+      "Honorários condicionados ao resultado efetivo, sem custo fixo inicial.",
+      "Linguagem executiva para decisão do gestor e acompanhamento técnico."
+    ]
+  },
+  "closing": {
+    "agenda": [
+      ["Apresentação executiva ao gestor", "Alinhamento do racional técnico e da oportunidade de R$ 175 mi."],
+      ["Abertura da mesa técnica", "Secretaria de Educação, equipe financeira e responsáveis operacionais."],
+      ["Plano de ação Rocha Prime", "Cronograma, acessos, priorização e acompanhamento."]
+    ],
+    "title": "ÁGUAS LINDAS DE GOIÁS | OPORTUNIDADE EXECUTIVA",
+    "body": "Águas Lindas de Goiás já demonstrou capacidade de crescimento: dobrou a receita FUNDEB em 5 anos e conquistou o VAAT em 2026. A proposta da Rocha Prime é consolidar esse avanço e capturar o potencial restante com método, segurança de execução e foco direto em resultado mensurável."
+  },
+  "contact": {
+    "company": "Rocha Prime Serviços Especializados",
+    "email": "contato@rochaprimedigital.com.br",
+    "phone": "(61) 99866-7834",
+    "cnpj": "29.342.691/0001-93",
+    "tagline": "Inteligência e Estratégia para Gestão Pública"
+  }
+}
