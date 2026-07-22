@@ -15,6 +15,7 @@
 
 # ── Environment ──
 .env*
+!.env.example
 cloudrun.env.yaml
 
 # ── TypeScript ──
