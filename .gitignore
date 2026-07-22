@@ -74,3 +74,4 @@ yarn-error.log*
 relatorios_*/
 data/_sinopses/
 data/batch/
+.superpowers/
