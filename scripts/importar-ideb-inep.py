@@ -23,6 +23,7 @@ Como usar:
 
 import json
 import sys
+import os
 from pathlib import Path
 
 try:
@@ -32,17 +33,20 @@ except ImportError:
     sys.exit(1)
 
 BASE_DIR = Path(__file__).parent.parent
+# Entrada: XLSX de origem, fora do repositório (DADOS_BRUTOS_DIR).
+# Saída: JSON derivado, versionado em data/.
+RAW_DIR = Path(os.environ.get("DADOS_BRUTOS_DIR") or (BASE_DIR / "data"))
 DATA_DIR = BASE_DIR / "data"
 JSON_OUT = DATA_DIR / "ideb-municipal-2023.json"
 
 def locate_excel_file(pattern: str) -> Path | None:
-    for file in DATA_DIR.glob("*.xlsx"):
+    for file in RAW_DIR.glob("*.xlsx"):
         if pattern in file.name.lower():
             return file
     return None
 
 def main():
-    print(f"Buscando planilhas do INEP na pasta: {DATA_DIR}")
+    print(f"Buscando planilhas do INEP na pasta: {RAW_DIR}")
     
     file_iniciais = locate_excel_file("iniciais")
     file_finais = locate_excel_file("finais")

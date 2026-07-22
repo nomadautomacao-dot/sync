@@ -5,6 +5,7 @@ import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
 import { ContratosFundebData } from "../types";
 import { estadoBySigla } from "./contrato-fundeb-service";
+import { contratosAssetsDir, requireContratosAsset } from "@/core/lib/assets-paths";
 
 /**
  * Interface representando o arquivo mapeado de template em formato DOCX
@@ -46,7 +47,7 @@ const PROPOSTA_TEMPLATE: TemplateConfig = {
  */
 export async function gerarKitContratoZip(data: ContratosFundebData): Promise<Buffer> {
   const resultZip = new JSZip();
-  const templatesDir = path.join(process.cwd(), "contratos", "Anexos_DOCX");
+  const templatesDir = requireContratosAsset("Anexos_DOCX");
 
   const estadoNome = estadoBySigla(data.municipioUF);
 
@@ -157,7 +158,7 @@ export async function gerarKitContratoZip(data: ContratosFundebData): Promise<Bu
   }
 
   // ── Incluir automaticamente a Documentação Habilitatória da empresa ──
-  const habilitacaoDir = path.join(process.cwd(), "contratos", "Habilitacao_PRIME");
+  const habilitacaoDir = path.join(contratosAssetsDir(), "Habilitacao_PRIME");
   if (fs.existsSync(habilitacaoDir)) {
     const categorias = fs.readdirSync(habilitacaoDir, { withFileTypes: true })
       .filter((entry) => entry.isDirectory())
@@ -273,7 +274,7 @@ export async function gerarKitContratoComAnexosZip(
  * Separada do ZIP para que possa ser assinada individualmente.
  */
 export async function gerarPropostaDocx(data: ContratosFundebData): Promise<{ buffer: Buffer; filename: string }> {
-  const templatesDir = path.join(process.cwd(), "contratos", "Anexos_DOCX");
+  const templatesDir = requireContratosAsset("Anexos_DOCX");
   const templatePath = path.join(templatesDir, PROPOSTA_TEMPLATE.filename);
 
   if (!fs.existsSync(templatePath)) {

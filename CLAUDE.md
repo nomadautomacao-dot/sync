@@ -96,7 +96,9 @@ Sync/
 ├── lib/auth.ts                   # Login customizado por email/senha (Flutter)
 ├── prisma/schema.prisma          # Schema completo (ver seção 3.4)
 ├── scripts/                      # Scripts auxiliares (ver seção 8)
-├── data/                         # Dados estáticos (IDEB, INEP, TSE)
+├── data/                         # JSONs derivados (IDEB, INEP, TSE) + fnde/*.csv
+│                                 #   Entram por `import from "@/data/..."` → bundlados
+│                                 #   no build. Fontes brutas ficam em Sync-Arquivos/.
 ├── kit_padrao_pdf_rocha_prime/   # Módulo Python de geração de PDFs FUNDEB
 ├── docs/                         # Specs de negócio e roadmaps
 │   ├── specs/                    # Specs de produto (colaboradores, case sucesso)
@@ -108,11 +110,6 @@ Sync/
 │       ├── core/                 # Models, repositories, services, theme
 │       └── features/             # auth, dashboard, cities, modules, people, shell
 │
-├── contratos/                    # Templates DOCX de contratos
-├── apresentacao/                 # Scripts de geração de apresentações
-├── complementacao/               # PDFs de complementação FUNDEB (fonte)
-├── documents/                    # Documentos corporativos
-│
 ├── CLAUDE.md                     # ← ESTE ARQUIVO
 ├── README.md                     # Setup rápido
 ├── Dockerfile                    # Multi-stage build
@@ -121,6 +118,35 @@ Sync/
 ├── run-local.sh                  # Inicia Next.js + Flutter Linux juntos
 └── package.json                  # Dependências e scripts npm
 ```
+
+### O que NÃO fica no repositório
+
+Vale a regra: fica no git só o que o Next importa ou executa, o que o Flutter
+compila, ou o que o build precisa. Documentos de negócio, saídas geradas e
+fontes brutas vivem em `../Sync-Arquivos/`, pasta irmã fora do git.
+
+```
+Sync-Arquivos/
+├── assets-contratos/     Anexos_DOCX, Anexos_TXT, Habilitacao_PRIME  → CONTRATOS_ASSETS_DIR
+├── dados-brutos/         XLSX do INEP, sinopses, payloads            → DADOS_BRUTOS_DIR
+├── kits-entregues/       kits de inexigibilidade por município
+├── relatorios-gerados/   saída dos geradores de PDF
+├── modelos-processo/     modelos .doc de processo administrativo
+├── documentos-empresa/   contratos sociais, alterações, propostas
+├── habilitacao/          certidões avulsas
+├── apresentacoes/        PDFs de apresentação
+├── ferramentas/          toolkit Python de slides, geradores .dart ad-hoc, scripts arquivados
+├── fontes-fundeb/        portarias de complementação FUNDEB
+└── inbox/                material ainda sem classificação
+```
+
+Duas variáveis de ambiente ligam o código a essa pasta, ambas com fallback para
+o caminho antigo (`./contratos` e `./data`) — ver `.env.example` e
+`core/lib/assets-paths.ts`. Ao adicionar um PDF, ZIP ou DOCX ao projeto,
+o destino é `Sync-Arquivos/`, não o repositório.
+
+Contexto completo da separação:
+`docs/superpowers/specs/2026-07-22-reorganizacao-estrutura-design.md`
 
 ---
 

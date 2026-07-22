@@ -9,7 +9,13 @@ import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import JSZip from "jszip";
 
+// Saída: os JSONs derivados ficam em data/, versionados, porque o app os importa.
 const DATA_DIR = path.join(process.cwd(), "data");
+// Entrada: os XLSX de origem vivem fora do repositório. Ver DADOS_BRUTOS_DIR em
+// docs/superpowers/specs/2026-07-22-reorganizacao-estrutura-design.md
+const RAW_DIR = process.env.DADOS_BRUTOS_DIR?.trim()
+  ? path.resolve(process.env.DADOS_BRUTOS_DIR.trim())
+  : DATA_DIR;
 const IDEB_YEARS = [2005, 2007, 2009, 2011, 2013, 2015, 2017, 2019, 2021, 2023] as const;
 
 function decodeXmlEntities(value: string) {
@@ -96,8 +102,8 @@ interface IdebMunicipalFull {
 async function main() {
   console.log("Parsing XLSX files...");
 
-  const aiPath = path.join(DATA_DIR, "divulgacao_anos_iniciais_municipios_2023.xlsx");
-  const afPath = path.join(DATA_DIR, "divulgacao_anos_finais_municipios_2023.xlsx");
+  const aiPath = path.join(RAW_DIR, "divulgacao_anos_iniciais_municipios_2023.xlsx");
+  const afPath = path.join(RAW_DIR, "divulgacao_anos_finais_municipios_2023.xlsx");
 
   const aiRows = await parseWorkbookRows(aiPath);
   const afRows = await parseWorkbookRows(afPath);

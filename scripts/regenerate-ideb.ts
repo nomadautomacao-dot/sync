@@ -6,8 +6,13 @@ import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import JSZip from "jszip";
 
-const ANOS_INICIAIS_FILE = path.join(process.cwd(), "data", "divulgacao_anos_iniciais_municipios_2023.xlsx");
-const ANOS_FINAIS_FILE = path.join(process.cwd(), "data", "divulgacao_anos_finais_municipios_2023.xlsx");
+// Entrada: XLSX de origem, fora do repositório. Saída: JSON derivado, versionado.
+const RAW_DIR = process.env.DADOS_BRUTOS_DIR?.trim()
+  ? path.resolve(process.env.DADOS_BRUTOS_DIR.trim())
+  : path.join(process.cwd(), "data");
+
+const ANOS_INICIAIS_FILE = path.join(RAW_DIR, "divulgacao_anos_iniciais_municipios_2023.xlsx");
+const ANOS_FINAIS_FILE = path.join(RAW_DIR, "divulgacao_anos_finais_municipios_2023.xlsx");
 const OUTPUT_FILE = path.join(process.cwd(), "data", "ideb-municipal-2023.json");
 
 function decodeXmlEntities(value: string) {

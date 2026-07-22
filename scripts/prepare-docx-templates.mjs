@@ -2,7 +2,17 @@ import fs from 'fs';
 import path from 'path';
 import JSZip from 'jszip';
 
-const docxDir = path.join(process.cwd(), 'contratos', 'Anexos_DOCX');
+// Mesma convenção de core/lib/assets-paths.ts — este arquivo é .mjs e não
+// consegue importar o helper TypeScript.
+const contratosAssetsDir = process.env.CONTRATOS_ASSETS_DIR?.trim()
+    ? path.resolve(process.env.CONTRATOS_ASSETS_DIR.trim())
+    : path.join(process.cwd(), 'contratos');
+const docxDir = path.join(contratosAssetsDir, 'Anexos_DOCX');
+
+if (!fs.existsSync(docxDir)) {
+    console.error(`Templates não encontrados em ${docxDir}. Defina CONTRATOS_ASSETS_DIR.`);
+    process.exit(1);
+}
 
 function replaceRegexWithMap(xml, regex, getReplaceStr) {
     let pureText = '';
