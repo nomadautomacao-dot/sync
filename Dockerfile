@@ -24,16 +24,8 @@ RUN npx playwright install --with-deps chromium
 FROM base AS builder
 WORKDIR /app
 
-ARG USE_STUB_DATA=false
-
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-
-# Optional: use stub data only when explicitly requested
-RUN if [ "$USE_STUB_DATA" = "true" ] && [ -d "data-stub" ]; then \
-      rm -rf data && \
-      cp -r data-stub data; \
-    fi
 
 # Disable analytics during build
 ENV NEXT_TELEMETRY_DISABLED 1

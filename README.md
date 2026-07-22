@@ -29,7 +29,7 @@ npm run supabase:bootstrap
 ## Deploy
 
 ```bash
-./scripts/deploy-cloudrun-linux.sh
+./scripts/deploy/deploy-cloudrun-linux.sh
 ```
 
 ## Estrutura

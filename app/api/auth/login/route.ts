@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { login } from '@/lib/auth';
+import { login } from '@/core/lib/session-auth';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',

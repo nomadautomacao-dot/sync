@@ -389,7 +389,7 @@ NODE_ENV: "production"
 
 ```bash
 # Deploy completo (Linux)
-./scripts/deploy-cloudrun-linux.sh
+./scripts/deploy/deploy-cloudrun-linux.sh
 
 # Dev local (Next.js + Flutter Linux)
 ./run-local.sh
