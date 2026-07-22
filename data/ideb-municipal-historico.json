@@ -1,0 +1,34 @@
+{
+  "metasNacionais": {
+    "anosIniciais": [
+      {"ano": 2005, "meta": 3.8},
+      {"ano": 2007, "meta": 3.9},
+      {"ano": 2009, "meta": 4.2},
+      {"ano": 2011, "meta": 4.6},
+      {"ano": 2013, "meta": 4.9},
+      {"ano": 2015, "meta": 5.2},
+      {"ano": 2017, "meta": 5.5},
+      {"ano": 2019, "meta": 5.7},
+      {"ano": 2021, "meta": 6.0},
+      {"ano": 2023, "meta": 6.0}
+    ],
+    "anosFinais": [
+      {"ano": 2005, "meta": 3.5},
+      {"ano": 2007, "meta": 3.5},
+      {"ano": 2009, "meta": 3.7},
+      {"ano": 2011, "meta": 3.9},
+      {"ano": 2013, "meta": 4.4},
+      {"ano": 2015, "meta": 4.7},
+      {"ano": 2017, "meta": 5.0},
+      {"ano": 2019, "meta": 5.2},
+      {"ano": 2021, "meta": 5.5},
+      {"ano": 2023, "meta": 5.5}
+    ],
+    "ensinoMedio": [
+      {"ano": 2017, "meta": 4.4},
+      {"ano": 2019, "meta": 4.6},
+      {"ano": 2021, "meta": 4.9},
+      {"ano": 2023, "meta": 5.2}
+    ]
+  }
+}
