@@ -40,7 +40,14 @@ class RemoteSyncRepository implements SyncRepository {
     if (!remoteEnabled) return null;
 
     // A sessao persiste no proprio SDK do Firebase; nao ha mais cookie.
-    final firebaseUser = FirebaseAuth.instance.currentUser;
+    // No cold start a restauracao e assincrona (Web/IndexedDB sobretudo), entao
+    // currentUser pode vir null antes de o SDK assentar. Esperamos o primeiro
+    // evento de authStateChanges, que reflete a sessao ja restaurada.
+    final firebaseUser = FirebaseAuth.instance.currentUser ??
+        await FirebaseAuth.instance
+            .authStateChanges()
+            .first
+            .timeout(const Duration(seconds: 5), onTimeout: () => null);
     if (firebaseUser == null) {
       return null;
     }
