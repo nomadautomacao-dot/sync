@@ -13,7 +13,7 @@ let env;
 before(async () => {
   env = await initializeTestEnvironment({
     projectId: 'globalconsultorias',
-    firestore: { rules: readFileSync('../firestore.rules', 'utf8') },
+    firestore: { rules: readFileSync('firestore.rules', 'utf8') },
   });
 });
 
