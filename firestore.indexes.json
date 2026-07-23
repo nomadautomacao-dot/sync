@@ -56,6 +56,14 @@
       "fields": [
         { "fieldPath": "payoutId", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "collaboratorDocuments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "groupId", "order": "ASCENDING" },
+        { "fieldPath": "collaboratorId", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/core/lib/auth";
 import { getCollaborator, deleteCollaboratorDocument, getCollaboratorDocument } from "@/core/lib/collaboration-data-access";
 
+// DEPRECATED: o Flutter fala direto com Firestore+Storage
+// (collaborator_document_firestore_service.dart) desde a migracao Firebase.
+// Esta rota so sera removida na Fase 5 (aposentar Prisma/Postgres), junto
+// com collaboration-data-access.ts.
+
 export async function DELETE(
   request: NextRequest,
   context: { params: Promise<{ id: string; docId: string }> }
