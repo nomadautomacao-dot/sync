@@ -64,5 +64,25 @@ service cloud.firestore {
       // Escrita de auditoria só via backend confiavel (Cloud Functions), nunca cliente.
       allow write: if false;
     }
+
+    match /cities/{cityId}/profitSnapshots/{competencia} {
+      allow read:  if isSignedIn() && resource.data.groupId == myGroupId();
+      allow write: if false; // so Cloud Functions (Admin SDK) via registrarProfitSnapshot
+    }
+
+    match /commissionRules/{id} {
+      allow read:  if isSignedIn() && resource.data.groupId == myGroupId();
+      allow write: if false; // regras sao criadas por admin via console/Function futura
+    }
+
+    match /commissionAccruals/{id} {
+      allow read:  if isSignedIn() && resource.data.groupId == myGroupId();
+      allow write: if false; // so fecharCompetencia (Admin SDK)
+    }
+
+    match /commissionPayouts/{id} {
+      allow read:  if isSignedIn() && resource.data.groupId == myGroupId();
+      allow write: if false; // totais so via onAccrualWrite (Admin SDK)
+    }
   }
 }
