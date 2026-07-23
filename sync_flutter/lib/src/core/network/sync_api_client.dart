@@ -109,14 +109,6 @@ class SyncApiClient {
     return _decodeObject(response.body);
   }
 
-  Map<String, dynamic> getObjectFromString(String body) {
-    return _decodeObject(body);
-  }
-
-  Future<void> logout() async {
-    await _send('POST', '/api/auth/logout');
-  }
-
   Future<http.Response> _send(
     String method,
     String path, {
@@ -212,31 +204,6 @@ class SyncApiClient {
     } catch (_) {}
 
     return 'Falha ao comunicar com a API.';
-  }
-
-  String? extractSessionCookie(http.Response response) {
-    final raw = response.headers['set-cookie'];
-    if (raw == null || raw.isEmpty) {
-      // No Flutter Web o browser esconde o set-cookie por seguranca, mas gerencia automaticamente
-      if (kIsWeb) {
-        return 'browser_managed';
-      }
-      return null;
-    }
-    final firstPart = raw.split(';').first.trim();
-    return firstPart.isEmpty ? null : firstPart;
-  }
-
-  Future<http.Response> rawLogin({
-    required String email,
-    required String password,
-  }) {
-    return _send(
-      'POST',
-      '/api/auth/login',
-      body: {'email': email, 'password': password},
-      includeSession: false,
-    );
   }
 
   /// Returns authentication headers (Bearer) for use in external requests (e.g. multipart).

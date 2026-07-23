@@ -84,6 +84,18 @@ class RemoteSyncRepository implements SyncRepository {
       if (firebaseUser == null) {
         throw const ApiException('Nao foi possivel entrar. Tente novamente.');
       }
+
+      // O backend so autoriza quem tem a custom claim groupId. Sem ela, o login
+      // "funciona" mas toda chamada de dados retorna 401 — melhor barrar aqui
+      // com uma mensagem clara do que deixar o app carregar vazio.
+      final claims = (await firebaseUser.getIdTokenResult(true)).claims;
+      if (claims == null || claims['groupId'] == null) {
+        await FirebaseAuth.instance.signOut();
+        throw const ApiException(
+          'Sua conta ainda nao tem acesso configurado. Contate o administrador.',
+        );
+      }
+
       return _userFromFirebase(firebaseUser);
     } on FirebaseAuthException catch (error) {
       throw ApiException(_authErrorMessage(error.code));

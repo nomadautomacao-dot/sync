@@ -29,10 +29,6 @@ class SessionStorage {
     await prefs.setString(_userInitialsKey, user.initials);
   }
 
-  Future<String?> readCookie() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_cookieKey);
-  }
 
   Future<String> readApiBaseUrl() async {
     if (_cachedApiBaseUrl != null) {

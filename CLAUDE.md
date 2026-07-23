@@ -28,7 +28,7 @@
 **Backend (BFF):**
 - Next.js 16 (App Router) + TypeScript — `output: "standalone"`
 - Prisma 6 + PostgreSQL (Supabase) — dual URL (pooler + direct)
-- NextAuth v4 (JWT, Google OAuth) + login customizado por cookie (Flutter)
+- Firebase Auth (verificação de ID token via `firebase-admin`) — ver seção 3.2
 - Python 3 + ReportLab/Pillow para geração de PDFs FUNDEB
 - Zod 4 para validação de schemas
 
@@ -229,8 +229,8 @@ account fica em `FIREBASE_SERVICE_ACCOUNT` (`.env.local`), nunca versionada.
 | Arquivo | Descrição |
 |---------|-----------|
 | `auth.ts` | `getSessionUser()` — verifica o ID token do Firebase |
-| `session-auth.ts` | Login/logout por cookie (Flutter) — tabela `Session` |
-| `user-provisioning.ts` | `upsertSessionUser()` e grupo padrão — compartilhado pelas duas estratégias, evita ciclo de import |
+| `auth-token.ts` | `bearerToken()`, `sessionUserFromClaims()` — parsing puro, testável |
+| `firebase-admin.ts` | Cliente do Admin SDK (lê `FIREBASE_SERVICE_ACCOUNT`) |
 | `assets-paths.ts` | Resolve `CONTRATOS_ASSETS_DIR` |
 | `prisma.ts` | Singleton do Prisma Client |
 | `data-access.ts` (19KB) | Acesso a dados organizacionais (empresas, funcionários, audit) |
@@ -377,15 +377,9 @@ PostgreSQL via Supabase. Dual connection: `DATABASE_URL` (pooler, porta 6543) + 
 ### Variáveis obrigatórias
 
 ```yaml
-DATABASE_URL: "postgresql://..."     # Supabase pooler (porta 6543)
+DATABASE_URL: "postgresql://..."     # Supabase pooler (porta 6543) — dados (fase 2 migra p/ Firestore)
 DIRECT_URL: "postgresql://..."       # Supabase direct (porta 5432)
-NEXTAUTH_URL: "https://..."          # URL pública do Cloud Run
-NEXTAUTH_SECRET: "..."               # Chave aleatória
-GOOGLE_CLIENT_ID: "..."
-GOOGLE_CLIENT_SECRET: "..."
-SYNC_LOGIN_EMAIL: "..."              # Login do app Flutter
-SYNC_LOGIN_PASSWORD: "..."           # Senha do app Flutter
-SYNC_LOGIN_NAME: "..."
+FIREBASE_SERVICE_ACCOUNT: '{...}'    # JSON da service account (globalconsultorias) — verifica o ID token
 NODE_ENV: "production"
 ```
 
