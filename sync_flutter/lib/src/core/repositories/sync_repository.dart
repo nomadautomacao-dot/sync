@@ -63,7 +63,11 @@ abstract class SyncRepository {
 
   Future<EmployeeRecord> createEmployee(Map<String, dynamic> data);
 
-  Future<void> setCompanyLogo(String companyId, Uint8List bytes);
+  Future<void> setCompanyLogo(
+    String companyId,
+    Uint8List bytes, {
+    String? contentType,
+  });
 
   Future<CollaboratorSummary> createCollaborator(Map<String, dynamic> data);
 

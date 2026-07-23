@@ -508,7 +508,11 @@ class MockSyncRepository implements SyncRepository {
   }
 
   @override
-  Future<void> setCompanyLogo(String companyId, Uint8List bytes) async {
+  Future<void> setCompanyLogo(
+    String companyId,
+    Uint8List bytes, {
+    String? contentType,
+  }) async {
     throw UnsupportedError('Mock não suporta upload de logo.');
   }
 

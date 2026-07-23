@@ -129,16 +129,34 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
   // ── LOGO — upload via Firebase Storage ─────────────────────
   bool _uploadingLogo = false;
 
+  static String _contentTypeForExtension(String? extension) {
+    switch (extension?.toLowerCase()) {
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'webp':
+        return 'image/webp';
+      case 'gif':
+        return 'image/gif';
+      default:
+        return 'image/png';
+    }
+  }
+
   Future<void> _pickAndUploadLogo() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.image,
       withData: true,
     );
-    final bytes = result?.files.single.bytes;
+    final file = result?.files.single;
+    final bytes = file?.bytes;
     if (bytes == null) return;
+    final contentType = _contentTypeForExtension(file?.extension);
     setState(() => _uploadingLogo = true);
     try {
-      await widget.repository.setCompanyLogo(widget.companyId, bytes);
+      await widget.repository.setCompanyLogo(widget.companyId, bytes, contentType: contentType);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
           content: Text('Logo atualizado com sucesso.'),
@@ -601,6 +619,18 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
   }
 
   // ── HEADER ──────────────────────────────────────────────────
+  Widget _buildLogoAvatarContent(String? logo) {
+    const initials = Text('RP', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: -1));
+    if (logo == null || logo.isEmpty) return initials;
+    return Image.network(
+      logo,
+      width: 64,
+      height: 64,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) => initials,
+    );
+  }
+
   Widget _buildHeader(BuildContext context, CompanyDetails c) {
     return SyncSurfaceCard(
       padding: const EdgeInsets.all(28),
@@ -612,13 +642,16 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
             onTap: _uploadingLogo ? null : _pickAndUploadLogo,
             child: Container(width: 64, height: 64,
               decoration: BoxDecoration(color: SaaSTokens.primary, borderRadius: BorderRadius.circular(16)),
-              child: Center(
-                child: _uploadingLogo
-                    ? const SizedBox(
-                        width: 22, height: 22,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                      )
-                    : const Text('RP', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: -1)),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Center(
+                  child: _uploadingLogo
+                      ? const SizedBox(
+                          width: 22, height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : _buildLogoAvatarContent(c.logo),
+                ),
               ),
             ),
           ),

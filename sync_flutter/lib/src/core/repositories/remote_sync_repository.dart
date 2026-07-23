@@ -325,7 +325,11 @@ class RemoteSyncRepository implements SyncRepository {
   }
 
   @override
-  Future<void> setCompanyLogo(String companyId, Uint8List bytes) async {
+  Future<void> setCompanyLogo(
+    String companyId,
+    Uint8List bytes, {
+    String? contentType,
+  }) async {
     throw UnsupportedError('setCompanyLogo é servido pelo Storage (Hybrid).');
   }
 

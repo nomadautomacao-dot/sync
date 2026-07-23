@@ -103,6 +103,7 @@ CompanyDetails companyDetailsFromDoc(String id, Map<String, dynamic> data) {
     contactName: (data['contactName'] as String?) ?? '',
     contactPosition: (data['contactPosition'] as String?) ?? '',
     enabledModules: _modules(data['enabledModules']),
+    logo: _str(data['logo']),
   );
 }
 

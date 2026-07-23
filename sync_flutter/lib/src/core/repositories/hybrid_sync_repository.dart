@@ -217,20 +217,27 @@ class HybridSyncRepository implements SyncRepository {
   }
 
   @override
-  Future<void> setCompanyLogo(String companyId, Uint8List bytes) async {
+  Future<void> setCompanyLogo(
+    String companyId,
+    Uint8List bytes, {
+    String? contentType,
+  }) async {
     if (_mustUseRemote) {
       final groupId = await _groupIdLoader();
       if (groupId == null || groupId.isEmpty) {
         throw StateError('Sem groupId nas claims.');
       }
       final url = await _logoStorage.upload(
-        groupId: groupId, companyId: companyId, bytes: bytes,
+        groupId: groupId,
+        companyId: companyId,
+        bytes: bytes,
+        contentType: contentType ?? 'image/png',
       );
       await _companies.setLogo(companyId, url);
       return;
     }
     // local: no-op
-    return _local.setCompanyLogo(companyId, bytes);
+    return _local.setCompanyLogo(companyId, bytes, contentType: contentType);
   }
 
   @override

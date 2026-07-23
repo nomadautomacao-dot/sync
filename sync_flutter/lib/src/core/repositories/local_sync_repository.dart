@@ -367,7 +367,11 @@ class LocalSyncRepository implements SyncRepository {
   }
 
   @override
-  Future<void> setCompanyLogo(String companyId, Uint8List bytes) async {
+  Future<void> setCompanyLogo(
+    String companyId,
+    Uint8List bytes, {
+    String? contentType,
+  }) async {
     // Local: no-op — logo requer Storage remoto.
   }
 

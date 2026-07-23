@@ -173,6 +173,7 @@ class CompanyDetails {
     required this.contactName,
     required this.contactPosition,
     required this.enabledModules,
+    this.logo,
   });
 
   final String id;
@@ -188,6 +189,7 @@ class CompanyDetails {
   final String contactName;
   final String contactPosition;
   final List<String> enabledModules;
+  final String? logo;
 }
 
 class EmployeeRecord {

@@ -118,6 +118,18 @@ void main() {
       expect(d.status, 'Inativo');
       expect(d.contactName, 'Adriel Tavares');
       expect(d.enabledModules, ['fundeb', 'consultoria']);
+      expect(d.logo, isNull);
+    });
+
+    test('mapeia logo quando presente e null quando ausente', () {
+      final withLogo = companyDetailsFromDoc('c1', {
+        'name': 'X',
+        'logo': 'https://x/l.png',
+      });
+      expect(withLogo.logo, 'https://x/l.png');
+
+      final withoutLogo = companyDetailsFromDoc('c1', {'name': 'X'});
+      expect(withoutLogo.logo, isNull);
     });
   });
 
