@@ -80,3 +80,16 @@ data/batch/
 # ── Cloud Functions ──
 functions/node_modules/
 functions/lib/
+
+# Added by code-review-graph
+.code-review-graph/
+
+# Local-only tool state
+firestore-debug.log
+*.pid
+.claude/worktrees/
+.mcp.json
+.vscode/
+opencode.jsonc
+.claude/skills/
+.impeccable/
