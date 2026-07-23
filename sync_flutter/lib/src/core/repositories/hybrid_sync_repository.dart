@@ -1,5 +1,6 @@
 import '../data/audit_firestore_service.dart';
 import '../data/city_firestore_service.dart';
+import '../data/collaborator_document_firestore_service.dart';
 import '../data/collaborator_firestore_service.dart';
 import '../data/company_firestore_service.dart';
 import '../data/company_logo_storage.dart';
@@ -19,6 +20,7 @@ class HybridSyncRepository implements SyncRepository {
     required RemoteSyncRepository remote,
     required LocalSyncRepository local,
     required CollaboratorFirestoreService collaborators,
+    required CollaboratorDocumentFirestoreService collaboratorDocuments,
     required CompanyFirestoreService companies,
     required CompanyLogoStorage logoStorage,
     required CityFirestoreService cities,
@@ -29,6 +31,7 @@ class HybridSyncRepository implements SyncRepository {
   }) : _remote = remote,
        _local = local,
        _collaborators = collaborators,
+       _collaboratorDocuments = collaboratorDocuments,
        _companies = companies,
        _logoStorage = logoStorage,
        _cities = cities,
@@ -40,6 +43,7 @@ class HybridSyncRepository implements SyncRepository {
   final RemoteSyncRepository _remote;
   final LocalSyncRepository _local;
   final CollaboratorFirestoreService _collaborators;
+  final CollaboratorDocumentFirestoreService _collaboratorDocuments;
   final CompanyFirestoreService _companies;
   final CompanyLogoStorage _logoStorage;
   final CityFirestoreService _cities;
@@ -285,7 +289,7 @@ class HybridSyncRepository implements SyncRepository {
   @override
   Future<List<CollaboratorDocument>> getCollaboratorDocuments(String id) async {
     if (_mustUseRemote) {
-      return _remote.getCollaboratorDocuments(id);
+      return _collaboratorDocuments.list(id);
     }
     return _local.getCollaboratorDocuments(id);
   }
@@ -303,8 +307,8 @@ class HybridSyncRepository implements SyncRepository {
     String? notes,
   }) async {
     if (_mustUseRemote) {
-      return _remote.uploadCollaboratorDocument(
-        id: id,
+      return _collaboratorDocuments.upload(
+        collaboratorId: id,
         category: category,
         documentType: documentType,
         name: name,
@@ -331,7 +335,7 @@ class HybridSyncRepository implements SyncRepository {
   @override
   Future<void> deleteCollaboratorDocument(String id, String docId) async {
     if (_mustUseRemote) {
-      return _remote.deleteCollaboratorDocument(id, docId);
+      return _collaboratorDocuments.delete(id, docId);
     }
     return _local.deleteCollaboratorDocument(id, docId);
   }

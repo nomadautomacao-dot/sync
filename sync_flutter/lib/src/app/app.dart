@@ -1,9 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 
 import '../core/data/audit_firestore_service.dart';
 import '../core/data/city_firestore_service.dart';
+import '../core/data/collaborator_document_firestore_service.dart';
 import '../core/data/collaborator_firestore_service.dart';
 import '../core/data/company_firestore_service.dart';
 import '../core/data/company_logo_storage.dart';
@@ -56,6 +58,16 @@ class _SyncFlutterAppState extends State<SyncFlutterApp> {
         collaborators: CollaboratorFirestoreService(
           firestore: FirebaseFirestore.instance,
           groupIdLoader: _loadGroupIdFromClaims,
+        ),
+        collaboratorDocuments: CollaboratorDocumentFirestoreService(
+          firestore: FirebaseFirestore.instance,
+          groupIdLoader: _loadGroupIdFromClaims,
+          uploadBytes: ({required path, required bytes, required contentType}) async {
+            final ref = FirebaseStorage.instance.ref(path);
+            await ref.putData(bytes, SettableMetadata(contentType: contentType));
+            return ref.getDownloadURL();
+          },
+          deleteBytes: (path) => FirebaseStorage.instance.ref(path).delete(),
         ),
         companies: CompanyFirestoreService(
           firestore: FirebaseFirestore.instance,
