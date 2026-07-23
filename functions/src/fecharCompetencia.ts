@@ -47,17 +47,24 @@ export const fecharCompetencia = onCall<FecharCompetenciaInput>(async (request) 
 
   const accruals = computeAccruals(cityId, year, month, snapshot, rules);
 
+  // Le o estado atual de cada accrual antes de recomputar — preserva o
+  // createdAt original (e o status/payoutId ja atribuidos) em reprocessos
+  // idempotentes; so grava createdAt novo na primeira vez que o accrual existe.
+  const accrualRefs = accruals.map((accrual) => db.collection("commissionAccruals").doc(accrual.id));
+  const existingSnaps = accrualRefs.length > 0 ? await db.getAll(...accrualRefs) : [];
+
   const batch = db.batch();
-  for (const accrual of accruals) {
-    batch.set(db.collection("commissionAccruals").doc(accrual.id), {
+  accruals.forEach((accrual, i) => {
+    const existing = existingSnaps[i];
+    batch.set(accrualRefs[i], {
       ...accrual,
       groupId,
-      status: "calculated",
-      payoutId: null,
+      status: existing?.exists ? (existing.data()!.status as string) : "calculated",
+      payoutId: existing?.exists ? (existing.data()!.payoutId ?? null) : null,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: existing?.exists ? existing.data()!.createdAt : admin.firestore.FieldValue.serverTimestamp(),
     }, { merge: true });
-  }
+  });
   await batch.commit();
 
   return { competencia, accrualsCount: accruals.length };

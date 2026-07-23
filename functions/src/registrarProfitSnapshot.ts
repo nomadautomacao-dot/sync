@@ -69,6 +69,7 @@ export const registrarProfitSnapshot = onCall<RegistrarProfitSnapshotInput>(
 
     const competencia = `${d.year}-${String(d.month).padStart(2, "0")}`;
     const snapshotRef = cityRef.collection("profitSnapshots").doc(competencia);
+    const existingSnap = await snapshotRef.get();
     await snapshotRef.set({
       groupId,
       cityId: d.cityId,
@@ -81,7 +82,9 @@ export const registrarProfitSnapshot = onCall<RegistrarProfitSnapshotInput>(
       profitBaseCents,
       notes: d.notes ?? null,
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      // Preserva o createdAt original em recomputos (set idempotente) — so
+      // grava createdAt novo na primeira vez que a competencia e registrada.
+      createdAt: existingSnap.exists ? existingSnap.data()!.createdAt : admin.firestore.FieldValue.serverTimestamp(),
     }, { merge: true });
 
     return { cityId: d.cityId, competencia, profitBaseCents };
