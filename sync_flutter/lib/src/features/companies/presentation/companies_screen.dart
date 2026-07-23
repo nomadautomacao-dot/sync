@@ -4,6 +4,7 @@ import '../../../core/models/sync_models.dart';
 import '../../../core/repositories/mock_sync_repository.dart';
 import '../../../core/repositories/sync_repository.dart';
 import '../../shared/presentation/shared_widgets.dart';
+import 'new_company_dialog.dart';
 
 class CompaniesScreen extends StatefulWidget {
   const CompaniesScreen({
@@ -60,11 +61,14 @@ class _CompaniesScreenState extends State<CompaniesScreen> {
             title: 'Empresas',
             description: 'Fluxo real conectado a backend para lista e detalhe de empresas.',
             trailing: ElevatedButton.icon(
-              onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Wizard de empresa entra no proximo ciclo de migracao.'),
-                ),
-              ),
+              onPressed: () async {
+                final created = await showDialog<bool>(
+                  context: context,
+                  builder: (context) =>
+                      NewCompanyDialog(repository: widget.repository),
+                );
+                if (created == true) _refresh();
+              },
               icon: const Icon(Icons.add_rounded),
               label: const Text('Nova empresa'),
             ),
