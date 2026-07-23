@@ -64,5 +64,12 @@ service cloud.firestore {
       // Escrita de auditoria só via backend confiavel (Cloud Functions), nunca cliente.
       allow write: if false;
     }
+
+    match /collaboratorDocuments/{id} {
+      allow read:   if isSignedIn() && resource.data.groupId == myGroupId();
+      allow create: if isSignedIn() && request.resource.data.groupId == myGroupId();
+      allow delete: if isSignedIn() && resource.data.groupId == myGroupId();
+      allow update: if false; // metadado e imutavel apos criado; para trocar, apaga e sobe de novo
+    }
   }
 }
