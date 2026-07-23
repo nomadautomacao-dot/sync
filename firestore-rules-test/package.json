@@ -1,0 +1,14 @@
+{
+  "name": "firestore-rules-test",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "firebase emulators:exec --only firestore --project globalconsultorias 'node --test'"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^4.0.1"
+  },
+  "dependencies": {
+    "firebase": "^12.16.0"
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "collaborators",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "groupId", "order": "ASCENDING" },
+        { "fieldPath": "deletedAt", "order": "ASCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
