@@ -100,6 +100,29 @@ void main() {
     expect((await service.list()).isEmpty, isTrue);
   });
 
+  test('update apos softDelete nao ressuscita o colaborador', () async {
+    final created = await service.create({
+      'fullName': 'Vai Sair',
+      'collaboratorType': 'introducer',
+      'primaryRole': 'X',
+    });
+
+    await service.softDelete(created.id);
+    await service.update(created.id, {
+      'fullName': 'Vai Sair Editado',
+      'collaboratorType': 'introducer',
+      'primaryRole': 'X',
+    });
+
+    final doc = await firestore.collection('collaborators').doc(created.id).get();
+    expect(doc.data()!['deletedAt'], isNotNull,
+        reason: 'update nao deve limpar deletedAt de um registro soft-deletado');
+    expect(
+      (await service.list()).where((c) => c.id == created.id),
+      isEmpty,
+    );
+  });
+
   test('create sem groupId no token lanca StateError', () async {
     final semGrupo = CollaboratorFirestoreService(
       firestore: firestore,

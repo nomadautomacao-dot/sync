@@ -60,6 +60,10 @@ class CollaboratorFirestoreService {
   Future<CollaboratorDetails> update(String id, Map<String, dynamic> input) async {
     final groupId = await _requireGroupId();
     final doc = collaboratorDocFromInput(input, groupId);
+    // Remove `deletedAt` (sempre vem como null de collaboratorDocFromInput):
+    // como o set usa merge, gravar null aqui ressuscitaria um registro que
+    // foi soft-deletado. O estado de exclusao so deve mudar via softDelete.
+    doc.remove('deletedAt');
     doc['updatedAt'] = FieldValue.serverTimestamp();
     await _col.doc(id).set(doc, SetOptions(merge: true));
     return details(id);
