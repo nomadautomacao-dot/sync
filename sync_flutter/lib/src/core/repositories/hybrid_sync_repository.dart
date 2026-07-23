@@ -1,3 +1,4 @@
+import '../data/collaborator_firestore_service.dart';
 import '../models/levantamento_fundeb_models.dart';
 import '../models/slide_models.dart';
 import '../models/sync_models.dart';
@@ -11,11 +12,14 @@ class HybridSyncRepository implements SyncRepository {
   HybridSyncRepository({
     required RemoteSyncRepository remote,
     required LocalSyncRepository local,
+    required CollaboratorFirestoreService collaborators,
   }) : _remote = remote,
-       _local = local;
+       _local = local,
+       _collaborators = collaborators;
 
   final RemoteSyncRepository _remote;
   final LocalSyncRepository _local;
+  final CollaboratorFirestoreService _collaborators;
 
   bool get _mustUseRemote => _remote.remoteEnabled;
 
@@ -78,13 +82,7 @@ class HybridSyncRepository implements SyncRepository {
     int? year,
   }) async {
     if (_mustUseRemote) {
-      final remote = await _remote.getCollaborators(
-        search: search,
-        status: status,
-        year: year,
-      );
-      await _local.cacheCollaborators(remote);
-      return remote;
+      return _collaborators.list();
     }
     return _local.getCollaborators(search: search, status: status, year: year);
   }
@@ -209,14 +207,14 @@ class HybridSyncRepository implements SyncRepository {
 
   @override
   Future<CollaboratorSummary> createCollaborator(Map<String, dynamic> data) async {
-    if (_mustUseRemote) return _remote.createCollaborator(data);
+    if (_mustUseRemote) return _collaborators.create(data);
     return _local.createCollaborator(data);
   }
 
   @override
   Future<CollaboratorDetails> getCollaboratorDetails(String id) async {
     if (_mustUseRemote) {
-      return _remote.getCollaboratorDetails(id);
+      return _collaborators.details(id);
     }
     return _local.getCollaboratorDetails(id);
   }
@@ -227,7 +225,7 @@ class HybridSyncRepository implements SyncRepository {
     Map<String, dynamic> data,
   ) async {
     if (_mustUseRemote) {
-      return _remote.updateCollaboratorDetails(id, data);
+      return _collaborators.update(id, data);
     }
     return _local.updateCollaboratorDetails(id, data);
   }

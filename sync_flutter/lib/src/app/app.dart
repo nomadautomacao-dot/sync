@@ -1,5 +1,8 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../core/data/collaborator_firestore_service.dart';
 import '../core/network/session_storage.dart';
 import '../core/network/sync_api_client.dart';
 import '../core/models/sync_models.dart';
@@ -36,6 +39,13 @@ class _SyncFlutterAppState extends State<SyncFlutterApp> {
         local: LocalSyncRepository(
           sessionStorage: sessionStorage,
           store: LocalWorkspaceStore(),
+        ),
+        collaborators: CollaboratorFirestoreService(
+          firestore: FirebaseFirestore.instance,
+          groupIdLoader: () async {
+            final result = await FirebaseAuth.instance.currentUser?.getIdTokenResult();
+            return result?.claims?['groupId'] as String?;
+          },
         ),
       ),
     );
