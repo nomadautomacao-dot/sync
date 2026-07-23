@@ -7,6 +7,7 @@ import '../core/data/city_firestore_service.dart';
 import '../core/data/collaborator_firestore_service.dart';
 import '../core/data/company_firestore_service.dart';
 import '../core/data/company_logo_storage.dart';
+import '../core/data/dashboard_firestore_service.dart';
 import '../core/data/workspace_settings_firestore_service.dart';
 import '../core/network/session_storage.dart';
 import '../core/network/sync_api_client.dart';
@@ -70,6 +71,10 @@ class _SyncFlutterAppState extends State<SyncFlutterApp> {
           groupIdLoader: _loadGroupIdFromClaims,
         ),
         audit: AuditFirestoreService(
+          firestore: FirebaseFirestore.instance,
+          groupIdLoader: _loadGroupIdFromClaims,
+        ),
+        dashboard: DashboardFirestoreService(
           firestore: FirebaseFirestore.instance,
           groupIdLoader: _loadGroupIdFromClaims,
         ),

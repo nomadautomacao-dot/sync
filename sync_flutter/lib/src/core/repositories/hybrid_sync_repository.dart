@@ -3,6 +3,7 @@ import '../data/city_firestore_service.dart';
 import '../data/collaborator_firestore_service.dart';
 import '../data/company_firestore_service.dart';
 import '../data/company_logo_storage.dart';
+import '../data/dashboard_firestore_service.dart';
 import '../data/workspace_settings_firestore_service.dart';
 import '../models/levantamento_fundeb_models.dart';
 import '../models/slide_models.dart';
@@ -23,6 +24,7 @@ class HybridSyncRepository implements SyncRepository {
     required CityFirestoreService cities,
     required WorkspaceSettingsFirestoreService settings,
     required AuditFirestoreService audit,
+    required DashboardFirestoreService dashboard,
     required Future<String?> Function() groupIdLoader,
   }) : _remote = remote,
        _local = local,
@@ -32,6 +34,7 @@ class HybridSyncRepository implements SyncRepository {
        _cities = cities,
        _settings = settings,
        _audit = audit,
+       _dashboard = dashboard,
        _groupIdLoader = groupIdLoader;
 
   final RemoteSyncRepository _remote;
@@ -42,6 +45,7 @@ class HybridSyncRepository implements SyncRepository {
   final CityFirestoreService _cities;
   final WorkspaceSettingsFirestoreService _settings;
   final AuditFirestoreService _audit;
+  final DashboardFirestoreService _dashboard;
   final Future<String?> Function() _groupIdLoader;
 
   bool get _mustUseRemote => _remote.remoteEnabled;
@@ -83,7 +87,8 @@ class HybridSyncRepository implements SyncRepository {
   @override
   Future<DashboardOverview> getDashboard({int? year}) async {
     if (_mustUseRemote) {
-      return _remote.getDashboard(year: year);
+      final remote = await _dashboard.overview(year: year);
+      return remote;
     }
     return _local.getDashboard(year: year);
   }
