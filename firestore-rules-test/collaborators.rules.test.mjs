@@ -64,3 +64,55 @@ test('delete real e sempre negado (soft delete only)', async () => {
   const { deleteDoc } = await import('firebase/firestore');
   await assertFails(deleteDoc(doc(db, 'collaborators/c5')));
 });
+
+test('admin do grupo edita colaborador do proprio grupo', async () => {
+  await env.withSecurityRulesDisabled(async (c) => {
+    await setDoc(doc(c.firestore(), 'collaborators/c6'), {
+      groupId: 'grupo-1', fullName: 'X', deletedAt: null,
+    });
+  });
+  const db = ctx('u1', 'grupo-1', 'admin');
+  const { updateDoc } = await import('firebase/firestore');
+  await assertSucceeds(updateDoc(doc(db, 'collaborators/c6'), {
+    fullName: 'Y', groupId: 'grupo-1',
+  }));
+});
+
+test('membro comum nao edita colaborador', async () => {
+  await env.withSecurityRulesDisabled(async (c) => {
+    await setDoc(doc(c.firestore(), 'collaborators/c7'), {
+      groupId: 'grupo-1', fullName: 'X', deletedAt: null,
+    });
+  });
+  const db = ctx('u2', 'grupo-1', 'member');
+  const { updateDoc } = await import('firebase/firestore');
+  await assertFails(updateDoc(doc(db, 'collaborators/c7'), {
+    fullName: 'Y', groupId: 'grupo-1',
+  }));
+});
+
+test('admin nao sequestra colaborador mudando o groupId', async () => {
+  await env.withSecurityRulesDisabled(async (c) => {
+    await setDoc(doc(c.firestore(), 'collaborators/c8'), {
+      groupId: 'grupo-1', fullName: 'X', deletedAt: null,
+    });
+  });
+  const db = ctx('u1', 'grupo-1', 'admin');
+  const { updateDoc } = await import('firebase/firestore');
+  await assertFails(updateDoc(doc(db, 'collaborators/c8'), {
+    groupId: 'grupo-2',
+  }));
+});
+
+test('admin de outro grupo nao edita colaborador alheio', async () => {
+  await env.withSecurityRulesDisabled(async (c) => {
+    await setDoc(doc(c.firestore(), 'collaborators/c9'), {
+      groupId: 'grupo-1', fullName: 'X', deletedAt: null,
+    });
+  });
+  const db = ctx('u3', 'grupo-2', 'admin');
+  const { updateDoc } = await import('firebase/firestore');
+  await assertFails(updateDoc(doc(db, 'collaborators/c9'), {
+    fullName: 'Y', groupId: 'grupo-1',
+  }));
+});
