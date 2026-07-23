@@ -204,8 +204,8 @@ class _PeopleScreenState extends State<PeopleScreen> {
                           margin: const EdgeInsets.only(bottom: 12),
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(16),
-                            color: SyncPalette.bgSurface,
-                            border: Border.all(color: SyncPalette.borderSubtle),
+                            color: SaaSTokens.scaffold,
+                            border: Border.all(color: SaaSTokens.borderLight),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -223,6 +223,10 @@ class _PeopleScreenState extends State<PeopleScreen> {
                                         const SizedBox(height: 4),
                                         Text(
                                           '${collaborator.role} - ${collaborator.type} - ${collaborator.state}',
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            color: SaaSTokens.textMuted,
+                                          ),
                                         ),
                                       ],
                                     ),
@@ -240,10 +244,19 @@ class _PeopleScreenState extends State<PeopleScreen> {
                                 spacing: 18,
                                 runSpacing: 8,
                                 children: [
-                                  Text('Cidades: ${collaborator.cities}'),
-                                  Text('Fidelizadas: ${collaborator.fidelized}'),
-                                  Text('Lucro YTD: ${_formatCurrency(collaborator.profitYtd)}'),
-                                  Text('Comissao: ${_formatCurrency(collaborator.commissionYtd)}'),
+                                  for (final stat in [
+                                    'Cidades: ${collaborator.cities}',
+                                    'Fidelizadas: ${collaborator.fidelized}',
+                                    'Lucro YTD: ${_formatCurrency(collaborator.profitYtd)}',
+                                    'Comissao: ${_formatCurrency(collaborator.commissionYtd)}',
+                                  ])
+                                    Text(
+                                      stat,
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        color: SaaSTokens.textBody,
+                                      ),
+                                    ),
                                 ],
                               ),
                             ],
