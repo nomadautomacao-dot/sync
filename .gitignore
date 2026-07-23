@@ -76,3 +76,7 @@ relatorios_*/
 data/_sinopses/
 data/batch/
 .superpowers/
+
+# ── Cloud Functions ──
+functions/node_modules/
+functions/lib/
