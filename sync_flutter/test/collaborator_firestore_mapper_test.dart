@@ -62,9 +62,9 @@ void main() {
       expect(s.id, 'c1');
       expect(s.fullName, 'Maria Silva');
       expect(s.role, 'Articuladora');
-      expect(s.type, 'external_partner');
+      expect(s.type, 'Parceiro externo');
       expect(s.state, 'BA');
-      expect(s.status, 'active');
+      expect(s.status, 'Ativo');
       // derivados de outras entidades — zerados nesta fatia
       expect(s.cities, 0);
       expect(s.fidelized, 0);
@@ -77,6 +77,17 @@ void main() {
       expect(s.fullName, 'So Nome');
       expect(s.role, '');
       expect(s.state, '');
+      expect(s.status, 'Ativo');
+    });
+
+    test('devolve o valor cru como fallback quando desconhecido', () {
+      final s = collaboratorSummaryFromDoc('c3', {
+        'fullName': 'Tipo Desconhecido',
+        'collaboratorType': 'valor_inexistente',
+        'partnershipStatus': 'valor_tambem_inexistente',
+      });
+      expect(s.type, 'valor_inexistente');
+      expect(s.status, 'valor_tambem_inexistente');
     });
   });
 

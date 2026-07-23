@@ -44,6 +44,51 @@ Map<String, dynamic> collaboratorDocFromInput(
   };
 }
 
+/// Rotula o status cru do Firestore em portugues, com os mesmos textos que o
+/// RemoteSyncRepository (`_collaboratorStatusLabel`) produzia a partir do
+/// Postgres — a lista/summary da UI espera o rotulo, nao o valor cru do enum.
+String collaboratorStatusLabel(String status) {
+  switch (status) {
+    case 'active':
+      return 'Ativo';
+    case 'prospect':
+      return 'Prospeccao';
+    case 'paused':
+      return 'Pausado';
+    case 'blocked':
+      return 'Bloqueado';
+    case 'inactive':
+      return 'Inativo';
+    default:
+      return status.isEmpty ? '--' : status;
+  }
+}
+
+/// Rotula o tipo cru do Firestore em portugues, espelhando
+/// `_collaboratorTypeLabel` do RemoteSyncRepository.
+String collaboratorTypeLabel(String type) {
+  switch (type) {
+    case 'internal_consultant':
+      return 'Consultor interno';
+    case 'external_partner':
+      return 'Parceiro externo';
+    case 'municipal_articulator':
+      return 'Articulador municipal';
+    case 'introducer':
+      return 'Introducer';
+    case 'strategic_advisor':
+      return 'Conselheiro estrategico';
+    case 'implementation_support':
+      return 'Suporte de implantacao';
+    case 'executive_sponsor':
+      return 'Sponsor executivo';
+    case 'hybrid':
+      return 'Hibrido';
+    default:
+      return type.isEmpty ? '--' : type;
+  }
+}
+
 CollaboratorSummary collaboratorSummaryFromDoc(
   String id,
   Map<String, dynamic> data,
@@ -52,9 +97,11 @@ CollaboratorSummary collaboratorSummaryFromDoc(
     id: id,
     fullName: (data['fullName'] as String?) ?? '',
     role: (data['primaryRole'] as String?) ?? '',
-    type: (data['collaboratorType'] as String?) ?? '',
+    type: collaboratorTypeLabel((data['collaboratorType'] as String?) ?? ''),
     state: (data['state'] as String?) ?? '',
-    status: (data['partnershipStatus'] as String?) ?? 'active',
+    status: collaboratorStatusLabel(
+      (data['partnershipStatus'] as String?) ?? 'active',
+    ),
     // Derivados de outras entidades — zerados nesta fatia (fases 2.2 e 2.3).
     cities: 0,
     fidelized: 0,
