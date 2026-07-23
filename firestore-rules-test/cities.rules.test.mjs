@@ -83,3 +83,12 @@ test('admin não sequestra cidade mudando o groupId (update hijack)', async () =
     groupId: 'g2',
   }));
 });
+
+test('admin de outro grupo NÃO edita cidade de g1 por doc-id (cross-group)', async () => {
+  await seedCity('c1', 'g1');
+  const { updateDoc } = await import('firebase/firestore');
+  // `other` é admin de g2; a regra exige resource.data.groupId == myGroupId()
+  await assertFails(updateDoc(doc(ctx('u', other), 'cities/c1'), {
+    name: 'Y', groupId: 'g1',
+  }));
+});

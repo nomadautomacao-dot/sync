@@ -108,6 +108,7 @@ class _PipelineScreenState extends State<PipelineScreen> {
   Future<void> _changeCityStage(String cityId, String newStage) async {
     try {
       await widget.repository.updateCityStage(cityId, newStage);
+      if (!mounted) return;
       await _fetchCities();
       if (!mounted) return;
 
@@ -139,6 +140,7 @@ class _PipelineScreenState extends State<PipelineScreen> {
   Future<void> _saveCityDetails(String cityId, Map<String, dynamic> data) async {
     try {
       await widget.repository.updateCityPipeline(cityId, data);
+      if (!mounted) return;
       await _fetchCities();
       if (!mounted) return;
 
