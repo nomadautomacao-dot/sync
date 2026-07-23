@@ -1,3 +1,4 @@
+import '../data/audit_firestore_service.dart';
 import '../data/city_firestore_service.dart';
 import '../data/collaborator_firestore_service.dart';
 import '../data/company_firestore_service.dart';
@@ -21,6 +22,7 @@ class HybridSyncRepository implements SyncRepository {
     required CompanyLogoStorage logoStorage,
     required CityFirestoreService cities,
     required WorkspaceSettingsFirestoreService settings,
+    required AuditFirestoreService audit,
     required Future<String?> Function() groupIdLoader,
   }) : _remote = remote,
        _local = local,
@@ -29,6 +31,7 @@ class HybridSyncRepository implements SyncRepository {
        _logoStorage = logoStorage,
        _cities = cities,
        _settings = settings,
+       _audit = audit,
        _groupIdLoader = groupIdLoader;
 
   final RemoteSyncRepository _remote;
@@ -38,6 +41,7 @@ class HybridSyncRepository implements SyncRepository {
   final CompanyLogoStorage _logoStorage;
   final CityFirestoreService _cities;
   final WorkspaceSettingsFirestoreService _settings;
+  final AuditFirestoreService _audit;
   final Future<String?> Function() _groupIdLoader;
 
   bool get _mustUseRemote => _remote.remoteEnabled;
@@ -109,7 +113,7 @@ class HybridSyncRepository implements SyncRepository {
   @override
   Future<List<AuditEntry>> getAudit({int limit = 20}) async {
     if (_mustUseRemote) {
-      final remote = await _remote.getAudit(limit: limit);
+      final remote = await _audit.list(limit: limit);
       await _local.cacheAudit(remote);
       return remote;
     }
