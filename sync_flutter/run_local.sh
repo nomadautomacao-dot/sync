@@ -119,7 +119,7 @@ if [ "${1:-}" = "--rebuild-web" ]; then
   echo -e "${GREEN}✓  Flutter Web copiado para public/flutter-web/${NC}"
   echo ""
   echo -e "${YELLOW}   Acesse em: ${API_URL}/flutter-web/${NC}"
-  echo -e "${YELLOW}   (inicie o backend separado com: npm run dev)${NC}"
+  echo -e "${YELLOW}   (inicie o backend separado com: npm run dev:next)${NC}"
   exit 0
 fi
 
@@ -128,7 +128,9 @@ kill_previous
 
 echo -e "${BLUE}▶  [1/2] Iniciando backend Next.js em ${API_URL}...${NC}"
 cd "$BACKEND_DIR"
-npm run dev > "$LOG_FILE" 2>&1 &
+# dev:next = só o backend Next. NÃO usar 'npm run dev' aqui: este script É o
+# 'npm run dev', então chamá-lo criaria recursão infinita.
+npm run dev:next > "$LOG_FILE" 2>&1 &
 BACKEND_PID=$!
 echo "$BACKEND_PID" > "$BACKEND_PID_FILE"
 
