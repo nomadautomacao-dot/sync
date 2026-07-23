@@ -145,12 +145,8 @@ Contexto completo da separação:
 
 Todas as rotas estão em `app/api/`. Autenticação obrigatória via `getSessionUser()`.
 
-**Autenticação:**
-| Rota | Método | Descrição |
-|------|--------|-----------|
-| `/api/auth/[...nextauth]` | GET/POST | NextAuth (Google OAuth, JWT) |
-| `/api/auth/login` | POST | Login por email/senha (Flutter) — gera session_token cookie |
-| `/api/auth/logout` | POST | Invalida sessão customizada |
+**Autenticação:** não há rotas de login no Next. O Firebase Auth cuida disso no
+cliente; as rotas apenas verificam o ID token. Ver seção 3.2.
 
 **Organizacional:**
 | Rota | Método | Descrição |
@@ -211,19 +207,28 @@ Todas as rotas estão em `app/api/`. Autenticação obrigatória via `getSession
 
 ### 3.2 Sistema de autenticação
 
-Duas estratégias coexistem:
+Firebase Auth (projeto `globalconsultorias`). O Flutter autentica pelo SDK
+(`signInWithEmailAndPassword`) e envia o ID token em `Authorization: Bearer` a
+cada requisição. `getSessionUser()` em `core/lib/auth.ts` verifica o token com o
+Admin SDK (`firebase-admin`) e lê `groupId` e `groupRole` das custom claims —
+sem consultar banco. Devolve `null` em qualquer falha; as rotas tratam como 401.
 
-1. **NextAuth (Google OAuth)** — JWT strategy, provider Google. Usado pelo frontend web. Callback `signIn` faz upsert do usuário no banco. Token JWT carrega `appUserId`, `groupId`, `groupRole`.
+Para conceder acesso a um usuário:
 
-2. **Login customizado (Flutter)** — `POST /api/auth/login` com email/senha. Valida contra `SYNC_LOGIN_EMAIL`/`SYNC_LOGIN_PASSWORD` (env vars). Gera token aleatório de 32 bytes, salva na tabela `Session`, retorna cookie `session_token` com validade de 7 dias.
+    npm run firebase:claims -- <email> <groupId> <groupRole>
 
-`getSessionUser()` em `core/lib/auth.ts` tenta NextAuth primeiro, depois fallback para cookie `session_token`.
+As claims valem a partir do próximo token: o usuário refaz login. A service
+account fica em `FIREBASE_SERVICE_ACCOUNT` (`.env.local`), nunca versionada.
+
+> A migração é fase 1 de uma transição maior para Firebase — ver
+> `docs/superpowers/specs/2026-07-22-migracao-firebase-design.md`. Os **dados**
+> ainda vivem no Postgres/Prisma (fase 2 os move para o Firestore).
 
 ### 3.3 core/lib/ — Arquivos e funções
 
 | Arquivo | Descrição |
 |---------|-----------|
-| `auth.ts` | Config NextAuth, `getSessionUser()` |
+| `auth.ts` | `getSessionUser()` — verifica o ID token do Firebase |
 | `session-auth.ts` | Login/logout por cookie (Flutter) — tabela `Session` |
 | `user-provisioning.ts` | `upsertSessionUser()` e grupo padrão — compartilhado pelas duas estratégias, evita ciclo de import |
 | `assets-paths.ts` | Resolve `CONTRATOS_ASSETS_DIR` |
@@ -288,7 +293,7 @@ PostgreSQL via Supabase. Dual connection: `DATABASE_URL` (pooler, porta 6543) + 
 - Estado: `ChangeNotifier`
 - Repositório: `RemoteSyncRepository` (chamadas à API Next.js)
 - Shell responsivo: drawer em mobile, sidebar fixa em desktop
-- Autenticação: login por cookie via `POST /api/auth/login`
+- Autenticação: Firebase Auth (ID token em Authorization: Bearer)
 
 ### 4.2 Telas implementadas
 
