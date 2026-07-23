@@ -3,7 +3,8 @@
 #  PrimeOS — Inicialização Local Integrada
 # ═══════════════════════════════════════════════════════════════════
 #  Sobe o backend Next.js (porta 3000) e lança o Flutter Linux
-#  apontando para http://localhost:3000.
+#  apontando para http://localhost:3100 (porta dedicada do Sync —
+#  a 3000 e a default do Next e colide com outros projetos, ex. tick3).
 #
 #  Uso:
 #    ./run_local.sh                → backend + Flutter Linux (padrão)
@@ -18,7 +19,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 FLUTTER_DIR="$SCRIPT_DIR"
 BACKEND_DIR="$(dirname "$SCRIPT_DIR")"
-BACKEND_PORT=3000
+BACKEND_PORT=3100
 API_URL="http://localhost:${BACKEND_PORT}"
 PROD_URL="https://sync-app-621901234263.us-central1.run.app"
 BACKEND_PID_FILE="$SCRIPT_DIR/.backend.pid"
