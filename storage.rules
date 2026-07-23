@@ -1,0 +1,16 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isSignedIn() { return request.auth != null; }
+    function myGroupId() { return request.auth.token.groupId; }
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.groupRole in ['owner', 'admin'];
+    }
+    match /company-logos/{groupId}/{fileName} {
+      allow read: if isSignedIn() && groupId == myGroupId();
+      allow write: if isAdmin() && groupId == myGroupId()
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+  }
+}

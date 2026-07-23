@@ -24,5 +24,23 @@ service cloud.firestore {
       // Sem delete real: exclusao e soft delete (update de deletedAt).
       allow delete: if false;
     }
+
+    match /companies/{id} {
+      allow read: if isSignedIn() && resource.data.groupId == myGroupId();
+      allow create: if isAdmin() && request.resource.data.groupId == myGroupId();
+      allow update: if isAdmin()
+                    && resource.data.groupId == myGroupId()
+                    && request.resource.data.groupId == myGroupId();
+      allow delete: if false;
+    }
+
+    match /employees/{id} {
+      allow read: if isSignedIn() && resource.data.groupId == myGroupId();
+      allow create: if isAdmin() && request.resource.data.groupId == myGroupId();
+      allow update: if isAdmin()
+                    && resource.data.groupId == myGroupId()
+                    && request.resource.data.groupId == myGroupId();
+      allow delete: if false;
+    }
   }
 }
