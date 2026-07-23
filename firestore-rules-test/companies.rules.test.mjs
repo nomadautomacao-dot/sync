@@ -59,3 +59,27 @@ test('delete real é sempre negado', async () => {
   const { deleteDoc } = await import('firebase/firestore');
   await assertFails(deleteDoc(doc(ctx('u', admin), 'companies/c1')));
 });
+
+test('admin edita empresa do próprio grupo', async () => {
+  await seedCompany('c1', 'g1');
+  const { updateDoc } = await import('firebase/firestore');
+  await assertSucceeds(updateDoc(doc(ctx('u', admin), 'companies/c1'), {
+    tradingName: 'Y', groupId: 'g1',
+  }));
+});
+
+test('membro comum NÃO edita empresa', async () => {
+  await seedCompany('c1', 'g1');
+  const { updateDoc } = await import('firebase/firestore');
+  await assertFails(updateDoc(doc(ctx('u', member), 'companies/c1'), {
+    tradingName: 'Y', groupId: 'g1',
+  }));
+});
+
+test('admin não sequestra empresa mudando o groupId (update hijack)', async () => {
+  await seedCompany('c1', 'g1');
+  const { updateDoc } = await import('firebase/firestore');
+  await assertFails(updateDoc(doc(ctx('u', admin), 'companies/c1'), {
+    groupId: 'g2',
+  }));
+});
