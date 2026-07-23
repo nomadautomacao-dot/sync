@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 import '../../../app/app.dart';
 
-/// Paleta institucional Rocha Prime
-class _PrimeColors {
-  static const navy = Color(0xFF1B2A4A);
-  static const navyLight = Color(0xFF2D3F5E);
-  static const accent = Color(0xFF3B5998);
-  static const surface = Color(0xFFF5F7FA);
+/// Paleta institucional Global Sync
+class _BrandColors {
+  static const navy = Color(0xFF0E3B3A);
+  static const navyLight = Color(0xFF1F5350);
+  static const accent = Color(0xFF049598);
+  static const accentText = Color(0xFF036B69);
   static const cardWhite = Color(0xFFFFFFFF);
-  static const textSecondary = Color(0xFF6B7A90);
-  static const inputBg = Color(0xFFF0F2F5);
+  static const textSecondary = Color(0xFF5A6B80);
   static const inputBorder = Color(0xFFD8DEE6);
 }
 
@@ -84,9 +82,9 @@ class _LoginScreenState extends State<LoginScreen>
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              _PrimeColors.navy,
-              Color(0xFF0F1C33),
-              Color(0xFF162544),
+              _BrandColors.navy,
+              Color(0xFF07211F),
+              Color(0xFF0C2E2B),
             ],
           ),
         ),
@@ -151,13 +149,12 @@ class _LoginScreenState extends State<LoginScreen>
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Logo P icon extracted directly from the user's image
+                      // Logo Global Sync — ícone extraído do logo comercial
                       Container(
                         width: 90,
                         height: 90,
                         decoration: BoxDecoration(
-                          color: _PrimeColors.cardWhite,
-                          borderRadius: BorderRadius.circular(24),
+                          borderRadius: BorderRadius.circular(4),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withValues(alpha: 0.25),
@@ -166,32 +163,19 @@ class _LoginScreenState extends State<LoginScreen>
                             ),
                           ],
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Image.asset(
-                            'assets/branding/prime-icon-extracted.png',
-                            fit: BoxFit.contain,
-                          ),
+                        child: Image.asset(
+                          'assets/branding/global-sync-icon.png',
+                          fit: BoxFit.contain,
                         ),
                       ),
                       const SizedBox(height: 20),
                       const Text(
-                        'Rocha Prime',
+                        'Global Sync',
                         style: TextStyle(
                           fontSize: 26,
                           fontWeight: FontWeight.w700,
                           color: Colors.white,
                           letterSpacing: -0.3,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'SERVIÇOS ESPECIALIZADOS',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.white.withValues(alpha: 0.45),
-                          letterSpacing: 3.0,
                         ),
                       ),
                       const SizedBox(height: 36),
@@ -201,15 +185,8 @@ class _LoginScreenState extends State<LoginScreen>
                         constraints: const BoxConstraints(maxWidth: 400),
                         child: Container(
                           decoration: BoxDecoration(
-                            color: _PrimeColors.cardWhite,
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.15),
-                                blurRadius: 40,
-                                offset: const Offset(0, 16),
-                              ),
-                            ],
+                            color: _BrandColors.cardWhite,
+                            borderRadius: BorderRadius.circular(4),
                           ),
                           child: Padding(
                             padding: const EdgeInsets.all(36),
@@ -221,7 +198,7 @@ class _LoginScreenState extends State<LoginScreen>
                                   style: TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.w700,
-                                    color: _PrimeColors.navy,
+                                    color: _BrandColors.navy,
                                   ),
                                   textAlign: TextAlign.center,
                                 ),
@@ -230,7 +207,7 @@ class _LoginScreenState extends State<LoginScreen>
                                   'Insira suas credenciais para continuar.',
                                   style: TextStyle(
                                     fontSize: 14,
-                                    color: _PrimeColors.textSecondary,
+                                    color: _BrandColors.textSecondary,
                                   ),
                                   textAlign: TextAlign.center,
                                 ),
@@ -242,7 +219,7 @@ class _LoginScreenState extends State<LoginScreen>
                                   style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
-                                    color: _PrimeColors.navy,
+                                    color: _BrandColors.navy,
                                   ),
                                 ),
                                 const SizedBox(height: 8),
@@ -250,28 +227,29 @@ class _LoginScreenState extends State<LoginScreen>
                                   controller: emailController,
                                   autofocus: true,
                                   keyboardType: TextInputType.emailAddress,
+                                  textInputAction: TextInputAction.next,
+                                  autofillHints: const [AutofillHints.email],
                                   style: const TextStyle(
                                     fontSize: 15,
-                                    color: _PrimeColors.navy,
+                                    color: _BrandColors.navy,
                                   ),
                                   decoration: InputDecoration(
                                     hintText: 'seu@email.com',
                                     hintStyle: TextStyle(
-                                      color: _PrimeColors.textSecondary.withValues(alpha: 0.6),
+                                      color: _BrandColors.textSecondary.withValues(alpha: 0.6),
                                     ),
-                                    filled: true,
-                                    fillColor: _PrimeColors.inputBg,
+                                    filled: false,
                                     border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: BorderSide(color: _PrimeColors.inputBorder),
+                                      borderRadius: BorderRadius.circular(3),
+                                      borderSide: BorderSide(color: _BrandColors.inputBorder),
                                     ),
                                     enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: BorderSide(color: _PrimeColors.inputBorder),
+                                      borderRadius: BorderRadius.circular(3),
+                                      borderSide: BorderSide(color: _BrandColors.inputBorder),
                                     ),
                                     focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: const BorderSide(color: _PrimeColors.accent, width: 2),
+                                      borderRadius: BorderRadius.circular(3),
+                                      borderSide: const BorderSide(color: _BrandColors.accent, width: 2),
                                     ),
                                     contentPadding: const EdgeInsets.symmetric(
                                       horizontal: 16,
@@ -287,37 +265,38 @@ class _LoginScreenState extends State<LoginScreen>
                                   style: TextStyle(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w600,
-                                    color: _PrimeColors.navy,
+                                    color: _BrandColors.navy,
                                   ),
                                 ),
                                 const SizedBox(height: 8),
                                 TextField(
                                   controller: passwordController,
                                   obscureText: obscurePassword,
+                                  textInputAction: TextInputAction.done,
+                                  autofillHints: const [AutofillHints.password],
                                   onSubmitted: (_) =>
                                       isSubmitting ? null : handleSubmit(),
                                   style: const TextStyle(
                                     fontSize: 15,
-                                    color: _PrimeColors.navy,
+                                    color: _BrandColors.navy,
                                   ),
                                   decoration: InputDecoration(
                                     hintText: '••••••••',
                                     hintStyle: TextStyle(
-                                      color: _PrimeColors.textSecondary.withValues(alpha: 0.6),
+                                      color: _BrandColors.textSecondary.withValues(alpha: 0.6),
                                     ),
-                                    filled: true,
-                                    fillColor: _PrimeColors.inputBg,
+                                    filled: false,
                                     border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: BorderSide(color: _PrimeColors.inputBorder),
+                                      borderRadius: BorderRadius.circular(3),
+                                      borderSide: BorderSide(color: _BrandColors.inputBorder),
                                     ),
                                     enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: BorderSide(color: _PrimeColors.inputBorder),
+                                      borderRadius: BorderRadius.circular(3),
+                                      borderSide: BorderSide(color: _BrandColors.inputBorder),
                                     ),
                                     focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(12),
-                                      borderSide: const BorderSide(color: _PrimeColors.accent, width: 2),
+                                      borderRadius: BorderRadius.circular(3),
+                                      borderSide: const BorderSide(color: _BrandColors.accent, width: 2),
                                     ),
                                     contentPadding: const EdgeInsets.symmetric(
                                       horizontal: 16,
@@ -328,7 +307,7 @@ class _LoginScreenState extends State<LoginScreen>
                                         obscurePassword
                                             ? Icons.visibility_off_outlined
                                             : Icons.visibility_outlined,
-                                        color: _PrimeColors.textSecondary,
+                                        color: _BrandColors.textSecondary,
                                         size: 20,
                                       ),
                                       onPressed: () {
@@ -357,7 +336,7 @@ class _LoginScreenState extends State<LoginScreen>
                                     child: const Text(
                                       'Esqueceu a senha?',
                                       style: TextStyle(
-                                        color: _PrimeColors.accent,
+                                        color: _BrandColors.accentText,
                                         fontWeight: FontWeight.w600,
                                         fontSize: 13,
                                       ),
@@ -400,7 +379,7 @@ class _LoginScreenState extends State<LoginScreen>
                                   ),
                                 ],
 
-                                const SizedBox(height: 24),
+                                const SizedBox(height: 32),
 
                                 // Submit button
                                 SizedBox(
@@ -409,15 +388,12 @@ class _LoginScreenState extends State<LoginScreen>
                                     onPressed:
                                         isSubmitting ? null : handleSubmit,
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: _PrimeColors.navy,
+                                      backgroundColor: _BrandColors.navy,
                                       foregroundColor: Colors.white,
                                       disabledBackgroundColor:
-                                          _PrimeColors.navyLight,
+                                          _BrandColors.navyLight,
                                       elevation: 0,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius:
-                                            BorderRadius.circular(12),
-                                      ),
+                                      shape: const RoundedRectangleBorder(),
                                     ),
                                     child: isSubmitting
                                         ? const SizedBox(
@@ -445,10 +421,10 @@ class _LoginScreenState extends State<LoginScreen>
 
                       const SizedBox(height: 32),
                       Text(
-                        '© 2026 Rocha Prime Serviços Especializados Ltda',
+                        '© 2026 Global Sync',
                         style: TextStyle(
                           fontSize: 12,
-                          color: Colors.white.withValues(alpha: 0.3),
+                          color: Colors.white.withValues(alpha: 0.5),
                         ),
                       ),
                       const SizedBox(height: 24),

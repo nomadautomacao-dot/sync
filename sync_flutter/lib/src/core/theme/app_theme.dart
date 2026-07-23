@@ -15,10 +15,10 @@ abstract final class SaaSTokens {
   static const textMuted    = Color(0xFF6B7280); // Gray-500
   static const textDim      = Color(0xFF9CA3AF); // Gray-400
 
-  // Primary palette (Rocha Prime Navy)
-  static const primary        = Color(0xFF1B2A4A);
-  static const primaryLight   = Color(0xFFE8EBF2);
-  static const primaryDim     = Color(0xFF7084AB);
+  // Primary palette (Global Sync Teal)
+  static const primary        = Color(0xFF049598);
+  static const primaryLight   = Color(0xFFDCF2F0);
+  static const primaryDim     = Color(0xFF5FA3A0);
 
   // Semantic
   static const success = Color(0xFF10B981);

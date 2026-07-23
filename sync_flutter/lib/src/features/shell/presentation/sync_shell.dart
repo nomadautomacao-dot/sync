@@ -247,41 +247,26 @@ class _ShellSidebar extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Logo area — synthesized with the extracted P icon and typography
+          // Logo area — ícone Global Sync + wordmark
           Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Image.asset(
-                'assets/branding/prime-icon-extracted.png',
+                'assets/branding/global-sync-icon.png',
                 height: 32,
                 width: 32,
                 fit: BoxFit.contain,
               ),
               const SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text(
-                    'Rocha Prime',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: SaaSTokens.primary,
-                      letterSpacing: -0.5,
-                      height: 1.1,
-                    ),
-                  ),
-                  Text(
-                    'SERVIÇOS ESPECIALIZADOS',
-                    style: TextStyle(
-                      fontSize: 7.5,
-                      fontWeight: FontWeight.w700,
-                      color: SaaSTokens.primaryDim,
-                      letterSpacing: 1.2,
-                    ),
-                  ),
-                ],
+              const Text(
+                'Global Sync',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: SaaSTokens.primary,
+                  letterSpacing: -0.5,
+                  height: 1.1,
+                ),
               ),
             ],
           ),
@@ -582,7 +567,7 @@ class _ShellContextPanel extends StatelessWidget {
           _buildContextCard(
             icon: LucideIcons.bellRing,
             title: 'Avisos da Plataforma',
-            body: 'Nenhuma nova atualizacao no sistema Rocha Prime.',
+            body: 'Nenhuma nova atualizacao no sistema Global Sync.',
           ),
           const SizedBox(height: 16),
           _buildContextCard(
@@ -621,7 +606,7 @@ class _ShellContextPanel extends StatelessWidget {
                           ? selectedModule!.label
                           : 'Modulo ativo'),
                 body: controller.selectedCompanyId != null
-                    ? 'Visualizando as configuracoes e informacoes corporativas exclusivas da Rocha Prime.'
+                    ? 'Visualizando as configuracoes e informacoes corporativas exclusivas da Global Sync.'
                     : selectedModule?.description.isNotEmpty == true
                     ? selectedModule!.description
                     : 'O painel exibira filtros e atalhos conforme voce navega pelos modulos.',
@@ -633,7 +618,7 @@ class _ShellContextPanel extends StatelessWidget {
           _buildContextCard(
             icon: LucideIcons.lifeBuoy,
             title: 'Suporte',
-            body: 'Para assistencia, entre em contato com a equipe de TI da Rocha Prime.',
+            body: 'Para assistencia, entre em contato com a equipe de TI da Global Sync.',
           ),
         ],
       ),
