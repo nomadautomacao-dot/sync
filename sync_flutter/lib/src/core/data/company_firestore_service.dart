@@ -121,4 +121,11 @@ class CompanyFirestoreService {
     final ref = await _employees.add(doc);
     return employeeFromDoc(ref.id, doc);
   }
+
+  Future<void> setLogo(String companyId, String logoUrl) async {
+    await _companies.doc(companyId).set({
+      'logo': logoUrl,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
 }

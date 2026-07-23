@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-// file_picker removed — Linux desktop incompatible with v3.x
+import 'package:file_picker/file_picker.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -124,6 +124,104 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
     bundleFuture = _loadBundle();
     _loadDocumentsFromStorage();
     setState(() {});
+  }
+
+  // ── LOGO — upload via Firebase Storage ─────────────────────
+  bool _uploadingLogo = false;
+
+  Future<void> _pickAndUploadLogo() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.image,
+      withData: true,
+    );
+    final bytes = result?.files.single.bytes;
+    if (bytes == null) return;
+    setState(() => _uploadingLogo = true);
+    try {
+      await widget.repository.setCompanyLogo(widget.companyId, bytes);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Logo atualizado com sucesso.'),
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+      _refresh();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Nao foi possivel atualizar o logo: $e'),
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    } finally {
+      if (mounted) setState(() => _uploadingLogo = false);
+    }
+  }
+
+  // ── FUNCIONARIOS — cria via Firestore (CompanyFirestoreService) ─
+  void _showAddEmployeeDialog() {
+    final nameCtrl = TextEditingController();
+    final emailCtrl = TextEditingController();
+    final positionCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: Padding(
+            padding: const EdgeInsets.all(28),
+            child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                const Icon(LucideIcons.userPlus, size: 20, color: SaaSTokens.primary),
+                const SizedBox(width: 10),
+                const Expanded(child: Text('Adicionar Funcionario',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: SaaSTokens.textTitle))),
+                IconButton(onPressed: () => Navigator.pop(ctx), icon: const Icon(LucideIcons.x, size: 18)),
+              ]),
+              const SizedBox(height: 24),
+              _EditField(label: 'Nome', controller: nameCtrl),
+              _EditField(label: 'Email', controller: emailCtrl),
+              _EditField(label: 'Cargo', controller: positionCtrl),
+              const SizedBox(height: 8),
+              Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                OutlinedButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+                const SizedBox(width: 12),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    final name = nameCtrl.text.trim();
+                    final email = emailCtrl.text.trim();
+                    final position = positionCtrl.text.trim();
+                    if (name.isEmpty || email.isEmpty || position.isEmpty) return;
+                    Navigator.pop(ctx);
+                    try {
+                      await widget.repository.createEmployee({
+                        'companyId': widget.companyId,
+                        'name': name,
+                        'email': email,
+                        'position': position,
+                        'role': position,
+                      });
+                      _refresh();
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                          content: Text('Nao foi possivel adicionar o funcionario: $e'),
+                          behavior: SnackBarBehavior.floating,
+                        ));
+                      }
+                    }
+                  },
+                  icon: const Icon(LucideIcons.plus, size: 16),
+                  label: const Text('Adicionar'),
+                ),
+              ]),
+            ]),
+          ),
+        ),
+      ),
+    );
   }
 
   static const _categoryMap = {
@@ -483,6 +581,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
         }
 
         final company = snapshot.data!.company;
+        final employees = snapshot.data!.employees;
         return SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -491,6 +590,8 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
             _buildKpiStrip(),
             const SizedBox(height: 24),
             _buildInstitutionalCard(context, company),
+            const SizedBox(height: 24),
+            _buildEmployeesSection(employees),
             const SizedBox(height: 24),
             _buildDocSection(context),
           ]),
@@ -504,9 +605,23 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
     return SyncSurfaceCard(
       padding: const EdgeInsets.all(28),
       child: Row(children: [
-        Container(width: 64, height: 64,
-          decoration: BoxDecoration(color: SaaSTokens.primary, borderRadius: BorderRadius.circular(16)),
-          child: const Center(child: Text('RP', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: -1))),
+        Tooltip(
+          message: 'Trocar logo',
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: _uploadingLogo ? null : _pickAndUploadLogo,
+            child: Container(width: 64, height: 64,
+              decoration: BoxDecoration(color: SaaSTokens.primary, borderRadius: BorderRadius.circular(16)),
+              child: Center(
+                child: _uploadingLogo
+                    ? const SizedBox(
+                        width: 22, height: 22,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Text('RP', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w800, letterSpacing: -1)),
+              ),
+            ),
+          ),
         ),
         const SizedBox(width: 20),
         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -589,6 +704,69 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
           ])),
         ]);
       }),
+    ]));
+  }
+
+  // ── EQUIPE ─────────────────────────────────────────────────
+  Widget _buildEmployeesSection(List<EmployeeRecord> employees) {
+    return SyncSurfaceCard(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Row(children: [
+        const Icon(LucideIcons.users, size: 18, color: SaaSTokens.primary),
+        const SizedBox(width: 10),
+        const Expanded(child: Text('Equipe',
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: SaaSTokens.textTitle, letterSpacing: -0.2))),
+        ElevatedButton.icon(
+          onPressed: _showAddEmployeeDialog,
+          icon: const Icon(LucideIcons.userPlus, size: 16),
+          label: const Text('Adicionar funcionario'),
+        ),
+      ]),
+      const SizedBox(height: 20),
+      if (employees.isEmpty)
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 32),
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: SaaSTokens.scaffold,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: SaaSTokens.borderLight),
+          ),
+          child: const Center(child: Text('Nenhum funcionario cadastrado.',
+            style: TextStyle(fontSize: 14, color: SaaSTokens.textMuted, fontWeight: FontWeight.w500))),
+        )
+      else
+        ...employees.asMap().entries.map((entry) {
+          final e = entry.value;
+          final isLast = entry.key == employees.length - 1;
+          return Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: SaaSTokens.cardWhite,
+              border: Border(
+                top: entry.key == 0 ? BorderSide(color: SaaSTokens.borderLight) : BorderSide.none,
+                left: BorderSide(color: SaaSTokens.borderLight),
+                right: BorderSide(color: SaaSTokens.borderLight),
+                bottom: BorderSide(color: SaaSTokens.borderLight),
+              ),
+              borderRadius: BorderRadius.vertical(
+                top: entry.key == 0 ? const Radius.circular(10) : Radius.zero,
+                bottom: isLast ? const Radius.circular(10) : Radius.zero,
+              ),
+            ),
+            child: Row(children: [
+              Container(width: 36, height: 36,
+                decoration: BoxDecoration(color: SaaSTokens.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+                child: Center(child: Text(e.name.isNotEmpty ? e.name[0].toUpperCase() : '?',
+                  style: const TextStyle(fontWeight: FontWeight.w700, color: SaaSTokens.primary))),
+              ),
+              const SizedBox(width: 14),
+              Expanded(flex: 3, child: Text(e.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: SaaSTokens.textTitle))),
+              Expanded(flex: 3, child: Text(e.email, style: const TextStyle(fontSize: 13, color: SaaSTokens.textMuted))),
+              Expanded(flex: 2, child: Text(e.position, style: const TextStyle(fontSize: 13, color: SaaSTokens.textDim))),
+              StatusPill(label: e.status, color: e.status == 'Ativo' ? SaaSTokens.success : SaaSTokens.textDim),
+            ]),
+          );
+        }),
     ]));
   }
 

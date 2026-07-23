@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../core/data/collaborator_firestore_service.dart';
 import '../core/data/company_firestore_service.dart';
+import '../core/data/company_logo_storage.dart';
 import '../core/network/session_storage.dart';
 import '../core/network/sync_api_client.dart';
 import '../core/models/sync_models.dart';
@@ -15,6 +16,13 @@ import '../core/storage/local_workspace_store.dart';
 import '../core/theme/app_theme.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/shell/presentation/sync_shell.dart';
+
+/// Le o groupId das custom claims do ID token do usuario logado no Firebase
+/// Auth. Reusado por todos os services/repos que precisam escopar por grupo.
+Future<String?> _loadGroupIdFromClaims() async {
+  final result = await FirebaseAuth.instance.currentUser?.getIdTokenResult();
+  return result?.claims?['groupId'] as String?;
+}
 
 class SyncFlutterApp extends StatefulWidget {
   const SyncFlutterApp({super.key});
@@ -43,18 +51,14 @@ class _SyncFlutterAppState extends State<SyncFlutterApp> {
         ),
         collaborators: CollaboratorFirestoreService(
           firestore: FirebaseFirestore.instance,
-          groupIdLoader: () async {
-            final result = await FirebaseAuth.instance.currentUser?.getIdTokenResult();
-            return result?.claims?['groupId'] as String?;
-          },
+          groupIdLoader: _loadGroupIdFromClaims,
         ),
         companies: CompanyFirestoreService(
           firestore: FirebaseFirestore.instance,
-          groupIdLoader: () async {
-            final result = await FirebaseAuth.instance.currentUser?.getIdTokenResult();
-            return result?.claims?['groupId'] as String?;
-          },
+          groupIdLoader: _loadGroupIdFromClaims,
         ),
+        logoStorage: CompanyLogoStorage(),
+        groupIdLoader: _loadGroupIdFromClaims,
       ),
     );
     _bootstrapController();

@@ -355,6 +355,23 @@ class LocalSyncRepository implements SyncRepository {
   }
 
   @override
+  Future<EmployeeRecord> createEmployee(Map<String, dynamic> data) async {
+    return EmployeeRecord(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      name: (data['name'] as String?) ?? '',
+      email: (data['email'] as String?) ?? '',
+      position: (data['position'] as String?) ?? '',
+      role: (data['role'] as String?) ?? '',
+      status: 'Ativo',
+    );
+  }
+
+  @override
+  Future<void> setCompanyLogo(String companyId, Uint8List bytes) async {
+    // Local: no-op — logo requer Storage remoto.
+  }
+
+  @override
   Future<CollaboratorSummary> createCollaborator(
     Map<String, dynamic> data,
   ) async {

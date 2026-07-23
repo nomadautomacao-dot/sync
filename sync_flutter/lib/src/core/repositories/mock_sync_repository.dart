@@ -503,6 +503,16 @@ class MockSyncRepository implements SyncRepository {
   }
 
   @override
+  Future<EmployeeRecord> createEmployee(Map<String, dynamic> data) async {
+    throw UnsupportedError('Mock não suporta criação.');
+  }
+
+  @override
+  Future<void> setCompanyLogo(String companyId, Uint8List bytes) async {
+    throw UnsupportedError('Mock não suporta upload de logo.');
+  }
+
+  @override
   Future<CollaboratorSummary> createCollaborator(
     Map<String, dynamic> data,
   ) async {

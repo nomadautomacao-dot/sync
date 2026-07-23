@@ -1,5 +1,6 @@
 import '../data/collaborator_firestore_service.dart';
 import '../data/company_firestore_service.dart';
+import '../data/company_logo_storage.dart';
 import '../models/levantamento_fundeb_models.dart';
 import '../models/slide_models.dart';
 import '../models/sync_models.dart';
@@ -15,15 +16,21 @@ class HybridSyncRepository implements SyncRepository {
     required LocalSyncRepository local,
     required CollaboratorFirestoreService collaborators,
     required CompanyFirestoreService companies,
+    required CompanyLogoStorage logoStorage,
+    required Future<String?> Function() groupIdLoader,
   }) : _remote = remote,
        _local = local,
        _collaborators = collaborators,
-       _companies = companies;
+       _companies = companies,
+       _logoStorage = logoStorage,
+       _groupIdLoader = groupIdLoader;
 
   final RemoteSyncRepository _remote;
   final LocalSyncRepository _local;
   final CollaboratorFirestoreService _collaborators;
   final CompanyFirestoreService _companies;
+  final CompanyLogoStorage _logoStorage;
+  final Future<String?> Function() _groupIdLoader;
 
   bool get _mustUseRemote => _remote.remoteEnabled;
 
@@ -201,6 +208,29 @@ class HybridSyncRepository implements SyncRepository {
   Future<CompanySummary> createCompany(Map<String, dynamic> data) async {
     if (_mustUseRemote) return _companies.create(data);
     return _local.createCompany(data);
+  }
+
+  @override
+  Future<EmployeeRecord> createEmployee(Map<String, dynamic> data) async {
+    if (_mustUseRemote) return _companies.createEmployee(data);
+    return _local.createEmployee(data);
+  }
+
+  @override
+  Future<void> setCompanyLogo(String companyId, Uint8List bytes) async {
+    if (_mustUseRemote) {
+      final groupId = await _groupIdLoader();
+      if (groupId == null || groupId.isEmpty) {
+        throw StateError('Sem groupId nas claims.');
+      }
+      final url = await _logoStorage.upload(
+        groupId: groupId, companyId: companyId, bytes: bytes,
+      );
+      await _companies.setLogo(companyId, url);
+      return;
+    }
+    // local: no-op
+    return _local.setCompanyLogo(companyId, bytes);
   }
 
   @override

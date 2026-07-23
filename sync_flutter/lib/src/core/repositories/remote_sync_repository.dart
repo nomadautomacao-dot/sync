@@ -320,6 +320,16 @@ class RemoteSyncRepository implements SyncRepository {
   }
 
   @override
+  Future<EmployeeRecord> createEmployee(Map<String, dynamic> data) async {
+    throw UnsupportedError('createEmployee é servido pelo Firestore (Hybrid).');
+  }
+
+  @override
+  Future<void> setCompanyLogo(String companyId, Uint8List bytes) async {
+    throw UnsupportedError('setCompanyLogo é servido pelo Storage (Hybrid).');
+  }
+
+  @override
   Future<CollaboratorSummary> createCollaborator(
     Map<String, dynamic> data,
   ) async {
