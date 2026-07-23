@@ -91,11 +91,13 @@ class _PipelineScreenState extends State<PipelineScreen> {
 
     try {
       final cities = await widget.repository.getCities(search: _searchQuery);
+      if (!mounted) return;
       setState(() {
         _cities = cities;
         _isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = 'Falha ao carregar pipeline: $e';
         _isLoading = false;
@@ -107,7 +109,8 @@ class _PipelineScreenState extends State<PipelineScreen> {
     try {
       await widget.repository.updateCityStage(cityId, newStage);
       await _fetchCities();
-      
+      if (!mounted) return;
+
       // Update selected city if active
       if (_selectedCity?.id == cityId) {
         final updatedCity = _cities.firstWhere((c) => c.id == cityId);
@@ -123,6 +126,7 @@ class _PipelineScreenState extends State<PipelineScreen> {
         ),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Erro ao atualizar estágio: $e'),
@@ -136,6 +140,7 @@ class _PipelineScreenState extends State<PipelineScreen> {
     try {
       await widget.repository.updateCityPipeline(cityId, data);
       await _fetchCities();
+      if (!mounted) return;
 
       // Update selected city if active
       if (_selectedCity?.id == cityId) {
@@ -152,6 +157,7 @@ class _PipelineScreenState extends State<PipelineScreen> {
         ),
       );
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Erro ao salvar dados: $e'),
