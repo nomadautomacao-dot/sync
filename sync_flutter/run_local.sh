@@ -64,13 +64,29 @@ kill_previous() {
     fi
     rm -f "$BACKEND_PID_FILE"
   fi
-  # Kill any orphan next-server on the port
-  local port_pid
-  port_pid=$(lsof -ti :"$BACKEND_PORT" 2>/dev/null || true)
-  if [ -n "$port_pid" ]; then
-    echo -e "${YELLOW}⏹  Liberando porta $BACKEND_PORT (PID $port_pid)...${NC}"
-    kill "$port_pid" 2>/dev/null || true
+  # Libera a porta matando TODOS os listeners (zumbis orfaos de outras
+  # sessoes incluidos). Um unico sobrevivente faz o next dev cair pra 3001
+  # silenciosamente, e o Flutter — fixo em 3000 — bate no zumbi. Escalonar
+  # SIGTERM -> SIGKILL e so desistir quando a porta estiver realmente livre.
+  local attempt
+  for attempt in 1 2 3; do
+    local port_pids
+    port_pids=$(lsof -ti :"$BACKEND_PORT" 2>/dev/null || true)
+    [ -z "$port_pids" ] && break
+    echo -e "${YELLOW}⏹  Liberando porta $BACKEND_PORT (PIDs: $port_pids) [tentativa $attempt]...${NC}"
+    # shellcheck disable=SC2086
+    kill $port_pids 2>/dev/null || true
     sleep 1
+    port_pids=$(lsof -ti :"$BACKEND_PORT" 2>/dev/null || true)
+    [ -z "$port_pids" ] && break
+    # shellcheck disable=SC2086
+    kill -9 $port_pids 2>/dev/null || true
+    sleep 1
+  done
+  if lsof -ti :"$BACKEND_PORT" >/dev/null 2>&1; then
+    echo -e "${RED}✗  Nao consegui liberar a porta $BACKEND_PORT. Feche o processo manualmente.${NC}"
+    echo -e "${YELLOW}   lsof -i :$BACKEND_PORT${NC}"
+    exit 1
   fi
 }
 
@@ -125,6 +141,14 @@ fi
 
 # ── Start backend ─────────────────────────────────────────────────
 kill_previous
+
+# Um next dev morto com SIGKILL deixa o lock preso; o proximo se recusa a
+# subir ("is another instance running?"). Como kill_previous ja garantiu que
+# ninguem detem a porta, qualquer lock aqui e residual — remover.
+if [ -f "$BACKEND_DIR/.next/dev/lock" ]; then
+  echo -e "${YELLOW}⏹  Removendo lock residual do Next dev...${NC}"
+  rm -f "$BACKEND_DIR/.next/dev/lock"
+fi
 
 echo -e "${BLUE}▶  [1/2] Iniciando backend Next.js em ${API_URL}...${NC}"
 cd "$BACKEND_DIR"
