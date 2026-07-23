@@ -314,6 +314,12 @@ class RemoteSyncRepository implements SyncRepository {
   }
 
   @override
+  Future<CompanySummary> createCompany(Map<String, dynamic> data) async {
+    // Fase 2.2: empresas vivem no Firestore; o caminho remoto sai de cena.
+    throw UnsupportedError('createCompany é servido pelo Firestore (Hybrid).');
+  }
+
+  @override
   Future<CollaboratorSummary> createCollaborator(
     Map<String, dynamic> data,
   ) async {

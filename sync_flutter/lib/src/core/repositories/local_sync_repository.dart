@@ -10,6 +10,7 @@ import '../models/sync_models.dart';
 import '../network/api_exception.dart';
 import '../network/session_storage.dart';
 import '../storage/local_workspace_store.dart';
+import '../theme/app_theme.dart';
 import '../../features/modules/application/fundeb_levantamento_pdf_builder.dart';
 import 'local_seed_catalog.dart';
 import 'mock_sync_repository.dart';
@@ -335,6 +336,22 @@ class LocalSyncRepository implements SyncRepository {
   @override
   Future<CityAccount> createCity(Map<String, dynamic> data) async {
     throw const ApiException('Criação de cidade requer conexão com a API.');
+  }
+
+  @override
+  Future<CompanySummary> createCompany(Map<String, dynamic> data) async {
+    final id = DateTime.now().millisecondsSinceEpoch.toString();
+    return CompanySummary(
+      id: id,
+      tradingName: (data['tradingName'] as String?) ?? '',
+      segment: (data['segment'] as String?) ?? 'outro',
+      cnpj: (data['cnpj'] as String?) ?? '',
+      status: 'Ativo',
+      city: (data['city'] as String?) ?? '',
+      state: (data['state'] as String?) ?? '',
+      enabledModules: const [],
+      color: SaaSTokens.success,
+    );
   }
 
   @override

@@ -59,6 +59,8 @@ abstract class SyncRepository {
 
   Future<CityAccount> createCity(Map<String, dynamic> data);
 
+  Future<CompanySummary> createCompany(Map<String, dynamic> data);
+
   Future<CollaboratorSummary> createCollaborator(Map<String, dynamic> data);
 
   Future<CollaboratorDetails> getCollaboratorDetails(String id);

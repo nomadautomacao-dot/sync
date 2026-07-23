@@ -1,4 +1,5 @@
 import '../data/collaborator_firestore_service.dart';
+import '../data/company_firestore_service.dart';
 import '../models/levantamento_fundeb_models.dart';
 import '../models/slide_models.dart';
 import '../models/sync_models.dart';
@@ -13,13 +14,16 @@ class HybridSyncRepository implements SyncRepository {
     required RemoteSyncRepository remote,
     required LocalSyncRepository local,
     required CollaboratorFirestoreService collaborators,
+    required CompanyFirestoreService companies,
   }) : _remote = remote,
        _local = local,
-       _collaborators = collaborators;
+       _collaborators = collaborators,
+       _companies = companies;
 
   final RemoteSyncRepository _remote;
   final LocalSyncRepository _local;
   final CollaboratorFirestoreService _collaborators;
+  final CompanyFirestoreService _companies;
 
   bool get _mustUseRemote => _remote.remoteEnabled;
 
@@ -68,7 +72,7 @@ class HybridSyncRepository implements SyncRepository {
   @override
   Future<List<CompanySummary>> getSidebarCompanies() async {
     if (_mustUseRemote) {
-      final remote = await _remote.getSidebarCompanies();
+      final remote = await _companies.sidebar();
       await _local.cacheCompanies(remote);
       return remote;
     }
@@ -159,7 +163,7 @@ class HybridSyncRepository implements SyncRepository {
     String status = 'Todos',
   }) async {
     if (_mustUseRemote) {
-      final remote = await _remote.getCompanies(search: search, status: status);
+      final remote = await _companies.list(search: search, status: status);
       await _local.cacheCompanies(remote);
       return remote;
     }
@@ -169,7 +173,7 @@ class HybridSyncRepository implements SyncRepository {
   @override
   Future<CompanyBundle> getCompanyBundle(String companyId) async {
     if (_mustUseRemote) {
-      final remote = await _remote.getCompanyBundle(companyId);
+      final remote = await _companies.bundle(companyId);
       await _local.cacheCompanyBundle(remote);
       return remote;
     }
@@ -182,19 +186,7 @@ class HybridSyncRepository implements SyncRepository {
     List<String> enabledModules,
   ) async {
     if (_mustUseRemote) {
-      final remote = await _remote.updateCompanyModules(
-        companyId,
-        enabledModules,
-      );
-      final bundle = await _safeCall(() => _remote.getCompanyBundle(companyId));
-      if (bundle != null) {
-        await _local.cacheCompanyBundle(bundle);
-      }
-      final allCompanies = await _safeCall(() => _remote.getCompanies());
-      if (allCompanies != null) {
-        await _local.cacheCompanies(allCompanies);
-      }
-      return remote;
+      return _companies.updateModules(companyId, enabledModules);
     }
     return _local.updateCompanyModules(companyId, enabledModules);
   }
@@ -203,6 +195,12 @@ class HybridSyncRepository implements SyncRepository {
   Future<CityAccount> createCity(Map<String, dynamic> data) async {
     if (_mustUseRemote) return _remote.createCity(data);
     return _local.createCity(data);
+  }
+
+  @override
+  Future<CompanySummary> createCompany(Map<String, dynamic> data) async {
+    if (_mustUseRemote) return _companies.create(data);
+    return _local.createCompany(data);
   }
 
   @override
