@@ -4,6 +4,11 @@ import { getSessionUser } from "@/core/lib/auth";
 import { listCollaboratorDocuments, createCollaboratorDocument, getCollaborator } from "@/core/lib/collaboration-data-access";
 import { collaboratorDocumentCreateSchema } from "@/core/domain/collaboration";
 
+// DEPRECATED: o Flutter fala direto com Firestore+Storage
+// (collaborator_document_firestore_service.dart) desde a migracao Firebase.
+// Esta rota so sera removida na Fase 5 (aposentar Prisma/Postgres), junto
+// com collaboration-data-access.ts.
+
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = new Set([
   "application/pdf",
