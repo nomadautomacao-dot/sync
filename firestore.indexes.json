@@ -51,13 +51,6 @@
       ]
     },
     {
-      "collectionGroup": "commissionAccruals",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "payoutId", "order": "ASCENDING" }
-      ]
-    },
-    {
       "collectionGroup": "collaboratorDocuments",
       "queryScope": "COLLECTION",
       "fields": [
