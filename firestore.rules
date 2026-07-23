@@ -42,5 +42,27 @@ service cloud.firestore {
                     && request.resource.data.groupId == myGroupId();
       allow delete: if false;
     }
+
+    match /cities/{id} {
+      allow read: if isSignedIn() && resource.data.groupId == myGroupId();
+      allow create: if isAdmin() && request.resource.data.groupId == myGroupId();
+      allow update: if isAdmin()
+                    && resource.data.groupId == myGroupId()
+                    && request.resource.data.groupId == myGroupId();
+      allow delete: if false;
+    }
+
+    match /workspace_settings/{groupId} {
+      allow read: if isSignedIn() && groupId == myGroupId();
+      allow create, update: if isAdmin() && groupId == myGroupId()
+                            && request.resource.data.groupId == myGroupId();
+      allow delete: if false;
+    }
+
+    match /audit/{id} {
+      allow read: if isSignedIn() && resource.data.groupId == myGroupId();
+      // Escrita de auditoria só via backend confiavel (Cloud Functions), nunca cliente.
+      allow write: if false;
+    }
   }
 }
