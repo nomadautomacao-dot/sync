@@ -2,6 +2,7 @@ import '../data/city_firestore_service.dart';
 import '../data/collaborator_firestore_service.dart';
 import '../data/company_firestore_service.dart';
 import '../data/company_logo_storage.dart';
+import '../data/workspace_settings_firestore_service.dart';
 import '../models/levantamento_fundeb_models.dart';
 import '../models/slide_models.dart';
 import '../models/sync_models.dart';
@@ -19,6 +20,7 @@ class HybridSyncRepository implements SyncRepository {
     required CompanyFirestoreService companies,
     required CompanyLogoStorage logoStorage,
     required CityFirestoreService cities,
+    required WorkspaceSettingsFirestoreService settings,
     required Future<String?> Function() groupIdLoader,
   }) : _remote = remote,
        _local = local,
@@ -26,6 +28,7 @@ class HybridSyncRepository implements SyncRepository {
        _companies = companies,
        _logoStorage = logoStorage,
        _cities = cities,
+       _settings = settings,
        _groupIdLoader = groupIdLoader;
 
   final RemoteSyncRepository _remote;
@@ -34,6 +37,7 @@ class HybridSyncRepository implements SyncRepository {
   final CompanyFirestoreService _companies;
   final CompanyLogoStorage _logoStorage;
   final CityFirestoreService _cities;
+  final WorkspaceSettingsFirestoreService _settings;
   final Future<String?> Function() _groupIdLoader;
 
   bool get _mustUseRemote => _remote.remoteEnabled;
@@ -131,7 +135,7 @@ class HybridSyncRepository implements SyncRepository {
   @override
   Future<WorkspaceSettings> getWorkspaceSettings() async {
     if (_mustUseRemote) {
-      final remote = await _remote.getWorkspaceSettings();
+      final remote = await _settings.get();
       await _local.cacheSettings(remote);
       return remote;
     }
@@ -143,7 +147,7 @@ class HybridSyncRepository implements SyncRepository {
     WorkspaceSettings settings,
   ) async {
     if (_mustUseRemote) {
-      final remote = await _remote.updateWorkspaceSettings(settings);
+      final remote = await _settings.update(settings);
       await _local.cacheSettings(remote);
       return remote;
     }

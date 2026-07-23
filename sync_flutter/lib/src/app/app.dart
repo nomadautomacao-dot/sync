@@ -6,6 +6,7 @@ import '../core/data/city_firestore_service.dart';
 import '../core/data/collaborator_firestore_service.dart';
 import '../core/data/company_firestore_service.dart';
 import '../core/data/company_logo_storage.dart';
+import '../core/data/workspace_settings_firestore_service.dart';
 import '../core/network/session_storage.dart';
 import '../core/network/sync_api_client.dart';
 import '../core/models/sync_models.dart';
@@ -60,6 +61,10 @@ class _SyncFlutterAppState extends State<SyncFlutterApp> {
         ),
         logoStorage: CompanyLogoStorage(),
         cities: CityFirestoreService(
+          firestore: FirebaseFirestore.instance,
+          groupIdLoader: _loadGroupIdFromClaims,
+        ),
+        settings: WorkspaceSettingsFirestoreService(
           firestore: FirebaseFirestore.instance,
           groupIdLoader: _loadGroupIdFromClaims,
         ),
