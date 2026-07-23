@@ -40,6 +40,22 @@
         { "fieldPath": "groupId", "order": "ASCENDING" },
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "commissionRules",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "groupId", "order": "ASCENDING" },
+        { "fieldPath": "cityId", "order": "ASCENDING" },
+        { "fieldPath": "isActive", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "commissionAccruals",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "payoutId", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
