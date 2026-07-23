@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../core/data/city_firestore_service.dart';
 import '../core/data/collaborator_firestore_service.dart';
 import '../core/data/company_firestore_service.dart';
 import '../core/data/company_logo_storage.dart';
@@ -58,6 +59,10 @@ class _SyncFlutterAppState extends State<SyncFlutterApp> {
           groupIdLoader: _loadGroupIdFromClaims,
         ),
         logoStorage: CompanyLogoStorage(),
+        cities: CityFirestoreService(
+          firestore: FirebaseFirestore.instance,
+          groupIdLoader: _loadGroupIdFromClaims,
+        ),
         groupIdLoader: _loadGroupIdFromClaims,
       ),
     );

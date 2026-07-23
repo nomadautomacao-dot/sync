@@ -1,3 +1,4 @@
+import '../data/city_firestore_service.dart';
 import '../data/collaborator_firestore_service.dart';
 import '../data/company_firestore_service.dart';
 import '../data/company_logo_storage.dart';
@@ -17,12 +18,14 @@ class HybridSyncRepository implements SyncRepository {
     required CollaboratorFirestoreService collaborators,
     required CompanyFirestoreService companies,
     required CompanyLogoStorage logoStorage,
+    required CityFirestoreService cities,
     required Future<String?> Function() groupIdLoader,
   }) : _remote = remote,
        _local = local,
        _collaborators = collaborators,
        _companies = companies,
        _logoStorage = logoStorage,
+       _cities = cities,
        _groupIdLoader = groupIdLoader;
 
   final RemoteSyncRepository _remote;
@@ -30,6 +33,7 @@ class HybridSyncRepository implements SyncRepository {
   final CollaboratorFirestoreService _collaborators;
   final CompanyFirestoreService _companies;
   final CompanyLogoStorage _logoStorage;
+  final CityFirestoreService _cities;
   final Future<String?> Function() _groupIdLoader;
 
   bool get _mustUseRemote => _remote.remoteEnabled;
@@ -200,7 +204,7 @@ class HybridSyncRepository implements SyncRepository {
 
   @override
   Future<CityAccount> createCity(Map<String, dynamic> data) async {
-    if (_mustUseRemote) return _remote.createCity(data);
+    if (_mustUseRemote) return _cities.create(data);
     return _local.createCity(data);
   }
 
@@ -325,25 +329,19 @@ class HybridSyncRepository implements SyncRepository {
     String search = '',
     String stage = '',
   }) async {
-    if (_mustUseRemote) {
-      return _remote.getCities(search: search, stage: stage);
-    }
+    if (_mustUseRemote) return _cities.list(search: search, stage: stage);
     return _local.getCities(search: search, stage: stage);
   }
 
   @override
   Future<void> updateCityStage(String cityId, String stage) async {
-    if (_mustUseRemote) {
-      return _remote.updateCityStage(cityId, stage);
-    }
+    if (_mustUseRemote) return _cities.updateStage(cityId, stage);
     return _local.updateCityStage(cityId, stage);
   }
 
   @override
   Future<void> updateCityPipeline(String cityId, Map<String, dynamic> data) async {
-    if (_mustUseRemote) {
-      return _remote.updateCityPipeline(cityId, data);
-    }
+    if (_mustUseRemote) return _cities.updatePipeline(cityId, data);
     return _local.updateCityPipeline(cityId, data);
   }
 
