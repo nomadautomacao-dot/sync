@@ -1,0 +1,356 @@
+<!-- 02 · Sistema — Dashboard — recorte do Global Sync Redesign (direcao Console Tecnico) -->
+<div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; letter-spacing: 1px; color: #6B7280; text-transform: uppercase;">02 · Sistema — Dashboard</div>
+        <div style="width: 1280px; border-radius: 16px; overflow: hidden; border: 1px solid #C9D0DB; box-shadow: 0 28px 64px rgba(16, 24, 40, .16);">
+          <div style="height: 38px; background: #F1F3F7; border-bottom: 1px solid #E2E8F0; display: flex; align-items: center; padding: 0 14px; gap: 8px;">
+            <div style="width: 11px; height: 11px; border-radius: 50%; background: #FF5F57;"></div>
+            <div style="width: 11px; height: 11px; border-radius: 50%; background: #FEBC2E;"></div>
+            <div style="width: 11px; height: 11px; border-radius: 50%; background: #28C840;"></div>
+            <div style="flex: 1; text-align: center; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #9CA3AF;">Global Sync — Dashboard</div>
+          </div>
+
+          <div style="display: flex; height: 1040px; background: #EEF1F6;">
+            <!-- sidebar -->
+            <div style="width: 268px; flex: none; background: #FFFFFF; border-right: 1px solid #E2E8F0; padding: 24px 18px 18px; display: flex; flex-direction: column;">
+              <div style="padding: 0 4px;">
+                <img src="assets/gs-lockup-dark.png" alt="Global Sync" style="height: 40px; width: auto; display: block;">
+              </div>
+              <div style="height: 16px;"></div>
+              <div style="border: 1px solid #E2E8F0; border-radius: 11px; padding: 8px 10px; display: flex; align-items: center; gap: 9px; cursor: pointer; transition: border-color .18s ease;" style-hover="border-color: #049598;">
+                <img src="assets/gs-icon.png" alt="" style="width: 26px; height: 26px; display: block; flex: none;">
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-size: 13px; font-weight: 600; color: #111827; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Global Services</div>
+                  <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #9CA3AF; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">grupo · 5 empresas</div>
+                </div>
+                <span style="font-family: 'Material Symbols Outlined'; font-size: 18px; color: #9CA3AF; flex: none;">unfold_more</span>
+              </div>
+              <div style="height: 10px;"></div>
+              <div style="height: 40px; background: #049598; border-radius: 10px; display: flex; align-items: center; gap: 8px; padding: 0 12px; cursor: pointer; transition: background .18s ease;" style-hover="background: #036B69;">
+                <span style="font-family: 'Material Symbols Outlined'; font-size: 18px; color: #FFFFFF; flex: none;">add</span>
+                <div style="flex: 1; min-width: 0; font-size: 13px; font-weight: 600; color: #FFFFFF; white-space: nowrap;">Novo levantamento</div>
+                <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: rgba(255,255,255,.72); flex: none;">⌘N</div>
+              </div>
+              <div style="height: 18px;"></div>
+              <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1.2px; color: #9CA3AF; padding: 0 6px;">WORKSPACE</div>
+              <div style="height: 10px;"></div>
+
+              <div style="display: flex; flex-direction: column; gap: 3px;">
+                <div style="height: 44px; border-radius: 10px; background: #DCF2F0; display: flex; align-items: center; gap: 11px; padding-right: 12px;">
+                  <div style="width: 3px; height: 24px; border-radius: 2px; background: #049598; margin-left: 8px;"></div>
+                  <span style="font-family: 'Material Symbols Outlined'; font-size: 19px; color: #049598;">space_dashboard</span>
+                  <div style="flex: 1; font-size: 14px; font-weight: 600; color: #049598; letter-spacing: -.2px;">Dashboard</div>
+                  <div style="width: 6px; height: 6px; border-radius: 50%; background: #10B981; box-shadow: 0 0 6px rgba(16,185,129,.5);"></div>
+                </div>
+                <div style="height: 44px; border-radius: 10px; display: flex; align-items: center; gap: 11px; padding-left: 22px; padding-right: 12px; cursor: pointer; transition: background .18s ease;" style-hover="background: #EEF1F6;">
+                  <span style="font-family: 'Material Symbols Outlined'; font-size: 19px; color: #9CA3AF;">inbox</span>
+                  <div style="flex: 1; font-size: 14px; font-weight: 500; color: #6B7280;">Inbox</div>
+                  <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; color: #FFFFFF; background: #049598; border-radius: 20px; padding: 2px 7px;">4</div>
+                </div>
+                <div style="height: 44px; border-radius: 10px; display: flex; align-items: center; gap: 11px; padding-left: 22px; cursor: pointer; transition: background .18s ease;" style-hover="background: #EEF1F6;">
+                  <span style="font-family: 'Material Symbols Outlined'; font-size: 19px; color: #9CA3AF;">apartment</span>
+                  <div style="font-size: 14px; font-weight: 500; color: #6B7280;">Empresas</div>
+                </div>
+                <div style="height: 44px; border-radius: 10px; display: flex; align-items: center; gap: 11px; padding-left: 22px; cursor: pointer; transition: background .18s ease;" style-hover="background: #EEF1F6;">
+                  <span style="font-family: 'Material Symbols Outlined'; font-size: 19px; color: #9CA3AF;">groups</span>
+                  <div style="font-size: 14px; font-weight: 500; color: #6B7280;">Pessoas</div>
+                </div>
+                <div style="height: 44px; border-radius: 10px; display: flex; align-items: center; gap: 11px; padding-left: 22px; cursor: pointer; transition: background .18s ease;" style-hover="background: #EEF1F6;">
+                  <span style="font-family: 'Material Symbols Outlined'; font-size: 19px; color: #9CA3AF;">track_changes</span>
+                  <div style="font-size: 14px; font-weight: 500; color: #6B7280;">Pipeline</div>
+                </div>
+                <div style="height: 44px; border-radius: 10px; display: flex; align-items: center; gap: 11px; padding-left: 22px; cursor: pointer; transition: background .18s ease;" style-hover="background: #EEF1F6;">
+                  <span style="font-family: 'Material Symbols Outlined'; font-size: 19px; color: #9CA3AF;">grid_view</span>
+                  <div style="font-size: 14px; font-weight: 500; color: #6B7280;">Módulos</div>
+                </div>
+                <div style="height: 44px; border-radius: 10px; display: flex; align-items: center; gap: 11px; padding-left: 22px; cursor: pointer; transition: background .18s ease;" style-hover="background: #EEF1F6;">
+                  <span style="font-family: 'Material Symbols Outlined'; font-size: 19px; color: #9CA3AF;">tune</span>
+                  <div style="font-size: 14px; font-weight: 500; color: #6B7280;">Configurações</div>
+                </div>
+              </div>
+
+              <div style="height: 22px;"></div>
+              <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1.2px; color: #9CA3AF; padding: 0 6px;">MÓDULO ATIVO</div>
+              <div style="height: 8px;"></div>
+              <div style="height: 36px; border-radius: 9px; background: #DCF2F0; display: flex; align-items: center; gap: 9px; padding: 0 8px;">
+                <span style="font-family: 'Material Symbols Outlined'; font-size: 17px; color: #049598; flex: none;">school</span>
+                <div style="flex: 1; min-width: 0; font-size: 13px; font-weight: 600; color: #036B69; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">FUNDEB 2026</div>
+                <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #036B69; flex: none;">18</div>
+              </div>
+
+              <div style="flex: 1; min-height: 12px;"></div>
+              <div style="height: 34px; border-radius: 9px; display: flex; align-items: center; gap: 9px; padding: 0 8px; cursor: pointer; transition: background .18s ease;" style-hover="background: #EEF1F6;">
+                <span style="font-family: 'Material Symbols Outlined'; font-size: 17px; color: #9CA3AF; flex: none;">help</span>
+                <div style="flex: 1; min-width: 0; font-size: 13px; color: #6B7280; white-space: nowrap;">Ajuda e atalhos</div>
+                <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #9CA3AF; border: 1px solid #E2E8F0; border-radius: 5px; padding: 1px 5px; flex: none;">⌘/</div>
+              </div>
+              <div style="height: 10px;"></div>
+              <div style="border: 1px solid #E2E8F0; background: #F7F9FB; border-radius: 12px; padding: 9px 10px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: border-color .18s ease;" style-hover="border-color: #049598;">
+                <div style="width: 36px; height: 36px; flex: none; border-radius: 11px; background: #049598; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #FFFFFF;">MR</div>
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-size: 14px; font-weight: 600; color: #111827; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Marcos Rocha</div>
+                  <div style="height: 3px;"></div>
+                  <div style="display: flex; align-items: center; gap: 5px;">
+                    <div style="width: 5px; height: 5px; border-radius: 50%; background: #10B981; flex: none;"></div>
+                    <div style="font-size: 11px; color: #6B7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Admin do grupo</div>
+                  </div>
+                </div>
+                <span style="font-family: 'Material Symbols Outlined'; font-size: 18px; color: #9CA3AF; flex: none;">more_vert</span>
+              </div>
+            </div>
+
+            <!-- main -->
+            <div style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
+              <div style="height: 62px; flex: none; background: #FFFFFF; border-bottom: 1px solid #E2E8F0; display: flex; align-items: center; padding: 0 18px; gap: 12px;">
+                <div>
+                  <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1.1px; color: #9CA3AF;">WORKSPACE</div>
+                  <div style="font-size: 15px; font-weight: 600; color: #111827; letter-spacing: -.25px;">Dashboard</div>
+                </div>
+                <div style="flex: none; width: 258px; min-width: 0; margin-left: 20px; height: 38px; border: 1px solid #E2E8F0; border-radius: 10px; display: flex; align-items: center; gap: 9px; padding: 0 12px; cursor: text; transition: border-color .18s ease;" style-hover="border-color: #049598;">
+                  <span style="font-family: 'Material Symbols Outlined'; font-size: 17px; color: #9CA3AF; flex: none;">search</span>
+                  <div style="flex: 1; min-width: 0; font-size: 13px; color: #9CA3AF; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Buscar município, empresa…</div>
+                  <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6B7280; background: #EEF1F6; border: 1px solid #E2E8F0; border-radius: 5px; padding: 1px 6px; flex: none;">⌘K</div>
+                </div>
+                <div style="flex: 1; min-width: 8px;"></div>
+                <div style="display: flex; align-items: center; gap: 8px; flex: none; white-space: nowrap; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6B7280; border: 1px solid #E2E8F0; border-radius: 20px; padding: 5px 11px;">
+                  <div style="width: 6px; height: 6px; border-radius: 50%; background: #10B981; animation: gsPulse 2.4s ease-in-out infinite;"></div>
+                  sincronizado 14:32
+                </div>
+                <span style="font-family: 'Material Symbols Outlined'; font-size: 19px; color: #6B7280; cursor: pointer;" style-hover="color: #111827;">notifications</span>
+                <span style="font-family: 'Material Symbols Outlined'; font-size: 19px; color: #6B7280; cursor: pointer;" style-hover="color: #111827;">right_panel_open</span>
+                <div style="width: 34px; height: 34px; flex: none; border-radius: 10px; background: #049598; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #FFFFFF;">MR</div>
+              </div>
+
+              <div style="flex: 1; overflow: hidden; padding: 22px 24px; display: flex; flex-direction: column; gap: 16px;">
+                <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 20px;">
+                  <div>
+                    <h3 style="margin: 0; font-size: 23px; font-weight: 700; letter-spacing: -.7px; color: #111827; white-space: nowrap;">Visão executiva</h3>
+                    <div style="height: 4px;"></div>
+                    <div style="font-size: 14px; color: #6B7280;">Carteira consolidada · exercício 2026</div>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 10px; flex: none;">
+                    <div style="display: flex; border: 1px solid #E2E8F0; border-radius: 10px; overflow: hidden; background: #FFFFFF; flex: none;">
+                      <div style="padding: 9px 14px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #6B7280; cursor: pointer;" style-hover="background: #F7F9FB;">Dia</div>
+                      <div style="padding: 9px 14px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #6B7280; cursor: pointer; border-left: 1px solid #E2E8F0;" style-hover="background: #F7F9FB;">Semana</div>
+                      <div style="padding: 9px 14px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: #FFFFFF; background: #049598; border-left: 1px solid #E2E8F0;">Mês</div>
+                      <div style="padding: 9px 14px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #6B7280; cursor: pointer; border-left: 1px solid #E2E8F0;" style-hover="background: #F7F9FB;">Trimestre</div>
+                      <div style="padding: 9px 14px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #6B7280; cursor: pointer; border-left: 1px solid #E2E8F0;" style-hover="background: #F7F9FB;">Ano</div>
+                    </div>
+                    <div style="height: 38px; background: #049598; border-radius: 10px; display: flex; align-items: center; gap: 7px; padding: 0 15px; cursor: pointer; transition: background .18s ease;" style-hover="background: #036B69;">
+                      <span style="font-family: 'Material Symbols Outlined'; font-size: 17px; color: #FFFFFF;">add</span>
+                      <div style="font-size: 13px; font-weight: 600; color: #FFFFFF;">Novo levantamento</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
+                  <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; padding: 18px 18px 16px;">
+                    <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1.1px; color: #9CA3AF; text-transform: uppercase;">Lucro projetado</div>
+                    <div style="height: 10px;"></div>
+                    <div style="font-family: 'IBM Plex Mono', monospace; font-size: 32px; font-weight: 600; letter-spacing: -1.6px; color: #111827; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap;">R$ 4,82M</div>
+                    <div style="height: 10px;"></div>
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                      <span style="font-family: 'Material Symbols Outlined'; font-size: 15px; color: #10B981;">trending_up</span>
+                      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: #10B981;">+12,4%</div>
+                      <div style="font-size: 12px; color: #9CA3AF;">vs. 2025</div>
+                    </div>
+                  </div>
+                  <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; padding: 18px 18px 16px;">
+                    <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1.1px; color: #9CA3AF; text-transform: uppercase;">Margem</div>
+                    <div style="height: 10px;"></div>
+                    <div style="font-family: 'IBM Plex Mono', monospace; font-size: 32px; font-weight: 600; letter-spacing: -1.6px; color: #111827; line-height: 1; font-variant-numeric: tabular-nums;">38,6%</div>
+                    <div style="height: 10px;"></div>
+                    <div style="height: 5px; border-radius: 4px; background: #EEF1F6; overflow: hidden;">
+                      <div style="width: 62%; height: 100%; background: #049598;"></div>
+                    </div>
+                  </div>
+                  <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; padding: 18px 18px 16px;">
+                    <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1.1px; color: #9CA3AF; text-transform: uppercase;">Cobertura</div>
+                    <div style="height: 10px;"></div>
+                    <div style="font-family: 'IBM Plex Mono', monospace; font-size: 32px; font-weight: 600; letter-spacing: -1.6px; color: #111827; line-height: 1; font-variant-numeric: tabular-nums;">71%</div>
+                    <div style="height: 10px;"></div>
+                    <div style="font-size: 12px; color: #6B7280;">24 de 34 municípios ativos</div>
+                  </div>
+                  <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; padding: 18px 18px 16px;">
+                    <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1.1px; color: #9CA3AF; text-transform: uppercase;">Pendências</div>
+                    <div style="height: 10px;"></div>
+                    <div style="font-family: 'IBM Plex Mono', monospace; font-size: 32px; font-weight: 600; letter-spacing: -1.6px; color: #111827; line-height: 1; font-variant-numeric: tabular-nums;">3</div>
+                    <div style="height: 10px;"></div>
+                    <div style="display: flex; align-items: center; gap: 5px;">
+                      <span style="font-family: 'Material Symbols Outlined'; font-size: 15px; color: #F59E0B;">warning</span>
+                      <div style="font-size: 12px; color: #374151;">2 contratos a vencer</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1.55fr 1fr; gap: 12px;">
+                  <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; padding: 18px 20px;">
+                    <div style="display: flex; align-items: baseline; justify-content: space-between;">
+                      <div>
+                        <div style="font-size: 16px; font-weight: 600; color: #111827; letter-spacing: -.3px;">Receita no ano</div>
+                        <div style="height: 3px;"></div>
+                        <div style="font-size: 13px; color: #6B7280;">Tendência mensal consolidada</div>
+                      </div>
+                      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #6B7280; font-variant-numeric: tabular-nums;">R$ 12,47M acum.</div>
+                    </div>
+                    <div style="height: 18px;"></div>
+                    <div style="display: flex; align-items: flex-end; gap: 10px; height: 132px;">
+                      <div style="flex: 1; height: 44%; background: #DCF2F0; border-radius: 5px 5px 0 0; transition: background .18s ease;" style-hover="background: #049598;"></div>
+                      <div style="flex: 1; height: 52%; background: #DCF2F0; border-radius: 5px 5px 0 0;" style-hover="background: #049598;"></div>
+                      <div style="flex: 1; height: 47%; background: #DCF2F0; border-radius: 5px 5px 0 0;" style-hover="background: #049598;"></div>
+                      <div style="flex: 1; height: 63%; background: #DCF2F0; border-radius: 5px 5px 0 0;" style-hover="background: #049598;"></div>
+                      <div style="flex: 1; height: 58%; background: #DCF2F0; border-radius: 5px 5px 0 0;" style-hover="background: #049598;"></div>
+                      <div style="flex: 1; height: 74%; background: #DCF2F0; border-radius: 5px 5px 0 0;" style-hover="background: #049598;"></div>
+                      <div style="flex: 1; height: 69%; background: #049598; border-radius: 5px 5px 0 0;"></div>
+                      <div style="flex: 1; height: 88%; background: #049598; border-radius: 5px 5px 0 0;"></div>
+                      <div style="flex: 1; height: 100%; background: #049598; border-radius: 5px 5px 0 0;"></div>
+                      <div style="flex: 1; height: 34%; background: #EEF1F6; border-radius: 5px 5px 0 0; border-top: 1px dashed #9CA3AF;"></div>
+                      <div style="flex: 1; height: 30%; background: #EEF1F6; border-radius: 5px 5px 0 0; border-top: 1px dashed #9CA3AF;"></div>
+                      <div style="flex: 1; height: 26%; background: #EEF1F6; border-radius: 5px 5px 0 0; border-top: 1px dashed #9CA3AF;"></div>
+                    </div>
+                    <div style="height: 8px;"></div>
+                    <div style="display: flex; gap: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #9CA3AF; text-align: center;">
+                      <div style="flex: 1;">JAN</div><div style="flex: 1;">FEV</div><div style="flex: 1;">MAR</div><div style="flex: 1;">ABR</div><div style="flex: 1;">MAI</div><div style="flex: 1;">JUN</div><div style="flex: 1;">JUL</div><div style="flex: 1;">AGO</div><div style="flex: 1;">SET</div><div style="flex: 1;">OUT</div><div style="flex: 1;">NOV</div><div style="flex: 1;">DEZ</div>
+                    </div>
+                  </div>
+
+                  <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; padding: 18px 20px;">
+                    <div style="font-size: 16px; font-weight: 600; color: #111827; letter-spacing: -.3px;">Radar executivo</div>
+                    <div style="height: 14px;"></div>
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
+                      <div style="display: flex; gap: 10px; align-items: flex-start; padding: 11px 12px; border: 1px solid #FDE9C8; background: #FEFAF2; border-radius: 10px;">
+                        <span style="font-family: 'Material Symbols Outlined'; font-size: 17px; color: #F59E0B;">schedule</span>
+                        <div>
+                          <div style="font-size: 13px; font-weight: 600; color: #111827;">Contrato Cristalina vence em 12 dias</div>
+                          <div style="height: 2px;"></div>
+                          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6B7280;">renovação não iniciada</div>
+                        </div>
+                      </div>
+                      <div style="display: flex; gap: 10px; align-items: flex-start; padding: 11px 12px; border: 1px solid #E2E8F0; border-radius: 10px;">
+                        <span style="font-family: 'Material Symbols Outlined'; font-size: 17px; color: #049598;">description</span>
+                        <div>
+                          <div style="font-size: 13px; font-weight: 600; color: #111827;">4 levantamentos aguardando revisão</div>
+                          <div style="height: 2px;"></div>
+                          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6B7280;">FUNDEB · lote 2026-07</div>
+                        </div>
+                      </div>
+                      <div style="display: flex; gap: 10px; align-items: flex-start; padding: 11px 12px; border: 1px solid #E2E8F0; border-radius: 10px;">
+                        <span style="font-family: 'Material Symbols Outlined'; font-size: 17px; color: #10B981;">verified</span>
+                        <div>
+                          <div style="font-size: 13px; font-weight: 600; color: #111827;">Base FNDE atualizada</div>
+                          <div style="height: 2px;"></div>
+                          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6B7280;">VAAT 2026 · hoje 06:10</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; overflow: hidden; flex: none;">
+                  <div style="padding: 15px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #E2E8F0;">
+                    <div style="display: flex; align-items: baseline; gap: 10px;">
+                      <div style="font-size: 16px; font-weight: 600; color: #111827; letter-spacing: -.3px;">Cidades com maior projeção</div>
+                      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #9CA3AF;">34 municípios</div>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                      <div style="border: 1px solid #E2E8F0; border-radius: 8px; padding: 6px 10px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6B7280; cursor: pointer; white-space: nowrap;" style-hover="border-color: #049598; color: #049598;">densidade</div>
+                      <div style="border: 1px solid #E2E8F0; border-radius: 8px; padding: 6px 10px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6B7280; cursor: pointer; white-space: nowrap;" style-hover="border-color: #049598; color: #049598;">exportar csv</div>
+                    </div>
+                  </div>
+                  <div style="--pad: {{ rowPad }}; white-space: nowrap;">
+                    <div style="display: grid; grid-template-columns: 1.8fr .45fr 1.15fr 1.1fr 1.1fr .7fr; background: #F7F9FB; border-bottom: 1px solid #E2E8F0; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: .9px; color: #6B7280; text-transform: uppercase;">
+                      <div style="padding: 10px 10px;">Município</div>
+                      <div style="padding: 10px 10px;">UF</div>
+                      <div style="padding: 10px 10px;">Estágio</div>
+                      <div style="padding: 10px 10px; text-align: right;">VAAT 2026</div>
+                      <div style="padding: 10px 10px; text-align: right;">Lucro proj.</div>
+                      <div style="padding: 10px 10px; text-align: right;">Margem</div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1.8fr .45fr 1.15fr 1.1fr 1.1fr .7fr; align-items: center; border-bottom: 1px solid #EEF1F6; cursor: pointer; transition: background .15s ease;" style-hover="background: #F7F9FB;">
+                      <div style="padding: var(--pad, 13px 10px); font-size: 14px; font-weight: 600; color: #111827;">Cristalina</div>
+                      <div style="padding: var(--pad, 13px 10px); font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #6B7280;">GO</div>
+                      <div style="padding: var(--pad, 13px 10px);"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; color: #036B69; background: #DCF2F0; border-radius: 6px; padding: 3px 8px;">contrato</span></div>
+                      <div style="padding: var(--pad, 13px 10px); font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #374151; text-align: right; font-variant-numeric: tabular-nums;">R$ 8,41M</div>
+                      <div style="padding: var(--pad, 13px 10px); font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600; color: #111827; text-align: right; font-variant-numeric: tabular-nums;">R$ 1,12M</div>
+                      <div style="padding: var(--pad, 13px 10px); font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #10B981; text-align: right; font-variant-numeric: tabular-nums;">41,2%</div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1.8fr .45fr 1.15fr 1.1fr 1.1fr .7fr; align-items: center; border-bottom: 1px solid #EEF1F6; cursor: pointer; transition: background .15s ease;" style-hover="background: #F7F9FB;">
+                      <div style="padding: var(--pad, 13px 10px); font-size: 14px; font-weight: 600; color: #111827;">Águas Lindas de Goiás</div>
+                      <div style="padding: var(--pad, 13px 10px); font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #6B7280;">GO</div>
+                      <div style="padding: var(--pad, 13px 10px);"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; color: #036B69; background: #DCF2F0; border-radius: 6px; padding: 3px 8px;">contrato</span></div>
+                      <div style="padding: var(--pad, 13px 10px); font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #374151; text-align: right; font-variant-numeric: tabular-nums;">R$ 7,96M</div>
+                      <div style="padding: var(--pad, 13px 10px); font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600; color: #111827; text-align: right; font-variant-numeric: tabular-nums;">R$ 964,3K</div>
+                      <div style="padding: var(--pad, 13px 10px); font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #10B981; text-align: right; font-variant-numeric: tabular-nums;">38,7%</div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1.8fr .45fr 1.15fr 1.1fr 1.1fr .7fr; align-items: center; border-bottom: 1px solid #EEF1F6; cursor: pointer; transition: background .15s ease;" style-hover="background: #F7F9FB;">
+                      <div style="padding: var(--pad, 13px 10px); font-size: 14px; font-weight: 600; color: #111827;">Senador José Porfírio</div>
+                      <div style="padding: var(--pad, 13px 10px); font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #6B7280;">PA</div>
+                      <div style="padding: var(--pad, 13px 10px);"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; color: #92400E; background: #FEF6E7; border-radius: 6px; padding: 3px 8px;">proposta</span></div>
+                      <div style="padding: var(--pad, 13px 10px); font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #374151; text-align: right; font-variant-numeric: tabular-nums;">R$ 6,20M</div>
+                      <div style="padding: var(--pad, 13px 10px); font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600; color: #111827; text-align: right; font-variant-numeric: tabular-nums;">R$ 742,0K</div>
+                      <div style="padding: var(--pad, 13px 10px); font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #374151; text-align: right; font-variant-numeric: tabular-nums;">35,1%</div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1.8fr .45fr 1.15fr 1.1fr 1.1fr .7fr; align-items: center; border-bottom: 1px solid #EEF1F6; cursor: pointer; transition: background .15s ease;" style-hover="background: #F7F9FB;">
+                      <div style="padding: var(--pad, 13px 10px); font-size: 14px; font-weight: 600; color: #111827;">Miradouro</div>
+                      <div style="padding: var(--pad, 13px 10px); font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #6B7280;">MG</div>
+                      <div style="padding: var(--pad, 13px 10px);"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; color: #374151; background: #EEF1F6; border-radius: 6px; padding: 3px 8px;">levantamento</span></div>
+                      <div style="padding: var(--pad, 13px 10px); font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #374151; text-align: right; font-variant-numeric: tabular-nums;">R$ 3,08M</div>
+                      <div style="padding: var(--pad, 13px 10px); font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600; color: #111827; text-align: right; font-variant-numeric: tabular-nums;">R$ 388,5K</div>
+                      <div style="padding: var(--pad, 13px 10px); font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #374151; text-align: right; font-variant-numeric: tabular-nums;">33,4%</div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1.8fr .45fr 1.15fr 1.1fr 1.1fr .7fr; align-items: center; cursor: pointer; transition: background .15s ease;" style-hover="background: #F7F9FB;">
+                      <div style="padding: var(--pad, 13px 10px); font-size: 14px; font-weight: 600; color: #111827;">Inhapi</div>
+                      <div style="padding: var(--pad, 13px 10px); font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #6B7280;">AL</div>
+                      <div style="padding: var(--pad, 13px 10px);"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; color: #374151; background: #EEF1F6; border-radius: 6px; padding: 3px 8px;">levantamento</span></div>
+                      <div style="padding: var(--pad, 13px 10px); font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #374151; text-align: right; font-variant-numeric: tabular-nums;">R$ 2,74M</div>
+                      <div style="padding: var(--pad, 13px 10px); font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600; color: #111827; text-align: right; font-variant-numeric: tabular-nums;">R$ 321,9K</div>
+                      <div style="padding: var(--pad, 13px 10px); font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #374151; text-align: right; font-variant-numeric: tabular-nums;">31,8%</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <sc-if value="{{ mostrarPainel }}" hint-placeholder-val="{{ true }}">
+              <div style="width: 300px; flex: none; background: #FFFFFF; border-left: 1px solid #E2E8F0; padding: 20px 18px; display: flex; flex-direction: column; gap: 14px;">
+                <div style="font-size: 16px; font-weight: 600; color: #111827; letter-spacing: -.3px;">Acesso rápido</div>
+                <div style="background: #EEF1F6; border: 1px solid #E2E8F0; border-radius: 12px; padding: 14px;">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-family: 'Material Symbols Outlined'; font-size: 16px; color: #049598;">bolt</span>
+                    <div style="font-size: 13px; font-weight: 700; color: #049598; letter-spacing: -.2px;">Gerar documento</div>
+                  </div>
+                  <div style="height: 10px;"></div>
+                  <div style="display: flex; flex-direction: column; gap: 7px;">
+                    <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 9px 11px; font-size: 13px; color: #374151; cursor: pointer;" style-hover="border-color: #049598; color: #036B69;">Levantamento FUNDEB</div>
+                    <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 9px 11px; font-size: 13px; color: #374151; cursor: pointer;" style-hover="border-color: #049598; color: #036B69;">Kit de inexigibilidade</div>
+                    <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 8px; padding: 9px 11px; font-size: 13px; color: #374151; cursor: pointer;" style-hover="border-color: #049598; color: #036B69;">Proposta comercial</div>
+                  </div>
+                </div>
+                <div style="background: #EEF1F6; border: 1px solid #E2E8F0; border-radius: 12px; padding: 14px;">
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-family: 'Material Symbols Outlined'; font-size: 16px; color: #049598;">cloud_done</span>
+                    <div style="font-size: 13px; font-weight: 700; color: #049598; letter-spacing: -.2px;">Status da conexão</div>
+                  </div>
+                  <div style="height: 8px;"></div>
+                  <div style="font-size: 13px; color: #374151; line-height: 1.45;">Conectado à nuvem oficial. Última sincronização às 14:32.</div>
+                </div>
+                <div style="background: #EEF1F6; border: 1px solid #E2E8F0; border-radius: 12px; padding: 14px;">
+                  <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1.1px; color: #9CA3AF;">FONTES DE DADOS</div>
+                  <div style="height: 10px;"></div>
+                  <div style="display: flex; flex-direction: column; gap: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #374151;">
+                    <div style="display: flex; justify-content: space-between; gap: 10px;"><div style="white-space: nowrap;">FNDE</div><div style="color: #10B981; white-space: nowrap;">ok</div></div>
+                    <div style="display: flex; justify-content: space-between; gap: 10px;"><div style="white-space: nowrap;">INEP</div><div style="color: #10B981; white-space: nowrap;">ok</div></div>
+                    <div style="display: flex; justify-content: space-between; gap: 10px;"><div style="white-space: nowrap;">SICONFI</div><div style="color: #F59E0B; white-space: nowrap;">atraso 2d</div></div>
+                    <div style="display: flex; justify-content: space-between; gap: 10px;"><div style="white-space: nowrap;">IBGE</div><div style="color: #10B981; white-space: nowrap;">ok</div></div>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+        <sc-if value="{{ mostrarNotas }}" hint-placeholder-val="{{ true }}">
+          <div style="font-size: 13px; color: #4B5563; line-height: 1.5; max-width: 1080px;">Todo número usa mono tabular — colunas de dinheiro alinham na vírgula e o olho compara linha a linha. Rótulos de coluna e metadados em mono 10px maiúsculo separam “dado” de “rótulo” sem precisar de segunda cor.</div>
+        </sc-if>
+      </div>
+
+      <!-- ── Inbox 1a ── -->
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; letter-spacing: 1px; color: #6B7280; text-transform: uppercase;"

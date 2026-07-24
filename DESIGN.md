@@ -1,227 +1,158 @@
 ---
 name: Global Sync
-description: Console operacional para consultoria FUNDEB — claro e denso em dados no dia a dia, com um portal de entrada escuro que sinaliza escala institucional.
+description: Console operacional para consultoria FUNDEB. Direcao "Console Tecnico" — claro, denso e instrumental, com hierarquia construida por duas familias tipograficas em vez de cor.
 colors:
   scaffold: "#EEF1F6"
   card-white: "#FFFFFF"
+  surface-subtle: "#F7F9FB"
+  surface-alt: "#F1F3F7"
   border-light: "#E2E8F0"
+  border-strong: "#D8DEE6"
+  border-stronger: "#C9D0DB"
   text-title: "#111827"
   text-body: "#374151"
+  text-soft: "#4B5563"
   text-muted: "#6B7280"
   text-dim: "#9CA3AF"
-  teal-institucional: "#049598"
-  teal-institucional-light: "#DCF2F0"
-  teal-institucional-dim: "#5FA3A0"
+  primary: "#049598"
+  primary-hover: "#036B69"
+  primary-light: "#DCF2F0"
+  primary-dim: "#5FA3A0"
   success: "#10B981"
+  success-light: "#E7F7F1"
+  success-dark: "#065F46"
   warning: "#F59E0B"
+  warning-light: "#FEF6E7"
+  warning-border: "#FDE9C8"
+  warning-dark: "#B45309"
   error: "#EF4444"
-  gold-premium: "#D4A853"
-  gold-premium-light: "#FAF3E3"
-  gold-premium-dim: "#B8943F"
-  navy-profundo: "#0E3B3A"
-  navy-profundo-light: "#1F5350"
-  navy-profundo-deep: "#07211F"
+  error-light: "#FEF2F2"
+  error-dark: "#991B1B"
 typography:
-  display:
-    fontFamily: "Inter, sans-serif"
-    fontSize: "36px"
-    fontWeight: 700
-    lineHeight: 1
-    letterSpacing: "-1.4px"
-  headline:
-    fontFamily: "Inter, sans-serif"
-    fontSize: "22px"
-    fontWeight: 700
-    lineHeight: 1.15
-    letterSpacing: "-0.6px"
-  title:
-    fontFamily: "Inter, sans-serif"
-    fontSize: "18px"
-    fontWeight: 600
-    lineHeight: 1.2
-    letterSpacing: "-0.3px"
-  body:
-    fontFamily: "Inter, sans-serif"
-    fontSize: "15px"
-    fontWeight: 400
-    lineHeight: 1.5
-  body-dense:
-    fontFamily: "Inter, sans-serif"
-    fontSize: "14px"
-    fontWeight: 400
-    lineHeight: 1.45
-  label:
-    fontFamily: "Inter, sans-serif"
-    fontSize: "13px"
-    fontWeight: 600
-    letterSpacing: "0.05px"
-  eyebrow:
-    fontFamily: "Inter, sans-serif"
-    fontSize: "11px"
-    fontWeight: 600
-    letterSpacing: "0.8px"
-rounded:
-  sm: "8px"
-  md: "10px"
-  lg: "12px"
-  hero-card: "4px"
-spacing:
-  xs: "4px"
-  sm: "8px"
-  md: "16px"
-  lg: "24px"
-  xl: "32px"
-components:
-  button-primary:
-    backgroundColor: "{colors.teal-institucional}"
-    textColor: "#FFFFFF"
-    rounded: "{rounded.md}"
-    padding: "12px 24px"
-    height: "48px"
-  button-outlined:
-    backgroundColor: "transparent"
-    textColor: "{colors.text-title}"
-    rounded: "{rounded.md}"
-    padding: "12px 24px"
-    height: "48px"
-  card:
-    backgroundColor: "{colors.card-white}"
-    rounded: "{rounded.lg}"
-    padding: "20px"
-  input:
-    backgroundColor: "transparent"
-    textColor: "{colors.text-title}"
-    rounded: "{rounded.md}"
-    padding: "14px 16px"
-    height: "48px"
+  ui-family: "InstrumentSans"
+  data-family: "IBMPlexMono"
 ---
 
-# Design System: Global Sync
+# Global Sync — Console Tecnico
 
-## Overview
+Fonte de verdade da implementacao: `sync_flutter/lib/src/core/theme/app_theme.dart`
+(`SaaSTokens` + `GsText`). Referencia visual original: `docs/design/global-sync-redesign.dc.html`,
+recortada por tela em `docs/design/screens/`.
 
-**Creative North Star: "The Global Console"**
+## A ideia em uma frase
 
-Global Sync é o console operacional da consultoria FUNDEB: claro, denso em dados, sem enfeite, feito para um consultor executar rápido em campo — não para admirar a interface. A maior parte do produto (dashboard, cidades, pipeline, empresas, módulos) vive nesse registro claro, com fundo neutro `#EEF1F6`, cards brancos de borda fina e um único accent teal (`#049598`) reservado para ação e estado ativo.
+O produto e um instrumento de trabalho de campo, nao um dashboard de SaaS. A hierarquia
+nasce de **duas familias tipograficas** — nao de uma segunda cor, nao de sombra, nao de
+gradiente. Texto de interface em `InstrumentSans`; **todo numero, codigo, data, sigla e
+rotulo tecnico em `IBMPlexMono`**, com figuras tabulares para que colunas de dinheiro
+alinhem na virgula e o olho compare linha a linha.
 
-O ponto de entrada — a tela de login — quebra deliberadamente esse registro: um hero em gradiente navy profundo, formas geométricas sutis, um badge de logo com sombra suave e um card branco flutuando no centro. É a única superfície do produto com essa dramaticidade; ela existe para sinalizar escala e seriedade institucional antes do usuário entrar no trabalho do dia a dia. Ela não define o resto do sistema, e o resto do sistema não deve importar a dramaticidade dela.
+## O que mudou em relacao a versao anterior
 
-O rebrand de "Rocha Prime" para "Global Sync" está em andamento: o ícone e o nome já trocaram amplamente (login, sidebar, título da aba), e a paleta operacional já migrou de navy/azul para o teal institucional atual (`SaaSTokens.primary`, comentado no código como "Global Sync Teal"). Esta é uma foto do estado real implementado — não do estado final planejado. Áreas fora do escopo do rebrand documentado (geradores de PDF/relatórios, alguns literais de cor legados em telas mais antigas) ainda podem citar a marca ou paleta antiga; tratar como dívida a migrar, não como padrão a seguir.
+A paleta permanece **identica** — teal `#049598` continua sendo o accent unico, cards
+continuam brancos e planos com borda de 1px, o alvo de toque continua 48dp. O que mudou:
 
-**Key Characteristics:**
-- Dois registros deliberados: console claro no dia a dia, hero escuro só no portal de entrada
-- Um único accent (teal institucional) reservado para ação — a regridez do resto é o que o faz notar
-- Flat-by-default: bordas finas fazem o trabalho que sombra faria em outro sistema
-- Tipografia Inter única, hierarquia por peso e tamanho, nunca por família
+| Area | Antes | Agora |
+|---|---|---|
+| Familia | Inter, sozinha | InstrumentSans (UI) + IBMPlexMono (dados) |
+| Numeros | mesma fonte do texto | mono tabular, alinhados |
+| Rotulos | sentence case, sans | mono, CAIXA ALTA, 10px, tracking 0.9–1.2px |
+| Login | hero navy escuro | fundo claro com leve tinta teal |
+| Gold premium | token de destaque | **removido** — quebrava a regra de um accent so |
+| Marca | Rocha Prime | Global Services Consultorias |
 
-## Colors
+## Tipografia
 
-Paleta de dois registros: neutros técnicos para o console operacional, teal como único accent, navy profundo reservado ao hero de entrada.
+Use sempre os papeis de `GsText`; nunca escreva `TextStyle(fontFamily: ...)` na tela.
 
-### Primary
-- **Teal Institucional** (`#049598`): accent único do console — botões primários, links, ícones/labels ativos em navegação, borda de foco em inputs. Confiança técnica sem frieza, quase uma cor de instrumento de precisão. Usado com moderação: sua raridade no fundo neutro é o que dá peso à ação.
-- **Teal Institucional Claro** (`#DCF2F0`): fundo de estado selecionado (chips, indicador de navegação) — nunca como fundo de superfície geral.
+### Interface — `InstrumentSans`
 
-### Secondary
-- **Ouro Premium** (`#D4A853`): accent secundário reservado para contexto de destaque/premium (ainda pouco usado no código atual — tratar como reserva, não introduzir sem necessidade real).
+| Papel | Spec | Uso |
+|---|---|---|
+| `pageTitle` | 23 / 700 / -0.7 | "Visao executiva", "Empresas do grupo" |
+| `panelTitle` | 20 / 700 / -0.6 | titulo de painel e dialogo |
+| `cardTitle` | 16 / 600 / -0.3 | "Receita no ano", "Radar executivo" |
+| `cardTitleSm` | 15 / 600 / -0.3 | subsecao dentro de card |
+| `navItem` | 15 / 600 / -0.25 | item da barra lateral |
+| `bodyStrong` | 14 / 600 | nome na linha de tabela |
+| `bodyMedium` | 14 / 500 | texto de apoio com peso |
+| `body` | 13 / 400 | **o texto mais comum da interface** |
+| `bodySm` | 12 / 400 | descricao secundaria |
+| `caption` | 11 / 400 | legenda |
+| `button` | 14 / 600 / -0.1 | rotulo de botao |
 
-### Tertiary
-- **Navy Profundo** (`#0E3B3A`): exclusivo do hero de login — grave, quase oceano-noturno, sinaliza solidez institucional no ponto de entrada. Não usar em superfícies do console operacional.
+### Dados — `IBMPlexMono`
 
-### Neutral
-- **Scaffold** (`#EEF1F6`): fundo padrão de todas as telas do console.
-- **Card White** (`#FFFFFF`): superfície de cards, painéis, sidebar, inputs.
-- **Border Light** (`#E2E8F0`): única cor de borda do sistema — separa card de fundo, divide seções, contorna inputs no estado padrão.
-- **Text Title** (`#111827`): títulos e texto de maior ênfase.
-- **Text Body** (`#374151`): corpo de texto padrão.
-- **Text Muted** (`#6B7280`): texto secundário, labels de campo, legendas.
-- **Text Dim** (`#9CA3AF`): texto terciário — placeholders, ícones inativos, texto sobre navy no hero de login com opacidade reduzida.
+| Papel | Spec | Uso |
+|---|---|---|
+| `kpiXl` | 32 / 600 / -1.6 | KPI de destaque: "R$ 4,82M" |
+| `kpiLg` | 26 / 600 / -1.2 | KPI padrao |
+| `dataLg` | 15 / 600 | numero de apoio: "de 26" |
+| `data` | 13 / 400 | celula de tabela |
+| `dataStrong` | 13 / 600 | o valor que importa na linha |
+| `dataSm` | 12 / 400 | dado secundario |
+| `dataXs` / `dataXsStrong` | 11 / 400 · 600 | metadado, horario, lote, versao |
+| `label` | 10 / 600 / +1.1 CAPS | **cabecalho de coluna, sobretitulo de secao** |
+| `fieldLabel` | 10 / 600 / +0.9 CAPS | rotulo de campo de formulario |
+| `chip` | 11 / 500 | texto de chip de status |
+| `kbd` | 10 / 600 / +0.5 | atalho de teclado (⌘K, ⌘N) |
 
-### Named Rules
-**The One Accent Rule.** O teal institucional é a única cor não-neutra usada para ação no console operacional. Success/warning/error existem só para estado semântico (nunca para ação); ouro é reserva. Se uma tela precisa de uma segunda cor "de destaque" para chamar atenção, o problema é hierarquia, não paleta.
+## Geometria
 
-**The Hero Exception Rule.** Navy profundo e o gradiente escuro existem só na tela de login. Nenhuma outra superfície do produto herda esse registro — é o único lugar onde o sistema é deliberadamente dramático.
+- **Raio:** `rControl` 10 (botao, input, item de nav) · `rCard` 14 · `rChip` 6 · `rPill` 20 · 50% em avatar.
+- **Borda:** sempre 1px. `border-light` no padrao, `border-strong`/`border-stronger` quando
+  precisa de mais peso, `primary` 1.5px no foco.
+- **Elevacao:** nenhuma. A separacao vem de borda e de degrau de superficie.
+- **Superficies:** `scaffold` (fundo) → `surface-subtle` (cabecalho de tabela, faixa) →
+  `card-white` (card, sidebar, header).
 
-## Typography
+## Componentes
 
-**Body Font:** Inter (variable weight, `InterVariable.ttf` embarcada — sem fallback de sistema necessário)
+### Barra lateral
+Branca, 292px em desktop / drawer de 304px abaixo de 1120px. Marca no topo, seletor de
+grupo, botao primario de acao com atalho. Secoes rotuladas em `label` (WORKSPACE, MODULO
+ATIVO). Item ativo: barra indicadora lateral + fundo `primary-light` + icone e texto em
+`primary`; inativo em `text-dim`. Rodape com "Ajuda e atalhos" e o cartao do usuario.
 
-**Character:** Uma família só, hierarquia construída por peso e tamanho — nunca por segunda família. Pesos 700/600 para tudo que precisa ser lido rápido (títulos, labels, botões); 400 para leitura corrida.
+### Cabecalho
+Migalha em `label` sobre o titulo da secao, campo de busca com atalho `⌘K`, pilula de
+status de sincronizacao, notificacoes e avatar.
 
-### Hierarchy
-- **Display** (700, 36px, height 1, -1.4px): KPIs e números de destaque no dashboard executivo.
-- **Headline** (700, 22px, height 1.15, -0.6px): títulos de tela/seção.
-- **Title** (600, 18px, height 1.2, -0.3px): títulos de card, cabeçalhos de bloco.
-- **Body** (400, 15px, height 1.5): texto corrido, descrições longas.
-- **Body Dense** (400, 14px, height 1.45): texto padrão de UI — tabelas, listas, corpo de card. É o tamanho mais usado no sistema.
-- **Label** (600, 13px, +0.05px): rótulos de campo, texto de botão.
-- **Eyebrow** (600, 11px, +0.8px, geralmente `text-dim`): microcopy secundária — badges de estágio, contadores.
+### Cartao de KPI
+`label` em caixa alta no topo, numero em `kpiLg`/`kpiXl`, e **uma** linha de apoio:
+delta com seta (verde sobe, ambar/vermelho desce), barra de progresso fina, ou contagem
+em `dataXs`. Nunca as tres.
 
-O hero de login usa a mesma lógica de peso (700 para o nome do produto e título do card, 600 para labels e botão, 400 para texto de apoio) mas com tamanhos próprios (26px / 20px / 14px / 13px / 16px) fora da escala do tema — é a única superfície que não passa pelo `TextTheme` central.
+### Tabela
+Cabecalho em `label` sobre `surface-subtle`. Numeros em mono tabular alinhados a direita;
+texto a esquerda. Status como **unica cor semantica da linha**. Linha inteira clicavel,
+terminando em chevron — sem botao "Abrir". Registro inativo perde peso (texto em cinza),
+nao ganha badge. Densidade alternavel: confortavel `14px 10px` / compacta `9px 10px`.
 
-### Named Rules
-**The Weight-Over-Family Rule.** Hierarquia nunca introduz uma segunda família tipográfica. Se um elemento precisa se destacar mais, sobe de peso ou tamanho — não muda de fonte.
-
-## Layout
-
-Shell responsivo com dois breakpoints: `< 900px` é o registro mobile (drawer de 304px sobrepondo o conteúdo, painel de contexto lateral fecha automaticamente); `≥ 1120px` é desktop, com sidebar fixa de 292px à esquerda e um painel de contexto opcional à direita. Entre 900 e 1120px o layout intermediário mantém a navegação em drawer.
-
-Espaçamento em base 4dp: `4 / 8 / 16 / 24 / 32`. Cards operacionais usam 20dp de padding interno; o card do hero de login usa 36dp (maior respiro por ser uma superfície única e central, não repetida). Inputs e botões têm 48dp de altura mínima em todo o sistema — é o alvo de toque padrão, inclusive em telas de mouse/teclado.
-
-## Elevation & Depth
-
-Flat-by-default: cards, listas e painéis do console operacional não têm sombra — a separação vem inteiramente de `border: 1px solid #E2E8F0` sobre o fundo `#EEF1F6`. Sombra é reservada para poucos elementos isolados que precisam se destacar do plano do console: o badge do logo (login e sidebar), dialogs/modais, e o hero card de login sobre o gradiente navy.
-
-### Shadow Vocabulary
-- **Logo Badge** (`box-shadow: 0 8px 30px rgba(0,0,0,0.25)`): sombra suave sob o ícone Global Sync, tanto no login quanto na sidebar — o único elemento com sombra fora de contexto modal.
-
-### Named Rules
-**The Flat-By-Default Rule.** Superfícies do console são sempre planas com borda. Sombra aparece só em elementos isolados de destaque (badges, dialogs, floating panels) — nunca em cards ou listas do dia a dia.
-
-## Shapes
-
-Dois vocabulários de raio coexistem por região: o console operacional usa cantos generosos (12px em cards, 10px em botões/inputs/chips) — o padrão Material 3 do `AppTheme`. O hero de login usa cantos quase retos (4px no card e no badge do logo, 3px nos inputs) — uma escolha deliberada de rigor geométrico para o portal de entrada, distinta do resto do sistema. Bordas são sempre 1px, cor `border-light` no estado padrão, `teal-institucional` (1.5-2px) em foco.
-
-## Components
-
-### Buttons
-- **Shape:** 10px de raio no console; sem raio real (retangular) no botão de submit do login.
-- **Primary:** fundo `teal-institucional`, texto branco, 48px de altura, `elevation: 0`. No login, o botão primário usa navy profundo em vez do teal — única exceção de cor no sistema de botões.
-- **Hover / Focus:** sem estado de hover visual documentado além do padrão Material ripple (`InkSparkle`); foco em inputs usa borda teal de 1.5-2px.
-- **Outlined / Text:** borda `border-light`, texto `text-title`; ambos com a mesma altura mínima de 48px dos primários.
-
-### Chips
-- **Style:** fundo `scaffold` no estado padrão, `teal-institucional-light` quando selecionado, borda `border-light`, raio 8px.
-
-### Cards / Containers
-- **Corner Style:** 12px no console; 4px no card único do hero de login.
-- **Background:** sempre `card-white`.
-- **Shadow Strategy:** nenhuma no console (ver Elevation); o card do login usa fundo branco liso, sem sombra própria — a sombra fica só no badge do logo acima dele.
-- **Border:** 1px `border-light` no console; o card do login não tem borda (se destaca por contraste com o fundo escuro, não por borda).
-- **Internal Padding:** 20dp no console, 36dp no card do login.
-
-### Inputs / Fields
-- **Style:** sem preenchimento (`filled: false`), borda 1px `border-light`, raio 10px no console / 3px no login.
-- **Focus:** borda muda para `teal-institucional`, 1.5-2px.
-- **Error:** borda `error` (#EF4444), 1.5px; mensagens de erro em bloco com fundo `#FEF2F2` e borda `#FECACA`.
-
-### Navigation
-- **Sidebar:** fundo branco (não mais navy escuro), 292px fixa em desktop / drawer de 304px abaixo de 1120px. Item ativo: ícone e label em `teal-institucional`, com uma barra indicadora lateral; item inativo em `text-dim`.
-
-### Login Hero (componente de assinatura)
-Superfície única do sistema com identidade própria: fundo em gradiente diagonal navy profundo (`#0E3B3A → #07211F → #0C2E2B`), três formas geométricas translúcidas (círculos e um quadrado rotacionado, opacidade 2-4%) como textura de fundo, badge de logo com sombra, e um card branco central de cantos quase retos. Existe para dar ao produto um momento de entrada com peso institucional antes do registro utilitário do console assumir.
+### Chip de status
+Fundo do par claro da semantica, texto no par escuro, raio 6, `chip` em mono.
+`ativo` verde · `pendencia` ambar · `inativo` cinza · `contrato`/`proposta` teal.
 
 ## Do's and Don'ts
 
-### Do:
-- **Do** usar teal institucional (`#049598`) como o único accent de ação no console — botões primários, links, estado ativo de navegação, foco de input.
-- **Do** manter cards e listas do console flat, só com borda de 1px — sombra é exceção, não regra.
-- **Do** manter o hero de login como a única superfície dramática/escura do produto.
-- **Do** manter a hierarquia tipográfica só por peso e tamanho da família Inter, nunca introduzindo segunda família.
-- **Do** usar 48dp como altura mínima de alvo de toque em botões e inputs, em toda superfície.
+### Do
+- **Do** mandar todo numero, CNPJ, data, sigla de UF e duracao para um papel `mono` — e o
+  que faz a tabela virar instrumento.
+- **Do** usar `label` (mono, caixa alta) para cabecalho de coluna e sobretitulo. E ele que
+  separa "dado" de "rotulo" sem gastar uma segunda cor.
+- **Do** manter o teal como accent unico: botao primario, link, nav ativa, foco de input.
+- **Do** deixar cards planos com borda de 1px.
+- **Do** manter 48dp de alvo minimo em botao e input.
 
-### Don't:
-- **Don't** levar o gradiente navy ou os cantos quase retos (3-4px) do hero de login para telas do console operacional — são uma exceção de superfície única, não um segundo tema.
-- **Don't** introduzir uma segunda cor de accent para "chamar atenção" — se algo precisa se destacar mais, o problema é hierarquia, não uma nova cor.
-- **Don't** adicionar sombra em cards, listas ou tabelas do dia a dia — a separação vem de borda, não de elevação.
-- **Don't** reintroduzir referências à marca antiga ("Rocha Prime", navy `#1B2A4A`/azul `#2F6BFF`) em superfícies novas — essa paleta foi substituída; onde ainda aparece (PDFs, telas legadas) é dívida a migrar, não referência a seguir.
+### Don't
+- **Don't** introduzir uma segunda cor de accent. Se algo precisa se destacar mais, o
+  problema e hierarquia — resolva com peso, tamanho ou familia.
+- **Don't** adicionar sombra em card, lista ou tabela.
+- **Don't** escrever numero em `InstrumentSans` dentro de tabela ou KPI: sem tabular, a
+  coluna desalinha.
+- **Don't** ressuscitar o gold `#D4A853` nem o navy profundo `#0E3B3A` do login antigo —
+  ambos foram removidos nesta direcao.
+- **Don't** reintroduzir "Rocha Prime", navy `#1B2A4A` ou azul `#2F6BFF`. Onde ainda
+  aparecem (PDFs, telas legadas) e divida a migrar, nao referencia a seguir.
+- **Don't** dar 13 cores a 13 estagios de pipeline. Cor volta a ser semantica: teal =
+  negocio quente, ambar = inatividade/prazo.

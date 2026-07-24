@@ -209,7 +209,7 @@ class MockSyncRepository implements SyncRepository {
           value: 'R\$ 1,1 mi',
           helper: 'resultado operacional acumulado',
           icon: LucideIcons.handCoins,
-          color: const Color(0xFFD4A853), // SaaSTokens.gold
+          color: const Color(0xFF049598), // SaaSTokens.primary
           sparkData: const [80, 120, 180, 310, 450, 620, 780, 950, 1100],
         ),
         KpiMetric(
@@ -217,7 +217,7 @@ class MockSyncRepository implements SyncRepository {
           value: 'R\$ 412 mil',
           helper: 'base recorrente do ano',
           icon: LucideIcons.badgeDollarSign,
-          color: const Color(0xFFB8943F), // SaaSTokens.goldDim
+          color: const Color(0xFF5FA3A0), // SaaSTokens.primaryDim
           sparkData: const [30, 55, 90, 140, 200, 260, 320, 370, 412],
         ),
         KpiMetric(

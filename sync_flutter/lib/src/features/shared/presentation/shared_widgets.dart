@@ -467,11 +467,7 @@ class _EmptyStateWidgetState extends State<EmptyStateWidget>
                     backgroundColor: SaaSTokens.primaryLight,
                     foregroundColor: SaaSTokens.primary,
                     padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-                    textStyle: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    textStyle: GsText.button,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
