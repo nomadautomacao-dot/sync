@@ -316,10 +316,10 @@ const SVG_LOGO = `<svg viewBox="110 10 300 210" fill="none" xmlns="http://www.w3
 // ---------------------------------------------------------------------------
 const CSS = `
         /* ===========================================
-           CSS CUSTOM PROPERTIES — ROCHA PRIME THEME
+           CSS CUSTOM PROPERTIES — GLOBAL SYNC THEME
            =========================================== */
         :root {
-            /* Rocha Prime brand colors */
+            /* Global Sync brand colors */
             --navy: #1B2A4A;
             --navy-deep: #0F1B33;
             --navy-light: #243B5E;
@@ -1280,28 +1280,28 @@ function generateBarChart(items: BarItem[]): string {
 
 function slideHeader(data: ComercialPdfData): string {
   return `<div class="slide-header">
-                    <div class="logo-area"><div class="logo-icon">${SVG_LOGO}</div><span>Rocha Prime Serviços Especializados</span></div>
+                    <div class="logo-area"><div class="logo-icon">${SVG_LOGO}</div><span>Global Sync</span></div>
                     <div class="header-right"><span>${data.municipio} - ${data.uf}</span><span class="badge-confidencial">Documento Confidencial</span></div>
                 </div>`;
 }
 
 function slideHeaderText(data: ComercialPdfData): string {
   return `<div class="slide-header">
-                    <div class="logo-area"><div class="logo-icon">RP</div><span>Rocha Prime Serviços Especializados</span></div>
+                    <div class="logo-area"><div class="logo-icon">GS</div><span>Global Sync</span></div>
                     <div class="header-right"><span>${data.municipio} - ${data.uf}</span><span class="badge-confidencial">Documento Confidencial</span></div>
                 </div>`;
 }
 
 function slideFooter(pageNum: number, totalPages: number): string {
   return `<div class="slide-footer">
-                    <span>Rocha Prime Serviços Especializados Ltda | CNPJ: 29.342.691/0001-93</span>
+                    <span><strong style="color:var(--navy);font-weight:700;">GLOBAL SYNC</strong> <span style="font-size:9px;">Global Services Company — Tecnologia e dados para gestão pública</span></span>
                     <span class="page-num">${pageNum} / ${totalPages}</span>
                 </div>`;
 }
 
 function sectionFooter(pageNum: number, totalPages: number): string {
   return `<div class="cover-footer">
-                    <span>Rocha Prime Serviços Especializados Ltda</span>
+                    <span><strong style="font-weight:700;">GLOBAL SYNC</strong> <span style="font-size:9px;opacity:0.75;">Global Services Company</span></span>
                     <span class="page-num" style="color:rgba(255,255,255,0.4)">${pageNum} / ${totalPages}</span>
                 </div>`;
 }
@@ -1496,7 +1496,7 @@ export function generateComercialHtml(data: ComercialPdfData): string {
                             <div class="cover-logo reveal">
                                 <div class="cover-logo-icon">${SVG_LOGO}</div>
                                 <div>
-                                    <div class="cover-logo-text">Rocha Prime</div>
+                                    <div class="cover-logo-text">Global Sync</div>
                                     <div style="font-family:var(--font-body);font-size:11px;color:rgba(255,255,255,0.4);letter-spacing:0.5px;">Serviços Especializados</div>
                                 </div>
                             </div>
@@ -2290,7 +2290,7 @@ export function generateComercialHtml(data: ComercialPdfData): string {
                             <div class="cover-logo reveal">
                                 <div class="cover-logo-icon">${SVG_LOGO}</div>
                                 <div>
-                                    <div class="cover-logo-text">Rocha Prime</div>
+                                    <div class="cover-logo-text">Global Sync</div>
                                     <div style="font-family:var(--font-body);font-size:11px;color:rgba(255,255,255,0.4);letter-spacing:0.5px;">Serviços Especializados Ltda</div>
                                 </div>
                             </div>
@@ -2306,8 +2306,8 @@ export function generateComercialHtml(data: ComercialPdfData): string {
                             <div class="cover-separator reveal" style="transition-delay:0.35s"></div>
 
                             <div class="reveal" style="transition-delay:0.4s;font-family:var(--font-body);color:rgba(255,255,255,0.5);font-size:14px;line-height:1.8;">
-                                <div>CNPJ: 29.342.691/0001-93</div>
-                                <div>Tel: (61) 99866-7834</div>
+                                <div>Global Services Company</div>
+                                <div>Tel: (77) 99700-5880</div>
                                 <div>Técnico responsável: Adriel Tavares</div>
                                 <div style="margin-top:8px;">Emitido em ${formatDateTime(now)}</div>
                             </div>
@@ -2336,7 +2336,7 @@ export function generateComercialHtml(data: ComercialPdfData): string {
                     </div>
                 </div>
                 <div class="cover-footer">
-                    <span>DOCUMENTO CONFIDENCIAL — Rocha Prime Serviços Especializados Ltda</span>
+                    <span>DOCUMENTO CONFIDENCIAL — Global Sync</span>
                     <span>Fontes: FNDE, INEP, IBGE e bases oficiais consolidadas no PrimeOS</span>
                     <span>18 / ${totalPages}</span>
                 </div>

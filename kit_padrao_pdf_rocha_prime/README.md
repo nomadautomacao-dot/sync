@@ -1,4 +1,4 @@
-# Kit Padrão PDF Rocha Prime
+# Kit Padrão PDF Global Sync
 
 Esta pasta contém apenas a parte reutilizável do padrão visual dos PDFs.
 

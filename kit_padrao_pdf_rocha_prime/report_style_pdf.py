@@ -166,10 +166,10 @@ def draw_cover(c: canvas.Canvas, title: str, subtitle: str, municipality: str, y
     c.drawCentredString(PAGE_W / 2, PAGE_H - 518, year_label)
     c.setFillColor(NAVY)
     c.setFont("BodyBold", 9)
-    c.drawCentredString(PAGE_W / 2, 88, "ROCHA PRIME SERVIÇOS ESPECIALIZADOS")
+    c.drawCentredString(PAGE_W / 2, 88, "GLOBAL SYNC")
     c.setFillColor(MUTED)
     c.setFont("Body", 7.5)
-    c.drawCentredString(PAGE_W / 2, 76, "Inteligência e Estratégia para Gestão Pública")
+    c.drawCentredString(PAGE_W / 2, 76, "Tecnologia e dados para gestão pública")
 
 
 def draw_header(c: canvas.Canvas, title: str, subtitle: str | None = None, source: str | None = None, confidential: bool = True) -> None:
@@ -179,10 +179,10 @@ def draw_header(c: canvas.Canvas, title: str, subtitle: str | None = None, sourc
     left = MARGIN_X + 44
     c.setFillColor(NAVY)
     c.setFont("BodyBold", 14)
-    c.drawString(left, PAGE_H - 44, "ROCHA PRIME SERVIÇOS ESPECIALIZADOS")
+    c.drawString(left, PAGE_H - 44, "GLOBAL SYNC")
     c.setFillColor(TEXT)
     c.setFont("Body", 6.5)
-    c.drawString(left, PAGE_H - 54, "CNPJ: 29.342.691/0001-93  |  Tel: (61) 99866-7834")
+    c.drawString(left, PAGE_H - 54, "Global Services Company  |  Tel: (77) 99700-5880")
     c.setFillColor(NAVY)
     c.setFont("BodyBold", 12.5)
     c.drawString(left, PAGE_H - 72, title)
@@ -208,11 +208,14 @@ def draw_footer(c: canvas.Canvas) -> None:
     c.setStrokeColor(LINE)
     c.setLineWidth(0.7)
     c.line(MARGIN_X, 32, PAGE_W - MARGIN_X, 32)
+    c.setFillColor(NAVY)
+    c.setFont("BodyBold", 6.5)
+    c.drawCentredString(PAGE_W / 2, 23, "GLOBAL SYNC")
     c.setFillColor(MUTED)
-    c.setFont("BodyBold", 6)
-    c.drawCentredString(PAGE_W / 2, 22, "Rocha Prime Serviços Especializados Ltda  |  CNPJ: 29.342.691/0001-93")
     c.setFont("Body", 5.7)
-    c.drawCentredString(PAGE_W / 2, 14, "Este relatório é confidencial e destinado exclusivamente ao destinatário. Reprodução proibida sem autorização.")
+    c.drawCentredString(PAGE_W / 2, 15, "Global Services Company — Tecnologia e dados para gestão pública")
+    c.setFont("Body", 5.2)
+    c.drawCentredString(PAGE_W / 2, 8, "Este relatório é confidencial e destinado exclusivamente ao destinatário. Reprodução proibida sem autorização.")
 
 
 def draw_section_title(c: canvas.Canvas, number: str, title: str, y: float) -> None:

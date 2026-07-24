@@ -212,7 +212,7 @@ def gerar_comparativa(payload_raw) -> str:
         " de incremento via ajustes tecnicos nas bases do FNDE — sem impacto"
         " fiscal adicional para o municipio.")
     txt_como_entra = safe(d.get("texto_como_rocha_prime_entra") or
-        "A Rocha Prime atua na identificacao e correcao das inconsistencias"
+        "A Global Sync atua na identificacao e correcao das inconsistencias"
         " tecnicas que limitam o acesso as complementacoes federais. Nosso"
         " trabalho e fundamentado em evidencias documentadas e orientado ao resultado.")
     txt_conclusao = safe(d.get("texto_conclusao") or
@@ -234,7 +234,7 @@ def gerar_comparativa(payload_raw) -> str:
         title=f"ANÁLISE COMPARATIVA FUNDEB",
         subtitle=f"Exercícios {ano1} e {ano2}  |  Base: FNDE / QEdu / Censo Escolar",
         municipality=mun.upper() + (f" - {uf}" if uf else ""),
-        year_label=f"Levantamento Técnico Rocha Prime  |  {ano1}-{ano2}"
+        year_label=f"Levantamento Técnico Global Sync  |  {ano1}-{ano2}"
     )
     c.showPage()
 
@@ -353,10 +353,10 @@ def gerar_comparativa(payload_raw) -> str:
     y_save = y
     y = wrap_box(c, MX, y, half_w, txt_movimentos,
                  label="Movimentos Relevantes", bg=LIGHT_BLUE, accent=NAVY)
-    # Card "Como a Rocha Prime Entra" — ao lado
+    # Card "Como a Global Sync Entra" — ao lado
     y2 = y_save
     y2 = wrap_box(c, MX + half_w + 10, y2, half_w, txt_como_entra,
-                  label="Como a Rocha Prime Entra", bg=colors.HexColor("#EDF8E9"), accent=GREEN)
+                  label="Como a Global Sync Entra", bg=colors.HexColor("#EDF8E9"), accent=GREEN)
     y = min(y, y2) - 8
 
     # Conclusao
@@ -395,7 +395,7 @@ def gerar_comparativa(payload_raw) -> str:
     y = wrap_box(c, MX, y, W, leitura_hist, label="Leitura de tendencia", bg=LIGHT_ORANGE, accent=ORANGE)
 
     y = check_y(c, y, 180, TITLE, mun_label)
-    draw_section_title(c, "4", f"Agenda {safe(cenario_estruturacao.get('anoAlvo') or '')} com Rocha Prime", y)
+    draw_section_title(c, "4", f"Agenda {safe(cenario_estruturacao.get('anoAlvo') or '')} com Global Sync", y)
     y -= 20
 
     metas = cenario_estruturacao.get("metas") or {}
@@ -444,7 +444,7 @@ def gerar_comparativa(payload_raw) -> str:
             y,
             W,
             " | ".join([safe(item) for item in frentes]),
-            label="Frentes de oficina e consultoria Rocha Prime",
+            label="Frentes de oficina e consultoria Global Sync",
             bg=CARD_BG,
             accent=BLUE,
         )

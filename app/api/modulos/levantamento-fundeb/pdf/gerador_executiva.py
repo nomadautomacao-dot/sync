@@ -1,5 +1,5 @@
 """
-Gerador: Apresentacao Executiva Rocha Prime — Fundeb
+Gerador: Apresentacao Executiva Global Sync — Fundeb
 Formato: 16:9 (960 x 540 pt)
 Paginas: 7
 Spec: kit_padrao_pdf_rocha_prime/01_apresentacao_executiva_fundeb.md
@@ -107,10 +107,10 @@ def exec_header(c, mun_label, source="FNDE / INEP / IBGE"):
     left = MX + 36
     c.setFillColor(NAVY)
     c.setFont("BodyBold", 11)
-    c.drawString(left, PH - 22, "ROCHA PRIME SERVICOS ESPECIALIZADOS")
+    c.drawString(left, PH - 22, "GLOBAL SYNC")
     c.setFillColor(TEXT)
     c.setFont("Body", 5.5)
-    c.drawString(left, PH - 30, "CNPJ: 29.342.691/0001-93  |  Tel: (61) 99866-7834")
+    c.drawString(left, PH - 30, "Global Services Company  |  Tel: (77) 99700-5880")
     c.setFillColor(NAVY)
     c.setFont("BodyBold", 10)
     c.drawString(left, PH - 42, safe(mun_label))
@@ -131,11 +131,12 @@ def exec_footer(c, page_num=None):
     c.setStrokeColor(LINE)
     c.setLineWidth(0.5)
     c.line(MX, 20, PW - MX, 20)
-    c.setFillColor(MUTED)
+    c.setFillColor(NAVY)
     c.setFont("BodyBold", 5)
-    c.drawCentredString(PW / 2, 14, "Rocha Prime Serviços Especializados Ltda  |  CNPJ: 29.342.691/0001-93")
+    c.drawCentredString(PW / 2, 14, "GLOBAL SYNC")
+    c.setFillColor(MUTED)
     c.setFont("Body", 4.5)
-    c.drawCentredString(PW / 2, 8, "Este material é confidencial e destinado exclusivamente ao destinatário.")
+    c.drawCentredString(PW / 2, 8, "Global Services Company — Tecnologia e dados para gestão pública")
     if page_num:
         c.setFont("Body", 5)
         c.drawRightString(PW - MX, 8, str(page_num))
@@ -291,7 +292,7 @@ def gerar_executiva(payload_raw) -> str:
         " do municipio na formula do FUNDEB, em especial no calculo do VAAT e na"
         " habilitacao para complementacoes federais.")
     txt_leitura     = safe(d.get("texto_leitura_rocha_prime") or
-        "A Rocha Prime realizou levantamento detalhado das bases de calculo e identificou"
+        "A Global Sync realizou levantamento detalhado das bases de calculo e identificou"
         " divergencias entre os dados declarados e os criterios vigentes do FNDE. A correcao"
         " dessas inconsistencias representa o principal vetor de ganho tecnico mapeado.")
     txt_oportunidade= safe(d.get("texto_oportunidade_final") or
@@ -326,7 +327,7 @@ def gerar_executiva(payload_raw) -> str:
         c.drawImage(logo, MX + 10, PH - 110, 46, 58, mask="auto")
     c.setFillColor(WHITE)
     c.setFont("BodyBold", 9)
-    c.drawString(MX + 10, PH - 122, "ROCHA PRIME SERVIÇOS ESPECIALIZADOS")
+    c.drawString(MX + 10, PH - 122, "GLOBAL SYNC")
     c.setFont("Body", 6)
     c.drawString(MX + 10, PH - 132, "Inteligência e Estratégia para Gestão Pública")
 
@@ -445,7 +446,7 @@ def gerar_executiva(payload_raw) -> str:
     c.drawString(MX, y, "O QUE ESTA APRESENTAÇÃO ENTREGA")
     y -= 10
     entregas = [
-        "Leitura clara do que a Rocha Prime faz e onde ela agrega valor.",
+        "Leitura clara do que a Global Sync faz e onde ela agrega valor.",
         f"Traducao executiva dos numeros de {mun} para contexto de decisao.",
         "Conexao entre rede, repasse, elegibilidade e agenda tecnica.",
     ]
@@ -549,10 +550,10 @@ def gerar_executiva(payload_raw) -> str:
 
     y = min(y_after_qedu, y_sys - len(sistemas) * 18 - 30) - 12
 
-    # Box "Leitura Rocha Prime"
+    # Box "Leitura Global Sync"
     c.setFillColor(NAVY)
     c.setFont("BodyBold", 9)
-    c.drawString(MX, y, "LEITURA ROCHA PRIME")
+    c.drawString(MX, y, "LEITURA GLOBAL SYNC")
     y -= 8
     leitura_style = ParagraphStyle("lr", fontName="Body", fontSize=8, leading=13, textColor=TEXT)
     lp = Paragraph(txt_leitura, leitura_style)
@@ -649,7 +650,7 @@ def gerar_executiva(payload_raw) -> str:
     y -= 10
     wrap_para(
         c,
-        f"{mun} cresce em receita, mas precisa transformar comparacao historica em agenda de virada. O papel da Rocha Prime e traduzir esses movimentos em priorizacao corretiva e captura de valor.",
+        f"{mun} cresce em receita, mas precisa transformar comparacao historica em agenda de virada. O papel da Global Sync e traduzir esses movimentos em priorizacao corretiva e captura de valor.",
         MX,
         y,
         W,
@@ -701,7 +702,7 @@ def gerar_executiva(payload_raw) -> str:
     y_proj = y
     c.setFillColor(NAVY)
     c.setFont("BodyBold", 8.5)
-    c.drawString(px, y_proj, "6.2 Projecao Rocha Prime")
+    c.drawString(px, y_proj, "6.2 Projecao Global Sync")
     y_proj -= 10
     proj_rows_exec = []
     for comp, atual, projetado, ganho in proj_list:
@@ -730,7 +731,7 @@ def gerar_executiva(payload_raw) -> str:
     c.drawString(MX + 14, y - 36, money(ganho_total))
     c.setFillColor(colors.HexColor("#4F5B48"))
     c.setFont("Body", 8)
-    c.drawString(MX + 14, y - bh + 10, f"+{pct(ganho_pct)} sobre a base atual pela projecao comercial Rocha Prime")
+    c.drawString(MX + 14, y - bh + 10, f"+{pct(ganho_pct)} sobre a base atual pela projecao comercial Global Sync")
 
     if ganho_recuperavel > 0 and abs(ganho_recuperavel - ganho_total) > 0.01:
         c.setFillColor(MUTED)
@@ -776,7 +777,7 @@ def gerar_executiva(payload_raw) -> str:
     # Diferenciais
     c.setFillColor(NAVY)
     c.setFont("BodyBold", 10)
-    c.drawString(MX, y, "Por que a Rocha Prime?")
+    c.drawString(MX, y, "Por que a Global Sync?")
     y -= 10
     diferenciais = [
         "• Honorarios exclusivamente condicionados ao resultado — sem custo fixo para o municipio.",
@@ -816,7 +817,7 @@ def gerar_executiva(payload_raw) -> str:
     passos_cards = [
         ("01 | Apresentacao executiva ao gestor", "Alinhamento do racional tecnico e da oportunidade."),
         ("02 | Abertura da mesa tecnica", "Organizacao de documentos, responsaveis e validacoes."),
-        ("03 | Plano de acao Rocha Prime", "Definicao de prioridades, cronograma e acompanhamento."),
+        ("03 | Plano de acao Global Sync", "Definicao de prioridades, cronograma e acompanhamento."),
     ]
     cw3 = (W - 8) / 3
     cx3 = MX
@@ -838,16 +839,16 @@ def gerar_executiva(payload_raw) -> str:
     c.setFont("BodyBold", 10)
     c.drawString(MX + 16, y - 18, f"{mun.upper()} | OPORTUNIDADE EXECUTIVA")
     c.setFont("Body", 8)
-    wrap_para(c, f"{mun} apresenta uma oportunidade tecnica real. A proposta da Rocha Prime e assumir essa agenda com clareza executiva, metodo, disciplina de acompanhamento e foco direto em resultado mensuravel.", MX + 16, y - 28, W * 0.62, size=8, color=WHITE, leading=12)
+    wrap_para(c, f"{mun} apresenta uma oportunidade tecnica real. A proposta da Global Sync e assumir essa agenda com clareza executiva, metodo, disciplina de acompanhamento e foco direto em resultado mensuravel.", MX + 16, y - 28, W * 0.62, size=8, color=WHITE, leading=12)
     c.setFont("BodyBold", 10)
     c.drawString(MX + W * 0.68, y - 18, "CONTATO")
     c.setFont("Body", 8)
-    c.drawString(MX + W * 0.68, y - 32, "contato@rochaprimedigital.com.br")
-    c.drawString(MX + W * 0.68, y - 43, "(61) 99866-7834")
-    c.drawString(MX + W * 0.68, y - 54, "CNPJ: 29.342.691/0001-93")
+    c.drawString(MX + W * 0.68, y - 32, "grupoglobalcomany2016@gmail.com")
+    c.drawString(MX + W * 0.68, y - 43, "(77) 99700-5880")
+    c.drawString(MX + W * 0.68, y - 54, "Global Services Company")
     c.setFillColor(ORANGE)
     c.setFont("BodyBold", 8)
-    c.drawString(MX + W * 0.68, y - 66, "Inteligência e Estratégia para Gestão Pública")
+    c.drawString(MX + W * 0.68, y - 66, "Tecnologia e dados para gestão pública")
 
     exec_footer(c, 8)
     c.showPage()

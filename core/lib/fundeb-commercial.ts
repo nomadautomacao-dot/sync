@@ -139,7 +139,7 @@ export function buildPerfilEProjecaoComercial(params: {
   const projecao = calcularProjecaoPorMultiplicador(
     params.receitas,
     perfil.multiplicador,
-    `Benchmark comercial Rocha Prime (${perfil.faixa}) baseado em score ${perfil.score.toFixed(2)}.`,
+    `Benchmark comercial Global Sync (${perfil.faixa}) baseado em score ${perfil.score.toFixed(2)}.`,
     { perfilComercial: perfil },
   );
 

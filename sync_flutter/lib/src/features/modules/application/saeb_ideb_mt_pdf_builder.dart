@@ -4,7 +4,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 /// SAEB/IDEB Premium Report Builder — MT municipalities
-/// Identidade visual Rocha Prime — padrão Sync
+/// Identidade visual Global Sync
 class SaebIdebMtPdfBuilder {
   // ========================= PALETA =========================
   static const PdfColor _navy = PdfColor.fromInt(0xFF0F2747);
@@ -33,7 +33,7 @@ class SaebIdebMtPdfBuilder {
   // ========================= BUILD ALL =========================
   static Future<Uint8List> buildAll({
     required List<Map<String, dynamic>> municipios,
-    required String? rochaLogoSvg,
+    required String? brandLogoSvg,
     required pw.Font contentFont,
     required DateTime generatedAt,
     required String estadoNome,
@@ -44,7 +44,7 @@ class SaebIdebMtPdfBuilder {
   }) async {
     final pdf = pw.Document(
       title: 'Resultados IDEB + SAEB — $estadoNome ($uf)',
-      author: 'Rocha Prime Consultorias',
+      author: 'Global Sync',
     );
 
     pdf.addPage(_buildCoverPage(
@@ -53,7 +53,7 @@ class SaebIdebMtPdfBuilder {
       totalMunicipios: municipios.length,
       anoIdeb: anoIdeb,
       anoSaeb: anoSaeb,
-      rochaLogoSvg: rochaLogoSvg,
+      brandLogoSvg: brandLogoSvg,
       contentFont: contentFont,
       generatedAt: generatedAt,
     ));
@@ -64,7 +64,7 @@ class SaebIdebMtPdfBuilder {
           pageTheme: _pageTheme(
             municipioNome: mun['municipio']?.toString() ?? '???',
             uf: uf,
-            rochaLogoSvg: rochaLogoSvg,
+            brandLogoSvg: brandLogoSvg,
             contentFont: contentFont,
             generatedAt: generatedAt,
           ),
@@ -90,7 +90,7 @@ class SaebIdebMtPdfBuilder {
     required int totalMunicipios,
     required int anoIdeb,
     required int anoSaeb,
-    String? rochaLogoSvg,
+    String? brandLogoSvg,
     required pw.Font contentFont,
     required DateTime generatedAt,
   }) {
@@ -112,15 +112,15 @@ class SaebIdebMtPdfBuilder {
               padding: const pw.EdgeInsets.symmetric(horizontal: 40, vertical: 12),
               child: pw.Row(
                 children: [
-                  if (rochaLogoSvg != null)
+                  if (brandLogoSvg != null)
                     pw.Container(
                       width: 66,
                       height: 30,
-                      child: pw.SvgImage(svg: rochaLogoSvg, fit: pw.BoxFit.contain),
+                      child: pw.SvgImage(svg: brandLogoSvg, fit: pw.BoxFit.contain),
                     ),
                   pw.Spacer(),
                   pw.Text(
-                    'ROCHA PRIME CONSULTORIAS',
+                    'GLOBAL SYNC',
                     style: pw.TextStyle(
                       color: _white,
                       fontSize: 10,
@@ -212,8 +212,8 @@ class SaebIdebMtPdfBuilder {
                       crossAxisAlignment: pw.CrossAxisAlignment.end,
                       mainAxisAlignment: pw.MainAxisAlignment.center,
                       children: [
-                        pw.Text('CNPJ: 29.342.691/0001-93', style: pw.TextStyle(color: PdfColor.fromInt(0xFF172033), fontSize: 8)),
-                        pw.Text('Tel: (61) 99866-7834', style: pw.TextStyle(color: PdfColor.fromInt(0xFF677184), fontSize: 8)),
+                        pw.Text('Global Services Company', style: pw.TextStyle(color: PdfColor.fromInt(0xFF172033), fontSize: 8)),
+                        pw.Text('Tel: (77) 99700-5880', style: pw.TextStyle(color: PdfColor.fromInt(0xFF677184), fontSize: 8)),
                       ],
                     ),
                   ),
@@ -230,7 +230,7 @@ class SaebIdebMtPdfBuilder {
   static pw.PageTheme _pageTheme({
     required String municipioNome,
     required String uf,
-    String? rochaLogoSvg,
+    String? brandLogoSvg,
     required pw.Font contentFont,
     required DateTime generatedAt,
   }) {
@@ -246,7 +246,7 @@ class SaebIdebMtPdfBuilder {
               left: 34,
               right: 34,
               top: 22,
-              child: _header(municipioNome, uf: uf, rochaLogoSvg: rochaLogoSvg),
+              child: _header(municipioNome, uf: uf, brandLogoSvg: brandLogoSvg),
             ),
             pw.Positioned(
               left: 34,
@@ -403,31 +403,31 @@ class SaebIdebMtPdfBuilder {
   static pw.Widget _header(
     String municipio, {
     required String uf,
-    String? rochaLogoSvg,
+    String? brandLogoSvg,
   }) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
         pw.Row(
           children: [
-            if (rochaLogoSvg != null)
+            if (brandLogoSvg != null)
           pw.Container(
             width: 52,
             height: 26,
             margin: const pw.EdgeInsets.only(right: 12),
-            child: pw.SvgImage(svg: rochaLogoSvg, fit: pw.BoxFit.contain),
+            child: pw.SvgImage(svg: brandLogoSvg, fit: pw.BoxFit.contain),
           ),
             pw.Expanded(
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               pw.Text(
-            'ROCHA PRIME SERVIÇOS ESPECIALIZADOS',
+            'GLOBAL SYNC',
             style: pw.TextStyle(color: _navy, fontSize: 9.8, fontWeight: pw.FontWeight.bold),
               ),
               pw.SizedBox(height: 1.5),
               pw.Text(
-            'CNPJ: 29.342.691/0001-93  |  Tel: (61) 99866-7834',
+            'Global Services Company  |  Tel: (77) 99700-5880',
             style: const pw.TextStyle(color: PdfColor.fromInt(0xFF172033), fontSize: 5.2),
               ),
               pw.SizedBox(height: 2.5),

@@ -188,14 +188,14 @@ function buildEnsinoModalidadesList(payload: GoviaPayloadLike) {
   ];
 }
 
-function buildRochaPrimeProposal(report: RelatorioFundeb, municipio: string) {
+function buildGlobalSyncProposal(report: RelatorioFundeb, municipio: string) {
   const projection = report.projecaoComercial ?? report.projecaoRecuperavel ?? report.projecao;
   return {
-    headline: `A proposta da Rocha Prime é assumir a agenda técnica de ${municipio} com foco em recuperar, proteger e ampliar receita educacional.`,
+    headline: `A proposta da Global Sync é assumir a agenda técnica de ${municipio} com foco em recuperar, proteger e ampliar receita educacional.`,
     descricao:
       projection.totalGanho > 0
-        ? `O levantamento identificou potencial técnico estimado de ${formatCurrency(projection.totalGanho)} sujeito a validação documental. A Rocha Prime entra para transformar esse potencial em plano de execução, saneamento de base e defesa institucional perante os sistemas do MEC/FNDE.`
-        : "A Rocha Prime entra para organizar a base educacional, corrigir inconsistências, sustentar elegibilidade e evitar perda futura de receita.",
+        ? `O levantamento identificou potencial técnico estimado de ${formatCurrency(projection.totalGanho)} sujeito a validação documental. A Global Sync entra para transformar esse potencial em plano de execução, saneamento de base e defesa institucional perante os sistemas do MEC/FNDE.`
+        : "A Global Sync entra para organizar a base educacional, corrigir inconsistências, sustentar elegibilidade e evitar perda futura de receita.",
     entregas: [
       "Levantamento completo das bases educacionais, fiscais e operacionais do município.",
       "Cruzamento técnico entre Censo Escolar, FUNDEB, FNDE, MEC e normativos locais.",
@@ -205,7 +205,7 @@ function buildRochaPrimeProposal(report: RelatorioFundeb, municipio: string) {
     etapas: [
       "Apresentação executiva ao gestor e alinhamento da tese técnica.",
       "Abertura da mesa técnica com secretaria, financeiro e responsáveis operacionais.",
-      "Plano de ação Rocha Prime com cronograma, prioridades e metas de acompanhamento.",
+      "Plano de ação Global Sync com cronograma, prioridades e metas de acompanhamento.",
     ],
     diferenciais: [
       "Atuação especializada em FUNDEB, Censo Escolar e sistemas FNDE.",
@@ -547,6 +547,6 @@ export async function buildDirectedFundebReportBase({
     contextoPolitico,
     historico,
     benchmarkRegional,
-    propostaEmpresa: buildRochaPrimeProposal(relatorio, municipio),
+    propostaEmpresa: buildGlobalSyncProposal(relatorio, municipio),
   } satisfies RelatorioDirigidoMunicipio);
 }

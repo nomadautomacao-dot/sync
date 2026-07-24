@@ -206,7 +206,7 @@ function buildCenarioEstruturacao(
       "busca ativa e reorganização da oferta de EJA com apoio territorial",
       "expansão de jornada ampliada e oficinas em escolas com capacidade de absorção",
       "qualificação cadastral e pedagógica para fortalecer educação especial e permanência",
-      "consultoria Rocha Prime para monitorar Censo, sistemas FNDE e consistência da base",
+      "consultoria Global Sync para monitorar Censo, sistemas FNDE e consistência da base",
     ],
   };
 }
@@ -426,14 +426,14 @@ export async function buildFundebComparativeSnapshot(relatorio: RelatorioFundeb)
       : "O principal movimento técnico desta rodada é a consolidação da série histórica oficial do Fundeb dentro do próprio Sync.";
 
     const textoComoEntra =
-    `A Rocha Prime entra na leitura comparativa validando as bases oficiais, cruzando Censo, FNDE e indicadores territoriais para transformar histórico fraco em agenda de virada. No caso atual, a prioridade passa por oficinas, reorganização de jornada, busca ativa de EJA, saneamento cadastral e monitoramento técnico para que ${municipioLabel} entre em ${cenarioEstruturacao.anoAlvo} com uma base mais forte e financeiramente melhor posicionada.`;
+    `A Global Sync entra na leitura comparativa validando as bases oficiais, cruzando Censo, FNDE e indicadores territoriais para transformar histórico fraco em agenda de virada. No caso atual, a prioridade passa por oficinas, reorganização de jornada, busca ativa de EJA, saneamento cadastral e monitoramento técnico para que ${municipioLabel} entre em ${cenarioEstruturacao.anoAlvo} com uma base mais forte e financeiramente melhor posicionada.`;
 
     const textoConclusao =
     receitaAnoBase1 && receitaAnoBase2 && deltaTotalAbsolute !== null
       ? `No cenário comparado, ${municipioLabel} apresenta variação oficial de ${Math.abs(deltaTotalAbsolute).toLocaleString("pt-BR", {
           style: "currency",
           currency: "BRL",
-        })} entre ${receitaAnoBase1.ano} e ${receitaAnoBase2.ano}. A leitura comparativa agora não para no retrovisor: ela projeta uma agenda ${cenarioEstruturacao.anoAlvo} com meta de ${cenarioEstruturacao.metas.eja.toLocaleString("pt-BR")} matrículas em EJA e ${cenarioEstruturacao.metas.integral.toLocaleString("pt-BR")} matrículas em tempo integral. Com a Rocha Prime, a comparativa passa a defender melhora de base, ganho de indicador e faixa indicativa de ${cenarioEstruturacao.impactoFinanceiroIndicativo.minimo.toLocaleString("pt-BR", {
+        })} entre ${receitaAnoBase1.ano} e ${receitaAnoBase2.ano}. A leitura comparativa agora não para no retrovisor: ela projeta uma agenda ${cenarioEstruturacao.anoAlvo} com meta de ${cenarioEstruturacao.metas.eja.toLocaleString("pt-BR")} matrículas em EJA e ${cenarioEstruturacao.metas.integral.toLocaleString("pt-BR")} matrículas em tempo integral. Com a Global Sync, a comparativa passa a defender melhora de base, ganho de indicador e faixa indicativa de ${cenarioEstruturacao.impactoFinanceiroIndicativo.minimo.toLocaleString("pt-BR", {
           style: "currency",
           currency: "BRL",
         })} a ${cenarioEstruturacao.impactoFinanceiroIndicativo.maximo.toLocaleString("pt-BR", {

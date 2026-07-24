@@ -2,7 +2,7 @@
 
 ## Relatório
 
-Apresentação Executiva Rocha Prime para município Fundeb.
+Apresentação Executiva Global Sync para município Fundeb.
 
 Arquivo de referência visual:
 - `Apresentacao_Rocha_Prime_Pocoes_2026.pdf`
@@ -15,7 +15,7 @@ Gerador de referência:
 Gerar um PDF em formato apresentação executiva para reunião com gestor, com foco comercial e técnico ao mesmo tempo.
 
 O documento precisa responder:
-- o que a Rocha Prime faz
+- o que a Global Sync faz
 - por que o município é relevante
 - qual a oportunidade financeira/técnica
 - como funciona a metodologia
@@ -25,7 +25,7 @@ O documento precisa responder:
 
 - PDF em formato `16:9`
 - Dimensão de página usada no gerador atual: `960 x 540`
-- Estilo visual Rocha Prime
+- Estilo visual Global Sync
 - Arquivo final com `7 páginas`
 
 ## Entradas obrigatórias
@@ -71,7 +71,7 @@ Campos mínimos esperados:
 - VAAR
 - total geral
 
-### Projeção Rocha Prime
+### Projeção Global Sync
 
 Lista com:
 - `componente`
@@ -116,7 +116,7 @@ Capa com:
 - subtítulo
 - município
 - exercício
-- identidade Rocha Prime
+- identidade Global Sync
 
 ### Página 2
 
@@ -141,13 +141,13 @@ Bloco final:
 Base técnica do caso:
 - tabela QEdu
 - tabela de sistemas/habilitação
-- box “Leitura Rocha Prime”
+- box “Leitura Global Sync”
 
 ### Página 5
 
 Análise financeira:
 - tabela de receitas previstas
-- tabela de projeção Rocha Prime
+- tabela de projeção Global Sync
 - box final de ganho potencial total
 
 ### Página 6
@@ -188,7 +188,7 @@ Base atual de estilo:
 
 ## Regras visuais
 
-- manter identidade Rocha Prime
+- manter identidade Global Sync
 - fundo branco
 - cabeçalho com logo, nome da empresa, contato e selo confidencial
 - linha horizontal forte abaixo do header

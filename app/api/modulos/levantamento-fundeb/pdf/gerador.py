@@ -288,7 +288,7 @@ def gerar_pdf(relatorio_raw) -> str:
     carta = (
         f"Ilmo(a). Sr(a). {prefeito}, gestor(a) municipal de {mun_label}. "
         f"Este relatório apresenta a leitura executiva e técnica do FUNDEB para o exercício de {exercicio}, "
-        "com foco na projeção comercial histórica do levantamento Rocha Prime, preservando em camada secundária o ganho recuperável "
+        "com foco na projeção comercial histórica do levantamento Global Sync, preservando em camada secundária o ganho recuperável "
         "já evidenciado nas bases oficiais para suporte técnico da tomada de decisão."
         + (f" {observacao_analise}" if observacao_analise else "")
     )
@@ -298,7 +298,7 @@ def gerar_pdf(relatorio_raw) -> str:
     card_h = 78
     cards = [
         ("BASE ATUAL DO FUNDEB", f_money(total_rec_float), "receita consolidada para leitura inicial"),
-        ("PROJEÇÃO ROCHA PRIME", f_money(total_proj_float), f"+{f_pct(ganho_pct)} no cenário potencial"),
+        ("PROJEÇÃO GLOBAL SYNC", f_money(total_proj_float), f"+{f_pct(ganho_pct)} no cenário potencial"),
         ("GANHO POTENCIAL", f_money(ganho), "metodologia comercial calibrada"),
     ]
     cx = MARGIN_X
@@ -337,7 +337,7 @@ def gerar_pdf(relatorio_raw) -> str:
 
     bullets = [
         f"\u2022 Gestor identificado na base atual: {prefeito} ({partido}).",
-        "\u2022 Método principal desta versão: projeção comercial Rocha Prime como headline do levantamento, mantendo a camada recuperável apenas como suporte técnico.",
+        "\u2022 Método principal desta versão: projeção comercial Global Sync como headline do levantamento, mantendo a camada recuperável apenas como suporte técnico.",
     ]
     if habilitacao_vaat not in ("", "-"):
         bullets.append(f"\u2022 Habilitação VAAT observada: {habilitacao_vaat}.")
@@ -434,7 +434,7 @@ def gerar_pdf(relatorio_raw) -> str:
     draw_header(c, title=TITLE, subtitle=mun_label, source=FONTE)
     y = PAGE_H - 160
 
-    draw_section_title(c, "3", "Projeção Rocha Prime - Ganho Potencial", y)
+    draw_section_title(c, "3", "Projeção Global Sync - Ganho Potencial", y)
     y -= 30
 
     # 4 cards no topo
@@ -526,7 +526,7 @@ def gerar_pdf(relatorio_raw) -> str:
             y - 10,
             W,
             f"Camada recuperavel evidenciada nas bases oficiais: {f_money(ganho_recuperavel)} (+{f_pct(ganho_recuperavel_pct)} sobre a base atual). "
-            "Ela funciona como piso técnico da oportunidade, enquanto o headline do levantamento permanece ancorado na projeção comercial Rocha Prime.",
+            "Ela funciona como piso técnico da oportunidade, enquanto o headline do levantamento permanece ancorado na projeção comercial Global Sync.",
         )
 
     draw_footer(c)

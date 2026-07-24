@@ -227,7 +227,7 @@ function calcularUpsideCondicionado(
     ganhoPercentual:
       projecaoRecuperavel.totalAtual > 0 ? (ganhoAdicional / projecaoRecuperavel.totalAtual) * 100 : 0,
     metodologia:
-      "Upside condicionado derivado do benchmark interno Rocha Prime. Requer validação documental, regularização sistêmica e eventual recálculo oficial.",
+      "Upside condicionado derivado do benchmark interno Global Sync. Requer validação documental, regularização sistêmica e eventual recálculo oficial.",
     vetores:
       vetores.length > 0
         ? vetores

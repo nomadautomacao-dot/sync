@@ -185,7 +185,7 @@ def draw_exec_header(c, title, subtitle):
     c.line(H_MARGIN, PDF_H - 54, PDF_W - H_MARGIN, PDF_H - 54)
     c.setFillColor(NAVY)
     c.setFont("BodyBold", 9)
-    c.drawString(H_MARGIN, PDF_H - 24, "ROCHA PRIME | RELATÓRIO EXECUTIVO")
+    c.drawString(H_MARGIN, PDF_H - 24, "GLOBAL SYNC | RELATÓRIO EXECUTIVO")
     c.setFillColor(DARK_TEXT)
     c.setFont("Heading", 14)
     c.drawString(H_MARGIN, PDF_H - 42, safe(title))
@@ -1113,7 +1113,7 @@ def gerar_pdf_dirigido(report) -> str:
         H_MARGIN,
         y,
         "8",
-        "Proposta da Rocha Prime",
+        "Proposta da Global Sync",
         "O que entregamos e como conduzimos a agenda tÃ©cnica",
     )
 

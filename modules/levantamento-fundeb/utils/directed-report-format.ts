@@ -293,7 +293,7 @@ export function buildDirectedReportMarkdown(report: RelatorioDirigidoMunicipio) 
     lines.push("");
   }
 
-  lines.push("## Proposta da Rocha Prime");
+  lines.push("## Proposta da Global Sync");
   lines.push("");
   lines.push(normalizePtBrText(report.propostaEmpresa.headline));
   lines.push("");

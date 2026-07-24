@@ -35,7 +35,7 @@ class FundebLevantamentoPdfBuilder {
   /// Pre-load font + logo once. Call before batch to eliminate I/O per PDF.
   static Future<void> warmupAssets() async {
     await _loadPdfFont();
-    await _loadRochaPrimeLogoSvg();
+    await _loadBrandLogoSvg();
   }
 
   static Future<Uint8List> build(RelatorioFundeb relatorio) async {
@@ -52,12 +52,12 @@ class FundebLevantamentoPdfBuilder {
     LevantamentoFundebBundle bundle, {
     RelatorioDirigidoMunicipio? directedReport,
   }) async {
-    final rochaLogoSvg = await _loadRochaPrimeLogoSvg();
+    final brandLogoSvg = await _loadBrandLogoSvg();
     final contentFont = await _loadPdfFont();
     return buildFromBundleWithAssets(
       bundle,
       directedReport: directedReport,
-      rochaLogoSvg: rochaLogoSvg,
+      brandLogoSvg: brandLogoSvg,
       contentFont: contentFont,
     );
   }
@@ -66,7 +66,7 @@ class FundebLevantamentoPdfBuilder {
   static Future<Uint8List> buildFromBundleWithAssets(
     LevantamentoFundebBundle bundle, {
     RelatorioDirigidoMunicipio? directedReport,
-    required String? rochaLogoSvg,
+    required String? brandLogoSvg,
     required pw.Font contentFont,
   }) async {
     final relatorio = bundle.relatorio;
@@ -79,7 +79,7 @@ class FundebLevantamentoPdfBuilder {
       pdf,
       bundle,
       directedReport: directedReport,
-      rochaLogoSvg: rochaLogoSvg,
+      brandLogoSvg: brandLogoSvg,
       contentFont: contentFont,
       generatedAt: generatedAt,
     );
@@ -93,7 +93,7 @@ class FundebLevantamentoPdfBuilder {
   }) async {
     final relatorio = bundle.relatorio;
     final report = directedReport ?? bundle.relatorioDirigidoBase;
-    final rochaLogoSvg = await _loadRochaPrimeLogoSvg();
+    final brandLogoSvg = await _loadBrandLogoSvg();
     final contentFont = await _loadPdfFont();
     final generatedAt = DateTime.now();
     final pdf = pw.Document(
@@ -108,7 +108,7 @@ class FundebLevantamentoPdfBuilder {
         maxPages: 2,
         pageTheme: _contentTheme(
           relatorio,
-          rochaLogoSvg: rochaLogoSvg,
+          brandLogoSvg: brandLogoSvg,
           contentFont: contentFont,
           generatedAt: generatedAt,
         ),
@@ -123,7 +123,7 @@ class FundebLevantamentoPdfBuilder {
     pw.Document pdf,
     LevantamentoFundebBundle bundle, {
     RelatorioDirigidoMunicipio? directedReport,
-    String? rochaLogoSvg,
+    String? brandLogoSvg,
     required pw.Font contentFont,
     required DateTime generatedAt,
   }) {
@@ -134,7 +134,7 @@ class FundebLevantamentoPdfBuilder {
       _buildCover(
         relatorio,
         report: report,
-        rochaLogoSvg: rochaLogoSvg,
+        brandLogoSvg: brandLogoSvg,
         contentFont: contentFont,
         generatedAt: generatedAt,
       ),
@@ -143,7 +143,7 @@ class FundebLevantamentoPdfBuilder {
       pw.MultiPage(
         pageTheme: _contentTheme(
           relatorio,
-          rochaLogoSvg: rochaLogoSvg,
+          brandLogoSvg: brandLogoSvg,
           contentFont: contentFont,
           generatedAt: generatedAt,
         ),
@@ -154,7 +154,7 @@ class FundebLevantamentoPdfBuilder {
       pw.MultiPage(
         pageTheme: _contentTheme(
           relatorio,
-          rochaLogoSvg: rochaLogoSvg,
+          brandLogoSvg: brandLogoSvg,
           contentFont: contentFont,
         ),
         build: (context) => _buildIdentificationAndReceitasPage(relatorio),
@@ -164,7 +164,7 @@ class FundebLevantamentoPdfBuilder {
       pw.MultiPage(
         pageTheme: _contentTheme(
           relatorio,
-          rochaLogoSvg: rochaLogoSvg,
+          brandLogoSvg: brandLogoSvg,
           contentFont: contentFont,
         ),
         build: (context) => _buildProjectionPage(relatorio),
@@ -175,7 +175,7 @@ class FundebLevantamentoPdfBuilder {
         pw.MultiPage(
           pageTheme: _contentTheme(
             relatorio,
-            rochaLogoSvg: rochaLogoSvg,
+            brandLogoSvg: brandLogoSvg,
             contentFont: contentFont,
           ),
           build: (context) => _buildCronogramaPage(relatorio),
@@ -186,7 +186,7 @@ class FundebLevantamentoPdfBuilder {
       pw.MultiPage(
         pageTheme: _contentTheme(
           relatorio,
-          rochaLogoSvg: rochaLogoSvg,
+          brandLogoSvg: brandLogoSvg,
           contentFont: contentFont,
         ),
         build: (context) => _buildTechnicalAnnexPage(relatorio, report: report),
@@ -196,7 +196,7 @@ class FundebLevantamentoPdfBuilder {
       pw.MultiPage(
         pageTheme: _contentTheme(
           relatorio,
-          rochaLogoSvg: rochaLogoSvg,
+          brandLogoSvg: brandLogoSvg,
           contentFont: contentFont,
         ),
         build: (context) => _buildOperationalPage(relatorio),
@@ -207,7 +207,7 @@ class FundebLevantamentoPdfBuilder {
         pw.MultiPage(
           pageTheme: _contentTheme(
             relatorio,
-            rochaLogoSvg: rochaLogoSvg,
+            brandLogoSvg: brandLogoSvg,
             contentFont: contentFont,
           ),
           build: (context) => _buildObservacoesPage(relatorio),
@@ -218,7 +218,7 @@ class FundebLevantamentoPdfBuilder {
       pw.MultiPage(
         pageTheme: _contentTheme(
           relatorio,
-          rochaLogoSvg: rochaLogoSvg,
+          brandLogoSvg: brandLogoSvg,
           contentFont: contentFont,
         ),
         build: (context) =>
@@ -230,7 +230,7 @@ class FundebLevantamentoPdfBuilder {
         pw.MultiPage(
           pageTheme: _contentTheme(
             relatorio,
-            rochaLogoSvg: rochaLogoSvg,
+            brandLogoSvg: brandLogoSvg,
             contentFont: contentFont,
           ),
           build: (context) => _buildTempoIntegralPage(relatorio),
@@ -241,7 +241,7 @@ class FundebLevantamentoPdfBuilder {
       pw.MultiPage(
         pageTheme: _contentTheme(
           relatorio,
-          rochaLogoSvg: rochaLogoSvg,
+          brandLogoSvg: brandLogoSvg,
           contentFont: contentFont,
         ),
         build: (context) => _buildIdebPage(relatorio),
@@ -252,7 +252,7 @@ class FundebLevantamentoPdfBuilder {
         pw.MultiPage(
           pageTheme: _contentTheme(
             relatorio,
-            rochaLogoSvg: rochaLogoSvg,
+            brandLogoSvg: brandLogoSvg,
             contentFont: contentFont,
           ),
           build: (context) => _buildIndicadoresAprendizagemPage(report!),
@@ -264,7 +264,7 @@ class FundebLevantamentoPdfBuilder {
         pw.MultiPage(
           pageTheme: _contentTheme(
             relatorio,
-            rochaLogoSvg: rochaLogoSvg,
+            brandLogoSvg: brandLogoSvg,
             contentFont: contentFont,
           ),
           build: (context) => _buildInfraestruturaEscolarPage(report!),
@@ -276,7 +276,7 @@ class FundebLevantamentoPdfBuilder {
         pw.MultiPage(
           pageTheme: _contentTheme(
             relatorio,
-            rochaLogoSvg: rochaLogoSvg,
+            brandLogoSvg: brandLogoSvg,
             contentFont: contentFont,
           ),
           build: (context) => _buildNarrativasPage(report!),
@@ -288,7 +288,7 @@ class FundebLevantamentoPdfBuilder {
         pw.MultiPage(
           pageTheme: _contentTheme(
             relatorio,
-            rochaLogoSvg: rochaLogoSvg,
+            brandLogoSvg: brandLogoSvg,
             contentFont: contentFont,
           ),
           build: (context) => _buildSaudeFiscalPage(report!),
@@ -300,7 +300,7 @@ class FundebLevantamentoPdfBuilder {
         pw.MultiPage(
           pageTheme: _contentTheme(
             relatorio,
-            rochaLogoSvg: rochaLogoSvg,
+            brandLogoSvg: brandLogoSvg,
             contentFont: contentFont,
           ),
           build: (context) => _buildCenarioEstruturacaoPage(report!),
@@ -312,7 +312,7 @@ class FundebLevantamentoPdfBuilder {
         pw.MultiPage(
           pageTheme: _contentTheme(
             relatorio,
-            rochaLogoSvg: rochaLogoSvg,
+            brandLogoSvg: brandLogoSvg,
             contentFont: contentFont,
           ),
           build: (context) => _buildDirectedHistoricPage(relatorio, report),
@@ -322,7 +322,7 @@ class FundebLevantamentoPdfBuilder {
         pw.MultiPage(
           pageTheme: _contentTheme(
             relatorio,
-            rochaLogoSvg: rochaLogoSvg,
+            brandLogoSvg: brandLogoSvg,
             contentFont: contentFont,
           ),
           build: (context) =>
@@ -334,7 +334,7 @@ class FundebLevantamentoPdfBuilder {
           pw.MultiPage(
             pageTheme: _contentTheme(
               relatorio,
-              rochaLogoSvg: rochaLogoSvg,
+              brandLogoSvg: brandLogoSvg,
               contentFont: contentFont,
             ),
             build: (context) =>
@@ -345,7 +345,7 @@ class FundebLevantamentoPdfBuilder {
       // Benchmark regional removido a pedido do cliente
       // pdf.addPage(
       //   pw.MultiPage(
-      //     pageTheme: _contentTheme(relatorio, rochaLogoSvg: rochaLogoSvg, contentFont: contentFont),
+      //     pageTheme: _contentTheme(relatorio, brandLogoSvg: brandLogoSvg, contentFont: contentFont),
       //     build: (context) => _buildDirectedBenchmarkPageCards(report),
       //   ),
       // );
@@ -353,7 +353,7 @@ class FundebLevantamentoPdfBuilder {
         pw.MultiPage(
           pageTheme: _contentTheme(
             relatorio,
-            rochaLogoSvg: rochaLogoSvg,
+            brandLogoSvg: brandLogoSvg,
             contentFont: contentFont,
           ),
           build: (context) => _buildDirectedExecutivePart2(report),
@@ -363,7 +363,7 @@ class FundebLevantamentoPdfBuilder {
         pw.MultiPage(
           pageTheme: _contentTheme(
             relatorio,
-            rochaLogoSvg: rochaLogoSvg,
+            brandLogoSvg: brandLogoSvg,
             contentFont: contentFont,
           ),
           build: (context) => _buildDirectedExecutivePart1(report),
@@ -375,7 +375,7 @@ class FundebLevantamentoPdfBuilder {
         pw.MultiPage(
           pageTheme: _contentTheme(
             relatorio,
-            rochaLogoSvg: rochaLogoSvg,
+            brandLogoSvg: brandLogoSvg,
             contentFont: contentFont,
           ),
           build: (context) => _buildSourcesPage(bundle),
@@ -672,7 +672,7 @@ class FundebLevantamentoPdfBuilder {
 
   static pw.PageTheme _contentTheme(
     RelatorioFundeb relatorio, {
-    String? rochaLogoSvg,
+    String? brandLogoSvg,
     required pw.Font contentFont,
     DateTime? generatedAt,
   }) {
@@ -689,7 +689,7 @@ class FundebLevantamentoPdfBuilder {
               left: 34,
               right: 34,
               top: 24,
-              child: _header(municipio, rochaLogoSvg: rochaLogoSvg),
+              child: _header(municipio, brandLogoSvg: brandLogoSvg),
             ),
             pw.Positioned(
               left: 34,
@@ -710,7 +710,7 @@ class FundebLevantamentoPdfBuilder {
   static pw.Page _buildCover(
     RelatorioFundeb relatorio, {
     RelatorioDirigidoMunicipio? report,
-    String? rochaLogoSvg,
+    String? brandLogoSvg,
     required pw.Font contentFont,
     required DateTime generatedAt,
   }) {
@@ -802,13 +802,13 @@ class FundebLevantamentoPdfBuilder {
                         pw.Row(
                           crossAxisAlignment: pw.CrossAxisAlignment.start,
                           children: [
-                            if (rochaLogoSvg != null)
+                            if (brandLogoSvg != null)
                               pw.Container(
                                 width: 54,
                                 height: 30,
                                 alignment: pw.Alignment.centerLeft,
                                 child: pw.SvgImage(
-                                  svg: rochaLogoSvg,
+                                  svg: brandLogoSvg,
                                   fit: pw.BoxFit.contain,
                                 ),
                               )
@@ -859,7 +859,7 @@ class FundebLevantamentoPdfBuilder {
                                 ),
                                 pw.SizedBox(height: 3),
                                 pw.Text(
-                                  'Rocha Prime Servicos Especializados',
+                                  'Global Sync',
                                   style: const pw.TextStyle(
                                     color: _muted,
                                     fontSize: 7,
@@ -922,7 +922,7 @@ class FundebLevantamentoPdfBuilder {
                         ),
                         pw.SizedBox(height: 4),
                         pw.Text(
-                          'Relatório técnico Rocha Prime',
+                          'Relatório técnico Global Sync',
                           style: const pw.TextStyle(
                             color: _muted,
                             fontSize: 8.5,
@@ -2336,7 +2336,7 @@ class FundebLevantamentoPdfBuilder {
         texto: narrativas.textoMovimentosRelevantes,
       ),
       (
-        titulo: 'Como a Rocha Prime pode atuar',
+        titulo: 'Como a Global Sync pode atuar',
         texto: narrativas.textoComoRochaPrimeEntra,
       ),
       (titulo: 'Conclusão', texto: narrativas.textoConclusao),
@@ -2840,26 +2840,26 @@ class FundebLevantamentoPdfBuilder {
     ];
   }
 
-  static pw.Widget _header(String municipio, {String? rochaLogoSvg}) {
+  static pw.Widget _header(String municipio, {String? brandLogoSvg}) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
         pw.Row(
           crossAxisAlignment: pw.CrossAxisAlignment.center,
           children: [
-            if (rochaLogoSvg != null)
+            if (brandLogoSvg != null)
               pw.Container(
                 width: 48,
                 height: 24,
                 margin: const pw.EdgeInsets.only(right: 12),
-                child: pw.SvgImage(svg: rochaLogoSvg, fit: pw.BoxFit.contain),
+                child: pw.SvgImage(svg: brandLogoSvg, fit: pw.BoxFit.contain),
               ),
             pw.Expanded(
               child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
                   pw.Text(
-                    'ROCHA PRIME SERVIÇOS ESPECIALIZADOS',
+                    'GLOBAL SYNC',
                     style: pw.TextStyle(
                       color: _navy,
                       fontSize: 9.8,
@@ -2868,7 +2868,7 @@ class FundebLevantamentoPdfBuilder {
                   ),
                   pw.SizedBox(height: 1.5),
                   pw.Text(
-                    'CNPJ: 29.342.691/0001-93  |  Tel: (61) 99866-7834',
+                    'Global Services Company  |  Tel: (77) 99700-5880',
                     style: const pw.TextStyle(color: _text, fontSize: 5.2),
                   ),
                   pw.SizedBox(height: 2.5),
@@ -2924,7 +2924,7 @@ class FundebLevantamentoPdfBuilder {
         pw.Container(height: 0.6, color: _line),
         pw.SizedBox(height: 6),
         pw.Text(
-          'Rocha Prime Serviços Especializados Ltda  |  CNPJ: 29.342.691/0001-93',
+          'GLOBAL SYNC  |  Global Services Company',
           style: const pw.TextStyle(color: _muted, fontSize: 5),
         ),
         pw.SizedBox(height: 2),
@@ -2960,8 +2960,17 @@ class FundebLevantamentoPdfBuilder {
         pw.Container(height: 0.6, color: _line),
         pw.SizedBox(height: 6),
         pw.Text(
-          'Rocha Prime Serviços Especializados Ltda  |  CNPJ: 29.342.691/0001-93',
-          style: const pw.TextStyle(color: _muted, fontSize: 5),
+          'GLOBAL SYNC',
+          style: pw.TextStyle(
+            color: _navy,
+            fontSize: 5.4,
+            fontWeight: pw.FontWeight.bold,
+          ),
+        ),
+        pw.SizedBox(height: 1),
+        pw.Text(
+          'Global Services Company — Tecnologia e dados para gestão pública',
+          style: const pw.TextStyle(color: _muted, fontSize: 4.6),
         ),
         pw.SizedBox(height: 2),
         pw.Row(
@@ -3006,7 +3015,7 @@ class FundebLevantamentoPdfBuilder {
         pw.Container(height: 0.6, color: _line),
         pw.SizedBox(height: 6),
         pw.Text(
-          'Rocha Prime Servicos Especializados Ltda  |  CNPJ: 29.342.691/0001-93',
+          'GLOBAL SYNC  |  Global Services Company',
           style: const pw.TextStyle(color: _muted, fontSize: 5),
         ),
         pw.SizedBox(height: 2),
@@ -3642,7 +3651,7 @@ class FundebLevantamentoPdfBuilder {
     );
   }
 
-  static Future<String?> _loadRochaPrimeLogoSvg() async {
+  static Future<String?> _loadBrandLogoSvg() async {
     if (_logoLoaded) return _cachedLogoSvg;
     try {
       final raw = await rootBundle.loadString(
@@ -4120,11 +4129,11 @@ class FundebLevantamentoPdfBuilder {
     var text = value;
     const replacements = <MapEntry<String, String>>[
       MapEntry(
-        'leitura Rocha Prime para decisao comercial e priorizacao tecnica',
+        'leitura Global Sync para decisao comercial e priorizacao tecnica',
         'análise técnica para suporte à tomada de decisão',
       ),
       MapEntry(
-        'leitura Rocha Prime para decisão comercial e priorização técnica',
+        'leitura Global Sync para decisão comercial e priorização técnica',
         'análise técnica para suporte à tomada de decisão',
       ),
       MapEntry(
@@ -4144,11 +4153,11 @@ class FundebLevantamentoPdfBuilder {
         'Metodologia: análise comparativa baseada em dados oficiais',
       ),
       MapEntry(
-        'projecao comercial historica do levantamento Rocha Prime',
+        'projecao comercial historica do levantamento Global Sync',
         'projeção técnica elaborada com base em dados oficiais e parâmetros regulatórios vigentes',
       ),
       MapEntry(
-        'projecao comercial historica do levantamento Rocha Prime',
+        'projecao comercial historica do levantamento Global Sync',
         'projeção técnica elaborada com base em dados oficiais e parâmetros regulatórios vigentes',
       ),
       MapEntry(

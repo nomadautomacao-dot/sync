@@ -16,12 +16,12 @@ Gerar um PDF técnico-executivo curto, com leitura comparativa entre dois exerc�
 - evolução de receita Fundeb
 - mudança no perfil das matrículas
 - leitura da rede educacional
-- espaço de atuação técnica da Rocha Prime
+- espaço de atuação técnica da Global Sync
 
 ## Saída esperada
 
 - PDF em `A4 retrato`
-- Estilo visual Rocha Prime
+- Estilo visual Global Sync
 - Arquivo final com `3 páginas`
 
 ## Entradas obrigatórias
@@ -134,7 +134,7 @@ Matrículas consideradas:
 
 Leitura geral:
 - card “Movimentos relevantes”
-- card “Como a Rocha Prime entra”
+- card “Como a Global Sync entra”
 - conclusão final
 
 ## Componentes visuais necessários
