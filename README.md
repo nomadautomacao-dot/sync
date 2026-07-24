@@ -34,7 +34,7 @@ Flutter em `public/flutter-web/`.
 
 ```mermaid
 graph LR
-  A[App Flutter<br/>Linux · Web · Android] -->|CRUD· auth| B[(Firestore<br/>+ Storage)]
+  A[App Flutter<br/>Web · Android] -->|CRUD· auth| B[(Firestore<br/>+ Storage)]
   A -->|dados FUNDEB<br/>e PDFs| C[Next.js BFF<br/>app/api]
   C -->|APIs públicas| D[IBGE · FNDE · INEP<br/>TSE · SICONFI · QEdu]
   C -->|ReportLab · Playwright| E[PDF / DOCX]
@@ -54,8 +54,14 @@ cp .env.example .env.local   # preencher com as credenciais reais
 npm run dev
 ```
 
-Outros modos: `npm run dev:linux` (Flutter desktop), `npm run dev:next` (só a API, porta
-3100), `bash sync_flutter/run_local.sh --no-flutter` (só backend) e `--kill` (encerra tudo).
+Outros modos: `npm run dev:next` (só a API, porta 3100),
+`bash sync_flutter/run_local.sh --no-flutter` (só backend), `--rebuild-web` (reconstrói o
+bundle em `public/flutter-web/`) e `--kill` (encerra tudo).
+
+> **Linux desktop não é um alvo suportado.** O app depende de Firebase Auth, Firestore e
+> Storage, e o FlutterFire não tem implementação para Linux — nenhum plugin `firebase_*`
+> registra para essa plataforma, então o binário compila mas morre no
+> `Firebase.initializeApp` antes de abrir a janela. Use Web ou Android.
 
 > `.env.example` cobre apenas a configuração do Firebase. As integrações opcionais
 > (`QEDU_TOKEN`, `SUPABASE_*`, e `DATABASE_URL`/`DIRECT_URL` do Postgres legado) precisam ser
@@ -65,7 +71,7 @@ Outros modos: `npm run dev:linux` (Flutter desktop), `npm run dev:next` (só a A
 
 | Camada | Tecnologia |
 |--------|-----------|
-| Frontend (o produto) | Flutter 3.44 / Dart 3.12 — Linux, Web, Android |
+| Frontend (o produto) | Flutter 3.44 / Dart 3.12 — Web e Android |
 | Persistência | Cloud Firestore + Firebase Storage (fonte de verdade) |
 | Autenticação | Firebase Auth + custom claims (`groupId`, `groupRole`) |
 | Backend (BFF) | Next.js 16.2 App Router, React 19, Node 22 |

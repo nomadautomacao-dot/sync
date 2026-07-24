@@ -1,6 +1,6 @@
 #!/bin/bash
 # ═══════════════════════════════════════════════════════════════════
-#  PrimeOS — Inicialização Local Integrada
+#  Global Sync — Inicialização Local Integrada
 # ═══════════════════════════════════════════════════════════════════
 #  Sobe o backend Next.js (porta 3000) e lança o Flutter Linux
 #  apontando para http://localhost:3100 (porta dedicada do Sync —
@@ -116,7 +116,7 @@ trap cleanup EXIT
 # ── Header ────────────────────────────────────────────────────────
 echo ""
 echo -e "${CYAN}╔═══════════════════════════════════════════════════╗${NC}"
-echo -e "${CYAN}║  ${BOLD}🚀  PrimeOS — Ambiente Local${NC}${CYAN}                     ║${NC}"
+echo -e "${CYAN}║  ${BOLD}🚀  Global Sync — Ambiente Local${NC}${CYAN}                 ║${NC}"
 echo -e "${CYAN}╚═══════════════════════════════════════════════════╝${NC}"
 echo ""
 
@@ -227,8 +227,20 @@ if [ "${1:-}" = "--web" ]; then
   "$FLUTTER_BIN" run -d chrome \
     --dart-define="SYNC_API_BASE_URL=${API_URL}"
 else
-  echo -e "${BLUE}▶  [2/2] Iniciando Flutter Linux → ${API_URL}...${NC}"
+  # O app depende de Firebase (Auth/Firestore/Storage) e o FlutterFire nao tem
+  # implementacao para Linux desktop — nenhum plugin firebase_* registra para
+  # essa plataforma. O binario compila, mas morre no Firebase.initializeApp
+  # antes de abrir a janela. Falhar aqui e mais honesto que crashar no Dart.
+  echo -e "${YELLOW}▶  [2/2] Alvo Linux desktop indisponivel.${NC}"
   echo ""
-  "$FLUTTER_BIN" run -d linux \
-    --dart-define="SYNC_API_BASE_URL=${API_URL}"
+  echo -e "   O app usa Firebase Auth/Firestore/Storage, e o FlutterFire nao"
+  echo -e "   suporta Linux desktop. O app abre em ${BOLD}Web${NC} e ${BOLD}Android${NC}."
+  echo ""
+  echo -e "   Use:  ${GREEN}npm run dev${NC}          (backend + Flutter Web)"
+  echo -e "         ${GREEN}npm run build:apk${NC}    (Android)"
+  echo ""
+  echo -e "   O backend continua rodando em ${API_URL} — Ctrl+C para encerrar."
+  echo ""
+  # Mantem o backend vivo, ja que ele subiu e e util sozinho.
+  wait
 fi
