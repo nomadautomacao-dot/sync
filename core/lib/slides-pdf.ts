@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { resolvePythonCommand } from "@/core/lib/python-runtime";
 
 type SlidesTemplateId = "institucional" | "proposta-fundeb" | "resumo-executivo";
 
@@ -47,7 +48,8 @@ export async function generateSlidesPdf(
   const scriptPath = path.join(process.cwd(), "app/api/modulos/slides/pdf", gerador);
 
   return await new Promise<{ pdfBuffer: Buffer; filename: string }>((resolve, reject) => {
-    const pythonProcess = spawn("python", [scriptPath], { shell: true });
+    const python = resolvePythonCommand();
+    const pythonProcess = spawn(python.command, [...python.argsPrefix, scriptPath]);
     let output = "";
     let errorOutput = "";
 

@@ -1,4 +1,4 @@
-import * as admin from "firebase-admin";
+import { getFirestore } from "firebase-admin/firestore";
 import { onSchedule } from "firebase-functions/v2/scheduler";
 import { logger } from "firebase-functions/v2";
 import { computeAccruals, CommissionRuleData, ProfitSnapshotData } from "./fecharCompetencia.core";
@@ -10,7 +10,7 @@ import { computeAccruals, CommissionRuleData, ProfitSnapshotData } from "./fecha
  * silencioso. So loga (Cloud Logging); nao corrige sozinha.
  */
 export const conferirCompetencia = onSchedule("every day 03:00", async () => {
-  const db = admin.firestore();
+  const db = getFirestore();
   const now = new Date();
   const year = now.getUTCFullYear();
   const month = now.getUTCMonth() + 1;

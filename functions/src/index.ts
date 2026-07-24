@@ -1,6 +1,6 @@
-import * as admin from "firebase-admin";
+import { initializeApp } from "firebase-admin/app";
 
-admin.initializeApp();
+initializeApp();
 
 export { registrarProfitSnapshot } from "./registrarProfitSnapshot";
 export { fecharCompetencia } from "./fecharCompetencia";

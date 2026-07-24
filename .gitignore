@@ -86,6 +86,7 @@ functions/lib/
 
 # Local-only tool state
 firestore-debug.log
+firebase-debug.log
 *.pid
 .claude/worktrees/
 .mcp.json

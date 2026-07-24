@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { resolvePythonCommand } from "@/core/lib/python-runtime";
 
 interface FundebPdfFilenameSource {
   identificacao: {
@@ -64,7 +65,8 @@ export async function generateFundebPdfBuffer(
   const scriptPath = path.join(process.cwd(), "app/api/modulos/levantamento-fundeb/pdf", gerador);
 
   return await new Promise<{ pdfBuffer: Buffer; filename: string }>((resolve, reject) => {
-    const pythonProcess = spawn("python3", [scriptPath]);
+    const python = resolvePythonCommand();
+    const pythonProcess = spawn(python.command, [...python.argsPrefix, scriptPath]);
     let output = "";
     let errorOutput = "";
 

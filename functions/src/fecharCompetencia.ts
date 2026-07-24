@@ -1,4 +1,4 @@
-import * as admin from "firebase-admin";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { computeAccruals, CommissionRuleData, ProfitSnapshotData } from "./fecharCompetencia.core";
 
@@ -23,7 +23,7 @@ export const fecharCompetencia = onCall<FecharCompetenciaInput>(async (request) 
     throw new HttpsError("invalid-argument", "cityId/year/month obrigatorios.");
   }
 
-  const db = admin.firestore();
+  const db = getFirestore();
   const cityRef = db.collection("cities").doc(cityId);
   const citySnap = await cityRef.get();
   if (!citySnap.exists || citySnap.data()?.groupId !== groupId) {
@@ -61,8 +61,8 @@ export const fecharCompetencia = onCall<FecharCompetenciaInput>(async (request) 
       groupId,
       status: existing?.exists ? (existing.data()!.status as string) : "calculated",
       payoutId: existing?.exists ? (existing.data()!.payoutId ?? null) : null,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
-      createdAt: existing?.exists ? existing.data()!.createdAt : admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+      createdAt: existing?.exists ? existing.data()!.createdAt : FieldValue.serverTimestamp(),
     }, { merge: true });
   });
   await batch.commit();

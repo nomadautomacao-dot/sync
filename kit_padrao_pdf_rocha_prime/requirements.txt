@@ -1,2 +1,2 @@
-reportlab
-Pillow
+reportlab==5.0.0
+Pillow==12.3.0

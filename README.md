@@ -7,10 +7,10 @@
   <br />
   Rocha Prime Consultorias
 
-  [![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=next.js&logoColor=white)](https://nextjs.org/)
-  [![Flutter](https://img.shields.io/badge/Flutter-3.38-02569B?logo=flutter&logoColor=white)](https://flutter.dev/)
-  [![Prisma](https://img.shields.io/badge/Prisma-6-2D3748?logo=prisma&logoColor=white)](https://www.prisma.io/)
-  [![Firebase](https://img.shields.io/badge/Firebase-Auth-FFCA28?logo=firebase&logoColor=white)](https://firebase.google.com/)
+  [![Next.js](https://img.shields.io/badge/Next.js-16.2-000000?logo=next.js&logoColor=white)](https://nextjs.org/)
+  [![Flutter](https://img.shields.io/badge/Flutter-3.44-02569B?logo=flutter&logoColor=white)](https://flutter.dev/)
+  [![Firebase](https://img.shields.io/badge/Firebase-Firestore%20%C2%B7%20Auth%20%C2%B7%20Functions-FFCA28?logo=firebase&logoColor=black)](https://firebase.google.com/)
+  [![Node](https://img.shields.io/badge/Node-22-339933?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
   [![Cloud Run](https://img.shields.io/badge/Cloud%20Run-us--central1-4285F4?logo=googlecloud&logoColor=white)](https://cloud.google.com/run)
 
   📖 **Documentação completa:** [CLAUDE.md](./CLAUDE.md)
@@ -25,49 +25,88 @@
 - Automatiza a geração de kits documentais de inexigibilidade (Lei 14.133/21)
 - Gerencia o pipeline de cidades, contratos, colaboradores e comissões
 
+## Arquitetura em uma frase
+
+O produto **é o app Flutter**. Ele lê e escreve direto no **Firestore/Storage**, e chama o
+**Next.js apenas como BFF** para dados públicos de FUNDEB e geração de documentos. O Next
+não tem interface própria — só rotas de API em `app/api/**` e a entrega do build web do
+Flutter em `public/flutter-web/`.
+
+```mermaid
+graph LR
+  A[App Flutter<br/>Linux · Web · Android] -->|CRUD· auth| B[(Firestore<br/>+ Storage)]
+  A -->|dados FUNDEB<br/>e PDFs| C[Next.js BFF<br/>app/api]
+  C -->|APIs públicas| D[IBGE · FNDE · INEP<br/>TSE · SICONFI · QEdu]
+  C -->|ReportLab · Playwright| E[PDF / DOCX]
+  B --> F[Cloud Functions v2<br/>motor de comissões]
+```
+
 ## Quick Start
 
 ```bash
 # 1. Instalar dependências
 npm install
 
-# 2. Configurar banco
-cp .env.example .env    # preencher com credenciais reais
-npm run supabase:bootstrap
+# 2. Configurar credenciais
+cp .env.example .env.local   # preencher com as credenciais reais
 
-# 3. Rodar localmente (Next.js + Flutter Linux)
-./run-local.sh
+# 3. Rodar backend + Flutter Web
+npm run dev
 ```
+
+Outros modos: `npm run dev:linux` (Flutter desktop), `npm run dev:next` (só a API, porta
+3100), `bash sync_flutter/run_local.sh --no-flutter` (só backend) e `--kill` (encerra tudo).
+
+> `.env.example` cobre apenas a configuração do Firebase. As integrações opcionais
+> (`QEDU_TOKEN`, `SUPABASE_*`, e `DATABASE_URL`/`DIRECT_URL` do Postgres legado) precisam ser
+> adicionadas manualmente ao `.env.local`.
 
 ## Stack
 
 | Camada | Tecnologia |
 |--------|-----------|
-| Backend | Next.js 16 (App Router), Prisma 6, Supabase (PostgreSQL) |
-| Autenticação | Firebase Auth (`firebase-admin`) |
-| Frontend | Flutter 3.38 (Linux, Web, Android) |
-| Documentos | Python 3 + ReportLab/Pillow, docxtemplater, jsPDF |
+| Frontend (o produto) | Flutter 3.44 / Dart 3.12 — Linux, Web, Android |
+| Persistência | Cloud Firestore + Firebase Storage (fonte de verdade) |
+| Autenticação | Firebase Auth + custom claims (`groupId`, `groupRole`) |
+| Backend (BFF) | Next.js 16.2 App Router, React 19, Node 22 |
+| Serverless | Cloud Functions v2 (`functions/`) — motor de comissões |
+| Documentos | Python 3 + ReportLab 5/Pillow 12, Playwright, docxtemplater, pacote `pdf` (Dart) |
 | Infra | Google Cloud Run, Cloud Build, Docker multi-stage |
+| Legado | Prisma 6 + Supabase/PostgreSQL — em desativação (Fase 5) |
 
-> O Next.js não tem interface própria — toda a UI é o app Flutter. O papel do
-> Next é servir as rotas de API, gerar documentos e entregar o build web do
-> Flutter em `public/flutter-web/`.
+> **Migração em andamento:** o CRUD operacional (cidades, empresas, colaboradores,
+> documentos, auditoria, settings) já roda no Firestore. As rotas Next que ainda usam Prisma
+> são legadas, estão marcadas como `DEPRECATED` no código e serão removidas junto com
+> `core/lib/data-access.ts` e `collaboration-data-access.ts`.
 
 ## Estrutura
 
 ```
-app/api/        → API Routes (BFF)
-core/            → Domínio, libs server-side, providers
-modules/         → Lógica de negócio (FUNDEB, contratos, propostas)
-sync_flutter/    → App Flutter multiplataforma (a interface do produto)
-docs/            → Specs de negócio e roadmaps
-scripts/         → Scripts de deploy, dados e manutenção
+app/api/                      → Rotas de API (BFF) + geradores PDF em Python
+core/                         → Domínio, libs server-side, auth, integrações
+modules/                      → Lógica de negócio (FUNDEB, contratos, propostas)
+sync_flutter/                 → App Flutter multiplataforma (a interface do produto)
+functions/                    → Cloud Functions v2 (comissões sobre Firestore)
+kit_padrao_pdf_rocha_prime/   → Estilo compartilhado dos PDFs (ReportLab)
+firestore.rules               → Regras de acesso (escopo por grupo via claims)
+storage.rules                 → Regras do Firebase Storage
+docs/                         → Specs de negócio e roadmaps
+scripts/                      → Deploy, dados, manutenção
+```
+
+## Testes
+
+```bash
+npm test                          # Vitest (core/, modules/)
+npm --prefix functions test       # node:test (Cloud Functions)
+cd sync_flutter && flutter test   # Testes do app
 ```
 
 ## Deploy
 
 ```bash
-./scripts/deploy/deploy-cloudrun-linux.sh
+./scripts/deploy/deploy-cloudrun-linux.sh   # Next.js + geradores → Cloud Run
+firebase deploy --only functions            # Cloud Functions
 ```
 
 **Serviço:** `sync-app` · **Projeto GCP:** `opus-sec` · **Região:** `us-central1`

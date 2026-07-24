@@ -146,7 +146,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
   }
 
   Future<void> _pickAndUploadLogo() async {
-    final result = await FilePicker.platform.pickFiles(
+    final result = await FilePicker.pickFiles(
       type: FileType.image,
       withData: true,
     );

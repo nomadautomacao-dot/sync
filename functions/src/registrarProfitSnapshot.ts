@@ -1,4 +1,4 @@
-import * as admin from "firebase-admin";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { centsSubtract } from "./money";
 
@@ -50,7 +50,7 @@ export const registrarProfitSnapshot = onCall<RegistrarProfitSnapshotInput>(
       }
     }
 
-    const db = admin.firestore();
+    const db = getFirestore();
     const cityRef = db.collection("cities").doc(d.cityId);
     const citySnap = await cityRef.get();
     if (!citySnap.exists) {
@@ -81,10 +81,10 @@ export const registrarProfitSnapshot = onCall<RegistrarProfitSnapshotInput>(
       taxesCents: d.taxesCents,
       profitBaseCents,
       notes: d.notes ?? null,
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
       // Preserva o createdAt original em recomputos (set idempotente) — so
       // grava createdAt novo na primeira vez que a competencia e registrada.
-      createdAt: existingSnap.exists ? existingSnap.data()!.createdAt : admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: existingSnap.exists ? existingSnap.data()!.createdAt : FieldValue.serverTimestamp(),
     }, { merge: true });
 
     return { cityId: d.cityId, competencia, profitBaseCents };

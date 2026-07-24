@@ -1,5 +1,5 @@
 # Base image — Debian slim (required for Playwright/Chromium)
-FROM node:20-slim AS base
+FROM node:22-slim AS base
 
 # Install dependencies only when needed
 FROM base AS deps
@@ -11,11 +11,13 @@ WORKDIR /app
 # Copy package files
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma/
+COPY kit_padrao_pdf_rocha_prime/requirements.txt ./kit_padrao_pdf_rocha_prime/requirements.txt
 
 # Install dependencies
 RUN npm ci
 RUN npx prisma generate
-RUN python3 -m pip install --no-cache-dir --break-system-packages reportlab Pillow
+RUN python3 -m pip install --no-cache-dir --break-system-packages \
+    -r kit_padrao_pdf_rocha_prime/requirements.txt
 
 # Install Playwright browsers (only Chromium, minimizes size)
 RUN npx playwright install --with-deps chromium
@@ -56,7 +58,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxrandr2 xdg-utils libxss1 libxshmfence1 libpango-1.0-0 \
     libpangocairo-1.0-0 libcairo2 libgdk-pixbuf2.0-0 \
     && rm -rf /var/lib/apt/lists/*
-RUN python3 -m pip install --no-cache-dir --break-system-packages reportlab Pillow
+COPY kit_padrao_pdf_rocha_prime/requirements.txt ./kit_padrao_pdf_rocha_prime/requirements.txt
+RUN python3 -m pip install --no-cache-dir --break-system-packages \
+    -r kit_padrao_pdf_rocha_prime/requirements.txt
 
 # Copy necessary files
 COPY --from=builder /app/public ./public
