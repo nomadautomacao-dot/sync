@@ -1,11 +1,11 @@
 {
-    "name": "PrimeOS",
-    "short_name": "PrimeOS",
+    "name": "Global Sync",
+    "short_name": "Global Sync",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0d1117",
-    "theme_color": "#f54a00",
-    "description": "PrimeOS — Plataforma de gestão municipal e empresarial integrada.",
+    "background_color": "#EEF1F6",
+    "theme_color": "#049598",
+    "description": "Global Sync — plataforma de gestão e automação para consultoria educacional FUNDEB.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

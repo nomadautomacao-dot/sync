@@ -114,7 +114,7 @@ class _ModulesScreenState extends State<ModulesScreen> {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Catalog — The main modules grid, grouped by category
+// Catalog — grade de geradores FUNDEB, agrupada por categoria
 // ─────────────────────────────────────────────────────────────
 
 /// Modules hidden from the catalog (not ready for production)
@@ -132,6 +132,9 @@ const _fundebKeys = {
   'kit-documental',
   'slides',
 };
+
+/// Gerador de referencia do fluxo FUNDEB — recebe a etiqueta "principal".
+const _primaryGeneratorKey = 'levantamento-fundeb';
 
 /// Modules that have actual working screens
 const _implementedKeys = {
@@ -166,31 +169,16 @@ class _ModulesCatalog extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // ── Header ──
-          SyncSectionHeader(
-            title: 'Modulos',
-            description:
-                'Ferramentas e extensoes do seu workspace.',
-            trailing: IconButton(
-              onPressed: onRefresh,
-              icon: const Icon(Icons.refresh_rounded, size: 20),
-              tooltip: 'Atualizar catalogo',
-              style: IconButton.styleFrom(
-                side: const BorderSide(color: SaaSTokens.borderLight),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-            ),
-          ),
+          // ── Cabecalho: titulo + municipio fixo + acoes ──
+          _CatalogHeader(onRefresh: onRefresh),
 
-          const SizedBox(height: 32),
+          const SizedBox(height: 28),
 
-          // ── FUNDEB section: featured tiles ──
+          // ── Geradores FUNDEB ──
           _SectionLabel(
-            label: 'FUNDEB',
+            label: 'Geradores',
             count: fundeb.length,
-            accent: const Color(0xFF2F6BFF),
+            accent: SaaSTokens.primary,
           ),
           const SizedBox(height: 14),
           LayoutBuilder(
@@ -200,13 +188,15 @@ class _ModulesCatalog extends StatelessWidget {
                   : constraints.maxWidth > 560
                       ? 2
                       : 1;
+              // floor evita que a soma das colunas ultrapasse a largura por
+              // fracao de pixel e dispare overflow no Wrap.
+              final tileWidth =
+                  ((constraints.maxWidth - (crossCount - 1) * 12) / crossCount)
+                      .floorToDouble();
               return Wrap(
-                spacing: 14,
-                runSpacing: 14,
+                spacing: 12,
+                runSpacing: 12,
                 children: fundeb.map((m) {
-                  final tileWidth =
-                      (constraints.maxWidth - (crossCount - 1) * 14) /
-                          crossCount;
                   return SizedBox(
                     width: tileWidth,
                     child: _ModuleTile(
@@ -221,11 +211,11 @@ class _ModulesCatalog extends StatelessWidget {
           ),
 
           if (others.isNotEmpty) ...[
-            const SizedBox(height: 36),
+            const SizedBox(height: 32),
             _SectionLabel(
-              label: 'Outros modulos',
+              label: 'Outros módulos',
               count: others.length,
-              accent: SaaSTokens.textDim,
+              accent: SaaSTokens.borderStronger,
             ),
             const SizedBox(height: 14),
             LayoutBuilder(
@@ -235,13 +225,13 @@ class _ModulesCatalog extends StatelessWidget {
                     : constraints.maxWidth > 560
                         ? 3
                         : 2;
+                final tileWidth =
+                    ((constraints.maxWidth - (crossCount - 1) * 12) / crossCount)
+                        .floorToDouble();
                 return Wrap(
-                  spacing: 14,
-                  runSpacing: 14,
+                  spacing: 12,
+                  runSpacing: 12,
                   children: others.map((m) {
-                    final tileWidth =
-                        (constraints.maxWidth - (crossCount - 1) * 14) /
-                            crossCount;
                     return SizedBox(
                       width: tileWidth,
                       child: _ModuleTileCompact(
@@ -255,6 +245,12 @@ class _ModulesCatalog extends StatelessWidget {
               },
             ),
           ],
+
+          // TODO(redesign): a secao "Execucoes recentes" (municipio / modulo /
+          // responsavel / duracao / status) do mockup nao foi construida porque
+          // o SyncRepository nao expoe historico de execucoes de geradores —
+          // nao ha endpoint nem modelo com duracao, responsavel ou motivo de
+          // falha. Reintroduzir a tabela quando esse historico existir.
         ],
       ),
     );
@@ -262,7 +258,143 @@ class _ModulesCatalog extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Section label with count pill
+// Cabecalho do catalogo — titulo, municipio fixo, acoes
+// ─────────────────────────────────────────────────────────────
+class _CatalogHeader extends StatelessWidget {
+  const _CatalogHeader({required this.onRefresh});
+
+  final VoidCallback onRefresh;
+
+  @override
+  Widget build(BuildContext context) {
+    const title = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Geradores FUNDEB', style: GsText.pageTitle),
+        SizedBox(height: 5),
+        Text(
+          'Documentos produzidos a partir das bases oficiais do município.',
+          style: GsText.body,
+        ),
+      ],
+    );
+
+    final actions = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const _ActiveCityChip(),
+        const SizedBox(width: 10),
+        // TODO(redesign): o botao primario "Gerar em lote" do mockup nao existe
+        // — o repositorio nao expoe uma acao de geracao em lote para varios
+        // geradores/municipios de uma vez. Adicionar quando a acao existir.
+        _HeaderIconButton(
+          icon: Icons.refresh_rounded,
+          tooltip: 'Atualizar catalogo',
+          onPressed: onRefresh,
+        ),
+      ],
+    );
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 720) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              title,
+              const SizedBox(height: 16),
+              actions,
+            ],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            const Expanded(child: title),
+            const SizedBox(width: 20),
+            actions,
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// Municipio fixado no cabecalho, para nao reescolher em cada gerador.
+class _ActiveCityChip extends StatelessWidget {
+  const _ActiveCityChip();
+
+  @override
+  Widget build(BuildContext context) {
+    // TODO(redesign): o app ainda nao mantem um municipio ativo compartilhado
+    // (o AppController guarda apenas secao, modulo e empresa selecionados, e
+    // cada gerador faz sua propria busca de municipio). Enquanto nao existir,
+    // o chip mostra o estado real em vez de um municipio inventado.
+    return Container(
+      height: 38,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: SaaSTokens.cardWhite,
+        border: Border.all(color: SaaSTokens.borderLight),
+        borderRadius: BorderRadius.circular(SaaSTokens.rControl),
+      ),
+      child: const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.location_city_rounded,
+            size: 17,
+            color: SaaSTokens.textDim,
+          ),
+          SizedBox(width: 8),
+          Text(
+            'Município definido em cada gerador',
+            style: GsText.body,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HeaderIconButton extends StatelessWidget {
+  const _HeaderIconButton({
+    required this.icon,
+    required this.tooltip,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String tooltip;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Tooltip(
+      message: tooltip,
+      child: SizedBox(
+        height: 38,
+        width: 38,
+        child: IconButton(
+          onPressed: onPressed,
+          icon: Icon(icon, size: 18),
+          padding: EdgeInsets.zero,
+          style: IconButton.styleFrom(
+            foregroundColor: SaaSTokens.textMuted,
+            backgroundColor: SaaSTokens.cardWhite,
+            side: const BorderSide(color: SaaSTokens.borderLight),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(SaaSTokens.rControl),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Sobretitulo de secao com contagem em mono
 // ─────────────────────────────────────────────────────────────
 class _SectionLabel extends StatelessWidget {
   const _SectionLabel({
@@ -281,36 +413,24 @@ class _SectionLabel extends StatelessWidget {
       children: [
         Container(
           width: 3,
-          height: 16,
+          height: 14,
           decoration: BoxDecoration(
             color: accent,
             borderRadius: BorderRadius.circular(2),
           ),
         ),
         const SizedBox(width: 10),
-        Text(
-          label.toUpperCase(),
-          style: const TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            color: SaaSTokens.textDim,
-            letterSpacing: 1.2,
-          ),
-        ),
+        Text(label.toUpperCase(), style: GsText.label),
         const SizedBox(width: 8),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
           decoration: BoxDecoration(
-            color: accent.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(10),
+            color: SaaSTokens.surfaceAlt,
+            borderRadius: BorderRadius.circular(SaaSTokens.rChip),
           ),
           child: Text(
             '$count',
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: accent,
-            ),
+            style: GsText.dataXs.copyWith(color: SaaSTokens.textMuted),
           ),
         ),
       ],
@@ -319,7 +439,59 @@ class _SectionLabel extends StatelessWidget {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Featured module tile (FUNDEB group) — larger, more detail
+// Etiqueta mono do canto superior direito do card
+// ─────────────────────────────────────────────────────────────
+class _MonoTag extends StatelessWidget {
+  const _MonoTag({
+    required this.text,
+    required this.foreground,
+    required this.background,
+  });
+
+  final String text;
+  final Color foreground;
+  final Color background;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(SaaSTokens.rChip),
+      ),
+      child: Text(
+        text,
+        style: GsText.dataXsStrong.copyWith(color: foreground),
+      ),
+    );
+  }
+}
+
+/// Etiqueta do gerador — so aparece quando ha dado real para mostrar.
+///
+// TODO(redesign): o mockup mostra contagem de saida ("5 pecas", "15 anexos").
+// O ModuleDefinition nao traz quantas pecas/anexos o gerador produz, apenas
+// `mappedFlows` (as etapas do fluxo), entao a etiqueta usa esse numero real.
+Widget? _generatorTag(ModuleDefinition module) {
+  if (module.key == _primaryGeneratorKey) {
+    return const _MonoTag(
+      text: 'principal',
+      foreground: SaaSTokens.primaryHover,
+      background: SaaSTokens.primaryLight,
+    );
+  }
+  final flows = module.mappedFlows.length;
+  if (flows == 0) return null;
+  return _MonoTag(
+    text: '$flows ${flows == 1 ? 'etapa' : 'etapas'}',
+    foreground: SaaSTokens.textMuted,
+    background: SaaSTokens.surfaceAlt,
+  );
+}
+
+// ─────────────────────────────────────────────────────────────
+// Card de gerador (grupo FUNDEB) — diz o que sai e em quantas etapas
 // ─────────────────────────────────────────────────────────────
 class _ModuleTile extends StatefulWidget {
   const _ModuleTile({
@@ -362,8 +534,16 @@ class _ModuleTileState extends State<_ModuleTile>
 
   @override
   Widget build(BuildContext context) {
-    final c = widget.module.color;
+    final module = widget.module;
     final dim = !widget.implemented;
+    final isPrimary = module.key == _primaryGeneratorKey;
+    final tag = dim
+        ? const _MonoTag(
+            text: 'em breve',
+            foreground: SaaSTokens.textDim,
+            background: SaaSTokens.surfaceAlt,
+          )
+        : _generatorTag(module);
 
     return MouseRegion(
       cursor: dim ? SystemMouseCursors.basic : SystemMouseCursors.click,
@@ -383,126 +563,77 @@ class _ModuleTileState extends State<_ModuleTile>
         child: ScaleTransition(
           scale: _scaleAnim,
           child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
+            duration: const Duration(milliseconds: 180),
             curve: Curves.easeOutQuart,
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(18),
             decoration: BoxDecoration(
-              color: _hovered
-                  ? SaaSTokens.cardWhite
-                  : SaaSTokens.cardWhite,
+              color: SaaSTokens.cardWhite,
               border: Border.all(
                 color: _hovered
-                    ? c.withValues(alpha: 0.35)
+                    ? SaaSTokens.primary
                     : SaaSTokens.borderLight,
-                width: _hovered ? 1.5 : 1,
               ),
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: _hovered
-                  ? [
-                      BoxShadow(
-                        color: c.withValues(alpha: 0.08),
-                        blurRadius: 20,
-                        offset: const Offset(0, 6),
-                      ),
-                    ]
-                  : [],
+              borderRadius: BorderRadius.circular(SaaSTokens.rCard),
             ),
             child: Opacity(
-              opacity: dim ? 0.45 : 1.0,
+              opacity: dim ? 0.55 : 1.0,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Icon + status row
+                  // Icone em quadrado + etiqueta mono
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Tonal icon container
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        width: 44,
-                        height: 44,
+                      Container(
+                        width: 38,
+                        height: 38,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          color: _hovered
-                              ? c.withValues(alpha: 0.18)
-                              : c.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
+                          color: isPrimary
+                              ? SaaSTokens.primaryLight
+                              : SaaSTokens.surfaceSubtle,
+                          borderRadius: BorderRadius.circular(11),
                         ),
                         child: Icon(
-                          widget.module.icon,
-                          size: 22,
-                          color: c,
+                          module.icon,
+                          size: 20,
+                          color: isPrimary
+                              ? SaaSTokens.primary
+                              : SaaSTokens.textBody,
                         ),
                       ),
                       const Spacer(),
-                      if (dim)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
-                          ),
-                          decoration: BoxDecoration(
-                            color: SaaSTokens.scaffold,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                              color: SaaSTokens.borderLight,
-                            ),
-                          ),
-                          child: const Text(
-                            'Em breve',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color: SaaSTokens.textDim,
-                            ),
-                          ),
-                        )
-                      else
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: _hovered
-                                ? c.withValues(alpha: 0.08)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(
-                            Icons.arrow_forward_rounded,
-                            size: 18,
-                            color: _hovered
-                                ? c
-                                : SaaSTokens.textDim,
-                          ),
-                        ),
+                      ?tag,
                     ],
                   ),
 
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
 
-                  // Title
+                  // Nome do gerador
                   Text(
-                    widget.module.label,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: SaaSTokens.textTitle,
-                      letterSpacing: -0.2,
-                    ),
+                    module.label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GsText.cardTitle,
                   ),
 
                   const SizedBox(height: 6),
 
-                  // Description
-                  Text(
-                    widget.module.description,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: SaaSTokens.textMuted,
-                      height: 1.45,
+                  // O que o gerador produz
+                  SizedBox(
+                    height: 38,
+                    child: Text(
+                      module.description,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GsText.body.copyWith(color: SaaSTokens.textMuted),
                     ),
                   ),
+
+                  // TODO(redesign): o rodape do mockup ("18 gerados · hoje
+                  // 09:14") depende de contagem de execucoes e data da ultima
+                  // rodada por gerador. O repositorio nao registra essas
+                  // metricas, entao o rodape fica de fora ate existirem.
                 ],
               ),
             ),
@@ -514,7 +645,7 @@ class _ModuleTileState extends State<_ModuleTile>
 }
 
 // ─────────────────────────────────────────────────────────────
-// Compact module tile (Others group) — smaller, denser
+// Card compacto (outros modulos) — menor e mais denso
 // ─────────────────────────────────────────────────────────────
 class _ModuleTileCompact extends StatefulWidget {
   const _ModuleTileCompact({
@@ -536,7 +667,7 @@ class _ModuleTileCompactState extends State<_ModuleTileCompact> {
 
   @override
   Widget build(BuildContext context) {
-    final c = widget.module.color;
+    final module = widget.module;
     final dim = !widget.implemented;
 
     return MouseRegion(
@@ -548,40 +679,33 @@ class _ModuleTileCompactState extends State<_ModuleTileCompact> {
       child: GestureDetector(
         onTap: dim ? null : widget.onTap,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
+          duration: const Duration(milliseconds: 180),
           curve: Curves.easeOutQuart,
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
             color: SaaSTokens.cardWhite,
             border: Border.all(
-              color: _hovered
-                  ? c.withValues(alpha: 0.3)
-                  : SaaSTokens.borderLight,
+              color: _hovered ? SaaSTokens.primary : SaaSTokens.borderLight,
             ),
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: _hovered
-                ? [
-                    BoxShadow(
-                      color: c.withValues(alpha: 0.06),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    ),
-                  ]
-                : [],
+            borderRadius: BorderRadius.circular(SaaSTokens.rControl),
           ),
           child: Opacity(
-            opacity: dim ? 0.4 : 1.0,
+            opacity: dim ? 0.55 : 1.0,
             child: Row(
               children: [
                 Container(
-                  width: 36,
-                  height: 36,
+                  width: 34,
+                  height: 34,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: c.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
+                    color: SaaSTokens.surfaceSubtle,
+                    borderRadius: BorderRadius.circular(9),
                   ),
-                  child: Icon(widget.module.icon, size: 18, color: c),
+                  child: Icon(
+                    module.icon,
+                    size: 18,
+                    color: SaaSTokens.textBody,
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -589,25 +713,17 @@ class _ModuleTileCompactState extends State<_ModuleTileCompact> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        widget.module.label,
+                        module.label,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: SaaSTokens.textTitle,
-                          letterSpacing: -0.1,
-                        ),
+                        style: GsText.cardTitleSm,
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        widget.module.description,
+                        module.description,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: SaaSTokens.textMuted,
-                        ),
+                        style: GsText.bodySm,
                       ),
                     ],
                   ),
@@ -615,20 +731,17 @@ class _ModuleTileCompactState extends State<_ModuleTileCompact> {
                 if (dim)
                   const Padding(
                     padding: EdgeInsets.only(left: 8),
-                    child: Text(
-                      'Em breve',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
-                        color: SaaSTokens.textDim,
-                      ),
+                    child: _MonoTag(
+                      text: 'em breve',
+                      foreground: SaaSTokens.textDim,
+                      background: SaaSTokens.surfaceAlt,
                     ),
                   )
                 else
                   Icon(
                     Icons.chevron_right_rounded,
                     size: 18,
-                    color: _hovered ? c : SaaSTokens.textDim,
+                    color: _hovered ? SaaSTokens.primary : SaaSTokens.textDim,
                   ),
               ],
             ),
@@ -652,11 +765,11 @@ class _ModulesLoadingSkeleton extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SyncShimmer(width: 120, height: 24),
+          const SyncShimmer(width: 220, height: 26),
           const SizedBox(height: 8),
-          const SyncShimmer(width: 260, height: 14),
-          const SizedBox(height: 32),
-          const SyncShimmer(width: 80, height: 12),
+          const SyncShimmer(width: 320, height: 14),
+          const SizedBox(height: 28),
+          const SyncShimmer(width: 96, height: 12),
           const SizedBox(height: 14),
           LayoutBuilder(
             builder: (context, constraints) {
@@ -666,10 +779,11 @@ class _ModulesLoadingSkeleton extends StatelessWidget {
                       ? 2
                       : 1;
               final tileW =
-                  (constraints.maxWidth - (crossCount - 1) * 14) / crossCount;
+                  ((constraints.maxWidth - (crossCount - 1) * 12) / crossCount)
+                      .floorToDouble();
               return Wrap(
-                spacing: 14,
-                runSpacing: 14,
+                spacing: 12,
+                runSpacing: 12,
                 children: List.generate(
                   6,
                   (_) => SizedBox(
@@ -699,9 +813,9 @@ class _ModulesErrorState extends StatelessWidget {
     return Center(
       child: EmptyStateWidget(
         icon: Icons.wifi_off_rounded,
-        title: 'Falha ao carregar modulos',
+        title: 'Falha ao carregar módulos',
         subtitle:
-            'Nao foi possivel atualizar o catalogo agora. Verifique sua conexao.',
+            'Não foi possível atualizar o catalogo agora. Verifique sua conexão.',
         actionLabel: 'Tentar novamente',
         onAction: onRetry,
       ),

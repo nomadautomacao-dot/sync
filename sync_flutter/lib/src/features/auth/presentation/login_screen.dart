@@ -1,17 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/app.dart';
-
-/// Paleta institucional Global Sync
-class _BrandColors {
-  static const navy = Color(0xFF0E3B3A);
-  static const navyLight = Color(0xFF1F5350);
-  static const accent = Color(0xFF049598);
-  static const accentText = Color(0xFF036B69);
-  static const cardWhite = Color(0xFFFFFFFF);
-  static const textSecondary = Color(0xFF5A6B80);
-  static const inputBorder = Color(0xFFD8DEE6);
-}
+import '../../../core/theme/app_theme.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key, required this.controller});
@@ -24,10 +14,19 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen>
     with SingleTickerProviderStateMixin {
+  /// Fundo claro com leve tinta teal — derivado dos tokens, sem gradiente.
+  static final _tintedScaffold = Color.alphaBlend(
+    SaaSTokens.primaryLight.withValues(alpha: 0.45),
+    SaaSTokens.scaffold,
+  );
+
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
   bool isSubmitting = false;
   bool obscurePassword = true;
+  // TODO(redesign): o repositorio sempre persiste a sessao; nao existe flag
+  // "manter sessao" em SyncRepository.signIn. Estado apenas visual por ora.
+  bool keepSession = true;
   String? errorText;
   late final AnimationController _fadeCtrl;
   late final Animation<double> _fadeAnim;
@@ -76,366 +75,305 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              _BrandColors.navy,
-              Color(0xFF07211F),
-              Color(0xFF0C2E2B),
-            ],
-          ),
-        ),
-        child: Stack(
-          children: [
-            // Geometric accent shapes
-            Positioned(
-              top: -120,
-              right: -80,
-              child: Container(
-                width: 300,
-                height: 300,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.04),
-                    width: 1,
+      backgroundColor: _tintedScaffold,
+      body: Center(
+        child: FadeTransition(
+          opacity: _fadeAnim,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // ── Marca ────────────────────────────────────────────
+                Image.asset(
+                  'assets/branding/global-sync-icon.png',
+                  width: 84,
+                  height: 84,
+                  fit: BoxFit.contain,
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  'Global Sync',
+                  style: GsText.pageTitle.copyWith(
+                    fontSize: 27,
+                    letterSpacing: -0.8,
                   ),
                 ),
-              ),
-            ),
-            Positioned(
-              bottom: -60,
-              left: -40,
-              child: Container(
-                width: 200,
-                height: 200,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.03),
-                    width: 1,
-                  ),
+                const SizedBox(height: 7),
+                Text(
+                  'GLOBAL SERVICES CONSULTORIAS',
+                  style: GsText.label.copyWith(fontSize: 11),
                 ),
-              ),
-            ),
-            Positioned(
-              top: 80,
-              left: -100,
-              child: Transform.rotate(
-                angle: 0.4,
-                child: Container(
-                  width: 250,
-                  height: 250,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(40),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.02),
-                      width: 1,
-                    ),
-                  ),
-                ),
-              ),
-            ),
+                const SizedBox(height: 30),
 
-            // Main content
-            Center(
-              child: FadeTransition(
-                opacity: _fadeAnim,
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Logo Global Sync — ícone extraído do logo comercial
-                      Container(
-                        width: 90,
-                        height: 90,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(4),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.25),
-                              blurRadius: 30,
-                              offset: const Offset(0, 8),
+                // ── Card de acesso ───────────────────────────────────
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: SaaSTokens.cardWhite,
+                      borderRadius: BorderRadius.circular(SaaSTokens.rCard),
+                      border: Border.all(color: SaaSTokens.borderLight),
+                    ),
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          'Acesse sua conta',
+                          style: GsText.panelTitle.copyWith(
+                            fontSize: 21,
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Credenciais institucionais da consultoria.',
+                          style: GsText.body,
+                        ),
+                        const SizedBox(height: 28),
+
+                        // Campo de e-mail
+                        Text('E-MAIL', style: _fieldLabel),
+                        const SizedBox(height: 7),
+                        TextField(
+                          controller: emailController,
+                          autofocus: true,
+                          keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
+                          autofillHints: const [AutofillHints.email],
+                          style: _inputText,
+                          decoration: const InputDecoration(
+                            hintText: 'consultor@globalsync.com.br',
+                          ),
+                        ),
+                        const SizedBox(height: 18),
+
+                        // Campo de senha
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text('SENHA', style: _fieldLabel),
+                            InkWell(
+                              onTap: () {},
+                              borderRadius: BorderRadius.circular(
+                                SaaSTokens.rChip,
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 4,
+                                  vertical: 2,
+                                ),
+                                child: Text(
+                                  'Esqueci a senha',
+                                  style: GsText.bodySm.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: SaaSTokens.primaryHover,
+                                  ),
+                                ),
+                              ),
                             ),
                           ],
                         ),
-                        child: Image.asset(
-                          'assets/branding/global-sync-icon.png',
-                          fit: BoxFit.contain,
+                        const SizedBox(height: 7),
+                        TextField(
+                          controller: passwordController,
+                          obscureText: obscurePassword,
+                          textInputAction: TextInputAction.done,
+                          autofillHints: const [AutofillHints.password],
+                          onSubmitted: (_) =>
+                              isSubmitting ? null : handleSubmit(),
+                          style: _inputText,
+                          decoration: InputDecoration(
+                            hintText: '••••••••',
+                            suffixIcon: IconButton(
+                              tooltip: obscurePassword
+                                  ? 'Mostrar senha'
+                                  : 'Ocultar senha',
+                              iconSize: 19,
+                              style: IconButton.styleFrom(
+                                minimumSize: const Size(40, 40),
+                              ),
+                              icon: Icon(
+                                obscurePassword
+                                    ? Icons.visibility_off_outlined
+                                    : Icons.visibility_outlined,
+                                color: SaaSTokens.textMuted,
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  obscurePassword = !obscurePassword;
+                                });
+                              },
+                            ),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 20),
-                      const Text(
-                        'Global Sync',
-                        style: TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                          letterSpacing: -0.3,
-                        ),
-                      ),
-                      const SizedBox(height: 36),
+                        const SizedBox(height: 12),
 
-                      // Login card
-                      ConstrainedBox(
-                        constraints: const BoxConstraints(maxWidth: 400),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: _BrandColors.cardWhite,
-                            borderRadius: BorderRadius.circular(4),
+                        // Manter sessao
+                        InkWell(
+                          onTap: () =>
+                              setState(() => keepSession = !keepSession),
+                          borderRadius: BorderRadius.circular(
+                            SaaSTokens.rChip,
                           ),
                           child: Padding(
-                            padding: const EdgeInsets.all(36),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                            padding: const EdgeInsets.symmetric(vertical: 4),
+                            child: Row(
                               children: [
-                                const Text(
-                                  'Acesse sua conta',
-                                  style: TextStyle(
-                                    fontSize: 20,
-                                    fontWeight: FontWeight.w700,
-                                    color: _BrandColors.navy,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                                const SizedBox(height: 6),
-                                const Text(
-                                  'Insira suas credenciais para continuar.',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: _BrandColors.textSecondary,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                                const SizedBox(height: 32),
-
-                                // Email field
-                                const Text(
-                                  'Email',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: _BrandColors.navy,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                TextField(
-                                  controller: emailController,
-                                  autofocus: true,
-                                  keyboardType: TextInputType.emailAddress,
-                                  textInputAction: TextInputAction.next,
-                                  autofillHints: const [AutofillHints.email],
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    color: _BrandColors.navy,
-                                  ),
-                                  decoration: InputDecoration(
-                                    hintText: 'seu@email.com',
-                                    hintStyle: TextStyle(
-                                      color: _BrandColors.textSecondary.withValues(alpha: 0.6),
-                                    ),
-                                    filled: false,
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(3),
-                                      borderSide: BorderSide(color: _BrandColors.inputBorder),
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(3),
-                                      borderSide: BorderSide(color: _BrandColors.inputBorder),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(3),
-                                      borderSide: const BorderSide(color: _BrandColors.accent, width: 2),
-                                    ),
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 14,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(height: 20),
-
-                                // Password field
-                                const Text(
-                                  'Senha',
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: _BrandColors.navy,
-                                  ),
-                                ),
-                                const SizedBox(height: 8),
-                                TextField(
-                                  controller: passwordController,
-                                  obscureText: obscurePassword,
-                                  textInputAction: TextInputAction.done,
-                                  autofillHints: const [AutofillHints.password],
-                                  onSubmitted: (_) =>
-                                      isSubmitting ? null : handleSubmit(),
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    color: _BrandColors.navy,
-                                  ),
-                                  decoration: InputDecoration(
-                                    hintText: '••••••••',
-                                    hintStyle: TextStyle(
-                                      color: _BrandColors.textSecondary.withValues(alpha: 0.6),
-                                    ),
-                                    filled: false,
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(3),
-                                      borderSide: BorderSide(color: _BrandColors.inputBorder),
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(3),
-                                      borderSide: BorderSide(color: _BrandColors.inputBorder),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(3),
-                                      borderSide: const BorderSide(color: _BrandColors.accent, width: 2),
-                                    ),
-                                    contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 14,
-                                    ),
-                                    suffixIcon: IconButton(
-                                      icon: Icon(
-                                        obscurePassword
-                                            ? Icons.visibility_off_outlined
-                                            : Icons.visibility_outlined,
-                                        color: _BrandColors.textSecondary,
-                                        size: 20,
-                                      ),
-                                      onPressed: () {
-                                        setState(() {
-                                          obscurePassword = !obscurePassword;
-                                        });
-                                      },
-                                    ),
-                                  ),
-                                ),
-
-                                const SizedBox(height: 8),
-                                Align(
-                                  alignment: Alignment.centerRight,
-                                  child: TextButton(
-                                    onPressed: () {},
-                                    style: TextButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 4,
-                                        vertical: 4,
-                                      ),
-                                      minimumSize: Size.zero,
-                                      tapTargetSize:
-                                          MaterialTapTargetSize.shrinkWrap,
-                                    ),
-                                    child: const Text(
-                                      'Esqueceu a senha?',
-                                      style: TextStyle(
-                                        color: _BrandColors.accentText,
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 13,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-
-                                // Error message
-                                if (errorText != null) ...[
-                                  const SizedBox(height: 12),
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFFEF2F2),
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                        color: const Color(0xFFFECACA),
-                                      ),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        const Icon(
-                                          Icons.error_outline,
-                                          color: Color(0xFFDC2626),
-                                          size: 18,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            errorText!,
-                                            style: const TextStyle(
-                                              color: Color(0xFF991B1B),
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w500,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-
-                                const SizedBox(height: 32),
-
-                                // Submit button
                                 SizedBox(
-                                  height: 50,
-                                  child: ElevatedButton(
-                                    onPressed:
-                                        isSubmitting ? null : handleSubmit,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: _BrandColors.navy,
-                                      foregroundColor: Colors.white,
-                                      disabledBackgroundColor:
-                                          _BrandColors.navyLight,
-                                      elevation: 0,
-                                      shape: const RoundedRectangleBorder(),
+                                  width: 20,
+                                  height: 20,
+                                  child: Checkbox(
+                                    value: keepSession,
+                                    onChanged: (value) => setState(
+                                      () => keepSession = value ?? false,
                                     ),
-                                    child: isSubmitting
-                                        ? const SizedBox(
-                                            height: 20,
-                                            width: 20,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: Colors.white,
-                                            ),
-                                          )
-                                        : const Text(
-                                            'Entrar',
-                                            style: TextStyle(
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
+                                    activeColor: SaaSTokens.primary,
+                                    side: const BorderSide(
+                                      color: SaaSTokens.borderStronger,
+                                    ),
+                                    visualDensity: VisualDensity.compact,
+                                    materialTapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(5),
+                                    ),
                                   ),
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  'Manter sessão neste dispositivo',
+                                  style: GsText.body,
                                 ),
                               ],
                             ),
                           ),
                         ),
-                      ),
 
-                      const SizedBox(height: 32),
-                      Text(
-                        '© 2026 Global Sync',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.white.withValues(alpha: 0.5),
+                        // Erro de autenticacao
+                        if (errorText != null) ...[
+                          const SizedBox(height: 14),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: SaaSTokens.errorLight,
+                              borderRadius: BorderRadius.circular(
+                                SaaSTokens.rControl,
+                              ),
+                              border: Border.all(color: SaaSTokens.error),
+                            ),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Icon(
+                                  Icons.error_outline,
+                                  color: SaaSTokens.error,
+                                  size: 18,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    errorText!,
+                                    style: GsText.body.copyWith(
+                                      color: SaaSTokens.errorDark,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+
+                        const SizedBox(height: 24),
+
+                        // Botao primario — teal, alvo de 48
+                        SizedBox(
+                          height: 48,
+                          child: ElevatedButton(
+                            onPressed: isSubmitting ? null : handleSubmit,
+                            style: ElevatedButton.styleFrom(
+                              disabledBackgroundColor: SaaSTokens.primaryDim,
+                              disabledForegroundColor: Colors.white,
+                            ),
+                            child: isSubmitting
+                                ? const SizedBox(
+                                    height: 18,
+                                    width: 18,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Text('Entrar'),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 24),
-                    ],
+                        // TODO(redesign): o botao "Entrar com Google Workspace"
+                        // do mockup depende de um fluxo de SSO que ainda nao
+                        // existe no app (so ha e-mail/senha via Firebase).
+                      ],
+                    ),
                   ),
                 ),
-              ),
+
+                const SizedBox(height: 26),
+                _ApiStatusLine(controller: widget.controller),
+                const SizedBox(height: 12),
+                Text(
+                  '© 2026 Global Sync',
+                  style: GsText.dataXs.copyWith(color: SaaSTokens.textDim),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
+    );
+  }
+
+  static final TextStyle _fieldLabel = GsText.fieldLabel.copyWith(
+    fontSize: 11,
+  );
+
+  static final TextStyle _inputText = GsText.body.copyWith(
+    fontSize: 15,
+    color: SaaSTokens.textTitle,
+  );
+}
+
+/// Rodape discreto: ponto de status + origem da api configurada.
+class _ApiStatusLine extends StatelessWidget {
+  const _ApiStatusLine({required this.controller});
+
+  final AppController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    // TODO(redesign): a regiao ("us-central1") do mockup nao e exposta pelo
+    // repositorio; usamos o host da api configurada, que e o dado existente.
+    final remote = controller.usesEnvironmentApi;
+    final host = Uri.tryParse(controller.apiBaseUrl)?.host ?? '';
+    final label = remote && host.isNotEmpty
+        ? 'api conectada · $host'
+        : 'modo local · sem api remota';
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 6,
+          height: 6,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: remote ? SaaSTokens.success : SaaSTokens.textDim,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(label, style: GsText.dataXs),
+      ],
     );
   }
 }

@@ -10,8 +10,8 @@ extension AppSectionX on AppSection {
     AppSection.companies => 'Minha Empresa',
     AppSection.people => 'Colaboradores',
     AppSection.pipeline => 'Plano de Ação',
-    AppSection.modules => 'Modulos',
-    AppSection.settings => 'Configuracoes',
+    AppSection.modules => 'Módulos',
+    AppSection.settings => 'Configurações',
   };
 
   IconData get icon => switch (this) {
