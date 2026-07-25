@@ -503,3 +503,43 @@ export function useAuth(): AuthCtx {
 - **Placeholders:** nenhum "TODO/depois". Onde o shape é externo (DashboardOverview), a tarefa manda LER a função real antes de tipar — não inventar. ✓
 - **Consistência de tipos:** `ClientUser` (T2) usado por T3/T4; `apiFetch`/`withAuthHeader` (T3) usados por T7; `useAuth` (T4) por T5/T6. `GroupRole` importado de `@/core/domain/rbac` (mesma fonte do BFF). ✓
 - **Contrato de auth** idêntico ao BFF (`Authorization: Bearer`, `groupId` obrigatório). ✓
+
+---
+
+# Fase 1 — Resultado da execução
+
+**Status: concluída.** 15 commits, 8 tasks, cada uma com review individual + review final de branch. `npm test` 25/25; `tsc` com 58 erros, todos preexistentes em código legado, nenhum em arquivo desta fase.
+
+**Verificado no browser (fluxo real, conta com `groupId` nas claims):** sessão limpa → `/painel` redireciona para `/entrar` → login → **navegação única** para `/painel` → shell com sidebar (Painel ativo, 6 itens inertes marcados "LEGADO") + header com usuário e papel + dashboard com três contagens reais do Firestore.
+
+## Defeitos do plano corrigidos durante a execução
+
+Registrados aqui porque cada um custou trabalho e nenhum era óbvio no papel:
+
+1. **Task 2 mandava duplicar `sessionUserFromClaims`.** `core/lib/auth-token.ts` é isomórfico (só `import type`), então o cliente reusa a função do BFF. Duas cópias da regra de sessão divergiriam em silêncio.
+2. **Task 5 punha `/entrar` dentro do grupo `(sync)`**, que tem a guarda — loop infinito de redirect. Movido para `app/(auth)/`.
+3. **Task 8 pedia que um Server Component lesse a sessão do cliente.** Impossível: a sessão do Firebase Web SDK vive no IndexedDB do browser; o BFF só recebe o token por header.
+4. **Task 7 apontava para `GET /api/dashboard/executive`**, que roda em Prisma/PostgreSQL legado (`DEPRECATED`, removido na Fase 5) e **que o produto não usa** — o dashboard do Flutter lê do Firestore. Reescrita para ler Firestore direto.
+5. **`process.env[k]` com chave dinâmica** em `firebase-client.ts`: o Next só inlina acesso literal no bundle do cliente, então `firebaseClientConfig()` nunca funcionaria no browser. **Nenhum teste unitário poderia pegar** (roda em Node, onde funciona) — quem pegou foi o smoke. É a justificativa de o smoke de browser ser obrigatório nas tasks de UI.
+6. **Critério "ambos autenticam com o mesmo login" era falso.** Medido: carregar `/flutter-web` apaga a sessão Firebase da origem.
+
+## A fronteira de sessão (o maior risco arquitetural herdado)
+
+React e Flutter compartilham origem e projeto Firebase, mas **não compartilham sessão**: visitar `/flutter-web` desloga o React (medido — `firebaseLocalStorage` some). Mitigação da Fase 1: os 6 itens de nav não portados são **inertes**, não links para o Flutter, para não deslogar o usuário em silêncio. Documentado em `app/[[...path]]/page.tsx`.
+
+**A Fase 2 precisa decidir isso antes de portar tela:** ou porta fatias completas (Cidades+Pipeline juntas) para o usuário não precisar atravessar no meio de um fluxo, ou resolve a unificação de sessão (mexendo no app Flutter) antes que a superfície de coexistência cresça.
+
+## Decisões tomadas que revogam o plano original
+
+- **A raiz `/` continua no Flutter.** Apontar a porta de entrada para o React entregaria um app incompleto a quem usa o produto hoje. Inverter é uma linha em `app/[[...path]]/page.tsx`, quando a Fase 2+ justificar.
+- **`core/lib/api-client.ts` fica sem consumidor nesta fase**, por consequência da correção nº 4. É infra testada para as Fases 4-5 (rotas FUNDEB e geradores de PDF são BFF-only). Marcado como tal no topo do arquivo para ninguém apagar como código morto.
+
+## Itens carregados para a Fase 2
+
+- **Tokenizar a paleta** do `DESIGN.md` em `@theme` no `globals.css`, num commit único que converta os cinco arquivos de uma vez. Foi adiado de propósito (tokenizar parcialmente criaria duas convenções vivas), mas deve vir **antes** de a Fase 2 espalhar hex literal por mais telas. Junto disso, limpar o `body { color: #1b2a4a }` (navy que o `DESIGN.md` proíbe).
+- **Responsividade da sidebar** — hoje 292px fixos; o `DESIGN.md` pede drawer abaixo de 1120px. Chega naturalmente com as telas de CRUD.
+- **`role="alert"` do painel de erro** pode não ser anunciado quando a página já monta em estado de erro; usar live region persistente.
+- **Apertar o teste `NO_SESSION`** de `api-client` (hoje só compara `message`) quando o módulo ganhar consumidor real.
+- **Decidir e registrar em ADR o padrão de acesso a dados** antes de codar: rotas BFF (`/api/municipalities`) versus Firestore direto na coleção `cities`. O painel usa Firestore direto (correto para read-only); escritas e Kanban mudam o cálculo. Sem essa decisão nascem duas convenções.
+- **Robustez do boot:** se o IndexedDB ficar indisponível ou bloqueado, `onAuthStateChanged` não dispara e a tela fica presa em "Verificando sessão…" sem saída. Observado ao forçar `deleteDatabase` com conexão aberta. Raro, mas sem escape para o usuário.
+- **Guarda é 100% client-side** (`/painel` responde 200 para qualquer um). Isso é aceitável porque as `firestore.rules` são a fronteira real — **invariante a manter**: nenhuma tela futura pode renderizar dado sensível no servidor sem verificar o token.
