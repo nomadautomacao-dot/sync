@@ -3,12 +3,15 @@ import { withAuthHeader, apiFetch, ApiError } from "./api-client";
 import { getFirebaseAuth } from "./firebase-client";
 import type { User } from "firebase/auth";
 
+let mockCurrentUser: User | null = null;
+
 vi.mock("./firebase-client", () => {
-  const mockAuth = {
-    currentUser: null as unknown as User,
-  };
   return {
-    getFirebaseAuth: () => mockAuth,
+    getFirebaseAuth: () => ({
+      get currentUser() {
+        return mockCurrentUser;
+      }
+    }),
   };
 });
 
@@ -26,7 +29,7 @@ describe("apiFetch", () => {
   beforeEach(() => {
     globalThis.fetch = mockFetch;
     mockFetch.mockReset();
-    getFirebaseAuth().currentUser = null;
+    mockCurrentUser = null;
   });
 
   it("lança ApiError 401 NO_SESSION se não houver usuário logado", async () => {
@@ -39,7 +42,7 @@ describe("apiFetch", () => {
     const mockUser = {
       getIdToken: vi.fn().mockResolvedValue("mock-id-token"),
     } as unknown as User;
-    getFirebaseAuth().currentUser = mockUser;
+    mockCurrentUser = mockUser;
 
     mockFetch.mockResolvedValue({
       ok: true,
@@ -58,7 +61,7 @@ describe("apiFetch", () => {
     const mockUser = {
       getIdToken: vi.fn().mockResolvedValue("mock-id-token"),
     } as unknown as User;
-    getFirebaseAuth().currentUser = mockUser;
+    mockCurrentUser = mockUser;
 
     mockFetch.mockResolvedValue({
       ok: false,
@@ -83,7 +86,7 @@ describe("apiFetch", () => {
     const mockUser = {
       getIdToken: vi.fn().mockResolvedValue("mock-id-token"),
     } as unknown as User;
-    getFirebaseAuth().currentUser = mockUser;
+    mockCurrentUser = mockUser;
 
     mockFetch.mockResolvedValue({
       ok: false,
