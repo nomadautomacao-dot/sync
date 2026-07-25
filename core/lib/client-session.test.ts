@@ -26,4 +26,13 @@ describe("clientUserFromClaims", () => {
   it("claims têm precedência sobre o fallback", () => {
     expect(clientUserFromClaims({ groupId: "g1", uid: "claim-uid" }, fallback)?.id).toBe("claim-uid");
   });
+
+  it("lida corretamente com email nulo no fallback", () => {
+    const fallbackWithNullEmail = { uid: "u1", email: null };
+    // sem email nas claims e com email null no fallback -> espera null (email é obrigatório no SessionUser)
+    expect(clientUserFromClaims({ groupId: "g1" }, fallbackWithNullEmail)).toBeNull();
+    // com email válido nas claims e email null no fallback -> espera sucesso (claims têm precedência)
+    expect(clientUserFromClaims({ groupId: "g1", email: "claim@email.com" }, fallbackWithNullEmail))
+      .toEqual({ id: "u1", name: "claim@email.com", email: "claim@email.com", groupId: "g1", groupRole: "member" });
+  });
 });
