@@ -41,8 +41,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
         }
         // `true` força o refresh do token para trazer claims recém-atribuídas.
         const { claims } = await fbUser.getIdTokenResult(true);
-        setUser(clientUserFromClaims(claims, { uid: fbUser.uid, email: fbUser.email }));
+        const mapped = clientUserFromClaims(claims, { uid: fbUser.uid, email: fbUser.email });
+        setUser(mapped);
         setLoading(false);
+        // Mesma regra do signIn, aplicada também às sessões que chegam prontas
+        // (claim revogada, login em outra aba): sem groupId não há acesso, então
+        // não se deixa a sessão do Firebase viva por baixo de um app deslogado.
+        // Converge: o signOut dispara este callback de novo com fbUser === null,
+        // que cai no ramo acima — e aquele ramo nunca desloga, então para ali.
+        // O estado já foi zerado antes do await, logo nem uma falha de rede no
+        // signOut deixa `loading` pendurado.
+        if (!mapped) await fbSignOut(getFirebaseAuth());
       }),
     [],
   );
