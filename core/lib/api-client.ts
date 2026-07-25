@@ -1,3 +1,9 @@
+/**
+ * Cliente HTTP das rotas do BFF. Sem consumidor por ora: a Fase 1 lê o Firestore
+ * direto. As Fases 4-5 (FUNDEB e geradores de PDF), que são BFF-only, são as
+ * consumidoras previstas — não é código morto.
+ */
+
 import { getFirebaseAuth } from "./firebase-client";
 
 export class ApiError extends Error {
