@@ -27,19 +27,30 @@
 
 ## Arquitetura em uma frase
 
-O produto **é o app Flutter**. Ele lê e escreve direto no **Firestore/Storage**, e chama o
-**Next.js apenas como BFF** para dados públicos de FUNDEB e geração de documentos. O Next
-não tem interface própria — só rotas de API em `app/api/**` e a entrega do build web do
-Flutter em `public/flutter-web/`.
+O produto **é o app Flutter** — e está sendo migrado, tela a tela, para uma interface
+**React sob o próprio Next.js**. Nos dois casos a fonte de verdade é o **Firestore/Storage**,
+lido direto pelo cliente, e o **Next.js atua como BFF** para dados públicos de FUNDEB e
+geração de documentos. Enquanto a migração corre, as duas interfaces convivem na mesma
+origem: rotas React explícitas vencem o catch-all, e todo o resto continua sendo servido
+pelo bundle Flutter em `public/flutter-web/`.
 
 ```mermaid
 graph LR
-  A[App Flutter<br/>Web · Android] -->|CRUD· auth| B[(Firestore<br/>+ Storage)]
+  A[App Flutter<br/>Web · Android<br/>maior parte do produto] -->|CRUD· auth| B[(Firestore<br/>+ Storage)]
+  R[UI React/Next<br/>/entrar · /painel<br/>em migração] -->|CRUD· auth| B
   A -->|dados FUNDEB<br/>e PDFs| C[Next.js BFF<br/>app/api]
+  R -.->|Fases 4-5| C
   C -->|APIs públicas| D[IBGE · FNDE · INEP<br/>TSE · SICONFI · QEdu]
   C -->|ReportLab · Playwright| E[PDF / DOCX]
   B --> F[Cloud Functions v2<br/>motor de comissões]
 ```
+
+> **Estado da migração:** Fase 1 concluída — autenticação, shell e painel em React
+> (`/entrar`, `/painel`). As demais seções seguem no Flutter e aparecem na navegação React
+> marcadas como `LEGADO`, propositalmente não clicáveis: as duas interfaces **não
+> compartilham sessão**, e carregar `/flutter-web` derruba a sessão do lado React. O plano
+> completo, com as sete fases e os defeitos já corrigidos, está em
+> [`docs/superpowers/plans/2026-07-24-migracao-flutter-para-next.md`](./docs/superpowers/plans/2026-07-24-migracao-flutter-para-next.md).
 
 ## Quick Start
 
@@ -75,27 +86,33 @@ bundle em `public/flutter-web/`) e `--kill` (encerra tudo).
 
 | Camada | Tecnologia |
 |--------|-----------|
-| Frontend (o produto) | Flutter 3.44 / Dart 3.12 — Web e Android |
+| Frontend (o produto) | Flutter 3.44 / Dart 3.12 — Web e Android · **em migração para React** |
 | Persistência | Cloud Firestore + Firebase Storage (fonte de verdade) |
 | Autenticação | Firebase Auth + custom claims (`groupId`, `groupRole`) |
-| Backend (BFF) | Next.js 16.2 App Router, React 19, Node 22 |
+| Frontend novo + BFF | Next.js 16.2 App Router, React 19, Tailwind v4, TanStack Query, Node 22 |
 | Serverless | Cloud Functions v2 (`functions/`) — motor de comissões |
 | Documentos | Python 3 + ReportLab 5/Pillow 12, Playwright, docxtemplater, pacote `pdf` (Dart) |
 | Infra | Google Cloud Run, Cloud Build, Docker multi-stage |
 | Legado | Prisma 6 + Supabase/PostgreSQL — em desativação (Fase 5) |
 
-> **Migração em andamento:** o CRUD operacional (cidades, empresas, colaboradores,
-> documentos, auditoria, settings) já roda no Firestore. As rotas Next que ainda usam Prisma
-> são legadas, estão marcadas como `DEPRECATED` no código e serão removidas junto com
-> `core/lib/data-access.ts` e `collaboration-data-access.ts`.
+> **Duas migrações correm em paralelo, não confunda:**
+> 1. **Prisma/PostgreSQL → Firestore** (backend). O CRUD operacional já roda no Firestore; as
+>    rotas Next que ainda usam Prisma estão marcadas `DEPRECATED` e saem junto com
+>    `core/lib/data-access.ts` e `collaboration-data-access.ts`.
+> 2. **Flutter → React/Next** (interface). Fase 1 concluída; alvo web-only — Android deixa de
+>    ser suportado ao fim da migração.
 
 ## Estrutura
 
 ```
+app/(auth)/                   → Telas React sem sessão (login)
+app/(sync)/                   → Telas React com guarda de sessão + shell
+core/components/sync-shell/   → Sidebar e header da interface React
+core/providers/               → AuthProvider (Firebase Auth) + React Query
 app/api/                      → Rotas de API (BFF) + geradores PDF em Python
 core/                         → Domínio, libs server-side, auth, integrações
 modules/                      → Lógica de negócio (FUNDEB, contratos, propostas)
-sync_flutter/                 → App Flutter multiplataforma (a interface do produto)
+sync_flutter/                 → App Flutter (ainda a maior parte da interface; sai na Fase 7)
 functions/                    → Cloud Functions v2 (comissões sobre Firestore)
 kit_padrao_pdf_rocha_prime/   → Estilo compartilhado dos PDFs (ReportLab)
 firestore.rules               → Regras de acesso (escopo por grupo via claims)
@@ -107,7 +124,7 @@ scripts/                      → Deploy, dados, manutenção
 ## Testes
 
 ```bash
-npm test                          # Vitest (core/, modules/)
+npm test                          # Vitest (core/, modules/) — lógica pura
 npm --prefix functions test       # node:test (Cloud Functions)
 cd sync_flutter && flutter test   # Testes do app
 ```
