@@ -34,15 +34,15 @@ const APOIO_MOTOR_FINANCEIRO = "via motor financeiro (em breve)";
 /** Zerados na origem: ver o comentário do topo. */
 const KPIS_DE_DINHEIRO = ["Lucro base YTD", "Comissão prevista"] as const;
 
-const CLASSES_CARTAO = "rounded-[14px] border border-[#E2E8F0] bg-white px-[18px] pb-4 pt-[18px]";
+const CLASSES_CARTAO = "rounded-[14px] border border-line bg-white px-[18px] pb-4 pt-[18px]";
 
 const CLASSES_ROTULO_KPI =
-  "font-mono text-[10px] font-semibold uppercase tracking-[1.1px] text-[#9CA3AF]";
+  "font-mono text-[10px] font-semibold uppercase tracking-[1.1px] text-soft";
 
 const CLASSES_VALOR_KPI =
-  "font-mono text-[32px] font-semibold leading-none tracking-[-1.6px] text-[#111827] tabular-nums";
+  "font-mono text-[32px] font-semibold leading-none tracking-[-1.6px] text-title tabular-nums";
 
-const CLASSES_APOIO_KPI = "font-mono text-[11px] text-[#6B7280]";
+const CLASSES_APOIO_KPI = "font-mono text-[11px] text-soft";
 
 /**
  * Conta no servidor: `getCountFromServer` devolve só o total, sem trafegar
@@ -88,8 +88,8 @@ function VisaoExecutiva({ groupId }: { groupId: string }) {
 
   return (
     <div className="min-w-0">
-      <h1 className="text-[23px] font-bold tracking-[-0.7px] text-[#111827]">Visão executiva</h1>
-      <p className="mt-1 text-[13px] text-[#6B7280]">Carteira consolidada do grupo</p>
+      <h1 className="text-[23px] font-bold tracking-[-0.7px] text-title">Visão executiva</h1>
+      <p className="mt-1 text-[13px] text-soft">Carteira consolidada do grupo</p>
 
       {error ? (
         <PainelDeFalha erro={error} onTentarDeNovo={refetch} recarregando={isFetching} />
@@ -135,11 +135,11 @@ function CartaoDeContagem({ rotulo, apoio, valor, carregando }: CartaoDeContagem
         <span
           role="status"
           aria-label={`Carregando ${rotulo}`}
-          className="block h-8 w-24 animate-pulse rounded-[6px] bg-[#F1F3F7]"
+          className="block h-8 w-24 animate-pulse rounded-[6px] bg-surface-alt"
         />
       ) : (
         <span className={CLASSES_VALOR_KPI}>
-          {valor === undefined ? <span className="text-[#9CA3AF]">—</span> : valor}
+          {valor === undefined ? <span className="text-soft">—</span> : valor}
         </span>
       )}
     </CartaoKpi>
@@ -179,12 +179,12 @@ function PainelDeFalha({ erro, onTentarDeNovo, recarregando }: PainelDeFalhaProp
   return (
     <div
       role="alert"
-      className="mt-6 rounded-[14px] border border-[#EF4444] bg-[#FEF2F2] px-[18px] py-4"
+      className="mt-6 rounded-[14px] border border-error bg-error-light px-[18px] py-4"
     >
-      <p className="text-[14px] font-semibold text-[#991B1B]">
+      <p className="text-[14px] font-semibold text-error-dark">
         Não foi possível carregar as contagens do painel.
       </p>
-      <p className="mt-1.5 font-mono text-[12px] leading-relaxed break-words text-[#991B1B]">
+      <p className="mt-1.5 font-mono text-[12px] leading-relaxed break-words text-error-dark">
         {erro.message}
       </p>
       <button
@@ -192,7 +192,7 @@ function PainelDeFalha({ erro, onTentarDeNovo, recarregando }: PainelDeFalhaProp
         onClick={() => void onTentarDeNovo()}
         disabled={recarregando}
         aria-busy={recarregando}
-        className="mt-3.5 h-10 rounded-[10px] border border-[#EF4444] bg-white px-4 text-[14px] font-semibold tracking-[-0.1px] text-[#991B1B] transition-colors hover:bg-[#FEF2F2] disabled:cursor-not-allowed disabled:text-[#9CA3AF]"
+        className="mt-3.5 h-10 rounded-[10px] border border-error bg-white px-4 text-[14px] font-semibold tracking-[-0.1px] text-error-dark transition-colors hover:bg-error-light disabled:cursor-not-allowed disabled:text-dim"
       >
         {recarregando ? "Tentando…" : "Tentar de novo"}
       </button>

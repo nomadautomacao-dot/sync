@@ -1,7 +1,11 @@
 "use client";
 
 import {
+  browserLocalPersistence,
+  browserSessionPersistence,
   onAuthStateChanged,
+  sendPasswordResetEmail,
+  setPersistence,
   signInWithEmailAndPassword,
   signOut as fbSignOut,
 } from "firebase/auth";
@@ -13,8 +17,10 @@ import { getFirebaseAuth } from "@/core/lib/firebase-client";
 interface AuthCtx {
   user: ClientUser | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string, manterConectado?: boolean) => Promise<void>;
   signOut: () => Promise<void>;
+  /** Dispara o e-mail de redefinição. Silencioso sobre a conta existir ou não. */
+  sendPasswordReset: (email: string) => Promise<void>;
 }
 
 const Ctx = createContext<AuthCtx | null>(null);
@@ -56,8 +62,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
     [],
   );
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, password: string, manterConectado = false) => {
     const auth = getFirebaseAuth();
+    // Antes do login, sempre: a persistência escolhida decide onde o Firebase
+    // grava a sessão, e trocá-la depois não move a que já foi gravada.
+    // `SESSION` morre com a aba — o padrão certo para um notebook levado a uma
+    // prefeitura. `LOCAL` é a escolha explícita de quem está na própria máquina.
+    await setPersistence(auth, manterConectado ? browserLocalPersistence : browserSessionPersistence);
     const cred = await signInWithEmailAndPassword(auth, email.trim(), password);
     const { claims } = await cred.user.getIdTokenResult(true);
     // Sem groupId não há acesso: desloga em vez de deixar uma sessão inútil de pé.
@@ -69,7 +80,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const signOut = () => fbSignOut(getFirebaseAuth());
 
-  return <Ctx.Provider value={{ user, loading, signIn, signOut }}>{children}</Ctx.Provider>;
+  const sendPasswordReset = async (email: string) => {
+    try {
+      await sendPasswordResetEmail(getFirebaseAuth(), email.trim());
+    } catch (erro) {
+      // `user-not-found` não sobe: confirmar quais e-mails têm conta numa tela
+      // pública é enumeração de usuários. Quem chamou responde igual nos dois
+      // casos. Qualquer outra falha (rede, e-mail malformado, cota) é real e
+      // precisa chegar à tela.
+      const codigo =
+        typeof erro === "object" && erro !== null && "code" in erro ? erro.code : "";
+      if (codigo !== "auth/user-not-found") throw erro;
+    }
+  };
+
+  return (
+    <Ctx.Provider value={{ user, loading, signIn, signOut, sendPasswordReset }}>
+      {children}
+    </Ctx.Provider>
+  );
 }
 
 export function useAuth(): AuthCtx {

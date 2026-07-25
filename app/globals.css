@@ -1,19 +1,109 @@
 @import "tailwindcss";
 
 /*
- * O Next serve apenas as rotas de API e o redirect para /flutter-web/.
- * A interface e o app Flutter — este arquivo existe so para o layout raiz
- * ter uma base tipografica coerente enquanto o redirect acontece.
+ * Tokens do "Console Técnico" — fonte de verdade em `DESIGN.md`, espelhando
+ * `SaaSTokens` de `sync_flutter/lib/src/core/theme/app_theme.dart`.
+ *
+ * Escrever a paleta aqui, e não como hex no JSX, é o que mantém as duas
+ * interfaces convergindo enquanto a migração corre: quando um token muda, muda
+ * em um lugar só. Nomes em inglês para casar com o utilitário do Tailwind
+ * (`bg-primary`, `text-muted`) sem tradução no meio.
  */
-
-@theme inline {
+@theme {
   --font-sans: var(--font-sync-sans);
   --font-mono: var(--font-sync-mono);
+
+  /* Superfícies — a separação vem de degrau de superfície e borda, nunca de sombra. */
+  --color-scaffold: #eef1f6;
+  --color-card: #ffffff;
+  --color-surface-subtle: #f7f9fb;
+  --color-surface-alt: #f1f3f7;
+
+  /* Fundo do login: `primary-light` a 45% sobre o scaffold. Chapado, sem gradiente. */
+  --color-scaffold-tinted: #e6f1f3;
+
+  /* Bordas — sempre 1px. */
+  --color-line: #e2e8f0;
+  --color-line-strong: #d8dee6;
+  --color-line-stronger: #c9d0db;
+  /* Borda de campo tem alvo próprio: 3:1 contra o branco (WCAG 1.4.11). */
+  --color-line-input: #8a94a6;
+
+  /* Texto */
+  --color-title: #111827;
+  --color-body: #374151;
+  --color-soft: #4b5563;
+  --color-muted: #6b7280;
+  --color-dim: #9ca3af;
+
+  /*
+   * Accent único. Uma segunda cor de destaque é sempre erro de hierarquia.
+   *
+   * A divisão entre os dois teais é de contraste, não de gosto, e vale medida:
+   * branco sobre `primary` rende 3,65:1 — reprova na WCAG AA para texto. Sobre
+   * `primary-strong`, 6,34:1. Daí a regra:
+   *   `primary`        -> superfície e traço: barra do item ativo, borda de foco.
+   *   `primary-strong` -> tudo que carrega texto: fundo de botão, link, rótulo.
+   * O tema do Flutter chega na mesma conclusão — o `ElevatedButton` de lá é
+   * pintado com `primaryStrong`.
+   */
+  --color-primary: #049598;
+  --color-primary-strong: #036b69;
+  --color-primary-deep: #025f5d;
+  --color-primary-light: #dcf2f0;
+  --color-primary-dim: #5fa3a0;
+
+  /* Semânticas — só para estado, nunca para decorar. */
+  --color-success: #10b981;
+  --color-success-dot: #047857;
+  --color-success-light: #e7f7f1;
+  --color-success-dark: #065f46;
+  --color-warning: #f59e0b;
+  --color-warning-light: #fef6e7;
+  --color-warning-border: #fde9c8;
+  --color-warning-dark: #b45309;
+  --color-error: #ef4444;
+  --color-error-light: #fef2f2;
+  --color-error-border: #f3c2c2;
+  --color-error-dark: #991b1b;
+
+  /* Geometria */
+  --radius-control: 10px;
+  --radius-card: 14px;
+  --radius-chip: 6px;
 }
 
 body {
   margin: 0;
-  background: #eef1f6;
-  color: #1b2a4a;
+  background: var(--color-scaffold);
+  color: var(--color-body);
   font-family: var(--font-sync-sans), sans-serif;
+}
+
+/*
+ * Um anel de foco só, para toda a interface. O padrão do browser some sobre o
+ * teal do botão primário, e cada tela reinventar o seu é como o foco vira
+ * invisível em metade do app.
+ */
+:focus-visible {
+  outline: 2px solid var(--color-primary-strong);
+  outline-offset: 2px;
+}
+
+/* O olho do campo de senha é decoração para quem lê a tela com os olhos. */
+input::-ms-reveal,
+input::-webkit-credentials-auto-fill-button {
+  display: none;
+}
+
+/*
+ * Entrada do login. Um momento só, autoral, a partir de um estado já legível —
+ * 6px de subida e opacidade, com saída exponencial. Quem tem "reduzir
+ * movimento" ligado nunca chega aqui: a chamada usa a variante `motion-safe`.
+ */
+@keyframes entrada {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
 }

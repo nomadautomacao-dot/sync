@@ -35,10 +35,10 @@ export function SyncHeader({ user }: SyncHeaderProps) {
   };
 
   return (
-    <header className="flex h-16 shrink-0 items-center justify-end gap-5 border-b border-[#E2E8F0] bg-white px-8">
+    <header className="flex h-16 shrink-0 items-center justify-end gap-5 border-b border-line bg-white px-8">
       <div className="flex min-w-0 flex-col items-end">
-        <span className="truncate text-[14px] font-semibold text-[#111827]">{user.name}</span>
-        <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.9px] text-[#6B7280]">
+        <span className="truncate text-[14px] font-semibold text-title">{user.name}</span>
+        <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.9px] text-muted">
           {ROTULOS_DE_PAPEL[user.groupRole]}
         </span>
       </div>
@@ -48,7 +48,7 @@ export function SyncHeader({ user }: SyncHeaderProps) {
         onClick={aoSair}
         disabled={saindo}
         aria-busy={saindo}
-        className="h-10 shrink-0 rounded-[10px] border border-[#D8DEE6] px-4 text-[14px] font-semibold tracking-[-0.1px] text-[#374151] transition-colors hover:border-[#C9D0DB] hover:bg-[#F1F3F7] disabled:cursor-not-allowed disabled:text-[#9CA3AF]"
+        className="h-10 shrink-0 rounded-[10px] border border-line-strong px-4 text-[14px] font-semibold tracking-[-0.1px] text-body transition-colors hover:border-line-stronger hover:bg-surface-alt disabled:cursor-not-allowed disabled:text-dim"
       >
         {saindo ? "Saindo…" : "Sair"}
       </button>

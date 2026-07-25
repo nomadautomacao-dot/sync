@@ -28,16 +28,16 @@ export function SyncSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="flex w-[292px] shrink-0 flex-col border-r border-[#E2E8F0] bg-white">
-      <div className="border-b border-[#E2E8F0] px-6 py-6">
-        <p className="text-[20px] font-bold tracking-[-0.6px] text-[#111827]">Global Sync</p>
-        <p className="mt-1 font-mono text-[10px] font-semibold uppercase tracking-[1.1px] text-[#6B7280]">
+    <aside className="flex w-[292px] shrink-0 flex-col border-r border-line bg-white">
+      <div className="border-b border-line px-6 py-6">
+        <p className="text-[20px] font-bold tracking-[-0.6px] text-title">Global Sync</p>
+        <p className="mt-1 font-mono text-[10px] font-semibold uppercase tracking-[1.1px] text-muted">
           Global Services Consultorias
         </p>
       </div>
 
       <nav aria-label="Navegação principal" className="px-4 py-5">
-        <p className="px-3 pb-2 font-mono text-[10px] font-semibold uppercase tracking-[1.1px] text-[#9CA3AF]">
+        <p className="px-3 pb-2 font-mono text-[10px] font-semibold uppercase tracking-[1.1px] text-soft">
           Workspace
         </p>
         <ul className="flex flex-col gap-0.5">
@@ -51,8 +51,8 @@ export function SyncSidebar() {
                   aria-current={ativo ? "page" : undefined}
                   className={`${CLASSES_ITEM} ${
                     ativo
-                      ? "bg-[#DCF2F0] text-[#049598] before:absolute before:left-0 before:top-1/2 before:h-5 before:w-[3px] before:-translate-y-1/2 before:rounded-r-[2px] before:bg-[#049598]"
-                      : "text-[#4B5563] hover:bg-[#F1F3F7]"
+                      ? "bg-primary-light text-primary-strong before:absolute before:left-0 before:top-1/2 before:h-5 before:w-[3px] before:-translate-y-1/2 before:rounded-r-[2px] before:bg-primary"
+                      : "text-soft hover:bg-surface-alt"
                   }`}
                 >
                   {item.rotulo}
@@ -60,7 +60,7 @@ export function SyncSidebar() {
                     <>
                       <span
                         aria-hidden="true"
-                        className="font-mono text-[10px] uppercase tracking-[0.9px] text-[#9CA3AF]"
+                        className="font-mono text-[10px] uppercase tracking-[0.9px] text-soft"
                       >
                         em breve
                       </span>

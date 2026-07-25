@@ -141,6 +141,15 @@ Fundo do par claro da semantica, texto no par escuro, raio 6, `chip` em mono.
 - **Do** usar `label` (mono, caixa alta) para cabecalho de coluna e sobretitulo. E ele que
   separa "dado" de "rotulo" sem gastar uma segunda cor.
 - **Do** manter o teal como accent unico: botao primario, link, nav ativa, foco de input.
+- **Do** separar os dois teais por contraste, nao por gosto. Branco sobre `primary`
+  (`#049598`) rende **3,65:1** e reprova na WCAG AA para texto; sobre `primary-strong`
+  (`#036B69`), 6,34:1. Entao `primary` e superficie e traco (barra do item ativo, borda de
+  foco) e `primary-strong` e tudo que carrega texto (fundo de botao, link, rotulo). O
+  `ElevatedButton` do tema Flutter ja e pintado com `primaryStrong` — a web so estava fora
+  de linha.
+- **Do** usar `text-soft` (`#4B5563`) nos rotulos `label`/`fieldLabel` de 10-11px. O
+  `text-dim` (`#9CA3AF`) da 2,54:1 no branco e 2,21:1 no fundo tintado do login: reprova em
+  toda superficie do produto. `text-dim` so serve a estado desabilitado, isento pela norma.
 - **Do** deixar cards planos com borda de 1px.
 - **Do** manter 48dp de alvo minimo em botao e input.
 

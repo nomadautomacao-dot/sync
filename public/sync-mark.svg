@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <radialGradient id="markGlow" cx="78%" cy="22%" r="92%">
+      <stop offset="0%" stop-color="#3a3f4c" />
+      <stop offset="42%" stop-color="#14151a" />
+      <stop offset="100%" stop-color="#050505" />
+    </radialGradient>
+    <filter id="markLight" x="-25%" y="-25%" width="170%" height="170%">
+      <feGaussianBlur stdDeviation="0.8" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect x="1.5" y="1.5" width="125" height="125" rx="20" fill="url(#markGlow)" stroke="#313847" />
+
+  <g filter="url(#markLight)" transform="translate(0 1)">
+    <line x1="28" y1="64" x2="44" y2="64" stroke="#ffffff" stroke-width="1.2" stroke-linecap="round" opacity="0.45" />
+    <line x1="55" y1="64" x2="79" y2="64" stroke="#ffffff" stroke-width="1.4" stroke-linecap="round" />
+    <path d="M 42 46 L 80 64 L 42 82" fill="none" stroke="#ffffff" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" />
+    <path d="M 42 46 L 52 64 L 42 82" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round" />
+    <circle cx="52" cy="64" r="4.8" fill="#14151a" stroke="#ffffff" stroke-width="1.6" />
+    <circle cx="52" cy="64" r="1.4" fill="#ffffff" />
+  </g>
+</svg>
