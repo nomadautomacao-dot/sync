@@ -63,9 +63,11 @@ export default function EntrarPage() {
     setEnviando(true);
     try {
       await signIn(email, senha);
-      // Sem `setEnviando(false)` no sucesso de propósito: o botão fica travado
-      // até a navegação levar esta tela embora, evitando um segundo submit.
-      router.replace(ROTA_POS_LOGIN);
+      // Sem `setEnviando(false)` e sem redirect aqui, de propósito. Quem navega
+      // é o `useEffect` acima, quando o `onAuthStateChanged` do provider
+      // preencher `user` — navegar antes disso faria a guarda de `(sync)` ver
+      // `user === null` e devolver para `/entrar`. Até lá o botão segue em
+      // "Entrando…": feedback honesto e trava contra um segundo submit.
     } catch (erro) {
       toast.error(mensagemDeErro(erro));
       setEnviando(false);
