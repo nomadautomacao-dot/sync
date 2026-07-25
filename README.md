@@ -27,30 +27,35 @@
 
 ## Arquitetura em uma frase
 
-O produto **é o app Flutter** — e está sendo migrado, tela a tela, para uma interface
-**React sob o próprio Next.js**. Nos dois casos a fonte de verdade é o **Firestore/Storage**,
-lido direto pelo cliente, e o **Next.js atua como BFF** para dados públicos de FUNDEB e
-geração de documentos. Enquanto a migração corre, as duas interfaces convivem na mesma
-origem: rotas React explícitas vencem o catch-all, e todo o resto continua sendo servido
-pelo bundle Flutter em `public/flutter-web/`.
+O produto **é a interface React sob o Next.js**. A fonte de verdade é o
+**Firestore/Storage**, lido direto pelo cliente, e o mesmo Next atua como **BFF** para dados
+públicos de FUNDEB e geração de documentos.
+
+O **app Flutter está trancado**: continua no repositório como referência para portar as telas
+que faltam, mas não é mais servido — o bundle em `public/flutter-web/` é bloqueado no
+`middleware.ts`.
 
 ```mermaid
 graph LR
-  A[App Flutter<br/>Web · Android<br/>maior parte do produto] -->|CRUD· auth| B[(Firestore<br/>+ Storage)]
-  R[UI React/Next<br/>/entrar · /painel<br/>em migração] -->|CRUD· auth| B
-  A -->|dados FUNDEB<br/>e PDFs| C[Next.js BFF<br/>app/api]
-  R -.->|Fases 4-5| C
+  R[UI React/Next<br/>rotas app/] -->|CRUD· auth| B[(Firestore<br/>+ Storage)]
+  R -->|dados FUNDEB<br/>e PDFs| C[Next.js BFF<br/>app/api]
   C -->|APIs públicas| D[IBGE · FNDE · INEP<br/>TSE · SICONFI · QEdu]
   C -->|ReportLab · Playwright| E[PDF / DOCX]
   B --> F[Cloud Functions v2<br/>motor de comissões]
+  L[App Flutter<br/>trancado · só consulta]:::legado -.->|código-fonte de<br/>referência| R
+  classDef legado fill:#F1F3F7,stroke:#9CA3AF,color:#6B7280,stroke-dasharray:4 3
 ```
 
 > **Estado da migração:** Fase 1 concluída — autenticação, shell e painel em React
-> (`/entrar`, `/painel`). As demais seções seguem no Flutter e aparecem na navegação React
-> marcadas como `LEGADO`, propositalmente não clicáveis: as duas interfaces **não
-> compartilham sessão**, e carregar `/flutter-web` derruba a sessão do lado React. O plano
-> completo, com as sete fases e os defeitos já corrigidos, está em
+> (`/entrar`, `/painel`). As outras seis seções aparecem na navegação marcadas `EM BREVE` e
+> abrem uma tela dizendo que ainda não foram migradas; cada uma dessas rotas é o arquivo que
+> a fase correspondente substitui. O plano completo, com as sete fases e os defeitos já
+> corrigidos, está em
 > [`docs/superpowers/plans/2026-07-24-migracao-flutter-para-next.md`](./docs/superpowers/plans/2026-07-24-migracao-flutter-para-next.md).
+
+> **Para comparar uma tela antiga durante a migração:**
+> `SYNC_FLUTTER_LEGADO=1 npm run dev:next` destranca `/flutter-web` — só fora de produção.
+> Sem a variável, qualquer acesso ao bundle antigo é redirecionado para a interface nova.
 
 ## Quick Start
 
@@ -61,18 +66,16 @@ npm install
 # 2. Configurar credenciais
 cp .env.example .env.local   # preencher com as credenciais reais
 
-# 3. Rodar backend + Flutter Web
+# 3. Rodar o app
 npm run dev
 ```
 
-Outros modos: `npm run dev:next` (só a API, porta 3100),
-`bash sync_flutter/run_local.sh --no-flutter` (só backend), `--rebuild-web` (reconstrói o
-bundle em `public/flutter-web/`) e `--kill` (encerra tudo).
+`npm run dev` sobe o Next na porta 3100 — interface e API no mesmo processo. A aplicação
+abre em `/entrar`.
 
-> **Linux desktop não é um alvo suportado.** O app depende de Firebase Auth, Firestore e
-> Storage, e o FlutterFire não tem implementação para Linux — nenhum plugin `firebase_*`
-> registra para essa plataforma, então o binário compila mas morre no
-> `Firebase.initializeApp` antes de abrir a janela. Use Web ou Android.
+Outros modos: `npm run dev:next` (idêntico, nome explícito) e
+`SYNC_FLUTTER_LEGADO=1 npm run dev` (destranca o app Flutter antigo em `/flutter-web` para
+consulta durante a migração).
 
 > `.env.example` cobre apenas a configuração do Firebase. As integrações opcionais
 > (`QEDU_TOKEN`, `SUPABASE_*`, e `DATABASE_URL`/`DIRECT_URL` do Postgres legado) precisam ser

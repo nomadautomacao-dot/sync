@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "bash sync_flutter/run_local.sh --web",
+    "dev": "next dev -p 3100",
     "dev:next": "next dev -p 3100",
     "build": "next build",
     "start": "next start",
@@ -26,8 +26,7 @@
     "supabase:reset": "npm run supabase:bootstrap && npm run supabase:clean",
     "dev:flutter:web": "cd sync_flutter && /home/AdrielT87/sync_tooling/flutter/bin/flutter run -d chrome --dart-define=SYNC_API_BASE_URL=http://localhost:3100",
     "dev:flutter:web:prod": "cd sync_flutter && /home/AdrielT87/sync_tooling/flutter/bin/flutter run -d chrome --dart-define=SYNC_API_BASE_URL=https://sync-app-621901234263.us-central1.run.app",
-    "dev:all": "bash sync_flutter/run_local.sh --web",
-    "dev:backend": "bash sync_flutter/run_local.sh --no-flutter",
+    "dev:legado:flutter": "bash sync_flutter/run_local.sh --web",
     "build:flutter:web": "cd sync_flutter && /home/AdrielT87/sync_tooling/flutter/bin/flutter build web --release --base-href /flutter-web/ --dart-define=SYNC_API_BASE_URL=https://sync-app-621901234263.us-central1.run.app && rm -rf ../public/flutter-web && cp -r build/web ../public/flutter-web",
     "build:flutter:web:local": "cd sync_flutter && /home/AdrielT87/sync_tooling/flutter/bin/flutter build web --release --base-href /flutter-web/ --dart-define=SYNC_API_BASE_URL=http://localhost:3100 && rm -rf ../public/flutter-web && cp -r build/web ../public/flutter-web",
     "build:apk": "cd sync_flutter && /home/AdrielT87/sync_tooling/flutter/bin/flutter build apk --release --dart-define=SYNC_API_BASE_URL=https://sync-app-621901234263.us-central1.run.app",
