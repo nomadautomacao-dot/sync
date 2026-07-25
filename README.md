@@ -67,6 +67,10 @@ bundle em `public/flutter-web/`) e `--kill` (encerra tudo).
 > (`QEDU_TOKEN`, `SUPABASE_*`, e `DATABASE_URL`/`DIRECT_URL` do Postgres legado) precisam ser
 > adicionadas manualmente ao `.env.local`.
 
+> As telas React (`/entrar`, `/painel`) leem a config do Firebase em tempo de build do
+> bundle: as seis `NEXT_PUBLIC_FIREBASE_*` do `.env.example` precisam estar no `.env.local`,
+> senão o SDK web falha no boot e a tela não carrega. As rotas de API não dependem delas.
+
 ## Stack
 
 | Camada | Tecnologia |
