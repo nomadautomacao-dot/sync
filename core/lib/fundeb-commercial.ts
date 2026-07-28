@@ -14,8 +14,14 @@ export function buildCensoEscolarFromInep(record: InepCensoMunicipalRecord | nul
     return createEmptyCensoEscolar();
   }
 
-  // FUNDEB/QEdu alignment: prioritize Rede Pública (Municipal + Estadual) totals 
+  // FUNDEB/QEdu alignment: prioritize Rede Pública (Municipal + Estadual) totals
   // to match the standard QEdu "Visão Geral" that clients use as benchmark.
+  //
+  // ATENÇÃO: estes três totais são da rede PÚBLICA, enquanto `matriculasEtapa`
+  // logo abaixo é MUNICIPAL. Misturar os dois recortes sob um rótulo só já fez
+  // um relatório publicar 8.112 matrículas "municipais" (eram 6.942) e dividir
+  // a receita do FUNDEB por essa base, subestimando o recurso por aluno em 14%.
+  // Quem consome deve escolher o recorte explicitamente.
   const totalEscolas = record.escolasPublicasTotal ?? record.escolasMunicipaisTotal ?? record.escolasTotal;
   const totalMatriculas = record.matriculasPublicasTotal ?? record.matriculasMunicipaisTotal ?? record.matriculasBasicaTotal;
   const totalDocentes = record.docentesPublicosTotal ?? record.docentesMunicipaisTotal ?? record.docentesTotal;
@@ -63,9 +69,12 @@ export function buildCensoEscolarFromInep(record: InepCensoMunicipalRecord | nul
     totalEscolas,
     totalMatriculas,
     totalDocentes,
-    fonte: "INEP/Censo Escolar consolidado — rede municipal",
+    totalEscolasMunicipais: record.escolasMunicipaisTotal ?? null,
+    totalMatriculasMunicipais: record.matriculasMunicipaisTotal ?? null,
+    totalDocentesMunicipais: record.docentesMunicipaisTotal ?? null,
+    fonte: "INEP/Censo Escolar consolidado — rede pública (municipal + estadual)",
     anoReferencia: record.anoReferencia,
-    recorte: "municipal",
+    recorte: "publica",
     matriculasEtapa: {
       educacaoInfantil,
       ensinoFundamental,

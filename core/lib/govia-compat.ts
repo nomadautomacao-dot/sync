@@ -19,6 +19,7 @@ import { getQeduMunicipalApiSnapshot } from "@/core/lib/qedu-api";
 import { getSiconfiFiscalRecord } from "@/core/lib/siconfi-fiscal";
 import { getSimecObrasRecord } from "@/core/lib/simec-obras";
 import { getValorAlunoAno } from "@/core/lib/fundeb-valor-aluno";
+import { getEquidadeMunicipal } from "@/core/lib/inep-equidade";
 
 interface IbgeMunicipioResponse {
   id: number;
@@ -859,6 +860,11 @@ function buildRelatorioDirigidoBase({
       caixaEquivalentes: siconfiFiscal.caixaEquivalentes,
       patrimonioLiquido: siconfiFiscal.patrimonioLiquido,
     } : { disponivel: false },
+    /**
+     * Cor/raça e localização diferenciada da rede. Leitura local, sem rede —
+     * ver `core/lib/inep-equidade.ts` para por que isto condiciona o FUNDEB.
+     */
+    equidade: getEquidadeMunicipal(ident.codigoIBGE),
     perfilIBGE: ibgeIndicators ? {
       disponivel: true,
       populacaoEstimada: ibgeIndicators.populacaoEstimada,
@@ -1004,6 +1010,9 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
           return {
             ano: entry.ano,
             metaProjetada: apiEntry?.metaProjetada ?? entry.meta,
+            // O INEP só projetou metas por rede até 2021; de lá para cá o que
+            // existe é a referência nacional. Quem exibe precisa distinguir.
+            metaOrigem: apiEntry?.metaProjetada != null ? ("municipal" as const) : ("nacional" as const),
             idebVerificado: apiEntry?.idebVerificado ?? (entry.ano === effectiveAnoRef ? effectiveLocal : null),
           };
         });
@@ -1016,6 +1025,7 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
           return {
             ano: entry.ano,
             metaProjetada: entry.meta,
+            metaOrigem: "nacional" as const,
             idebVerificado: localEntry?.ideb ?? (entry.ano === localAnoRef ? localVerificado : null),
           };
         });
@@ -1025,6 +1035,7 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
       return metasNacionais.anosIniciais.map((entry) => ({
         ano: entry.ano,
         metaProjetada: entry.meta,
+        metaOrigem: "nacional" as const,
         idebVerificado: entry.ano === localAnoRef ? localVerificado : null,
       }));
     })(),
@@ -1047,6 +1058,9 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
           return {
             ano: entry.ano,
             metaProjetada: apiEntry?.metaProjetada ?? entry.meta,
+            // O INEP só projetou metas por rede até 2021; de lá para cá o que
+            // existe é a referência nacional. Quem exibe precisa distinguir.
+            metaOrigem: apiEntry?.metaProjetada != null ? ("municipal" as const) : ("nacional" as const),
             idebVerificado: apiEntry?.idebVerificado ?? (entry.ano === effectiveAnoRef ? effectiveLocal : null),
           };
         });
@@ -1059,6 +1073,7 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
           return {
             ano: entry.ano,
             metaProjetada: entry.meta,
+            metaOrigem: "nacional" as const,
             idebVerificado: localEntry?.ideb ?? (entry.ano === localAnoRef ? localVerificado : null),
           };
         });
@@ -1068,6 +1083,7 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
       return metasNacionais.anosFinais.map((entry) => ({
         ano: entry.ano,
         metaProjetada: entry.meta,
+        metaOrigem: "nacional" as const,
         idebVerificado: entry.ano === localAnoRef ? localVerificado : null,
       }));
     })(),
@@ -1089,6 +1105,9 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
           return {
             ano: entry.ano,
             metaProjetada: apiEntry?.metaProjetada ?? entry.meta,
+            // O INEP só projetou metas por rede até 2021; de lá para cá o que
+            // existe é a referência nacional. Quem exibe precisa distinguir.
+            metaOrigem: apiEntry?.metaProjetada != null ? ("municipal" as const) : ("nacional" as const),
             idebVerificado: apiEntry?.idebVerificado ?? (entry.ano === effectiveAnoRef ? effectiveLocal : null),
           };
         });
@@ -1098,6 +1117,7 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
       return metasNacionais.ensinoMedio.map((entry) => ({
         ano: entry.ano,
         metaProjetada: entry.meta,
+        metaOrigem: "nacional" as const,
         idebVerificado: entry.ano === localAnoRef ? localVerificado : null,
       }));
     })(),

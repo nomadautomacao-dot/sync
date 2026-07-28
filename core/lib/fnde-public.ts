@@ -508,14 +508,14 @@ export async function getFndePublicEnrichment(params: {
   const sigarpEntityDescription = sigarpResumo?.prefeitura?.NO_RAZAO_SOCIAL
     ? `Entidade localizada: ${sigarpResumo.prefeitura.NO_RAZAO_SOCIAL}.`
     : sigarpResumo?.fundoEducacao?.NO_RAZAO_SOCIAL
-    ? `Fundo/entidade de educacao localizado: ${sigarpResumo.fundoEducacao.NO_RAZAO_SOCIAL}.`
+    ? `Fundo/entidade de educação localizado: ${sigarpResumo.fundoEducacao.NO_RAZAO_SOCIAL}.`
     : "";
   const sigarpStatus = sigarpDisponivel
-    ? `Consulta publica disponivel no FNDE. ${sigarpEntityDescription}`.trim()
-    : "Consulta publica nao respondeu nesta tentativa.";
+    ? `Consulta pública disponível no FNDE. ${sigarpEntityDescription}`.trim()
+    : "Consulta pública não respondeu nesta tentativa.";
   const sigpcStatus = sigpcDisponivel
-    ? "Consulta publica de prestacao de contas disponivel no FNDE."
-    : "Consulta publica nao respondeu nesta tentativa.";
+    ? "Consulta pública de prestação de contas disponível no FNDE."
+    : "Consulta pública não respondeu nesta tentativa.";
 
   const sistemas: SistemaHabilitacao[] = [
     {
@@ -574,7 +574,7 @@ export async function getFndePublicEnrichment(params: {
   observacoes.push(...sigarpCaminhoEscola.observacoes);
 
   const situacaoPAR = parDisponivel
-    ? "Portal institucional do PAR localizado no FNDE. Status operacional detalhado do ente depende de credencial e validacao documental."
+    ? "Portal institucional do PAR localizado no FNDE. Status operacional detalhado do ente depende de credencial e validação documental."
     : "Pagina publica institucional do PAR nao respondeu nesta tentativa; status detalhado segue dependente de credencial.";
 
   const fontes = [

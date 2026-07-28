@@ -24,13 +24,90 @@ export interface LevantamentoPayload {
   educacao?: Record<string, unknown> | null;
   fiscal?: {
     situacao_lrf?: string | null;
+    /**
+     * Receita **realizada** do RREO — execução acumulada até o bimestre da
+     * entrega, não o exercício fechado. Não confundir com RCL: o denominador
+     * dos limites da LRF é `siconfi.rcl_ajustada`.
+     */
     receita_total?: number | null;
     despesa_pessoal?: number | null;
     pib_per_capita?: number | null;
     historico_repasses?: Array<Record<string, unknown>> | null;
-    siconfi?: Record<string, unknown> | null;
+    /**
+     * Bloco fiscal oficial do SICONFI. É a fonte de verdade dos limites da
+     * LRF: o percentual e os limites vêm calculados na própria entrega RGF e
+     * não devem ser recalculados aqui.
+     */
+    siconfi?: {
+      ano_referencia?: number | null;
+      rcl?: number | null;
+      rcl_ajustada?: number | null;
+      despesa_pessoal_total?: number | null;
+      percentual_despesa_pessoal?: number | null;
+      limite_maximo_pessoal?: number | null;
+      limite_prudencial_pessoal?: number | null;
+      limite_alerta_pessoal?: number | null;
+      espaco_fiscal_pessoal?: number | null;
+      receita_total_realizada?: number | null;
+    } | null;
   } | null;
   fontes_utilizadas?: unknown[] | null;
+  /**
+   * Blocos já derivados pelo backend. O template **consome** estes valores em
+   * vez de recalcular: duplicar a regra aqui foi o que produziu um cenário de
+   * estruturação 3,4× maior que o do motor e um recurso por aluno 14% menor.
+   */
+  relatorio_dirigido_base?: {
+    equidade?: {
+      anoCenso?: number;
+      municipal?: {
+        total?: number;
+        branca?: number;
+        preta?: number;
+        parda?: number;
+        amarela?: number;
+        indigena?: number;
+        naoDeclarada?: number;
+      } | null;
+      escolas?: {
+        municipaisTotal?: number;
+        municipaisRurais?: number;
+        municipaisTerraIndigena?: number;
+        municipaisQuilombolas?: number;
+        municipaisAssentamento?: number;
+        municipaisEducacaoIndigena?: number;
+      } | null;
+      negraMunicipal?: number;
+      naoDeclaradaPct?: number | null;
+      cadastroFragil?: boolean;
+    } | null;
+    perfilIBGE?: {
+      /** O IBGE devolve o ano como texto; não assuma número. */
+      pibAnoReferencia?: string | number | null;
+      populacaoUltimoCenso?: number | null;
+      populacaoAnoReferencia?: string | null;
+    } | null;
+    /** Receita FUNDEB ÷ matrículas **municipais** — a base correta por aluno. */
+    recursosPorAluno?: {
+      valor?: number | null;
+      receitaBase?: number | null;
+      totalAlunosMunicipais?: number | null;
+      anoReferencia?: number | null;
+    } | null;
+    cenarioEstruturacao?: {
+      anoAlvo?: number | null;
+      baseAtual?: Record<string, number> | null;
+      metas?: Record<string, number> | null;
+      ganhosMatriculas?: Record<string, number> | null;
+      impactoFinanceiroIndicativo?: {
+        minimo?: number | null;
+        maximo?: number | null;
+        basePorMatricula?: number | null;
+      } | null;
+      leituraExecutiva?: string | null;
+      frentes?: string[] | null;
+    } | null;
+  } | null;
 }
 
 export interface LevantamentoTemplateInput {
@@ -46,6 +123,38 @@ const NBSP = "\u00a0";
 
 function num(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+/**
+ * Recorte municipal da rede — a base de qualquer conta de FUNDEB.
+ *
+ * `censoEscolar.total*` carrega a rede **pública** (municipal + estadual),
+ * mantida para comparação com o QEdu. O fundo municipal remunera só a rede
+ * municipal, então dividir a receita por matrícula pública subestima o
+ * recurso por aluno. Em Canindé de São Francisco a diferença era de 14%:
+ * R$ 11.107,99 impressos contra R$ 12.980,12 reais.
+ *
+ * `recursosPorAluno` já vem calculado pelo backend; recalcular aqui só
+ * reintroduz a chance de usar o denominador errado.
+ */
+function redeMunicipal(i: LevantamentoTemplateInput) {
+  const censo = i.relatorio.censoEscolar;
+  const perfil = i.relatorio.perfilComercial;
+  const derivado = i.payload?.relatorio_dirigido_base;
+
+  const matriculas = num(perfil?.matriculasMunicipais) || num(censo?.totalMatriculasMunicipais);
+  const escolas = num(perfil?.escolasMunicipais) || num(censo?.totalEscolasMunicipais);
+  const docentes = num(censo?.totalDocentesMunicipais);
+
+  return {
+    matriculas,
+    escolas,
+    docentes,
+    anoCenso: censo?.anoReferencia ?? null,
+    recursoAluno:
+      num(derivado?.recursosPorAluno?.valor) ||
+      (matriculas > 0 ? i.relatorio.receitas.totalReceitas / matriculas : 0),
+  };
 }
 
 /** `R$ 128.516.949,21` — usado em tabela, onde o centavo importa. */
@@ -101,6 +210,88 @@ function esc(value: unknown): string {
 }
 
 /** Texto ausente vira travessão — nunca um zero que finge ser dado. */
+/**
+ * `perfil.faixa` é sentinela comparada em código (`=== "padrao"`), então o
+ * acento entra só na exibição — renomear o valor quebraria a regra de negócio.
+ */
+function rotuloFaixa(faixa: unknown): string {
+  const mapa: Record<string, string> = {
+    padrao: "padrão",
+    conservador: "conservador",
+    agressivo: "agressivo",
+  };
+  const chave = String(faixa ?? "").trim();
+  return esc(mapa[chave] ?? chave);
+}
+
+/**
+ * Composição da rede por cor/raça e condições que a portaria do FUNDEB pondera
+ * acima da matrícula urbana comum: campo, terra indígena e remanescente de
+ * quilombo. Declarar errado no Censo custa receita no exercício seguinte.
+ *
+ * Quando a não declaração é alta, a distribuição descreve o preenchimento do
+ * Censo e não os alunos — nesse caso o bloco diz isso em vez de deixar o
+ * leitor concluir que o município não tem alunos negros ou indígenas.
+ */
+function blocoEquidade(i: LevantamentoTemplateInput): string {
+  const eq = i.payload?.relatorio_dirigido_base?.equidade;
+  const m = eq?.municipal;
+  const total = num(m?.total);
+  if (!eq || total === 0) return "";
+
+  const esc2 = eq.escolas;
+  const pctDe = (valor: unknown) => pct(share(num(valor), total));
+  const negra = num(eq.negraMunicipal);
+  const naoDecl = num(eq.naoDeclaradaPct);
+
+  const condicoes = (
+    [
+      ["Escolas no campo", num(esc2?.municipaisRurais)],
+      ["Escolas em terra indígena", num(esc2?.municipaisTerraIndigena)],
+      ["Escolas quilombolas", num(esc2?.municipaisQuilombolas)],
+      ["Escolas em assentamento", num(esc2?.municipaisAssentamento)],
+      ["Escolas de educação indígena", num(esc2?.municipaisEducacaoIndigena)],
+    ] satisfies Array<[string, number]>
+  ).filter(([, valor]) => valor > 0);
+
+  return `
+    <div class="sec-label">Equidade e condições de ponderação &middot; Censo ${ou(eq.anoCenso, "—")}</div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Matrícula por cor/raça &middot; rede municipal</h3>
+        ${barras([
+          { nome: "Parda", valor: num(m?.parda), rotulo: pctDe(m?.parda) },
+          { nome: "Branca", valor: num(m?.branca), rotulo: pctDe(m?.branca) },
+          { nome: "Preta", valor: num(m?.preta), rotulo: pctDe(m?.preta) },
+          { nome: "Indígena", valor: num(m?.indigena), rotulo: pctDe(m?.indigena) },
+          { nome: "Amarela", valor: num(m?.amarela), rotulo: pctDe(m?.amarela) },
+          { nome: "Não declarada", valor: num(m?.naoDeclarada), rotulo: pctDe(m?.naoDeclarada) },
+        ])}
+        <p class="micro" style="margin-top:.05in">População negra (preta + parda): <b>${int(negra)}</b>
+        matrículas, ${pct(share(negra, total))} da rede.${
+          eq.cadastroFragil
+            ? ` <b>Atenção:</b> ${pct(naoDecl)} da rede está sem cor/raça declarada no Censo &mdash;
+              acima desse patamar a distribuição mede o preenchimento do formulário, não a composição dos alunos.`
+            : ""
+        }</p>
+      </div>
+      <div class="card">
+        <h3>Condições que pesam na ponderação</h3>
+        ${
+          condicoes.length
+            ? `<table class="tb">${condicoes
+                .map(([rotulo, valor]) => `<tr><td>${rotulo}</td><td class="r"><b>${int(valor)}</b></td></tr>`)
+                .join("")}<tr><td>Total de escolas municipais</td><td class="r">${int(esc2?.municipaisTotal)}</td></tr></table>`
+            : `<p class="micro">Nenhuma escola municipal declarada em campo, terra indígena, quilombo ou assentamento.</p>`
+        }
+        <p class="micro" style="margin-top:.05in">A portaria do FUNDEB pondera matrícula de campo, indígena e
+        quilombola acima da urbana comum. Condição não declarada no Censo é receita não recebida no exercício
+        seguinte &mdash; e a correção só vale a partir do próximo levantamento.</p>
+      </div>
+    </div>
+`;
+}
+
 function ou(value: unknown, fallback = "—"): string {
   if (value == null) return fallback;
   const s = String(value).trim();
@@ -353,7 +544,7 @@ function paginaSumario(i: LevantamentoTemplateInput): string {
         <h3>Leitura executiva</h3>
         <p style="font-size:8.2pt;line-height:1.45;color:#33454f">
         &bull; Gestor identificado na base atual: <span class="strong">${ou(id.prefeito)}${id.partido && id.partido !== "Nao informado" ? ` (${esc(id.partido)})` : ""}</span>.<br>
-        &bull; Habilitação VAAT: <span class="strong">${ou(perfil?.habilitacaoVaat, "não informada")}</span> para o cálculo do exercício.<br>
+        &bull; Habilitação VAAT no exercício ${id.exercicio}: <span class="strong">${ou(perfil?.habilitacaoVaat, "não informada")}</span>.<br>
         &bull; VAAR atual: <span class="strong">R$ ${brl(rec.complementacaoVAAR)}</span>${vaarZerado ? " &mdash; o município não captura a complementação de resultado." : "."}<br>
         &bull; Vetores de trabalho: condicionalidades de desempenho e regularidade informacional para VAAR.</p>
       </div>
@@ -375,7 +566,7 @@ function paginaSumario(i: LevantamentoTemplateInput): string {
     <div class="note mt-1">
       <p style="font-size:7.8pt;line-height:1.38"><span class="strong" style="color:#584416">Nota de método:</span>
       a estimativa ${id.exercicio + 1} usa benchmark comercial Global Company${
-        perfil ? ` (cenário ${esc(perfil.faixa)}, score ${perfil.score.toFixed(2)})` : ""
+        perfil ? ` (cenário ${rotuloFaixa(perfil.faixa)}, score ${perfil.score.toFixed(2)})` : ""
       } e inclui potencial prospectivo de VAAR condicionado a condicionalidades e desempenho. Os valores projetados têm caráter
       estimativo e dependem de validação documental nas bases oficiais FUNDEB e MEC/FNDE.</p>
     </div>
@@ -410,6 +601,12 @@ function paginaReceita(i: LevantamentoTemplateInput): string {
   const fiscal = i.payload?.fiscal;
   const populacao = num(demo?.populacao);
   const perfil = r.perfilComercial;
+  const anoPib = String(i.payload?.relatorio_dirigido_base?.perfilIBGE?.pibAnoReferencia ?? "").trim();
+  const rclAjustada = num(fiscal?.siconfi?.rcl_ajustada) || num(fiscal?.siconfi?.rcl);
+  // `censoEscolar.totalMatriculas` é da rede **pública** (municipal + estadual)
+  // apesar do rótulo da fonte dizer "municipal". O recorte municipal correto
+  // é o do perfil comercial — é ele que divide a receita do FUNDEB municipal.
+  const matriculasMunicipais = num(perfil?.matriculasMunicipais);
 
   const linhas: Array<[string, number, boolean]> = [
     ["Contribuição do município", rec.receitaContribuicaoMunicipal, false],
@@ -462,9 +659,9 @@ function paginaReceita(i: LevantamentoTemplateInput): string {
         <div class="sec-label">Perfil IBGE</div>
         <div class="grid-2" style="gap:.1in">
           ${kpi("População", populacao > 0 ? int(populacao) : "—", `estimativa ${ou(demo?.populacao_ano_referencia, "—")}`)}
-          ${kpi("PIB per capita", num(fiscal?.pib_per_capita) > 0 ? `R$ ${int(fiscal?.pib_per_capita)}` : "—", "IBGE Cidades")}
-          ${kpi("Receita corrente líquida", num(fiscal?.receita_total) > 0 ? brlCompact(fiscal?.receita_total) : "—", "SICONFI")}
-          ${kpi("Matrículas municipais", int(r.censoEscolar?.totalMatriculas), "Censo Escolar INEP")}
+          ${kpi("PIB per capita", num(fiscal?.pib_per_capita) > 0 ? `R$ ${int(fiscal?.pib_per_capita)}` : "—", `IBGE Cidades${anoPib ? ` &middot; ${esc(anoPib)}` : ""}`)}
+          ${kpi("Receita corrente líquida", rclAjustada > 0 ? brlCompact(rclAjustada) : "—", "SICONFI &middot; RGF")}
+          ${kpi("Matrículas municipais", matriculasMunicipais > 0 ? int(matriculasMunicipais) : "—", "Censo Escolar INEP &middot; rede municipal")}
         </div>
         ${kpi(
           "FUNDEB per capita",
@@ -539,7 +736,7 @@ function paginaProjecao(i: LevantamentoTemplateInput): string {
       <p style="font-size:7.9pt;line-height:1.4">A estimativa mostra uma leitura possível do próximo ciclo a
       partir da receita atual, do histórico e dos pontos de conferência do FUNDEB &mdash; ela <b>não
       substitui a validação nas bases oficiais</b>.${
-        perfil ? ` Referência: benchmark comercial Global Company (${esc(perfil.faixa)}), score ${perfil.score.toFixed(2)}, com potencial prospectivo de VAAR condicionado a condicionalidades e desempenho.` : ""
+        perfil ? ` Referência: benchmark comercial Global Company (${rotuloFaixa(perfil.faixa)}), score ${perfil.score.toFixed(2)}, com potencial prospectivo de VAAR condicionado a condicionalidades e desempenho.` : ""
       }</p>
     </div>
 
@@ -592,6 +789,7 @@ function paginaSerie(i: LevantamentoTemplateInput): string {
   const r = i.relatorio;
   const id = r.identificacao;
   const municipio = `${id.municipioNome} — ${id.uf}`;
+  const rede = redeMunicipal(i);
   const serie = serieHistorica(i);
 
   if (!serie.length) {
@@ -619,8 +817,8 @@ function paginaSerie(i: LevantamentoTemplateInput): string {
 
     <div class="grid-3">
       ${kpi(`Receita ${primeiro.ano} → ${ultimo.ano}`, `+${brlCompact(ultimo.total - primeiro.total)}`, `de ${brlCompact(primeiro.total)} para ${brlCompact(ultimo.total)} (+${pct(variacaoTotal)})`, "up")}
-      ${kpi("Matrículas municipais", int(r.censoEscolar?.totalMatriculas), `Censo ${ou(r.censoEscolar?.anoReferencia, "—")}`)}
-      ${kpi("Unidades escolares", int(r.censoEscolar?.totalEscolas), "rede municipal")}
+      ${kpi("Matrículas municipais", rede.matriculas > 0 ? int(rede.matriculas) : "—", `Censo ${ou(rede.anoCenso, "—")} &middot; rede municipal`)}
+      ${kpi("Unidades escolares", rede.escolas > 0 ? int(rede.escolas) : "—", "rede municipal")}
     </div>
 
     <div class="card mt-2">
@@ -666,8 +864,9 @@ function paginaRede(i: LevantamentoTemplateInput): string {
   const censo = r.censoEscolar;
   const etapa = censo?.matriculasEtapa;
   const edu = (i.payload?.educacao ?? {}) as Record<string, unknown>;
-  const matriculas = num(censo?.totalMatriculas);
-  const recursoAluno = matriculas > 0 ? r.receitas.totalReceitas / matriculas : 0;
+  const rede = redeMunicipal(i);
+  const matriculas = rede.matriculas;
+  const recursoAluno = rede.recursoAluno;
 
   const porEtapa = barras([
     { nome: "Ensino Fundamental", valor: num(etapa?.ensinoFundamental), rotulo: int(etapa?.ensinoFundamental) },
@@ -691,10 +890,10 @@ function paginaRede(i: LevantamentoTemplateInput): string {
     <div class="kicker">Parte III &middot; A rede municipal em números</div>
 
     <div class="grid-4">
-      ${kpi("Unidades escolares", int(censo?.totalEscolas), "rede municipal")}
-      ${kpi("Matrículas municipais", int(matriculas), `Censo ${ou(censo?.anoReferencia ?? edu.censo_ano, "—")}`)}
-      ${kpi("Docentes", num(censo?.totalDocentes) > 0 ? int(censo?.totalDocentes) : "—", "rede municipal")}
-      ${kpi("Recurso por aluno", recursoAluno > 0 ? `R$ ${brl(recursoAluno)}` : "—", "receita &divide; matrículas", "up")}
+      ${kpi("Unidades escolares", rede.escolas > 0 ? int(rede.escolas) : "—", "rede municipal")}
+      ${kpi("Matrículas municipais", matriculas > 0 ? int(matriculas) : "—", `Censo ${ou(rede.anoCenso ?? edu.censo_ano, "—")} &middot; rede municipal`)}
+      ${kpi("Docentes", rede.docentes > 0 ? int(rede.docentes) : "—", "rede municipal")}
+      ${kpi("Recurso por aluno", recursoAluno > 0 ? `R$ ${brl(recursoAluno)}` : "—", "receita FUNDEB &divide; matrículas municipais", "up")}
     </div>
 
     <div class="grid-2 mt-2">
@@ -703,7 +902,9 @@ function paginaRede(i: LevantamentoTemplateInput): string {
         ${porEtapa}
         <p class="micro" style="margin-top:.05in">Detalhe: creche ${int(edu.matriculas_creche)} &middot; pré-escola ${int(edu.matriculas_pre_escola)} &middot;
         anos iniciais ${int(edu.matriculas_fundamental_ai)} &middot; anos finais ${int(edu.matriculas_fundamental_af)}.
-        Ensino Médio (${int(edu.matriculas_ensino_medio_total)}) é rede estadual/federal e não compõe o FUNDEB municipal.</p>
+        Ensino Médio (${int(edu.matriculas_ensino_medio_total)}) é rede estadual/federal e não compõe o FUNDEB municipal.
+        Fundamental, Infantil e EJA somam o total da rede; educação especial é recorte transversal e já está
+        contada nas etapas &mdash; por isso as quatro barras somam mais que ${int(matriculas)}.</p>
       </div>
       <div class="card">
         <h3>Distribuição da rede por segmento</h3>
@@ -713,9 +914,11 @@ function paginaRede(i: LevantamentoTemplateInput): string {
       </div>
     </div>
 
+    ${blocoEquidade(i)}
+
     <div class="sec-label">Leitura do valor por aluno</div>
     <div class="grid-3">
-      ${kpi("Recurso real por aluno", recursoAluno > 0 ? `R$ ${brl(recursoAluno)}` : "—", "receita FUNDEB &divide; matrículas")}
+      ${kpi("Recurso real por aluno", recursoAluno > 0 ? `R$ ${brl(recursoAluno)}` : "—", "receita FUNDEB &divide; matrículas municipais")}
       ${kpi("Matrículas em EJA", int(etapa?.eja), "modalidade com expansão possível")}
       ${kpi("Educação especial", int(etapa?.educacaoEspecial), "maior ponderação no fundo", "up")}
     </div>
@@ -751,6 +954,7 @@ function paginaIdeb(i: LevantamentoTemplateInput): string {
     const meta = num(dado.metaProjetada);
     const gap = observado - meta;
     const abaixo = meta > 0 && gap < 0;
+    const metaNacional = dado.metaOrigem === "nacional";
     return `<div class="card" style="border-left:.045in solid var(--${abaixo ? "gold" : "teal"})">
       <em style="font-style:normal;color:var(--muted);font-size:6.8pt;font-weight:800;letter-spacing:.09em;text-transform:uppercase">${titulo}</em>
       <div style="display:flex;align-items:baseline;gap:.12in;margin-top:.04in">
@@ -761,11 +965,15 @@ function paginaIdeb(i: LevantamentoTemplateInput): string {
                 abaixo ? "&#9888; " : ""
               }${gap >= 0 ? "+" : "&minus;"}${Math.abs(gap).toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })} ${
                 abaixo ? "abaixo" : "acima"
-              } da meta (${meta.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })})</span>`
+              } da ${metaNacional ? "referência nacional" : "meta"} (${meta.toLocaleString("pt-BR", { minimumFractionDigits: 1, maximumFractionDigits: 1 })})</span>`
             : ""
         }
       </div>
-      <p class="micro" style="margin-top:.04in">Referência ${dado.ano} &middot; rede municipal</p>
+      <p class="micro" style="margin-top:.04in">Referência ${dado.ano} &middot; rede municipal${
+        metaNacional
+          ? " &middot; o INEP projetou metas por rede apenas até 2021; o parâmetro acima é a referência nacional"
+          : ""
+      }</p>
     </div>`;
   };
 
@@ -867,9 +1075,28 @@ function paginaFiscal(i: LevantamentoTemplateInput): string {
   const id = r.identificacao;
   const municipio = `${id.municipioNome} — ${id.uf}`;
   const fiscal = i.payload?.fiscal;
-  const rcl = num(fiscal?.receita_total);
-  const pessoal = num(fiscal?.despesa_pessoal);
-  const percentual = rcl > 0 ? (pessoal / rcl) * 100 : 0;
+  const siconfi = fiscal?.siconfi;
+
+  /**
+   * Os limites da LRF são medidos contra a **RCL ajustada**, não contra a
+   * receita realizada. Recalcular a razão aqui já produziu 158,55% para um
+   * município que está em 52,89%: a despesa de pessoal do RGF cobre 12 meses
+   * e a receita realizada do RREO cobre só os bimestres entregues.
+   *
+   * O percentual e os limites vêm calculados na própria entrega RGF e são a
+   * autoridade legal — este template exibe, não deriva.
+   */
+  const rcl = num(siconfi?.rcl_ajustada) || num(siconfi?.rcl);
+  const pessoal = num(siconfi?.despesa_pessoal_total) || num(fiscal?.despesa_pessoal);
+  const percentual = num(siconfi?.percentual_despesa_pessoal);
+  const temPercentual = percentual > 0;
+  // Fallback nos valores da LRF para o Executivo municipal, usados só quando a
+  // entrega não traz os limites.
+  const limiteMaximo = num(siconfi?.limite_maximo_pessoal) || 54;
+  const limitePrudencial = num(siconfi?.limite_prudencial_pessoal) || 51.3;
+  const espacoFiscal = temPercentual ? limiteMaximo - percentual : 0;
+  const receitaRealizada = num(siconfi?.receita_total_realizada) || num(fiscal?.receita_total);
+  const anoFiscal = num(siconfi?.ano_referencia);
   const situacao = String(fiscal?.situacao_lrf ?? "");
   const acima = /acima/i.test(situacao);
   const pdde = r.pdde ?? [];
@@ -883,7 +1110,7 @@ function paginaFiscal(i: LevantamentoTemplateInput): string {
     ${
       situacao
         ? `<div class="status ${acima ? "bad" : "good"}"><span class="dot"></span> Status LRF: ${esc(situacao)}${
-            rcl > 0 ? ` (${pct(percentual, 2)} da RCL)` : ""
+            temPercentual ? ` (${pct(percentual, 2)} da RCL ajustada)` : ""
           }</div>`
         : `<div class="status good"><span class="dot"></span> Status LRF: sem pendência registrada nas bases consultadas</div>`
     }
@@ -891,18 +1118,19 @@ function paginaFiscal(i: LevantamentoTemplateInput): string {
     <div class="grid-2 mt-1">
       <div>
         <table class="tb">
-          <tr><th>Indicador fiscal &middot; SICONFI</th><th class="r">Valor</th></tr>
-          <tr><td>Receita Corrente Líquida (RCL)</td><td class="r">${rcl > 0 ? `R$ ${brl(rcl)}` : "—"}</td></tr>
-          <tr><td>Despesa com pessoal</td><td class="r">${pessoal > 0 ? `R$ ${brl(pessoal)}` : "—"}</td></tr>
-          <tr><td>% pessoal / RCL</td><td class="r">${
-            rcl > 0 ? `<b style="color:var(--${acima ? "red" : "good"})">${pct(percentual, 2)}</b>` : "—"
+          <tr><th>Indicador fiscal &middot; SICONFI${anoFiscal > 0 ? ` ${anoFiscal}` : ""}</th><th class="r">Valor</th></tr>
+          <tr><td>Receita Corrente Líquida ajustada</td><td class="r">${rcl > 0 ? `R$ ${brl(rcl)}` : "—"}</td></tr>
+          <tr><td>Despesa com pessoal <span class="micro">(12 meses)</span></td><td class="r">${pessoal > 0 ? `R$ ${brl(pessoal)}` : "—"}</td></tr>
+          <tr><td>% pessoal / RCL ajustada</td><td class="r">${
+            temPercentual ? `<b style="color:var(--${acima ? "red" : "good"})">${pct(percentual, 2)}</b>` : "—"
           }</td></tr>
-          <tr><td>Limite máximo &middot; prudencial</td><td class="r">54,00% &middot; 51,30%</td></tr>
-          <tr><td>Espaço fiscal</td><td class="r">${
-            rcl > 0
-              ? `<b style="color:var(--${percentual > 54 ? "red" : "good"})">${percentual > 54 ? "&minus;" : "+"}${pct(Math.abs(54 - percentual), 2)}</b>`
+          <tr><td>Limite máximo &middot; prudencial</td><td class="r">${pct(limiteMaximo, 2)} &middot; ${pct(limitePrudencial, 2)}</td></tr>
+          <tr><td>Espaço fiscal até o limite</td><td class="r">${
+            temPercentual
+              ? `<b style="color:var(--${espacoFiscal < 0 ? "red" : "good"})">${espacoFiscal < 0 ? "&minus;" : "+"}${pct(Math.abs(espacoFiscal), 2)}</b>`
               : "—"
           }</td></tr>
+          <tr><td>Receita realizada <span class="micro">(execução parcial)</span></td><td class="r">${receitaRealizada > 0 ? `R$ ${brl(receitaRealizada)}` : "—"}</td></tr>
           <tr><td>PIB per capita</td><td class="r">${num(fiscal?.pib_per_capita) > 0 ? `R$ ${brl(fiscal?.pib_per_capita)}` : "—"}</td></tr>
         </table>
       </div>
@@ -943,29 +1171,44 @@ function paginaCenario(i: LevantamentoTemplateInput): string {
   const municipio = `${id.municipioNome} — ${id.uf}`;
   const etapa = r.censoEscolar?.matriculasEtapa;
   const edu = (i.payload?.educacao ?? {}) as Record<string, unknown>;
-  const matriculas = num(r.censoEscolar?.totalMatriculas);
-  const recursoAluno = matriculas > 0 ? r.receitas.totalReceitas / matriculas : 0;
+  const rede = redeMunicipal(i);
+  const matriculas = rede.matriculas;
+  const recursoAluno = rede.recursoAluno;
 
   /**
-   * Metas de estruturação. As razões vêm do modelo de referência: EJA e tempo
-   * integral são as frentes de maior elasticidade, educação especial a de menor.
+   * O cenário vem do motor (`cenarioEstruturacao`), não deste template.
+   *
+   * A versão anterior multiplicava a base por fatores fixos — EJA × 7,4,
+   * tempo integral × 5,1 — aplicados a qualquer município. Em Canindé de São
+   * Francisco isso projetava 6.237 matrículas em jornada integral, 90% de toda
+   * a rede municipal em um ano, e uma faixa de receita 3,4× maior que a
+   * calculada pelo backend. Número irreal em proposta comercial custa a
+   * credibilidade do documento inteiro.
    */
+  const cenario = i.payload?.relatorio_dirigido_base?.cenarioEstruturacao;
+  const baseAtual = cenario?.baseAtual ?? {};
+  const metas = cenario?.metas ?? {};
+  const ganhos = cenario?.ganhosMatriculas ?? {};
+
   const frentes = [
-    { nome: "EJA", base: num(etapa?.eja), fator: 7.4 },
-    { nome: "Tempo integral", base: num(edu.matriculas_tempo_integral), fator: 5.1 },
-    { nome: "Educação especial", base: num(etapa?.educacaoEspecial), fator: 1.6 },
+    { nome: "EJA", chave: "eja" },
+    { nome: "Tempo integral", chave: "integral" },
+    { nome: "Educação especial", chave: "educacaoEspecial" },
   ].map((f) => {
-    const meta = Math.round(f.base * f.fator);
-    return { ...f, meta, ganho: Math.max(0, meta - f.base) };
+    const base = num(baseAtual[f.chave]);
+    const meta = num(metas[f.chave]);
+    return { ...f, base, meta, ganho: num(ganhos[f.chave]) || Math.max(0, meta - base) };
   });
 
+  const temCenario = frentes.some((f) => f.meta > 0);
   const totalBase = frentes.reduce((s, f) => s + f.base, 0);
   const totalMeta = frentes.reduce((s, f) => s + f.meta, 0);
-  const totalGanho = frentes.reduce((s, f) => s + f.ganho, 0);
+  const totalGanho = num(ganhos.total) || frentes.reduce((s, f) => s + f.ganho, 0);
 
-  // Faixa indicativa: 40% a 60% do ganho de matrícula monetizado no exercício.
-  const faixaBaixa = totalGanho * recursoAluno * 0.4;
-  const faixaAlta = totalGanho * recursoAluno * 0.6;
+  const impacto = cenario?.impactoFinanceiroIndicativo;
+  const faixaBaixa = num(impacto?.minimo);
+  const faixaAlta = num(impacto?.maximo);
+  const basePorMatricula = num(impacto?.basePorMatricula) || recursoAluno;
 
   return `<section class="page content-page">
   ${cabecalho(municipio, `Parte V · Cenário ${id.exercicio + 1}`)}
@@ -991,9 +1234,18 @@ function paginaCenario(i: LevantamentoTemplateInput): string {
     </div>
 
     <div class="kpi hero mt-2"><em>Faixa indicativa de receita adicional &middot; se a reestruturação for bem executada</em>
-      <b>${brlCompact(faixaBaixa)} &ndash; ${brlCompact(faixaAlta)}</b>
-      <span>base de cálculo: R$ ${brl(recursoAluno)} por matrícula &middot; caráter estimativo, sujeito a validação documental</span>
+      <b>${temCenario && faixaAlta > 0 ? `${brlCompact(faixaBaixa)} &ndash; ${brlCompact(faixaAlta)}` : "—"}</b>
+      <span>${
+        temCenario && faixaAlta > 0
+          ? `${int(totalGanho)} matrículas &times; R$ ${brl(basePorMatricula)} por matrícula, monetizadas entre 40% e 60% no exercício
+             &middot; caráter estimativo, sujeito a validação documental`
+          : "Cenário não calculado para este município — as bases do Censo não permitiram projetar as frentes."
+      }</span>
     </div>
+
+    <p class="micro mt-1">Esta faixa mede só o efeito de <b>mais matrícula</b> na rede. Ela não se soma nem
+    substitui a estimativa da Parte I, que projeta o efeito de <b>correção das complementações</b> da União
+    (VAAT e VAAR): são dois mecanismos distintos sobre a mesma receita, e cada um tem sua própria validação.</p>
 
     <div class="sec-label">Frentes de atuação</div>
     <div class="grid-2">

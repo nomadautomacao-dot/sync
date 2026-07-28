@@ -96,6 +96,11 @@ COPY --from=builder /app/data/fnde ./data/fnde
 # core/lib/municipal-profile/emprego.ts).
 COPY --from=builder /app/data/caged-municipios.json ./data/caged-municipios.json
 
+# Copy the school-census equity dataset (cor/raça, indigenous, quilombola and
+# rural schools). Built offline from INEP microdata — see
+# scripts/dados/gerar-equidade-censo-municipal.mjs.
+COPY --from=builder /app/data/inep-equidade-municipal.json ./data/inep-equidade-municipal.json
+
 # Set permissions
 RUN chown -R nextjs:nodejs /app
 

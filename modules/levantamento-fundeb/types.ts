@@ -86,14 +86,38 @@ export interface IDEBDado {
   ano: number;
   metaProjetada: number | null;
   idebVerificado: number | null;
+  /**
+   * Procedência da meta.
+   *
+   * O INEP projetou metas por rede **apenas até 2021** — o ciclo do IDEB
+   * encerrou ali e a edição de 2023 saiu sem metas estipuladas. Quando não há
+   * meta municipal, cai-se na referência nacional, e o relatório precisa
+   * dizer isso: apresentar 6,0 como "a meta do município" é afirmar um
+   * compromisso que o INEP não publicou.
+   */
+  metaOrigem?: "municipal" | "nacional" | null;
 }
 
 export interface CensoEscolar {
+  /**
+   * Totais da rede **pública** (municipal + estadual). É o recorte que o QEdu
+   * usa na "Visão Geral", mantido aqui para o cliente conseguir comparar.
+   *
+   * Não use estes campos em conta de FUNDEB: o fundo municipal remunera a
+   * rede municipal, e dividir a receita municipal por matrícula pública
+   * subestima o recurso por aluno. Para isso existem os campos `*Municipais`
+   * logo abaixo — e `matriculasEtapa`, que já é municipal.
+   */
   totalEscolas: number;
   totalMatriculas: number;
   totalDocentes: number;
+  /** Recorte municipal — a base correta para qualquer divisão por aluno. */
+  totalEscolasMunicipais: number | null;
+  totalMatriculasMunicipais: number | null;
+  totalDocentesMunicipais: number | null;
   fonte: string;
   anoReferencia: number | null;
+  /** Refere-se a `totalEscolas`/`totalMatriculas`/`totalDocentes`. */
   recorte: "publica" | "municipal" | "total";
   matriculasEtapa: {
     educacaoInfantil: number;
