@@ -2,16 +2,6 @@ import populacaoCenso2022 from "@/data/ibge-populacao-2022.json";
 
 const populacaoDataset = populacaoCenso2022 as Record<string, number>;
 
-function slugifyMunicipio(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/['']/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
 function parseBrazilianNumber(value: string | null | undefined) {
   if (!value) {
     return null;
@@ -53,72 +43,6 @@ function parseApiNumber(value: string | null | undefined) {
   const cleaned = trimmed.replace(/[^\d.-]/g, "");
   const parsed = Number(cleaned);
   return Number.isFinite(parsed) ? parsed : null;
-}
-
-function decodeHtml(value: string) {
-  return value
-    .replace(/&ccedil;/gi, "c")
-    .replace(/&atilde;/gi, "a")
-    .replace(/&aacute;/gi, "a")
-    .replace(/&acirc;/gi, "a")
-    .replace(/&eacute;/gi, "e")
-    .replace(/&ecirc;/gi, "e")
-    .replace(/&iacute;/gi, "i")
-    .replace(/&oacute;/gi, "o")
-    .replace(/&ocirc;/gi, "o")
-    .replace(/&otilde;/gi, "o")
-    .replace(/&uacute;/gi, "u")
-    .replace(/&uuml;/gi, "u")
-    .replace(/&sup2;/gi, "2")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&[^;]+;/g, " ")
-    .replace(/<[^>]+>/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function stripAccents(value: string) {
-  return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-}
-
-function extractIndicators(html: string) {
-  const indicators = new Map<string, { value: string; unit: string; year: string }>();
-
-  // Split HTML into individual <li> blocks — each indicator is inside one <li>
-  const liBlocks = html.split(/<li[^>]*>/);
-  for (const block of liBlocks) {
-    // Extract label from <div class='ind-label'>...<p>LABEL</p></div>
-    const labelMatch = block.match(/<div class='ind-label'>[\s\S]*?<p>(.*?)<\/p><\/div>/);
-    if (!labelMatch) continue;
-    const label = decodeHtml(labelMatch[1]);
-
-    // Extract year from <small>...[YEAR]</small>
-    const yearMatch = block.match(/<small>[\s\S]*?\[(.*?)\]<\/small>/);
-    if (!yearMatch) continue;
-    const year = decodeHtml(yearMatch[1]);
-
-    // Extract value and optional unit from <p class='ind-value'>VALUE<span class='indicador-unidade'>UNIT</span>
-    const withUnitMatch = block.match(/<p class='ind-value'>(.*?)<span class='indicador-unidade'>(.*?)<\/span>/);
-    if (withUnitMatch) {
-      indicators.set(label, {
-        value: decodeHtml(withUnitMatch[1]),
-        unit: decodeHtml(withUnitMatch[2]),
-        year,
-      });
-    } else {
-      // No unit span (e.g. IDHM): <p class='ind-value'>VALUE<small>
-      const noUnitMatch = block.match(/<p class='ind-value'>([^<]*?)<small>/);
-      if (noUnitMatch) {
-        indicators.set(label, {
-          value: decodeHtml(noUnitMatch[1]),
-          unit: "",
-          year,
-        });
-      }
-    }
-  }
-
-  return indicators;
 }
 
 export interface IbgeCidadeIndicators {
@@ -314,62 +238,6 @@ async function fetchFromSidraApi(codigoIBGE: string): Promise<Partial<IbgeCidade
 }
 
 // ---------------------------------------------------------------------------
-// HTML scraper (existing logic, kept as fallback)
-// ---------------------------------------------------------------------------
-
-async function fetchFromHtmlScraper(
-  municipioNome: string,
-  uf: string,
-): Promise<IbgeCidadeIndicators | null> {
-  const slug = slugifyMunicipio(municipioNome);
-  const url = `https://www.ibge.gov.br/cidades-e-estados/${uf.toLowerCase()}/${slug}.html`;
-  const response = await fetch(url, {
-    headers: {
-      "User-Agent": "Mozilla/5.0",
-    },
-    next: { revalidate: 60 * 60 * 24 * 7 },
-  });
-
-  if (!response.ok) {
-    return null;
-  }
-
-  const html = await response.text();
-  const indicators = extractIndicators(html);
-  const entries = Array.from(indicators.entries());
-  const findIndicator = (...fragments: string[]) =>
-    entries.find(([label]) => {
-      const normalizedLabel = stripAccents(label).toLowerCase();
-      return fragments.every((fragment) => normalizedLabel.includes(stripAccents(fragment).toLowerCase()));
-    })?.[1];
-
-  const estimada = findIndicator("Populacao estimada");
-  const ultimoCenso = findIndicator("Populacao no ultimo censo");
-  const receitas = findIndicator("Total de receitas brutas realizadas");
-  const escolarizacao = findIndicator("Escolarizacao", "6 a 14 anos");
-  const pibPerCapita = findIndicator("PIB per capita");
-  const idhm = findIndicator("idhm");
-  const mortalidadeInfantil = findIndicator("Mortalidade infantil");
-  const areaTerritorial = findIndicator("Area Territorial");
-
-  const result: IbgeCidadeIndicators = {
-    populacaoEstimada: parseBrazilianNumber(estimada?.value),
-    populacaoAnoReferencia: estimada?.year ?? ultimoCenso?.year ?? null,
-    populacaoUltimoCenso: parseBrazilianNumber(ultimoCenso?.value),
-    receitasBrutasMunicipais: parseBrazilianNumber(receitas?.value),
-    receitasAnoReferencia: receitas?.year ?? null,
-    escolarizacao614: parseBrazilianNumber(escolarizacao?.value),
-    pibPerCapita: parseBrazilianNumber(pibPerCapita?.value),
-    pibAnoReferencia: pibPerCapita?.year ?? null,
-    areaTerritorial: parseBrazilianNumber(areaTerritorial?.value),
-  };
-
-  // Check if the scraper actually found data (SPA may return empty HTML shell)
-  const hasData = result.populacaoEstimada != null || result.populacaoUltimoCenso != null;
-  return hasData ? result : null;
-}
-
-// ---------------------------------------------------------------------------
 // Merge helper: fills nulls in `base` with values from `patch`
 // ---------------------------------------------------------------------------
 
@@ -452,21 +320,10 @@ export async function getIbgeCidadeIndicators(
       }
     }
 
-    // -----------------------------------------------------------------------
-    // Step 3: Fall back to HTML scraper (may work if IBGE changes back to SSR)
-    // -----------------------------------------------------------------------
-    try {
-      const scraperResult = await fetchFromHtmlScraper(municipioNome, uf);
-      if (scraperResult) {
-        console.info(`[ibge] HTML scraper OK para ${municipioNome}/${uf}`);
-        return scraperResult;
-      }
-    } catch (error) {
-      console.warn(
-        `[ibge] Scraping failed for ${municipioNome}/${uf}:`,
-        error instanceof Error ? error.message : error,
-      );
-    }
+    // O scraper de `ibge.gov.br/cidades-e-estados` foi removido: o IBGE passou
+    // a responder 403 a qualquer User-Agent (bot protection), então o passo só
+    // custava uma ida à rede antes de falhar. Mortalidade infantil e IDHM, que
+    // vinham de lá, agora saem do coletor de saúde do Perfil Municipal.
 
     // -----------------------------------------------------------------------
     // Step 4: Fall back to local population dataset

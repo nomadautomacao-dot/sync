@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,200..600,0..1,-25..0&amp;display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: #E8E7EF; -webkit-font-smoothing: antialiased; }
+  a { color: #16181D; text-decoration: none; }
+  a:hover { color: #4A4E5A; }
+  @keyframes gsRise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @keyframes gsGlow { 0%, 100% { opacity: .55; } 50% { opacity: .9; } }
+</style>
+</helmet>
+
+<div style="font-family: 'Instrument Sans', sans-serif; background: linear-gradient(175deg, #EFEDF4 0%, #E9E6F0 30%, #E6E4EC 60%, #ECEAF1 100%); min-height: 100vh; overflow: hidden; position: relative;">
+
+  <sc-if value="{{ brilho }}" hint-placeholder-val="{{ true }}">
+    <div style="position: absolute; top: 620px; left: -180px; width: 520px; height: 26px; background: linear-gradient(90deg, transparent, #F5A3B5, #F7C77E, transparent); filter: blur(26px); animation: gsGlow 6s ease-in-out infinite; pointer-events: none;"></div>
+    <div style="position: absolute; top: 560px; right: -160px; width: 480px; height: 22px; background: linear-gradient(90deg, transparent, #93B8F2, #C9A6EF, transparent); filter: blur(24px); animation: gsGlow 7s ease-in-out infinite; pointer-events: none;"></div>
+    <div style="position: absolute; top: 40px; left: 30%; width: 620px; height: 340px; background: radial-gradient(ellipse, rgba(255,255,255,.85), transparent 65%); pointer-events: none;"></div>
+  </sc-if>
+
+  <!-- NAV -->
+  <div style="display: flex; justify-content: center; padding: 26px 40px 0; position: relative; z-index: 5;">
+    <div style="width: 880px; height: 56px; background: rgba(255,255,255,.82); backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,.9); border-radius: 40px; box-shadow: 0 10px 30px rgba(22,24,29,.07); display: flex; align-items: center; padding: 0 10px 0 22px; gap: 8px; animation: gsRise .5s ease-out both;">
+      <div style="display: flex; align-items: center; gap: 9px; flex: none;">
+        <img src="assets/gs-icon.png" alt="Global Sync" style="width: 24px; height: 24px;">
+        <div style="font-size: 15px; font-weight: 700; letter-spacing: -.4px; color: #16181D;">global sync</div>
+      </div>
+      <div style="flex: 1;"></div>
+      <div style="display: flex; align-items: center; gap: 4px;">
+        <div style="padding: 8px 13px; border-radius: 20px; font-size: 13px; font-weight: 500; color: #3B3F4A; cursor: pointer; transition: background .15s ease;" style-hover="background: rgba(22,24,29,.06);">Soluções</div>
+        <div style="padding: 8px 13px; border-radius: 20px; font-size: 13px; font-weight: 500; color: #3B3F4A; cursor: pointer; transition: background .15s ease;" style-hover="background: rgba(22,24,29,.06);">Produto</div>
+        <div style="padding: 8px 13px; border-radius: 20px; font-size: 13px; font-weight: 500; color: #3B3F4A; cursor: pointer; transition: background .15s ease;" style-hover="background: rgba(22,24,29,.06);">Empresa</div>
+        <div style="padding: 8px 13px; border-radius: 20px; font-size: 13px; font-weight: 500; color: #3B3F4A; cursor: pointer; transition: background .15s ease;" style-hover="background: rgba(22,24,29,.06);">Docs</div>
+        <div style="padding: 8px 13px; border-radius: 20px; font-size: 13px; font-weight: 500; color: #3B3F4A; cursor: pointer; transition: background .15s ease;" style-hover="background: rgba(22,24,29,.06);">Suporte</div>
+      </div>
+      <div style="flex: 1;"></div>
+      <div style="height: 38px; background: #16181D; border-radius: 24px; display: flex; align-items: center; padding: 0 18px; font-size: 13px; font-weight: 600; color: #FFFFFF; cursor: pointer; flex: none; transition: background .18s ease;" style-hover="background: #2C2F38;">Agendar demo</div>
+    </div>
+  </div>
+
+  <!-- HERO -->
+  <div style="display: flex; flex-direction: column; align-items: center; text-align: center; padding: 72px 40px 0; position: relative; z-index: 4;">
+    <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; letter-spacing: 1.6px; color: #6E7280; text-transform: uppercase; animation: gsRise .5s .05s ease-out both;">Consultoria educacional · FUNDEB</div>
+    <div style="height: 18px;"></div>
+    <h1 style="margin: 0; font-size: 54px; font-weight: 700; letter-spacing: -2.4px; line-height: 1.08; color: #16181D; max-width: 760px; text-wrap: balance; animation: gsRise .5s .1s ease-out both;">Levantamentos que fecham contratos, prontos em minutos</h1>
+    <div style="height: 20px;"></div>
+    <p style="margin: 0; font-size: 15px; line-height: 1.6; color: #5A5E6A; max-width: 520px; text-wrap: pretty; animation: gsRise .5s .15s ease-out both;">Diagnóstico financeiro automático de qualquer município, pipeline comercial e kits documentais da Lei 14.133/21 — tudo numa plataforma feita para consultorias educacionais.</p>
+    <div style="height: 30px;"></div>
+    <div style="height: 48px; background: #16181D; border-radius: 28px; display: flex; align-items: center; gap: 9px; padding: 0 26px; cursor: pointer; box-shadow: 0 16px 32px rgba(22,24,29,.22); animation: gsRise .5s .2s ease-out both; transition: background .18s ease;" style-hover="background: #2C2F38;">
+      <div style="font-size: 15px; font-weight: 600; color: #FFFFFF;">Agendar demonstração</div>
+      <span style="font-family: 'Material Symbols Outlined'; font-size: 18px; color: #FFFFFF;">arrow_forward</span>
+    </div>
+    <div style="height: 56px;"></div>
+    <div style="font-size: 12.5px; color: #838792; animation: gsRise .5s .25s ease-out both;">Conectado às bases públicas oficiais. Dados sempre auditáveis.</div>
+    <div style="height: 16px;"></div>
+    <div style="display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; animation: gsRise .5s .3s ease-out both;">
+      <sc-for list="{{ fontes }}" as="f" hint-placeholder-count="6">
+        <div style="height: 36px; background: rgba(255,255,255,.9); border: 1px solid rgba(255,255,255,1); border-radius: 20px; box-shadow: 0 4px 14px rgba(22,24,29,.06); display: flex; align-items: center; gap: 7px; padding: 0 16px;">
+          <div style="width: 8px; height: 8px; border-radius: 3px; background: {{ f.cor }};"></div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: #2C2F38;">{{ f.nome }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- SCREENSHOT FLUTUANTE -->
+  <div style="display: flex; justify-content: center; padding: 44px 40px 90px; position: relative; z-index: 3;">
+    <div style="width: 1040px; background: rgba(255,255,255,.72); border: 1px solid rgba(255,255,255,.95); border-radius: 22px; padding: 10px; box-shadow: 0 40px 90px rgba(22,24,29,.16); animation: gsRise .6s .35s ease-out both;">
+      <div style="background: #FFFFFF; border: 1px solid #ECEDF2; border-radius: 14px; overflow: hidden; display: flex;">
+        <!-- mini sidebar -->
+        <div style="width: 176px; flex: none; border-right: 1px solid #F0F1F5; padding: 16px 12px; display: flex; flex-direction: column; gap: 2px;">
+          <div style="display: flex; align-items: center; gap: 7px; padding: 0 6px 14px;">
+            <img src="assets/gs-icon.png" alt="" style="width: 18px; height: 18px;">
+            <div style="font-size: 12.5px; font-weight: 700; letter-spacing: -.3px; color: #16181D;">global sync</div>
+          </div>
+          <div style="height: 32px; border-radius: 8px; background: #F2F1F7; display: flex; align-items: center; gap: 8px; padding: 0 9px; font-size: 12px; font-weight: 600; color: #16181D;"><span style="font-family: 'Material Symbols Outlined'; font-size: 15px; color: #16181D;">space_dashboard</span>Painel</div>
+          <div style="height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 9px; font-size: 12px; font-weight: 500; color: #767A86;"><span style="font-family: 'Material Symbols Outlined'; font-size: 15px; color: #A2A6B2;">track_changes</span>Pipeline</div>
+          <div style="height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 9px; font-size: 12px; font-weight: 500; color: #767A86;"><span style="font-family: 'Material Symbols Outlined'; font-size: 15px; color: #A2A6B2;">description</span>Levantamentos</div>
+          <div style="height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 9px; font-size: 12px; font-weight: 500; color: #767A86;"><span style="font-family: 'Material Symbols Outlined'; font-size: 15px; color: #A2A6B2;">apartment</span>Empresas</div>
+          <div style="height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 9px; font-size: 12px; font-weight: 500; color: #767A86;"><span style="font-family: 'Material Symbols Outlined'; font-size: 15px; color: #A2A6B2;">groups</span>Pessoas</div>
+          <div style="flex: 1; min-height: 60px;"></div>
+          <div style="height: 32px; display: flex; align-items: center; gap: 8px; padding: 0 9px; font-size: 12px; font-weight: 500; color: #767A86;"><span style="font-family: 'Material Symbols Outlined'; font-size: 15px; color: #A2A6B2;">tune</span>Ajustes</div>
+        </div>
+        <!-- mini main -->
+        <div style="flex: 1; min-width: 0; padding: 18px 20px; display: flex; flex-direction: column; gap: 14px;">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div style="font-size: 15px; font-weight: 700; letter-spacing: -.4px; color: #16181D;">Olá, Marcos Rocha!</div>
+            <div style="height: 30px; background: #16181D; border-radius: 18px; display: flex; align-items: center; padding: 0 13px; font-size: 11.5px; font-weight: 600; color: #FFFFFF;">Novo levantamento</div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1.5fr 1fr; gap: 12px;">
+            <div style="border: 1px solid #F0F1F5; border-radius: 12px; padding: 13px 14px;">
+              <div style="font-size: 11px; color: #767A86;">Municípios ativos</div>
+              <div style="height: 7px;"></div>
+              <div style="display: flex; align-items: baseline; gap: 4px;"><div style="font-family: 'IBM Plex Mono', monospace; font-size: 27px; font-weight: 600; letter-spacing: -1.4px; color: #16181D;">34</div><div style="font-size: 10.5px; color: #A2A6B2;">na carteira</div></div>
+              <div style="height: 8px;"></div>
+              <div style="font-size: 10.5px; color: #767A86;">12 com contrato vigente</div>
+            </div>
+            <div style="border: 1px solid #F0F1F5; border-radius: 12px; padding: 13px 14px;">
+              <div style="font-size: 11px; color: #767A86;">Distribuição do pipeline</div>
+              <div style="height: 12px;"></div>
+              <div style="display: flex; height: 10px; border-radius: 6px; overflow: hidden; gap: 2px;">
+                <div style="width: 34%; background: linear-gradient(90deg, #F5A3B5, #F7B99B);"></div>
+                <div style="width: 24%; background: linear-gradient(90deg, #F7C77E, #F5D89B);"></div>
+                <div style="width: 26%; background: linear-gradient(90deg, #8FD3B6, #A9DFC6);"></div>
+                <div style="width: 16%; background: linear-gradient(90deg, #93B8F2, #B5CDF6);"></div>
+              </div>
+              <div style="height: 12px;"></div>
+              <div style="display: flex; gap: 14px; font-size: 10.5px; color: #767A86;">
+                <div style="display: flex; align-items: center; gap: 5px;"><div style="width: 7px; height: 7px; border-radius: 2px; background: #F5A3B5;"></div>12 Contrato</div>
+                <div style="display: flex; align-items: center; gap: 5px;"><div style="width: 7px; height: 7px; border-radius: 2px; background: #F7C77E;"></div>8 Proposta</div>
+                <div style="display: flex; align-items: center; gap: 5px;"><div style="width: 7px; height: 7px; border-radius: 2px; background: #8FD3B6;"></div>9 Estudo</div>
+                <div style="display: flex; align-items: center; gap: 5px;"><div style="width: 7px; height: 7px; border-radius: 2px; background: #93B8F2;"></div>5 Contato</div>
+              </div>
+            </div>
+            <div style="border: 1px solid #F0F1F5; border-radius: 12px; padding: 13px 14px; background: linear-gradient(150deg, #FFFFFF 40%, #F3EEFB);">
+              <div style="font-size: 11px; color: #767A86;">Lucro projetado</div>
+              <div style="height: 7px;"></div>
+              <div style="display: flex; align-items: baseline; gap: 4px;"><div style="font-family: 'IBM Plex Mono', monospace; font-size: 27px; font-weight: 600; letter-spacing: -1.4px; color: #16181D;">4,82</div><div style="font-size: 12px; font-weight: 600; color: #16181D;">M</div></div>
+              <div style="height: 8px;"></div>
+              <div style="font-size: 10.5px; color: #767A86;">+12,4% vs. exercício 2025</div>
+            </div>
+          </div>
+          <div style="display: grid; grid-template-columns: 1.6fr 1fr; gap: 12px;">
+            <div style="border: 1px solid #F0F1F5; border-radius: 12px; padding: 13px 14px;">
+              <div style="display: flex; justify-content: space-between; align-items: baseline;"><div style="font-size: 12px; font-weight: 600; color: #16181D;">Últimos levantamentos</div><div style="font-size: 10.5px; color: #A2A6B2;">Ver todos</div></div>
+              <div style="height: 10px;"></div>
+              <sc-for list="{{ tarefas }}" as="t" hint-placeholder-count="4">
+                <div style="display: flex; align-items: center; gap: 10px; padding: 7px 0; border-top: 1px solid #F4F5F8;">
+                  <div style="width: 7px; height: 7px; border-radius: 50%; background: {{ t.cor }}; flex: none;"></div>
+                  <div style="flex: 1; min-width: 0; font-size: 11.5px; font-weight: 500; color: #2C2F38; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ t.titulo }}</div>
+                  <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #A2A6B2; flex: none;">{{ t.meta }}</div>
+                  <div style="font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; font-weight: 600; color: {{ t.chipTexto }}; background: {{ t.chipFundo }}; border-radius: 5px; padding: 2px 7px; flex: none;">{{ t.chip }}</div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="border: 1px solid #F0F1F5; border-radius: 12px; padding: 13px 14px;">
+              <div style="font-size: 12px; font-weight: 600; color: #16181D;">Status das bases</div>
+              <div style="height: 10px;"></div>
+              <sc-for list="{{ bases }}" as="b" hint-placeholder-count="4">
+                <div style="display: flex; align-items: center; justify-content: space-between; padding: 7px 0; border-top: 1px solid #F4F5F8;">
+                  <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 500; color: #2C2F38;">{{ b.nome }}</div>
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <div style="width: 54px; height: 5px; border-radius: 4px; background: #F0F1F5; overflow: hidden;"><div style="width: {{ b.pct }}; height: 100%; background: {{ b.grad }};"></div></div>
+                    <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #767A86; width: 30px; text-align: right;">{{ b.pct }}</div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- HUB -->
+  <div style="display: flex; flex-direction: column; align-items: center; text-align: center; padding: 30px 40px 0; position: relative; z-index: 2;">
+    <h2 style="margin: 0; font-size: 36px; font-weight: 700; letter-spacing: -1.5px; line-height: 1.12; color: #16181D; max-width: 620px; text-wrap: balance;">Todas as bases públicas, um único fluxo de trabalho</h2>
+    <div style="height: 14px;"></div>
+    <p style="margin: 0; font-size: 14px; line-height: 1.55; color: #5A5E6A; max-width: 440px;">O Global Sync cruza os dados oficiais e entrega o diagnóstico pronto — você cuida da relação com o gestor.</p>
+    <div style="height: 44px;"></div>
+    <div style="display: flex; align-items: center; gap: 56px;">
+      <div style="display: flex; flex-direction: column; gap: 18px; align-items: flex-end;">
+        <div style="height: 42px; background: #FFFFFF; border: 1px solid #ECEDF2; border-radius: 22px; box-shadow: 0 6px 18px rgba(22,24,29,.07); display: flex; align-items: center; gap: 8px; padding: 0 18px;"><div style="width: 9px; height: 9px; border-radius: 3px; background: #93B8F2;"></div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600; color: #2C2F38;">FNDE</div></div>
+        <div style="height: 42px; background: #FFFFFF; border: 1px solid #ECEDF2; border-radius: 22px; box-shadow: 0 6px 18px rgba(22,24,29,.07); display: flex; align-items: center; gap: 8px; padding: 0 18px; margin-right: 34px;"><div style="width: 9px; height: 9px; border-radius: 3px; background: #F5A3B5;"></div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600; color: #2C2F38;">INEP</div></div>
+        <div style="height: 42px; background: #FFFFFF; border: 1px solid #ECEDF2; border-radius: 22px; box-shadow: 0 6px 18px rgba(22,24,29,.07); display: flex; align-items: center; gap: 8px; padding: 0 18px;"><div style="width: 9px; height: 9px; border-radius: 3px; background: #F7C77E;"></div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600; color: #2C2F38;">IBGE</div></div>
+      </div>
+      <div style="height: 64px; background: #16181D; border-radius: 34px; display: flex; align-items: center; gap: 11px; padding: 0 28px; box-shadow: 0 22px 48px rgba(22,24,29,.28);">
+        <img src="assets/gs-icon.png" alt="" style="width: 26px; height: 26px;">
+        <div style="font-size: 18px; font-weight: 700; letter-spacing: -.5px; color: #FFFFFF;">global sync</div>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 18px; align-items: flex-start;">
+        <div style="height: 42px; background: #FFFFFF; border: 1px solid #ECEDF2; border-radius: 22px; box-shadow: 0 6px 18px rgba(22,24,29,.07); display: flex; align-items: center; gap: 8px; padding: 0 18px;"><div style="width: 9px; height: 9px; border-radius: 3px; background: #8FD3B6;"></div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600; color: #2C2F38;">SICONFI</div></div>
+        <div style="height: 42px; background: #FFFFFF; border: 1px solid #ECEDF2; border-radius: 22px; box-shadow: 0 6px 18px rgba(22,24,29,.07); display: flex; align-items: center; gap: 8px; padding: 0 18px; margin-left: 34px;"><div style="width: 9px; height: 9px; border-radius: 3px; background: #C9A6EF;"></div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600; color: #2C2F38;">TSE</div></div>
+        <div style="height: 42px; background: #FFFFFF; border: 1px solid #ECEDF2; border-radius: 22px; box-shadow: 0 6px 18px rgba(22,24,29,.07); display: flex; align-items: center; gap: 8px; padding: 0 18px;"><div style="width: 9px; height: 9px; border-radius: 3px; background: #F7B99B;"></div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600; color: #2C2F38;">QEdu</div></div>
+      </div>
+    </div>
+
+    <div style="height: 56px;"></div>
+    <div style="display: flex; gap: 18px; max-width: 1040px;">
+      <sc-for list="{{ pilares }}" as="p" hint-placeholder-count="3">
+        <div style="flex: 1; background: rgba(255,255,255,.85); border: 1px solid rgba(255,255,255,1); border-radius: 18px; padding: 22px; text-align: left; box-shadow: 0 14px 36px rgba(22,24,29,.08);">
+          <div style="width: 38px; height: 38px; border-radius: 12px; background: {{ p.iconeFundo }}; display: flex; align-items: center; justify-content: center;"><span style="font-family: 'Material Symbols Outlined'; font-size: 19px; color: #16181D;">{{ p.icone }}</span></div>
+          <div style="height: 14px;"></div>
+          <div style="font-size: 16px; font-weight: 700; letter-spacing: -.4px; color: #16181D;">{{ p.titulo }}</div>
+          <div style="height: 7px;"></div>
+          <div style="font-size: 13px; line-height: 1.55; color: #5A5E6A;">{{ p.texto }}</div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- DEPOIMENTO -->
+  <div style="display: flex; justify-content: center; padding: 110px 40px;">
+    <div style="display: flex; gap: 44px; align-items: center; max-width: 880px;">
+      <div style="flex: none; display: flex; flex-direction: column; gap: 12px;">
+        <div style="width: 180px; height: 180px; border-radius: 18px; background: repeating-linear-gradient(45deg, #DDDCE6, #DDDCE6 8px, #E6E5EE 8px, #E6E5EE 16px); border: 1px solid rgba(255,255,255,.9); display: flex; align-items: center; justify-content: center; text-align: center; padding: 14px;">
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: #767A86; line-height: 1.5;">foto do<br>fundador / cliente</div>
+        </div>
+        <div style="width: 180px; background: #FFFFFF; border: 1px solid #ECEDF2; border-radius: 14px; padding: 14px; box-shadow: 0 10px 26px rgba(22,24,29,.08);">
+          <div style="font-size: 10.5px; color: #767A86;">Receita em contratos</div>
+          <div style="height: 6px;"></div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 30px; font-weight: 600; letter-spacing: -1.6px; color: #16181D;">R$ 12M</div>
+          <div style="font-size: 10.5px; color: #A2A6B2;">/ano na carteira</div>
+        </div>
+      </div>
+      <div style="position: relative;">
+        <div style="position: absolute; right: -30px; bottom: -34px; font-size: 130px; font-weight: 700; color: rgba(255,255,255,.75); line-height: 1; pointer-events: none;">&rdquo;</div>
+        <p style="margin: 0; font-size: 19px; line-height: 1.6; color: #3B3F4A; letter-spacing: -.2px;"><strong style="color: #16181D;">O Global Sync mudou o jogo da prospecção.</strong> Antes, cada diagnóstico de município levava uma semana entre planilhas e portais. Hoje o levantamento sai em minutos, com dado oficial citável — e a proposta chega na mesa do prefeito antes do concorrente saber que a cidade existe.</p>
+        <div style="height: 18px;"></div>
+        <div style="font-size: 13px; font-weight: 600; color: #16181D;">Marcos Rocha <span style="font-weight: 400; color: #767A86;">— Diretor, Global Services Consultorias</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BENTO -->
+  <div style="display: flex; justify-content: center; padding: 0 40px 110px;">
+    <div style="width: 1100px; background: rgba(255,255,255,.6); border: 1px solid rgba(255,255,255,.95); border-radius: 26px; padding: 46px 42px; box-shadow: 0 30px 70px rgba(22,24,29,.1);">
+      <div style="text-align: center;">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; font-weight: 600; letter-spacing: 1.6px; color: #6E7280; text-transform: uppercase;">· Solução ·</div>
+        <div style="height: 12px;"></div>
+        <h2 style="margin: 0; font-size: 32px; font-weight: 700; letter-spacing: -1.3px; color: #16181D;">Consultoria FUNDEB, reinventada</h2>
+      </div>
+      <div style="height: 34px;"></div>
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;">
+        <sc-for list="{{ bentos }}" as="b" hint-placeholder-count="6">
+          <div style="background: {{ b.fundo }}; border: 1px solid rgba(255,255,255,.9); border-radius: 16px; padding: 20px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-family: 'Material Symbols Outlined'; font-size: 18px; color: #16181D;">{{ b.icone }}</span>
+              <div style="font-size: 14px; font-weight: 700; letter-spacing: -.3px; color: #16181D;">{{ b.titulo }}</div>
+            </div>
+            <div style="height: 8px;"></div>
+            <div style="font-size: 12.5px; line-height: 1.55; color: #4A4E5A;">{{ b.texto }}</div>
+            <div style="height: 14px;"></div>
+            <div style="background: rgba(255,255,255,.85); border: 1px solid rgba(255,255,255,1); border-radius: 10px; padding: 10px 12px; display: flex; align-items: center; justify-content: space-between;">
+              <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: .8px; color: #6E7280; text-transform: uppercase;">{{ b.metricaRotulo }}</div>
+              <div style="font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600; color: #16181D;">{{ b.metrica }}</div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+
+  <!-- CTA FINAL -->
+  <div style="display: flex; justify-content: center; gap: 80px; align-items: center; padding: 0 40px 100px;">
+    <h2 style="margin: 0; font-size: 34px; font-weight: 700; letter-spacing: -1.4px; line-height: 1.15; color: #16181D; max-width: 420px;">Feche o próximo município antes do concorrente</h2>
+    <div style="max-width: 320px;">
+      <p style="margin: 0; font-size: 13.5px; line-height: 1.6; color: #5A5E6A;">Diagnóstico, proposta e kit documental no mesmo fluxo. Comece pela demonstração guiada com um município real da sua região.</p>
+      <div style="height: 18px;"></div>
+      <div style="height: 46px; background: #16181D; border-radius: 26px; display: inline-flex; align-items: center; gap: 8px; padding: 0 24px; cursor: pointer; box-shadow: 0 14px 30px rgba(22,24,29,.2); transition: background .18s ease;" style-hover="background: #2C2F38;">
+        <div style="font-size: 14px; font-weight: 600; color: #FFFFFF;">Agendar demo</div>
+        <span style="font-family: 'Material Symbols Outlined'; font-size: 17px; color: #FFFFFF;">arrow_forward</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div style="position: relative; overflow: hidden; padding: 40px 60px 0;">
+    <div style="display: flex; justify-content: space-between; gap: 40px; max-width: 1100px; margin: 0 auto; padding-bottom: 90px; position: relative; z-index: 2;">
+      <div style="display: flex; flex-direction: column; gap: 10px; max-width: 220px;">
+        <img src="assets/gs-icon.png" alt="Global Sync" style="width: 26px; height: 26px;">
+        <div style="font-size: 12.5px; line-height: 1.55; color: #5A5E6A;">Nossa missão é dar à consultoria educacional o mesmo poder de dados do governo federal.</div>
+      </div>
+      <div style="display: flex; gap: 44px; font-size: 13px; color: #3B3F4A;">
+        <div style="display: flex; flex-direction: column; gap: 9px;"><div style="font-weight: 700; color: #16181D;">Produto</div><div style="cursor: pointer;" style-hover="color: #16181D;">Levantamentos</div><div style="cursor: pointer;" style-hover="color: #16181D;">Pipeline</div><div style="cursor: pointer;" style-hover="color: #16181D;">Kits documentais</div></div>
+        <div style="display: flex; flex-direction: column; gap: 9px;"><div style="font-weight: 700; color: #16181D;">Empresa</div><div style="cursor: pointer;" style-hover="color: #16181D;">Sobre</div><div style="cursor: pointer;" style-hover="color: #16181D;">Contato</div><div style="cursor: pointer;" style-hover="color: #16181D;">Trabalhe conosco</div></div>
+        <div style="display: flex; flex-direction: column; gap: 9px;"><div style="font-weight: 700; color: #16181D;">Recursos</div><div style="cursor: pointer;" style-hover="color: #16181D;">Documentação</div><div style="cursor: pointer;" style-hover="color: #16181D;">Lei 14.133/21</div><div style="cursor: pointer;" style-hover="color: #16181D;">Suporte</div></div>
+      </div>
+    </div>
+    <sc-if value="{{ rodapeGigante }}" hint-placeholder-val="{{ true }}">
+      <div style="text-align: center; font-size: 218px; font-weight: 700; letter-spacing: -10px; line-height: .72; color: rgba(255,255,255,.55); white-space: nowrap; pointer-events: none; margin-bottom: -50px; position: relative; z-index: 1;">globalsync</div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;brilho&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Efeitos&quot;}, &quot;rodapeGigante&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Efeitos&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      brilho: this.props.brilho ?? true,
+      rodapeGigante: this.props.rodapeGigante ?? true,
+      fontes: [
+        { nome: 'FNDE', cor: '#93B8F2' }, { nome: 'INEP', cor: '#F5A3B5' }, { nome: 'IBGE', cor: '#F7C77E' },
+        { nome: 'SICONFI', cor: '#8FD3B6' }, { nome: 'TSE', cor: '#C9A6EF' }, { nome: 'QEdu', cor: '#F7B99B' },
+      ],
+      tarefas: [
+        { titulo: 'Levantamento FUNDEB · Cristalina', meta: 'GO · v3', chip: 'em revisão', chipTexto: '#8A5A00', chipFundo: '#FBF0D9', cor: '#F7C77E' },
+        { titulo: 'Kit de inexigibilidade · Miradouro', meta: 'MG · 14 peças', chip: 'gerado', chipTexto: '#1F6A47', chipFundo: '#DFF2E7', cor: '#8FD3B6' },
+        { titulo: 'Proposta comercial · Sen. José Porfírio', meta: 'PA · v1', chip: 'aprovada', chipTexto: '#1F6A47', chipFundo: '#DFF2E7', cor: '#8FD3B6' },
+        { titulo: 'Raio-X · Senhor do Bonfim', meta: 'BA · 2026', chip: 'na fila', chipTexto: '#4A4E5A', chipFundo: '#EFEFF4', cor: '#A2A6B2' },
+      ],
+      bases: [
+        { nome: 'FNDE', pct: '100%', grad: 'linear-gradient(90deg, #93B8F2, #B5CDF6)' },
+        { nome: 'INEP', pct: '100%', grad: 'linear-gradient(90deg, #F5A3B5, #F7B99B)' },
+        { nome: 'SICONFI', pct: '82%', grad: 'linear-gradient(90deg, #F7C77E, #F5D89B)' },
+        { nome: 'IBGE', pct: '100%', grad: 'linear-gradient(90deg, #8FD3B6, #A9DFC6)' },
+      ],
+      pilares: [
+        { icone: 'query_stats', iconeFundo: 'linear-gradient(140deg, #FBE0E7, #FBE7DC)', titulo: 'Diagnóstico automático', texto: 'VAAT, matrículas, IDEB e repasses de qualquer um dos 5.570 municípios — cruzados e formatados em relatório citável.' },
+        { icone: 'track_changes', iconeFundo: 'linear-gradient(140deg, #FBF0D9, #FBE7DC)', titulo: 'Pipeline comercial B2G', texto: 'Da primeira visita ao contrato assinado: estágios, pendências e projeção de lucro por município, sempre visíveis.' },
+        { icone: 'gavel', iconeFundo: 'linear-gradient(140deg, #DDEBFA, #EAE2F8)', titulo: 'Kits da Lei 14.133/21', texto: 'As 14 peças da inexigibilidade geradas em lote, com os dados do levantamento já aplicados. Sem retrabalho jurídico.' },
+      ],
+      bentos: [
+        { icone: 'description', fundo: 'linear-gradient(150deg, #FBE9EE, #FBEFE7)', titulo: 'Levantamento dirigido', texto: 'Relatório financeiro por município, pronto para a mesa do gestor.', metricaRotulo: 'Tempo médio', metrica: '4 min' },
+        { icone: 'account_tree', fundo: 'linear-gradient(150deg, #FBF3DE, #FBEDE0)', titulo: 'Pipeline de cidades', texto: 'Kanban e tabela dos municípios, do contato ao contrato.', metricaRotulo: 'Estágios', metrica: '7' },
+        { icone: 'folder_zip', fundo: 'linear-gradient(150deg, #E4F4EC, #E9F5E4)', titulo: 'Kit documental', texto: 'Inexigibilidade completa gerada em lote, revisada por IA.', metricaRotulo: 'Peças', metrica: '14' },
+        { icone: 'forum', fundo: 'linear-gradient(150deg, #E2EDFA, #EAE7F8)', titulo: 'Comunicação com o gestor', texto: 'Histórico de contatos e aprovações por município, auditável.', metricaRotulo: 'Registro', metrica: '100%' },
+        { icone: 'sync', fundo: 'linear-gradient(150deg, #EEE7F9, #F7E7F2)', titulo: 'Bases sempre atualizadas', texto: 'FNDE, INEP, SICONFI, IBGE, TSE e QEdu sincronizados de madrugada.', metricaRotulo: 'Fontes', metrica: '6' },
+        { icone: 'payments', fundo: 'linear-gradient(150deg, #FBEBE2, #FBF2DC)', titulo: 'Comissões automáticas', texto: 'Motor de comissões calcula repasses do time a cada contrato.', metricaRotulo: 'Fechamento', metrica: 'D+1' },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

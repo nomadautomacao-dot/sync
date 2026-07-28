@@ -107,7 +107,7 @@ class _SyncFlutterAppState extends State<SyncFlutterApp> {
       animation: controller,
       builder: (context, _) {
         return MaterialApp(
-          title: 'PrimeOS',
+          title: 'Global Sync',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.themeData,
           home: controller.isBootstrapping
@@ -165,6 +165,10 @@ class AppController extends ChangeNotifier {
 
   Future<bool> signIn(String email, String password) async {
     if (email.trim().isEmpty || password.trim().isEmpty) {
+      // Sem limpar aqui, o erro da tentativa anterior sobrevive e a tela passa
+      // a acusar a causa errada (ex.: "senha incorreta" com o campo vazio).
+      _errorMessage = 'Preencha e-mail e senha para entrar.';
+      notifyListeners();
       return false;
     }
     try {
@@ -177,6 +181,25 @@ class AppController extends ChangeNotifier {
       _errorMessage = error.toString();
       notifyListeners();
       return false;
+    }
+  }
+
+  /// Dispara o e-mail de redefinicao. Devolve `null` em sucesso ou a mensagem
+  /// de erro para a tela exibir.
+  Future<String?> sendPasswordReset(String email) async {
+    try {
+      await _repository.sendPasswordReset(email);
+      return null;
+    } catch (error) {
+      return error.toString();
+    }
+  }
+
+  Future<void> setSessionPersistence({required bool keepSignedIn}) async {
+    try {
+      await _repository.setSessionPersistence(keepSignedIn: keepSignedIn);
+    } catch (_) {
+      // Preferencia de persistencia nao e critica para o login prosseguir.
     }
   }
 

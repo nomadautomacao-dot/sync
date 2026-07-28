@@ -14,9 +14,13 @@ export async function generateMunicipalXrayPdf(
     await page.setContent(htmlContent, { waitUntil: "networkidle" });
     await page.evaluate(() => document.fonts?.ready);
 
+    // 13 do núcleo (fiscal, FUNDEB, educação) + 7 do Perfil Municipal
+    // (saneamento, saúde, emprego, assistência, capacidade institucional,
+    // governança educacional, conformidade legal) + 2 do roteiro de campo.
+    const PAGINAS_ESPERADAS = 22;
     const pageCount = await page.locator("section.page").count();
-    if (pageCount !== 13) {
-      throw new Error(`O template do Raio-X gerou ${pageCount} páginas; eram esperadas 13.`);
+    if (pageCount !== PAGINAS_ESPERADAS) {
+      throw new Error(`O template do Raio-X gerou ${pageCount} páginas; eram esperadas ${PAGINAS_ESPERADAS}.`);
     }
 
     const pdfBytes = await page.pdf({

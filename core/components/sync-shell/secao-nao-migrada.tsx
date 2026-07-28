@@ -7,6 +7,12 @@ interface SecaoNaoMigradaProps {
   fase: number;
   /** O que a seção faz hoje no app Flutter, em uma frase. */
   resumo: string;
+  /**
+   * Conteúdo que a seção **já** oferece, apesar de não ter sido migrada.
+   * Renderiza abaixo do aviso. Usado por Ajustes, que ainda é placeholder mas
+   * já hospeda ferramentas de desenvolvimento.
+   */
+  children?: React.ReactNode;
 }
 
 /**
@@ -21,7 +27,7 @@ interface SecaoNaoMigradaProps {
  * pelo conteúdo real. Não é andaime esquecido: é o marcador do trabalho que
  * falta, e some quando a seção for portada.
  */
-export function SecaoNaoMigrada({ titulo, fase, resumo }: SecaoNaoMigradaProps) {
+export function SecaoNaoMigrada({ titulo, fase, resumo, children }: SecaoNaoMigradaProps) {
   return (
     <div className="mx-auto max-w-[560px] px-8 py-16">
       <p className="font-mono text-[10px] font-semibold uppercase tracking-[1.1px] text-soft">
@@ -38,9 +44,11 @@ export function SecaoNaoMigrada({ titulo, fase, resumo }: SecaoNaoMigradaProps) 
         </p>
       </div>
 
+      {children && <div className="mt-6">{children}</div>}
+
       <Link
         href="/painel"
-        className="mt-6 inline-flex h-11 items-center rounded-[10px] bg-primary-strong px-5 text-[15px] font-semibold text-white transition-colors hover:bg-primary-deep"
+        className="mt-6 inline-flex h-11 items-center bg-[#16181D] text-white rounded-[20px] hover:bg-[#2C2F38] px-5 text-[15px] font-semibold transition-colors"
       >
         Voltar ao painel
       </Link>

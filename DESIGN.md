@@ -1,167 +1,189 @@
 ---
 name: Global Sync
-description: Console operacional para consultoria FUNDEB. Direcao "Console Tecnico" — claro, denso e instrumental, com hierarquia construida por duas familias tipograficas em vez de cor.
+description: Console operacional para consultoria FUNDEB. Direção "Console Soft" — glassmorphism, neutros lavanda, accent quase-preto. Hierarquia por duas famílias tipográficas, cards glass flutuantes, pills suaves, gradientes pastel para pipeline.
 colors:
-  scaffold: "#EEF1F6"
-  card-white: "#FFFFFF"
-  surface-subtle: "#F7F9FB"
-  surface-alt: "#F1F3F7"
-  border-light: "#E2E8F0"
-  border-strong: "#D8DEE6"
-  border-stronger: "#C9D0DB"
-  text-title: "#111827"
-  text-body: "#374151"
-  text-soft: "#4B5563"
-  text-muted: "#6B7280"
-  text-dim: "#9CA3AF"
-  primary: "#049598"
-  primary-hover: "#036B69"
-  primary-light: "#DCF2F0"
-  primary-dim: "#5FA3A0"
-  success: "#10B981"
-  success-light: "#E7F7F1"
-  success-dark: "#065F46"
-  warning: "#F59E0B"
-  warning-light: "#FEF6E7"
-  warning-border: "#FDE9C8"
-  warning-dark: "#B45309"
-  error: "#EF4444"
-  error-light: "#FEF2F2"
+  scaffold-from: "#F0EEF5"
+  scaffold-via: "#E9E6F0"
+  scaffold-to: "#ECEAF1"
+  glass-bg: "rgba(255,255,255,.85)"
+  glass-bg-strong: "rgba(255,255,255,.88)"
+  glass-border: "rgba(255,255,255,.95)"
+  surface-subtle: "#F7F6FA"
+  surface-alt: "#F2F1F7"
+  surface-hover: "#ECEBF2"
+  line: "#F0F1F5"
+  line-strong: "#ECEDF2"
+  line-stronger: "#D6D7DE"
+  text-title: "#16181D"
+  text-body: "#3B3F4A"
+  text-soft: "#5A5E6A"
+  text-muted: "#767A86"
+  text-dim: "#A2A6B2"
+  primary: "#16181D"
+  primary-hover: "#2C2F38"
+  primary-softer: "#3B3F4A"
+  primary-dim: "#4A4E5A"
+  primary-light: "#F2F1F7"
+  success: "#34C388"
+  success-light: "#DFF2E7"
+  success-dark: "#1F6A47"
+  warning: "#F0913F"
+  warning-light: "#FBF0D9"
+  warning-dark: "#8A5A00"
+  error: "#E5484D"
+  error-light: "#FFE5E5"
   error-dark: "#991B1B"
+  stage-contrato: "#F5A3B5"
+  stage-proposta: "#F7C77E"
+  stage-estudo: "#8FD3B6"
+  stage-contato: "#93B8F2"
+  stage-modulo: "#C9A6EF"
 typography:
   ui-family: "InstrumentSans"
   data-family: "IBMPlexMono"
 ---
 
-# Global Sync — Console Tecnico
+# Global Sync — Console Soft
 
-Fonte de verdade da implementacao: `sync_flutter/lib/src/core/theme/app_theme.dart`
-(`SaaSTokens` + `GsText`). Referencia visual original: `docs/design/global-sync-redesign.dc.html`,
-recortada por tela em `docs/design/screens/`.
+Fonte de verdade da implementação: `app/globals.css` (tokens CSS) + este arquivo.
+Referência visual: `UI_Kit_fundacoes_atomos/Console Soft.dc.html`.
 
 ## A ideia em uma frase
 
-O produto e um instrumento de trabalho de campo, nao um dashboard de SaaS. A hierarquia
-nasce de **duas familias tipograficas** — nao de uma segunda cor, nao de sombra, nao de
-gradiente. Texto de interface em `InstrumentSans`; **todo numero, codigo, data, sigla e
-rotulo tecnico em `IBMPlexMono`**, com figuras tabulares para que colunas de dinheiro
-alinhem na virgula e o olho compare linha a linha.
+Interface glassmorphism com painéis flutuantes sobre fundo lavanda, accent único
+quase-preto `#16181D`, hierarquia por **duas famílias tipográficas** — `InstrumentSans`
+para interface, `IBMPlexMono` para dados — e pipeline representado por
+**gradientes pastel suaves** (rosa, amarelo, verde, azul, lilás).
 
-## O que mudou em relacao a versao anterior
+## O que mudou da versão Console Técnico
 
-A paleta permanece **identica** — teal `#049598` continua sendo o accent unico, cards
-continuam brancos e planos com borda de 1px, o alvo de toque continua 48dp. O que mudou:
-
-| Area | Antes | Agora |
+| Área | Console Técnico | Console Soft |
 |---|---|---|
-| Familia | Inter, sozinha | InstrumentSans (UI) + IBMPlexMono (dados) |
-| Numeros | mesma fonte do texto | mono tabular, alinhados |
-| Rotulos | sentence case, sans | mono, CAIXA ALTA, 10px, tracking 0.9–1.2px |
-| Login | hero navy escuro | fundo claro com leve tinta teal |
-| Gold premium | token de destaque | **removido** — quebrava a regra de um accent so |
-| Marca | Rocha Prime | Global Services Consultorias |
+| Accent | Teal `#049598` / `#036B69` | Quase-preto `#16181D` / `#2C2F38` |
+| Fundo | Cinza frio sólido `#EEF1F6` | Gradiente lavanda `#F0EEF5 → #E9E6F0` |
+| Cards | Brancos, borda `1px solid #E2E8F0`, planos | Glass `rgba(255,255,255,.88)`, blur, sombra |
+| Bordas | `1px solid` visível | Quase invisíveis `rgba(255,255,255,.95)` |
+| Raios | 10px botão, 14px card, 6px chip | 20px botão (pill), 16-18px card, 14px chip |
+| Sombras | Nenhuma | Suaves `rgba(22,24,29,.05--.18)` |
+| Sidebar | Branca, colada, borda direita | Glass flutuante, `backdrop-blur`, raio 18px |
+| Header | Branco, borda inferior | Glass flutuante, raio 18px |
+| Status pipeline | Teal/âmbar/cinza semântico | Gradientes pastel (rosa/amarelo/verde/azul) |
+| Avatares | Teal, raio 11px | Gradiente escuro, circular |
+| Efeitos | Nenhum | Glows difusos, backdrop-filter, transições |
 
 ## Tipografia
 
-Use sempre os papeis de `GsText`; nunca escreva `TextStyle(fontFamily: ...)` na tela.
+Mesma estrutura de papéis do Console Técnico — `GsText` no Flutter,
+tokens CSS na web.
 
 ### Interface — `InstrumentSans`
 
 | Papel | Spec | Uso |
 |---|---|---|
-| `pageTitle` | 23 / 700 / -0.7 | "Visao executiva", "Empresas do grupo" |
-| `panelTitle` | 20 / 700 / -0.6 | titulo de painel e dialogo |
-| `cardTitle` | 16 / 600 / -0.3 | "Receita no ano", "Radar executivo" |
-| `cardTitleSm` | 15 / 600 / -0.3 | subsecao dentro de card |
-| `navItem` | 15 / 600 / -0.25 | item da barra lateral |
-| `bodyStrong` | 14 / 600 | nome na linha de tabela |
-| `bodyMedium` | 14 / 500 | texto de apoio com peso |
-| `body` | 13 / 400 | **o texto mais comum da interface** |
-| `bodySm` | 12 / 400 | descricao secundaria |
-| `caption` | 11 / 400 | legenda |
-| `button` | 14 / 600 / -0.1 | rotulo de botao |
+| `pageTitle` | 21/700/-0.7 | Saudação "Olá, Marcos Rocha!" |
+| `panelTitle` | 15-16/700/-0.3 | Título de card/seção |
+| `cardTitle` | 14.5/700/-0.3 | "Receita no ano", "Radar executivo" |
+| `navItem` | 13.5/600/-0.2 | Item da barra lateral |
+| `bodyStrong` | 13.5/600 | Nome na linha de tabela |
+| `body` | 13/400 | Texto mais comum |
+| `bodySm` | 12/400 | Descrição secundária |
+| `caption` | 11/400 | Legenda |
+| `button` | 13.5/600 | Rótulo de botão |
 
 ### Dados — `IBMPlexMono`
 
 | Papel | Spec | Uso |
 |---|---|---|
-| `kpiXl` | 32 / 600 / -1.6 | KPI de destaque: "R$ 4,82M" |
-| `kpiLg` | 26 / 600 / -1.2 | KPI padrao |
-| `dataLg` | 15 / 600 | numero de apoio: "de 26" |
-| `data` | 13 / 400 | celula de tabela |
-| `dataStrong` | 13 / 600 | o valor que importa na linha |
-| `dataSm` | 12 / 400 | dado secundario |
-| `dataXs` / `dataXsStrong` | 11 / 400 · 600 | metadado, horario, lote, versao |
-| `label` | 10 / 600 / +1.1 CAPS | **cabecalho de coluna, sobretitulo de secao** |
-| `fieldLabel` | 10 / 600 / +0.9 CAPS | rotulo de campo de formulario |
-| `chip` | 11 / 500 | texto de chip de status |
-| `kbd` | 10 / 600 / +0.5 | atalho de teclado (⌘K, ⌘N) |
+| `kpiXl` | 34/600/-1.8 | KPI de destaque: "34", "R$ 4,82M" |
+| `kpiLg` | 24/600/-1.2 | KPI secundário |
+| `data` | 12.5/400 | Célula de tabela |
+| `dataStrong` | 12.5/600 | Valor importante |
+| `label` | 9.5/600/+1.3 CAPS | WORKSPACE, MÓDULO ATIVO, rótulos |
+| `chip` | 10.5/600 | Texto de chip de status |
+| `kbd` | 9.5/600 | Atalho de teclado (⌘K, ⌘N) |
 
 ## Geometria
 
-- **Raio:** `rControl` 10 (botao, input, item de nav) · `rCard` 14 · `rChip` 6 · `rPill` 20 · 50% em avatar.
-- **Borda:** sempre 1px. `border-light` no padrao, `border-strong`/`border-stronger` quando
-  precisa de mais peso, `primary` 1.5px no foco.
-- **Elevacao:** nenhuma. A separacao vem de borda e de degrau de superficie.
-- **Superficies:** `scaffold` (fundo) → `surface-subtle` (cabecalho de tabela, faixa) →
-  `card-white` (card, sidebar, header).
+- **Raio:** `rPill` 20-24 (botão, CTA) · `rCard` 16-18 (card, sidebar, header) ·
+  `rChip` 14 (chip, badge) · `rInput` 22-24 (campo) · 50% em avatar.
+- **Borda:** `1px solid rgba(255,255,255,.95)` — quase invisível, define vidro.
+  Bordas internas `#F0F1F5` suaves. Sem bordas escuras.
+- **Elevação:** `box-shadow` suave. Cards `0 10px 26px rgba(22,24,29,.05)`,
+  sidebar/header `0 14px 36px rgba(22,24,29,.07)`, popovers
+  `0 24px 60px rgba(22,24,29,.18)`.
+- **Glass:** `backdrop-filter: blur(12px)` + `bg rgba(255,255,255,.85)` para
+  sidebar/header; `.88` para cards; `.97` para popovers.
+- **Superfícies:** gradiente lavanda (fundo) → glass (cards) → `#F7F6FA` (hover)
+  → `#F2F1F7` (controles, inputs).
+
+## Pipeline — gradientes pastel
+
+Cada estágio tem um par de cores suaves em gradiente:
+
+| Estágio | Dot | Fundo chip | Gradiente barra |
+|---|---|---|---|
+| Contrato | `#F5A3B5` | `#FBE0E7` | `#F5A3B5 → #F7B99B` |
+| Proposta | `#F7C77E` | `#FBF0D9` | `#F7C77E → #F5D89B` |
+| Estudo | `#8FD3B6` | `#DFF2E7` | `#8FD3B6 → #A9DFC6` |
+| Contato | `#93B8F2` | `#E2EDFA` | `#93B8F2 → #B5CDF6` |
+| Módulo | `#C9A6EF` | `#EEE7F9` | `#C9A6EF → #D9BFF5` |
 
 ## Componentes
 
-### Barra lateral
-Branca, 292px em desktop / drawer de 304px abaixo de 1120px. Marca no topo, seletor de
-grupo, botao primario de acao com atalho. Secoes rotuladas em `label` (WORKSPACE, MODULO
-ATIVO). Item ativo: barra indicadora lateral + fundo `primary-light` + icone e texto em
-`primary`; inativo em `text-dim`. Rodape com "Ajuda e atalhos" e o cartao do usuario.
+### Sidebar
+Glass flutuante, 240px, `backdrop-blur-xl`, raio 18px, separada do conteúdo por
+gap. Marca no topo, seções rotuladas em `label` (`A2A6B2`). Item ativo:
+`bg-[#F2F1F7]` + texto `#16181D` 600; inativo em `#767A86`. Contador badge
+pill `#16181D`. Módulo ativo com gradiente lavanda `#EEE7F9 → #E2EDFA`.
+Botão de ação pill escuro `#16181D`, raio 20px. Rodapé com card do usuário
+em `#F7F6FA`, avatar circular com gradiente escuro.
 
-### Cabecalho
-Migalha em `label` sobre o titulo da secao, campo de busca com atalho `⌘K`, pilula de
-status de sincronizacao, notificacoes e avatar.
+### Header
+Glass flutuante, raio 18px, `backdrop-blur-xl`. Busca pill `#F2F1F7` raio 22px,
+atalho ⌘K. Status de sync com ponto verde pulsante. Notificações com badge
+`#16181D`. Avatar circular.
 
-### Cartao de KPI
-`label` em caixa alta no topo, numero em `kpiLg`/`kpiXl`, e **uma** linha de apoio:
-delta com seta (verde sobe, ambar/vermelho desce), barra de progresso fina, ou contagem
-em `dataXs`. Nunca as tres.
+### KPI card
+Label em `#767A86` 12px (sem caixa alta, sem mono), número em mono 34px,
+sublinhas em `#A2A6B2`. Card glass com sombra suave. Quando destaque:
+gradiente lavanda → lilás sutil no canto.
 
 ### Tabela
-Cabecalho em `label` sobre `surface-subtle`. Numeros em mono tabular alinhados a direita;
-texto a esquerda. Status como **unica cor semantica da linha**. Linha inteira clicavel,
-terminando em chevron — sem botao "Abrir". Registro inativo perde peso (texto em cinza),
-nao ganha badge. Densidade alternavel: confortavel `14px 10px` / compacta `9px 10px`.
+Container glass. Header quase invisível — apenas `#A2A6B2` 9.5px mono caps
+com border-bottom `#F0F1F5`. Linhas com raio 12px no hover, dados mono
+tabulares alinhados à direita. Status como chip pill com ponto colorido.
+Sem chevron explícito — linha inteira clicável.
 
-### Chip de status
-Fundo do par claro da semantica, texto no par escuro, raio 6, `chip` em mono.
-`ativo` verde · `pendencia` ambar · `inativo` cinza · `contrato`/`proposta` teal.
+### Alertas do radar
+Cards com gradientes pastel suaves: rosa-quente (warning de prazo),
+azul-lavanda (informação), verde-menta (sucesso). Sem bordas coloridas
+fortes — o gradiente é a cor.
+
+### Botões
+- **Primário:** pill `#16181D`, raio 20px, sombra `rgba(22,24,29,.16)`.
+  Hover: `#2C2F38`.
+- **Secundário:** pill `#F2F1F7`, raio 20px. Hover: `#ECEBF2`.
+- **Ghost:** sem fundo, texto `#3B3F4A`. Hover: `bg-[#F7F6FA]`.
+- **Destrutivo:** pill `bg-[#FFE5E5]`, texto `#991B1B`.
 
 ## Do's and Don'ts
 
 ### Do
-- **Do** mandar todo numero, CNPJ, data, sigla de UF e duracao para um papel `mono` — e o
-  que faz a tabela virar instrumento.
-- **Do** usar `label` (mono, caixa alta) para cabecalho de coluna e sobretitulo. E ele que
-  separa "dado" de "rotulo" sem gastar uma segunda cor.
-- **Do** manter o teal como accent unico: botao primario, link, nav ativa, foco de input.
-- **Do** separar os dois teais por contraste, nao por gosto. Branco sobre `primary`
-  (`#049598`) rende **3,65:1** e reprova na WCAG AA para texto; sobre `primary-strong`
-  (`#036B69`), 6,34:1. Entao `primary` e superficie e traco (barra do item ativo, borda de
-  foco) e `primary-strong` e tudo que carrega texto (fundo de botao, link, rotulo). O
-  `ElevatedButton` do tema Flutter ja e pintado com `primaryStrong` — a web so estava fora
-  de linha.
-- **Do** usar `text-soft` (`#4B5563`) nos rotulos `label`/`fieldLabel` de 10-11px. O
-  `text-dim` (`#9CA3AF`) da 2,54:1 no branco e 2,21:1 no fundo tintado do login: reprova em
-  toda superficie do produto. `text-dim` so serve a estado desabilitado, isento pela norma.
-- **Do** deixar cards planos com borda de 1px.
-- **Do** manter 48dp de alvo minimo em botao e input.
+- **Do** usar glass (`backdrop-blur` + bg semitransparente) para sidebar, header,
+  cards e popovers.
+- **Do** manter `#16181D` como accent único. Tudo que antes era teal agora é
+  quase-preto.
+- **Do** usar gradientes pastel para representar estágios do pipeline. Nunca
+  cores sólidas fortes.
+- **Do** manter raios pill (20-24px) em botões e inputs. É o DNA do Console Soft.
+- **Do** usar sombras suaves e difusas. Nunca sombra dura.
+- **Do** usar avatares circulares com gradiente escuro.
+- **Do** mandar todo número, CNPJ, data, sigla para `IBMPlexMono`.
 
 ### Don't
-- **Don't** introduzir uma segunda cor de accent. Se algo precisa se destacar mais, o
-  problema e hierarquia — resolva com peso, tamanho ou familia.
-- **Don't** adicionar sombra em card, lista ou tabela.
-- **Don't** escrever numero em `InstrumentSans` dentro de tabela ou KPI: sem tabular, a
-  coluna desalinha.
-- **Don't** ressuscitar o gold `#D4A853` nem o navy profundo `#0E3B3A` do login antigo —
-  ambos foram removidos nesta direcao.
-- **Don't** reintroduzir "Rocha Prime", navy `#1B2A4A` ou azul `#2F6BFF`. Onde ainda
-  aparecem (PDFs, telas legadas) e divida a migrar, nao referencia a seguir.
-- **Don't** dar 13 cores a 13 estagios de pipeline. Cor volta a ser semantica: teal =
-  negocio quente, ambar = inatividade/prazo.
+- **Don't** reintroduzir o teal `#049598` ou qualquer variante. Foi removido.
+- **Don't** usar cards com borda sólida visível. A borda é `rgba(255,255,255,.95)`.
+- **Don't** usar raios quadrados (10px) em botões. Sempre pill.
+- **Don't** adicionar bordas escuras ou sombras duras.
+- **Don't** usar fundo sólido plano. Sempre gradiente lavanda ou glass.
+- **Don't** usar chips com raio 6px. Sempre 14px (pill).

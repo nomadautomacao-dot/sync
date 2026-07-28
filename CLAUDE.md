@@ -422,6 +422,7 @@ docker build -t sync-app . && docker run -p 3000:3000 sync-app
 | `dados/build-inep-censo-municipal-dataset.py` | Dataset municipal INEP |
 | `dados/gerar-tse-prefeitos.py` | Dados TSE prefeitos |
 | `dados/gerar-ideb-municipios.py` | Dados IDEB |
+| `dados/gerar-caged-municipios.mjs` | `npm run dados:caged` — snapshot do Novo CAGED (IPEADATA). Regerar mensalmente |
 | `pdf/prepare-docx-templates.mjs` | Templates DOCX contratos |
 
 ---

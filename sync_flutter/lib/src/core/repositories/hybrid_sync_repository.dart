@@ -89,6 +89,14 @@ class HybridSyncRepository implements SyncRepository {
   }
 
   @override
+  Future<void> sendPasswordReset(String email) =>
+      _remote.sendPasswordReset(email);
+
+  @override
+  Future<void> setSessionPersistence({required bool keepSignedIn}) =>
+      _remote.setSessionPersistence(keepSignedIn: keepSignedIn);
+
+  @override
   Future<DashboardOverview> getDashboard({int? year}) async {
     if (_mustUseRemote) {
       final remote = await _dashboard.overview(year: year);

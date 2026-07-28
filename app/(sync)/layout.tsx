@@ -11,15 +11,6 @@ interface SyncLayoutProps {
   children: ReactNode;
 }
 
-/**
- * Guarda de sessão do produto. A sessão do Firebase vive no IndexedDB, então
- * quem decide é o cliente — não há como o servidor barrar a rota.
- *
- * O redirect só pode acontecer depois que `loading` cai: no boot o provider
- * chama `getIdTokenResult(true)`, que vai à rede, e existe um intervalo real em
- * que `user` ainda é `null` com sessão válida. Redirecionar ali chutaria para
- * fora um usuário logado a cada F5.
- */
 export default function SyncLayout({ children }: SyncLayoutProps) {
   const router = useRouter();
   const { user, loading } = useAuth();
@@ -28,16 +19,18 @@ export default function SyncLayout({ children }: SyncLayoutProps) {
     if (!loading && !user) router.replace("/entrar");
   }, [loading, user, router]);
 
-  // Também cobre o instante entre reconhecer a ausência de sessão e o redirect
-  // acontecer: sem usuário, o shell nunca chega a renderizar.
   if (loading || !user) return <EsqueletoDoShell />;
 
   return (
-    <div className="flex min-h-screen bg-[#EEF1F6] font-sans">
+    <div className="relative flex h-screen w-screen overflow-hidden font-sans gap-[14px] p-[14px]">
+      {/* ── Ambient background glows (Console Soft) ───────────────────────── */}
+      <div className="pointer-events-none absolute -right-[240px] -top-[60px] h-[300px] w-[560px] bg-[radial-gradient(ellipse,_rgba(255,255,255,0.95),_transparent_65%)]" />
+      <div className="pointer-events-none absolute -left-[140px] bottom-[120px] h-[20px] w-[460px] bg-[linear-gradient(90deg,_transparent,_rgba(245,163,181,0.5),_rgba(247,199,126,0.5),_transparent)] blur-[24px]" />
+
       <SyncSidebar />
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="relative z-10 flex min-w-0 flex-1 flex-col overflow-hidden gap-[14px]">
         <SyncHeader user={user} />
-        <main className="min-w-0 flex-1 px-8 py-7">{children}</main>
+        <main className="min-w-0 flex-1 overflow-y-auto">{children}</main>
       </div>
     </div>
   );
@@ -48,15 +41,15 @@ function EsqueletoDoShell() {
     <div
       role="status"
       aria-live="polite"
-      className="flex min-h-screen animate-pulse bg-[#EEF1F6] font-sans"
+      className="flex h-screen w-screen animate-pulse bg-transparent font-sans gap-[14px] p-[14px]"
     >
       <span className="sr-only">Carregando sua sessão…</span>
-      <div className="w-[292px] shrink-0 border-r border-[#E2E8F0] bg-white" />
-      <div className="flex min-w-0 flex-1 flex-col">
-        <div className="h-16 shrink-0 border-b border-[#E2E8F0] bg-white" />
-        <div className="flex-1 px-8 py-7">
-          <div className="h-7 w-52 rounded-[10px] bg-[#E2E8F0]" />
-          <div className="mt-6 h-40 w-full rounded-[14px] border border-[#E2E8F0] bg-white" />
+      <div className="w-[260px] shrink-0 rounded-[18px] bg-white/85 backdrop-blur-xl border border-white/95" />
+      <div className="flex min-w-0 flex-1 flex-col gap-[14px]">
+        <div className="h-14 shrink-0 rounded-[18px] bg-white/85 backdrop-blur-xl border border-white/95" />
+        <div className="flex-1">
+          <div className="h-7 w-52 rounded-control bg-[#ECEBF2]" />
+          <div className="mt-6 h-40 w-full rounded-card border border-[#F0F1F5] bg-white" />
         </div>
       </div>
     </div>

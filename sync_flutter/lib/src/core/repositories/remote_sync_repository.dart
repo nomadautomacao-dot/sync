@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -130,6 +131,26 @@ class RemoteSyncRepository implements SyncRepository {
       default:
         return 'Nao foi possivel entrar. Tente novamente.';
     }
+  }
+
+  @override
+  Future<void> sendPasswordReset(String email) async {
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email.trim());
+    } on FirebaseAuthException catch (error) {
+      // `user-not-found` nao e propagado: confirmar quais e-mails existem numa
+      // tela publica e enumeracao de contas. A UI responde igual nos dois casos.
+      if (error.code == 'user-not-found') return;
+      throw ApiException(_authErrorMessage(error.code));
+    }
+  }
+
+  @override
+  Future<void> setSessionPersistence({required bool keepSignedIn}) async {
+    if (!kIsWeb) return; // fora da web o Firebase nao expoe a escolha
+    await FirebaseAuth.instance.setPersistence(
+      keepSignedIn ? Persistence.LOCAL : Persistence.SESSION,
+    );
   }
 
   @override

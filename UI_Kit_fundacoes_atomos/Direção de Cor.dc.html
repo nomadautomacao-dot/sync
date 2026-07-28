@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,200..600,0..1,-25..0&amp;display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: #DCE0E7; font-family: 'Instrument Sans', sans-serif; -webkit-font-smoothing: antialiased; }
+  a { color: #1E2840; text-decoration: none; }
+  a:hover { color: #313D79; text-decoration: underline; }
+  .dv-turn { padding: 48px 56px 40px; border-bottom: 1px solid rgba(0,0,0,.08); scroll-margin-top: 16px; }
+  .dv-thd { display: flex; align-items: baseline; gap: 10px; margin: 0 0 8px; }
+  .dv-tid { font: 600 11px 'IBM Plex Mono', monospace; padding: 4px 9px; background: #1a1a1a; color: #fff; border-radius: 5px; text-decoration: none; }
+  .dv-tname { font: 700 20px/1.2 'Instrument Sans', sans-serif; letter-spacing: -.5px; color: #111827; }
+  .dv-sub { font: 400 14px/1.5 'Instrument Sans', sans-serif; color: #4B5563; max-width: 860px; margin: 0 0 24px; }
+  .dv-opts { display: flex; flex-wrap: wrap; gap: 28px; align-items: flex-start; }
+  .dv-opt { flex: none; display: flex; flex-direction: column; gap: 9px; scroll-margin-top: 16px; }
+  .dv-oid { font: 600 10.5px 'IBM Plex Mono', monospace; padding: 3px 7px; background: rgba(0,0,0,.08); color: #1a1a1a; border-radius: 5px; text-decoration: none; }
+  .dv-olabel { display: flex; align-items: baseline; gap: 8px; font: 400 12px/1.3 'Instrument Sans', sans-serif; color: rgba(0,0,0,.6); }
+  .dv-card { background: #fff; border: 1px solid rgba(0,0,0,.1); border-radius: 10px; overflow: hidden; }
+  .dv-opt:target .dv-oid { background: #1E2840; color: #fff; }
+  .dv-next { margin: 24px 0 0; font: 13px/1.5 'Instrument Sans', sans-serif; color: rgba(0,0,0,.55); }
+</style>
+</helmet>
+
+<section class="dv-turn" id="t2">
+  <div class="dv-thd"><a class="dv-tid" href="#t2">2</a><span class="dv-tname">Direções em laranja</span></div>
+  <p class="dv-sub">Três caminhos: laranja como accent único (<a class="dv-oid" href="#2a">2a</a>), laranja como cor de ação sobre o navy do logo (<a class="dv-oid" href="#2b">2b</a>) e terracota profundo para máxima sobriedade (<a class="dv-oid" href="#2c">2c</a>). Neutros aquecidos acompanham nos <a class="dv-oid" href="#2a">2a</a> e <a class="dv-oid" href="#2c">2c</a>.</p>
+
+  <div class="dv-opts">
+    <sc-for list="{{ opcoes2 }}" as="op" hint-placeholder-count="3">
+      <div class="dv-opt" id="{{ op.id }}">
+        <div class="dv-olabel"><a class="dv-oid" href="{{ op.href }}">{{ op.id }}</a>{{ op.titulo }}</div>
+        <div class="dv-card" style="width: 460px;">
+          <div style="padding: 18px 20px 16px; display: flex; flex-direction: column; gap: 16px; background: {{ op.scaffold }};">
+
+            <div style="display: flex; gap: 6px;">
+              <sc-for list="{{ op.swatches }}" as="sw" hint-placeholder-count="5">
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+                  <div style="height: 34px; border-radius: 6px; background: {{ sw.hex }}; border: 1px solid rgba(0,0,0,.08);"></div>
+                  <div style="font-family: 'IBM Plex Mono', monospace; font-size: 8.5px; color: #6B7280; text-align: center;">{{ sw.hex }}</div>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+              <div style="flex: 1; height: 44px; background: {{ op.primaria }}; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 7px; font-size: 14px; font-weight: 600; color: {{ op.textoSobrePrimaria }}; cursor: pointer;"><span style="font-family: 'Material Symbols Outlined'; font-size: 17px;">add</span>Novo levantamento</div>
+              <div style="height: 44px; border: 1px solid {{ op.bordaForte }}; background: #FFFFFF; border-radius: 10px; display: flex; align-items: center; justify-content: center; padding: 0 16px; font-size: 14px; font-weight: 600; color: #374151; cursor: pointer;">Exportar</div>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+              <div style="flex: 1; background: #FFFFFF; border: 1px solid {{ op.borda }}; border-radius: 14px; padding: 15px 15px 13px;">
+                <div style="font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; font-weight: 600; letter-spacing: 1.1px; color: #4B5563;">LUCRO PROJETADO</div>
+                <div style="height: 8px;"></div>
+                <div style="font-family: 'IBM Plex Mono', monospace; font-size: 26px; font-weight: 600; letter-spacing: -1.2px; color: #111827; line-height: 1; font-variant-numeric: tabular-nums;">R$ 4,82M</div>
+                <div style="height: 9px;"></div>
+                <div style="display: flex; align-items: center; gap: 5px;"><span style="font-family: 'Material Symbols Outlined'; font-size: 14px; color: {{ op.sucesso }};">trending_up</span><div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; color: {{ op.sucesso }};">+12,4%</div><div style="font-size: 11px; color: #6B7280;">vs. 2025</div></div>
+              </div>
+              <div style="flex: 1; background: #FFFFFF; border: 1px solid {{ op.borda }}; border-radius: 14px; padding: 15px 15px 13px;">
+                <div style="font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; font-weight: 600; letter-spacing: 1.1px; color: #4B5563;">MARGEM</div>
+                <div style="height: 8px;"></div>
+                <div style="font-family: 'IBM Plex Mono', monospace; font-size: 26px; font-weight: 600; letter-spacing: -1.2px; color: #111827; line-height: 1; font-variant-numeric: tabular-nums;">38,6%</div>
+                <div style="height: 11px;"></div>
+                <div style="height: 5px; border-radius: 4px; background: {{ op.trilha }}; overflow: hidden;"><div style="width: 62%; height: 100%; background: {{ op.acento }};"></div></div>
+              </div>
+            </div>
+
+            <div style="background: #FFFFFF; border: 1px solid {{ op.borda }}; border-radius: 12px; padding: 8px; display: flex; flex-direction: column; gap: 2px;">
+              <div style="height: 40px; border-radius: 8px; background: {{ op.navAtivaFundo }}; display: flex; align-items: center; gap: 10px; padding-right: 10px;">
+                <div style="width: 3px; height: 22px; border-radius: 2px; background: {{ op.navAtivaBarra }}; margin-left: 7px;"></div>
+                <span style="font-family: 'Material Symbols Outlined'; font-size: 18px; color: {{ op.navAtivaTexto }};">space_dashboard</span>
+                <div style="flex: 1; font-size: 13.5px; font-weight: 600; color: {{ op.navAtivaTexto }};">Dashboard</div>
+                <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; color: {{ op.contadorTexto }}; background: {{ op.contadorFundo }}; border-radius: 20px; padding: 2px 7px;">4</div>
+              </div>
+              <div style="height: 40px; border-radius: 8px; display: flex; align-items: center; gap: 10px; padding-left: 20px;">
+                <span style="font-family: 'Material Symbols Outlined'; font-size: 18px; color: #9CA3AF;">track_changes</span>
+                <div style="font-size: 13.5px; font-weight: 500; color: #6B7280;">Pipeline</div>
+              </div>
+            </div>
+
+            <div style="background: #FFFFFF; border: 1px solid {{ op.borda }}; border-radius: 12px; overflow: hidden;">
+              <div style="display: grid; grid-template-columns: 1.6fr .5fr 1.1fr .9fr; background: {{ op.cabecalhoTabela }}; font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 600; letter-spacing: .9px; color: {{ op.cabecalhoTexto }}; text-transform: uppercase;">
+                <div style="padding: 8px 12px;">Município</div><div style="padding: 8px 6px;">UF</div><div style="padding: 8px 6px;">Estágio</div><div style="padding: 8px 12px; text-align: right;">Lucro</div>
+              </div>
+              <div style="display: grid; grid-template-columns: 1.6fr .5fr 1.1fr .9fr; align-items: center; border-bottom: 1px solid {{ op.linhaTabela }};">
+                <div style="padding: 10px 12px; font-size: 13px; font-weight: 600; color: #111827;">Cristalina</div>
+                <div style="padding: 10px 6px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #6B7280;">GO</div>
+                <div style="padding: 10px 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; color: {{ op.chipTexto }}; background: {{ op.chipFundo }}; border-radius: 6px; padding: 3px 7px;">contrato</span></div>
+                <div style="padding: 10px 12px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: #111827; text-align: right; font-variant-numeric: tabular-nums;">R$ 1,12M</div>
+              </div>
+              <div style="display: grid; grid-template-columns: 1.6fr .5fr 1.1fr .9fr; align-items: center;">
+                <div style="padding: 10px 12px; font-size: 13px; font-weight: 600; color: #111827;">Senador José Porfírio</div>
+                <div style="padding: 10px 6px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #6B7280;">PA</div>
+                <div style="padding: 10px 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; color: #92400E; background: #FEF6E7; border-radius: 6px; padding: 3px 7px;">proposta</span></div>
+                <div style="padding: 10px 12px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: #111827; text-align: right; font-variant-numeric: tabular-nums;">R$ 742,0K</div>
+              </div>
+            </div>
+
+            <div style="background: {{ op.faixaEscura }}; border-radius: 12px; padding: 14px 16px; display: flex; align-items: center; gap: 12px;">
+              <img src="assets/gs-icon.png" alt="" style="width: 30px; height: 30px;">
+              <div style="flex: 1;">
+                <div style="font-size: 13.5px; font-weight: 700; color: #FFFFFF; letter-spacing: -.2px;">Global Sync</div>
+                <div style="font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; letter-spacing: 1px; color: {{ op.faixaSubtexto }}; text-transform: uppercase;">Global Services Consultorias</div>
+              </div>
+              <div style="height: 32px; background: {{ op.faixaBotao }}; border-radius: 8px; display: flex; align-items: center; padding: 0 13px; font-size: 12.5px; font-weight: 600; color: {{ op.faixaBotaoTexto }}; cursor: pointer;">Entrar</div>
+            </div>
+
+          </div>
+          <div style="padding: 12px 20px 14px; border-top: 1px solid rgba(0,0,0,.07); font-size: 12px; line-height: 1.5; color: #4B5563;">{{ op.nota }}</div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+
+  <p class="dv-next">Próximos: "aplica a <a class="dv-oid" href="#2b">2b</a> no UI Kit inteiro" · "mostra o <a class="dv-oid" href="#2a">2a</a> com a sidebar escura" · "tenta o terracota <a class="dv-oid" href="#2c">2c</a> com neutros frios"</p>
+</section>
+
+<section class="dv-turn" id="t1">
+  <div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Direção de cor — institucional, com peso</span></div>
+  <p class="dv-sub">O teal <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">#049598</span> sai de cena. Quatro direções sobre os mesmos componentes do kit — mesma tipografia, mesma geometria; só a cor muda. As duas primeiras resgatam o DNA do logo Rocha Prime (navy <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">#313D79 / #1E2840</span>); as outras exploram autoridade por outros caminhos.</p>
+
+  <div class="dv-opts">
+    <sc-for list="{{ opcoes }}" as="op" hint-placeholder-count="4">
+      <div class="dv-opt" id="{{ op.id }}">
+        <div class="dv-olabel"><a class="dv-oid" href="{{ op.href }}">{{ op.id }}</a>{{ op.titulo }}</div>
+        <div class="dv-card" style="width: 460px;">
+          <div style="padding: 18px 20px 16px; display: flex; flex-direction: column; gap: 16px; background: {{ op.scaffold }};">
+
+            <div style="display: flex; gap: 6px;">
+              <sc-for list="{{ op.swatches }}" as="sw" hint-placeholder-count="5">
+                <div style="flex: 1; display: flex; flex-direction: column; gap: 4px;">
+                  <div style="height: 34px; border-radius: 6px; background: {{ sw.hex }}; border: 1px solid rgba(0,0,0,.08);"></div>
+                  <div style="font-family: 'IBM Plex Mono', monospace; font-size: 8.5px; color: #6B7280; text-align: center;">{{ sw.hex }}</div>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+              <div style="flex: 1; height: 44px; background: {{ op.primaria }}; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 7px; font-size: 14px; font-weight: 600; color: {{ op.textoSobrePrimaria }}; cursor: pointer;"><span style="font-family: 'Material Symbols Outlined'; font-size: 17px;">add</span>Novo levantamento</div>
+              <div style="height: 44px; border: 1px solid {{ op.bordaForte }}; background: #FFFFFF; border-radius: 10px; display: flex; align-items: center; justify-content: center; padding: 0 16px; font-size: 14px; font-weight: 600; color: #374151; cursor: pointer;">Exportar</div>
+            </div>
+
+            <div style="display: flex; gap: 10px;">
+              <div style="flex: 1; background: #FFFFFF; border: 1px solid {{ op.borda }}; border-radius: 14px; padding: 15px 15px 13px;">
+                <div style="font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; font-weight: 600; letter-spacing: 1.1px; color: #4B5563;">LUCRO PROJETADO</div>
+                <div style="height: 8px;"></div>
+                <div style="font-family: 'IBM Plex Mono', monospace; font-size: 26px; font-weight: 600; letter-spacing: -1.2px; color: #111827; line-height: 1; font-variant-numeric: tabular-nums;">R$ 4,82M</div>
+                <div style="height: 9px;"></div>
+                <div style="display: flex; align-items: center; gap: 5px;"><span style="font-family: 'Material Symbols Outlined'; font-size: 14px; color: {{ op.sucesso }};">trending_up</span><div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; color: {{ op.sucesso }};">+12,4%</div><div style="font-size: 11px; color: #6B7280;">vs. 2025</div></div>
+              </div>
+              <div style="flex: 1; background: #FFFFFF; border: 1px solid {{ op.borda }}; border-radius: 14px; padding: 15px 15px 13px;">
+                <div style="font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; font-weight: 600; letter-spacing: 1.1px; color: #4B5563;">MARGEM</div>
+                <div style="height: 8px;"></div>
+                <div style="font-family: 'IBM Plex Mono', monospace; font-size: 26px; font-weight: 600; letter-spacing: -1.2px; color: #111827; line-height: 1; font-variant-numeric: tabular-nums;">38,6%</div>
+                <div style="height: 11px;"></div>
+                <div style="height: 5px; border-radius: 4px; background: {{ op.trilha }}; overflow: hidden;"><div style="width: 62%; height: 100%; background: {{ op.acento }};"></div></div>
+              </div>
+            </div>
+
+            <div style="background: #FFFFFF; border: 1px solid {{ op.borda }}; border-radius: 12px; padding: 8px; display: flex; flex-direction: column; gap: 2px;">
+              <div style="height: 40px; border-radius: 8px; background: {{ op.navAtivaFundo }}; display: flex; align-items: center; gap: 10px; padding-right: 10px;">
+                <div style="width: 3px; height: 22px; border-radius: 2px; background: {{ op.navAtivaBarra }}; margin-left: 7px;"></div>
+                <span style="font-family: 'Material Symbols Outlined'; font-size: 18px; color: {{ op.navAtivaTexto }};">space_dashboard</span>
+                <div style="flex: 1; font-size: 13.5px; font-weight: 600; color: {{ op.navAtivaTexto }};">Dashboard</div>
+                <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; color: {{ op.contadorTexto }}; background: {{ op.contadorFundo }}; border-radius: 20px; padding: 2px 7px;">4</div>
+              </div>
+              <div style="height: 40px; border-radius: 8px; display: flex; align-items: center; gap: 10px; padding-left: 20px;">
+                <span style="font-family: 'Material Symbols Outlined'; font-size: 18px; color: #9CA3AF;">track_changes</span>
+                <div style="font-size: 13.5px; font-weight: 500; color: #6B7280;">Pipeline</div>
+              </div>
+            </div>
+
+            <div style="background: #FFFFFF; border: 1px solid {{ op.borda }}; border-radius: 12px; overflow: hidden;">
+              <div style="display: grid; grid-template-columns: 1.6fr .5fr 1.1fr .9fr; background: {{ op.cabecalhoTabela }}; font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 600; letter-spacing: .9px; color: {{ op.cabecalhoTexto }}; text-transform: uppercase;">
+                <div style="padding: 8px 12px;">Município</div><div style="padding: 8px 6px;">UF</div><div style="padding: 8px 6px;">Estágio</div><div style="padding: 8px 12px; text-align: right;">Lucro</div>
+              </div>
+              <div style="display: grid; grid-template-columns: 1.6fr .5fr 1.1fr .9fr; align-items: center; border-bottom: 1px solid {{ op.linhaTabela }};">
+                <div style="padding: 10px 12px; font-size: 13px; font-weight: 600; color: #111827;">Cristalina</div>
+                <div style="padding: 10px 6px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #6B7280;">GO</div>
+                <div style="padding: 10px 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; color: {{ op.chipTexto }}; background: {{ op.chipFundo }}; border-radius: 6px; padding: 3px 7px;">contrato</span></div>
+                <div style="padding: 10px 12px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: #111827; text-align: right; font-variant-numeric: tabular-nums;">R$ 1,12M</div>
+              </div>
+              <div style="display: grid; grid-template-columns: 1.6fr .5fr 1.1fr .9fr; align-items: center;">
+                <div style="padding: 10px 12px; font-size: 13px; font-weight: 600; color: #111827;">Senador José Porfírio</div>
+                <div style="padding: 10px 6px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #6B7280;">PA</div>
+                <div style="padding: 10px 6px;"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; color: #92400E; background: #FEF6E7; border-radius: 6px; padding: 3px 7px;">proposta</span></div>
+                <div style="padding: 10px 12px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: #111827; text-align: right; font-variant-numeric: tabular-nums;">R$ 742,0K</div>
+              </div>
+            </div>
+
+            <div style="background: {{ op.faixaEscura }}; border-radius: 12px; padding: 14px 16px; display: flex; align-items: center; gap: 12px;">
+              <img src="assets/gs-icon.png" alt="" style="width: 30px; height: 30px;">
+              <div style="flex: 1;">
+                <div style="font-size: 13.5px; font-weight: 700; color: #FFFFFF; letter-spacing: -.2px;">Global Sync</div>
+                <div style="font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; letter-spacing: 1px; color: {{ op.faixaSubtexto }}; text-transform: uppercase;">Global Services Consultorias</div>
+              </div>
+              <div style="height: 32px; background: {{ op.faixaBotao }}; border-radius: 8px; display: flex; align-items: center; padding: 0 13px; font-size: 12.5px; font-weight: 600; color: {{ op.faixaBotaoTexto }}; cursor: pointer;">Entrar</div>
+            </div>
+
+          </div>
+          <div style="padding: 12px 20px 14px; border-top: 1px solid rgba(0,0,0,.07); font-size: 12px; line-height: 1.5; color: #4B5563;">{{ op.nota }}</div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+
+  <p class="dv-next">Próximos: "aplica a <a class="dv-oid" href="#1a">1a</a> no UI Kit inteiro" · "mistura <a class="dv-oid" href="#1b">1b</a> com o dourado da <a class="dv-oid" href="#1c">1c</a>" · "quero ver a sidebar escura em tela cheia"</p>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const comSwatches = (lista) => lista.map((op) => ({
+      ...op,
+      swatches: [
+        { hex: op.primaria }, { hex: op.acento }, { hex: op.navAtivaFundo }, { hex: op.scaffold }, { hex: '#111827' },
+      ],
+    }));
+    return { opcoes: comSwatches(this._opcoes()), opcoes2: comSwatches(this._opcoes2()) };
+  }
+  _opcoes2() {
+    return [
+      {
+        id: '2a', href: '#2a', titulo: 'Laranja queimado — accent único sobre neutros quentes',
+        scaffold: '#F1EFEA', primaria: '#C2410C', textoSobrePrimaria: '#FFFFFF', acento: '#C2410C',
+        borda: '#E8E4DC', bordaForte: '#D4CEC2', trilha: '#F5E3D5', sucesso: '#047857',
+        navAtivaFundo: '#FDEAD8', navAtivaBarra: '#C2410C', navAtivaTexto: '#9A3412',
+        contadorFundo: '#C2410C', contadorTexto: '#FFFFFF',
+        cabecalhoTabela: '#F6F4F0', cabecalhoTexto: '#4B5563', linhaTabela: '#F0EDE7',
+        chipFundo: '#FDEAD8', chipTexto: '#9A3412',
+        faixaEscura: '#26211B', faixaSubtexto: '#E8B58A', faixaBotao: '#C2410C', faixaBotaoTexto: '#FFFFFF',
+        nota: 'Laranja queimado #C2410C como accent único, neutros aquecidos (papel, não cinza-azulado). Energia e urgência — combina com produto de prospecção. Botão primário passa AA para texto 14/600.',
+      },
+      {
+        id: '2b', href: '#2b', titulo: 'Navy + laranja — estrutura fria, ação quente',
+        scaffold: '#EDEFF4', primaria: '#1E2840', textoSobrePrimaria: '#FFFFFF', acento: '#C2410C',
+        borda: '#E2E6EE', bordaForte: '#C9CFDD', trilha: '#F5E3D5', sucesso: '#047857',
+        navAtivaFundo: '#FDEAD8', navAtivaBarra: '#C2410C', navAtivaTexto: '#1E2840',
+        contadorFundo: '#C2410C', contadorTexto: '#FFFFFF',
+        cabecalhoTabela: '#F4F6FA', cabecalhoTexto: '#4B5563', linhaTabela: '#EEF0F6',
+        chipFundo: '#FDEAD8', chipTexto: '#9A3412',
+        faixaEscura: '#1E2840', faixaSubtexto: '#F2A65A', faixaBotao: '#F0913F', faixaBotaoTexto: '#1E2840',
+        nota: 'O navy do logo segura a estrutura (botões, marca); o laranja aponta o que está vivo — nav ativa, contadores, pendências. Deriva do #F6A63A dos PDFs, escurecido para carregar texto. Dois accents, alto impacto.',
+      },
+      {
+        id: '2c', href: '#2c', titulo: 'Terracota profundo — o mais sóbrio dos laranjas',
+        scaffold: '#F2EDE8', primaria: '#7C2D12', textoSobrePrimaria: '#FFFFFF', acento: '#7C2D12',
+        borda: '#E9E1D8', bordaForte: '#D5C9BC', trilha: '#EFE0D6', sucesso: '#047857',
+        navAtivaFundo: '#F3E2D9', navAtivaBarra: '#7C2D12', navAtivaTexto: '#7C2D12',
+        contadorFundo: '#7C2D12', contadorTexto: '#FFFFFF',
+        cabecalhoTabela: '#F7F3EF', cabecalhoTexto: '#4B5563', linhaTabela: '#F0EAE3',
+        chipFundo: '#F3E2D9', chipTexto: '#7C2D12',
+        faixaEscura: '#3B1D10', faixaSubtexto: '#C89B85', faixaBotao: '#FFFFFF', faixaBotaoTexto: '#7C2D12',
+        nota: 'Terracota #7C2D12 — laranja com gravidade de instituição centenária (contraste 8,5:1 com branco). Terroso, brasileiro, sério; o meio-termo entre o impacto do 2a e a sobriedade do navy.',
+      },
+    ];
+  }
+  _opcoes() {
+    return [
+        {
+          id: '1a', href: '#1a', titulo: 'Navy institucional — o azul do logo Rocha Prime como accent único',
+          scaffold: '#EDEFF4', primaria: '#1E2840', textoSobrePrimaria: '#FFFFFF', acento: '#313D79',
+          borda: '#E2E6EE', bordaForte: '#C9CFDD', trilha: '#E8EBF3', sucesso: '#047857',
+          navAtivaFundo: '#E8EBF5', navAtivaBarra: '#313D79', navAtivaTexto: '#1E2840',
+          contadorFundo: '#313D79', contadorTexto: '#FFFFFF',
+          cabecalhoTabela: '#F4F6FA', cabecalhoTexto: '#4B5563', linhaTabela: '#EEF0F6',
+          chipFundo: '#E8EBF5', chipTexto: '#313D79',
+          faixaEscura: '#1E2840', faixaSubtexto: '#8B94B3', faixaBotao: '#FFFFFF', faixaBotaoTexto: '#1E2840',
+          nota: 'Direto do logo institucional (#313D79 / #1E2840). Sóbrio, jurídico, B2G — navy carrega texto branco com folga de contraste (13:1). O verde fica só na semântica de sucesso.',
+        },
+        {
+          id: '1b', href: '#1b', titulo: 'Navy + dourado — autoridade com um traço premium',
+          scaffold: '#EDEFF4', primaria: '#1E2840', textoSobrePrimaria: '#FFFFFF', acento: '#B98A2F',
+          borda: '#E2E6EE', bordaForte: '#C9CFDD', trilha: '#F3ECDA', sucesso: '#047857',
+          navAtivaFundo: '#F7F0DF', navAtivaBarra: '#B98A2F', navAtivaTexto: '#1E2840',
+          contadorFundo: '#B98A2F', contadorTexto: '#FFFFFF',
+          cabecalhoTabela: '#F4F6FA', cabecalhoTexto: '#4B5563', linhaTabela: '#EEF0F6',
+          chipFundo: '#F7F0DF', chipTexto: '#7A5A1A',
+          faixaEscura: '#1E2840', faixaSubtexto: '#D4A853', faixaBotao: '#D4A853', faixaBotaoTexto: '#1E2840',
+          nota: 'Navy manda, dourado #D4A853 (do kit PDF premium) marca o que está ativo ou vale dinheiro. Dois accents — quebra a regra do DESIGN.md de propósito; é a cara de "consultoria de alto contrato".',
+        },
+        {
+          id: '1c', href: '#1c', titulo: 'Petróleo profundo — mantém a família verde, mas com peso',
+          scaffold: '#ECF0EF', primaria: '#0E3B3A', textoSobrePrimaria: '#FFFFFF', acento: '#0E3B3A',
+          borda: '#E0E6E4', bordaForte: '#C6D0CD', trilha: '#DFE8E6', sucesso: '#047857',
+          navAtivaFundo: '#DCE8E6', navAtivaBarra: '#0E3B3A', navAtivaTexto: '#0E3B3A',
+          contadorFundo: '#0E3B3A', contadorTexto: '#FFFFFF',
+          cabecalhoTabela: '#F2F5F4', cabecalhoTexto: '#4B5563', linhaTabela: '#ECF0EF',
+          chipFundo: '#DCE8E6', chipTexto: '#0E3B3A',
+          faixaEscura: '#0E3B3A', faixaSubtexto: '#7FA8A3', faixaBotao: '#FFFFFF', faixaBotaoTexto: '#0E3B3A',
+          nota: 'Para quem gosta do verde mas não do #049598: o navy-verde #0E3B3A do login antigo vira o accent. Escuro, denso, quase floresta — contraste 12:1 com branco, impacto sem gritar.',
+        },
+        {
+          id: '1d', href: '#1d', titulo: 'Azul governo — o azul dos relatórios PDF, lido como "órgão oficial"',
+          scaffold: '#EDF0F5', primaria: '#1D4F91', textoSobrePrimaria: '#FFFFFF', acento: '#1D4F91',
+          borda: '#E1E7F0', bordaForte: '#C7D2E2', trilha: '#E3EDF8', sucesso: '#047857',
+          navAtivaFundo: '#E3EDF8', navAtivaBarra: '#1D4F91', navAtivaTexto: '#163D73',
+          contadorFundo: '#1D4F91', contadorTexto: '#FFFFFF',
+          cabecalhoTabela: '#F4F7FB', cabecalhoTexto: '#4B5563', linhaTabela: '#EEF2F8',
+          chipFundo: '#E3EDF8', chipTexto: '#163D73',
+          faixaEscura: '#163D73', faixaSubtexto: '#9DB8DC', faixaBotao: '#FFFFFF', faixaBotaoTexto: '#163D73',
+          nota: 'Deriva do azul #2F73C8 dos relatórios, escurecido para #1D4F91. É a língua visual de prefeitura, FNDE, tribunal de contas — o cliente reconhece na hora. O mais "governo" dos quatro.',
+        },
+      ];
+  }
+}
+</script>
+</body>
+</html>

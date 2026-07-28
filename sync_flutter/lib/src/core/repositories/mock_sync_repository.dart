@@ -139,6 +139,12 @@ class MockSyncRepository implements SyncRepository {
   Future<void> signOut() async {}
 
   @override
+  Future<void> sendPasswordReset(String email) async {}
+
+  @override
+  Future<void> setSessionPersistence({required bool keepSignedIn}) async {}
+
+  @override
   Future<DashboardOverview> getDashboard({int? year}) async {
     return loadDashboard();
   }

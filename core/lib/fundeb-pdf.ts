@@ -14,8 +14,14 @@ interface FundebPdfFilenameSource {
 
 export type FundebPdfTipo = "levantamento" | "executiva" | "comparativa" | "comercial-premium";
 
+/**
+ * Geradores Python remanescentes. `levantamento` saiu daqui: o novo modelo é
+ * HTML + Chromium (`fundeb-levantamento-template.ts` / `-pdf.ts`), e a rota o
+ * intercepta antes de chegar neste mapa. O ReportLab `gerador.py` foi removido
+ * junto com ele.
+ */
 const GERADORES: Record<FundebPdfTipo, string> = {
-  levantamento: "gerador.py",
+  levantamento: "", // Novo modelo: HTML + Playwright, tratado na rota
   executiva: "gerador_executiva.py",
   comparativa: "gerador_comparativa.py",
   "comercial-premium": "", // Handled by Playwright, not Python

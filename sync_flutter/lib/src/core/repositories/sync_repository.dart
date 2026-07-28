@@ -14,6 +14,16 @@ abstract class SyncRepository {
   Future<SyncUser> signIn(String email, String password);
   Future<void> signOut();
 
+  /// Envia o e-mail de redefinicao de senha.
+  Future<void> sendPasswordReset(String email);
+
+  /// Define se a sessao sobrevive ao fechamento do navegador.
+  ///
+  /// So tem efeito na web, onde o Firebase distingue `LOCAL` de `SESSION`.
+  /// Nas demais plataformas a sessao sempre persiste e o app nao deve
+  /// oferecer a escolha.
+  Future<void> setSessionPersistence({required bool keepSignedIn});
+
   Future<DashboardOverview> getDashboard({
     int? year,
   });

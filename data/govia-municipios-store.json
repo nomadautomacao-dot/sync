@@ -17,9 +17,9 @@
       "uf": "BA",
       "regiao": "Nordeste",
       "created_at": "2026-03-17T19:57:46.777Z",
-      "updated_at": "2026-06-26T15:56:22.488Z",
-      "ultimo_acesso": "2026-06-26T15:56:22.488Z",
-      "acessos": 32,
+      "updated_at": "2026-07-27T21:45:52.687Z",
+      "ultimo_acesso": "2026-07-27T21:45:52.687Z",
+      "acessos": 42,
       "in_carteira": false
     },
     {
@@ -820,9 +820,9 @@
       "uf": "BA",
       "regiao": "Nordeste",
       "created_at": "2026-06-11T19:36:34.118Z",
-      "updated_at": "2026-07-22T19:07:00.987Z",
-      "ultimo_acesso": "2026-07-22T19:07:00.987Z",
-      "acessos": 5,
+      "updated_at": "2026-07-27T18:11:01.392Z",
+      "ultimo_acesso": "2026-07-27T18:11:01.392Z",
+      "acessos": 14,
       "in_carteira": false
     },
     {
@@ -1435,9 +1435,9 @@
       "uf": "UF",
       "regiao": "Nao informado",
       "created_at": "2026-06-22T18:09:48.588Z",
-      "updated_at": "2026-06-26T15:51:17.520Z",
-      "ultimo_acesso": "2026-06-26T15:51:17.520Z",
-      "acessos": 10,
+      "updated_at": "2026-07-27T14:54:07.458Z",
+      "ultimo_acesso": "2026-07-27T14:54:07.458Z",
+      "acessos": 12,
       "in_carteira": false
     },
     {
@@ -3140,9 +3140,20 @@
       "uf": "AL",
       "regiao": "Nordeste",
       "created_at": "2026-07-23T18:08:20.207Z",
-      "updated_at": "2026-07-23T18:08:53.269Z",
-      "ultimo_acesso": "2026-07-23T18:08:53.269Z",
-      "acessos": 2,
+      "updated_at": "2026-07-27T18:11:10.389Z",
+      "ultimo_acesso": "2026-07-27T18:11:10.389Z",
+      "acessos": 4,
+      "in_carteira": false
+    },
+    {
+      "codigo_ibge": "3136959",
+      "nome": "Juvenília",
+      "uf": "MG",
+      "regiao": "Sudeste",
+      "created_at": "2026-07-28T19:25:57.562Z",
+      "updated_at": "2026-07-28T19:50:46.679Z",
+      "ultimo_acesso": "2026-07-28T19:50:46.679Z",
+      "acessos": 4,
       "in_carteira": false
     }
   ]

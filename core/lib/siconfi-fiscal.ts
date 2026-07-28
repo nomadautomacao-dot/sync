@@ -43,6 +43,12 @@ interface SiconfiEntregaSelecionada {
   periodicidade: string;
   instituicao: string;
   dataStatus: string | null;
+  /**
+   * Municipios pequenos entregam RGF e RREO na modalidade simplificada. O
+   * SICONFI trata as duas como demonstrativos distintos: consultar o anexo
+   * com o co_tipo_demonstrativo errado devolve 200 com lista vazia.
+   */
+  simplificado: boolean;
 }
 
 interface SiconfiFiscalRecord {
@@ -161,6 +167,7 @@ function pickLatestEntrega(
         periodicidade: item.periodicidade ?? (tipo === "DCA" ? "A" : tipo === "RGF" ? "Q" : "B"),
         instituicao: item.instituicao ?? "Nao informado",
         dataStatus: item.data_status ?? null,
+        simplificado: /simplificado/i.test(item.entregavel ?? ""),
       } satisfies SiconfiEntregaSelecionada;
     }
   }
@@ -193,30 +200,54 @@ async function fetchDca(codigoIBGE: string, exercicio: number) {
   return json.items ?? [];
 }
 
+function tipoDemonstrativo(tipo: "RGF" | "RREO", simplificado: boolean) {
+  return simplificado ? `${tipo} Simplificado` : tipo;
+}
+
+/**
+ * Consulta a modalidade declarada na entrega e, se ela vier vazia, tenta a
+ * outra. O extrato de entregas e o anexo nem sempre concordam sobre a
+ * modalidade, e uma lista vazia aqui zera todo o bloco fiscal do relatorio.
+ */
+async function fetchComFallback(
+  path: "rgf" | "rreo",
+  simplificado: boolean,
+  params: (tipo: string) => Record<string, string | number | null | undefined>,
+) {
+  const tipo = path.toUpperCase() as "RGF" | "RREO";
+  const consultar = async (usarSimplificado: boolean) => {
+    const url = buildUrl(path, params(tipoDemonstrativo(tipo, usarSimplificado)));
+    const json = await fetchSiconfiJson<{ items?: SiconfiAccountItem[] }>(url);
+    return json.items ?? [];
+  };
+
+  const items = await consultar(simplificado);
+  if (items.length > 0) {
+    return items;
+  }
+  return consultar(!simplificado).catch(() => items);
+}
+
 async function fetchRgf(codigoIBGE: string, entrega: SiconfiEntregaSelecionada) {
-  const url = buildUrl("rgf", {
+  return fetchComFallback("rgf", entrega.simplificado, (co_tipo_demonstrativo) => ({
     id_ente: codigoIBGE,
     an_exercicio: entrega.exercicio,
     in_periodicidade: entrega.periodicidade,
     nr_periodo: entrega.periodo,
-    co_tipo_demonstrativo: "RGF",
+    co_tipo_demonstrativo,
     co_poder: "E",
     no_anexo: "RGF-Anexo 01",
-  });
-  const json = await fetchSiconfiJson<{ items?: SiconfiAccountItem[] }>(url);
-  return json.items ?? [];
+  }));
 }
 
 async function fetchRreo(codigoIBGE: string, entrega: SiconfiEntregaSelecionada) {
-  const url = buildUrl("rreo", {
+  return fetchComFallback("rreo", entrega.simplificado, (co_tipo_demonstrativo) => ({
     id_ente: codigoIBGE,
     an_exercicio: entrega.exercicio,
     nr_periodo: entrega.periodo,
-    co_tipo_demonstrativo: "RREO",
+    co_tipo_demonstrativo,
     no_anexo: "RREO-Anexo 01",
-  });
-  const json = await fetchSiconfiJson<{ items?: SiconfiAccountItem[] }>(url);
-  return json.items ?? [];
+  }));
 }
 
 function pickMetric(items: SiconfiAccountItem[], codConta: string, coluna = "Valor") {
@@ -255,12 +286,12 @@ function buildFontes(entregas: SiconfiFiscalRecord["entregas"]) {
   }
   if (entregas.rgf) {
     fontes.push(
-      `SICONFI / Tesouro Nacional - RGF ${entregas.rgf.exercicio} periodo ${entregas.rgf.periodo}`,
+      `SICONFI / Tesouro Nacional - RGF ${entregas.rgf.exercicio} período ${entregas.rgf.periodo}`,
     );
   }
   if (entregas.rreo) {
     fontes.push(
-      `SICONFI / Tesouro Nacional - RREO ${entregas.rreo.exercicio} periodo ${entregas.rreo.periodo}`,
+      `SICONFI / Tesouro Nacional - RREO ${entregas.rreo.exercicio} período ${entregas.rreo.periodo}`,
     );
   }
 
@@ -364,7 +395,7 @@ export async function getSiconfiFiscalRecord(
   if (resumoEntregas.length > 0 && anoReferencia < exercicio) {
     observacoes.push(`Base fiscal oficial mais recente no SICONFI: ${resumoEntregas.join(", ")}.`);
   } else if (entregas.rgf && entregas.rgf.periodo > 0) {
-    observacoes.push(`Leitura LRF baseada no periodo ${entregas.rgf.periodo} do exercicio ${entregas.rgf.exercicio}.`);
+    observacoes.push(`Leitura LRF baseada no período ${entregas.rgf.periodo} do exercício ${entregas.rgf.exercicio}.`);
   }
 
   const record: SiconfiFiscalRecord = {

@@ -69,6 +69,19 @@ class LocalSyncRepository implements SyncRepository {
   }
 
   @override
+  Future<void> sendPasswordReset(String email) async {
+    // Workspace local nao tem servidor de identidade para redefinir senha.
+    throw const ApiException(
+      'Redefinição de senha exige conexão com o servidor.',
+    );
+  }
+
+  @override
+  Future<void> setSessionPersistence({required bool keepSignedIn}) async {
+    // A sessao local vive no armazenamento do dispositivo; nada a alternar.
+  }
+
+  @override
   Future<DashboardOverview> getDashboard({int? year}) async {
     final companies = await getCompanies();
     final collaborators = await getCollaborators();

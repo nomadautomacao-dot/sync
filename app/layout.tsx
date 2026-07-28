@@ -1,23 +1,24 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Instrument_Sans, IBM_Plex_Mono } from "next/font/google";
 import { AppProviders } from "@/core/providers/app-providers";
 import "./globals.css";
 
-const inter = Inter({
+const instrumentSans = Instrument_Sans({
   variable: "--font-sync-sans",
   subsets: ["latin"],
   display: "swap",
 });
 
-const jetBrainsMono = JetBrains_Mono({
+const ibmPlexMono = IBM_Plex_Mono({
+  weight: ["400", "500", "600"],
   variable: "--font-sync-mono",
   subsets: ["latin"],
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Sync",
-  description: "Plataforma centralizada de gestao multi-empresa",
+  title: "Global Sync — Console Operacional",
+  description: "Plataforma de automação e gestão para consultoria FUNDEB",
   icons: {
     icon: "/sync-mark.svg",
     shortcut: "/sync-mark.svg",
@@ -32,7 +33,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR">
-      <body className={`${inter.variable} ${jetBrainsMono.variable} antialiased`}>
+      <body className={`${instrumentSans.variable} ${ibmPlexMono.variable} antialiased font-sans`}>
         <AppProviders>{children}</AppProviders>
       </body>
     </html>

@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,200..600,0..1,-25..0&amp;display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: #DCE0E7; -webkit-font-smoothing: antialiased; }
+  a { color: #036B69; text-decoration: none; }
+  a:hover { color: #025F5D; text-decoration: underline; }
+  @keyframes gsPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.8); } }
+</style>
+</helmet>
+
+<section style="padding: 64px 72px 120px; display: flex; flex-direction: column; gap: 56px; font-family: 'Instrument Sans', sans-serif;">
+
+  <div style="max-width: 880px; display: flex; flex-direction: column; gap: 14px;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <img src="assets/gs-icon.png" alt="Global Sync" style="width: 40px; height: 40px;">
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; letter-spacing: 1.2px; color: #6B7280; text-transform: uppercase;">Global Sync · Console Técnico · v1</div>
+    </div>
+    <h1 style="margin: 0; font-size: 38px; font-weight: 700; letter-spacing: -1.5px; color: #111827; line-height: 1.05;">UI Kit — biblioteca de componentes</h1>
+    <p style="margin: 0; font-size: 15px; line-height: 1.55; color: #374151; text-wrap: pretty;">Fonte: <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; background: #E2E8F0; padding: 1px 6px; border-radius: 4px;">DESIGN.md</span> + <span style="font-family: 'IBM Plex Mono', monospace; font-size: 13px; background: #E2E8F0; padding: 1px 6px; border-radius: 4px;">app_theme.dart</span>. Regras: um accent só (teal), cards planos com borda 1px, hierarquia por duas famílias tipográficas. Componentes marcados <span style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; color: #92400E; background: #FEF6E7; border-radius: 6px; padding: 2px 7px;">novo</span> são explorações além do padrão atual.</p>
+  </div>
+
+  <!-- ══════ 01 FUNDAÇÕES ══════ -->
+  <div style="display: flex; flex-direction: column; gap: 24px;">
+    <div style="display: flex; align-items: baseline; gap: 12px;">
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: #FFFFFF; background: #049598; padding: 4px 10px; border-radius: 6px;">01</div>
+      <h2 style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -.7px; color: #111827;">Fundações</h2>
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start;">
+      <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; padding: 22px; width: 620px;">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1.1px; color: #4B5563; text-transform: uppercase;">Paleta</div>
+        <div style="height: 16px;"></div>
+        <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;">
+          <sc-for list="{{ cores }}" as="cor" hint-placeholder-count="20">
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <div style="height: 52px; border-radius: 8px; background: {{ cor.hex }}; border: 1px solid #E2E8F0;"></div>
+              <div style="font-size: 11.5px; font-weight: 600; color: #111827;">{{ cor.nome }}</div>
+              <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #6B7280; margin-top: -4px;">{{ cor.hex }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; padding: 22px; width: 460px;">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1.1px; color: #4B5563; text-transform: uppercase;">Interface — Instrument Sans</div>
+        <div style="height: 14px;"></div>
+        <div style="display: flex; flex-direction: column; gap: 11px;">
+          <div style="display: flex; align-items: baseline; gap: 12px;"><div style="font-size: 23px; font-weight: 700; letter-spacing: -.7px; color: #111827; flex: 1;">Visão executiva</div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #9CA3AF;">pageTitle 23/700</div></div>
+          <div style="display: flex; align-items: baseline; gap: 12px;"><div style="font-size: 20px; font-weight: 700; letter-spacing: -.6px; color: #111827; flex: 1;">Título de painel</div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #9CA3AF;">panelTitle 20/700</div></div>
+          <div style="display: flex; align-items: baseline; gap: 12px;"><div style="font-size: 16px; font-weight: 600; letter-spacing: -.3px; color: #111827; flex: 1;">Receita no ano</div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #9CA3AF;">cardTitle 16/600</div></div>
+          <div style="display: flex; align-items: baseline; gap: 12px;"><div style="font-size: 14px; font-weight: 600; color: #111827; flex: 1;">Nome na linha de tabela</div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #9CA3AF;">bodyStrong 14/600</div></div>
+          <div style="display: flex; align-items: baseline; gap: 12px;"><div style="font-size: 13px; color: #374151; flex: 1;">O texto mais comum da interface</div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #9CA3AF;">body 13/400</div></div>
+          <div style="display: flex; align-items: baseline; gap: 12px;"><div style="font-size: 12px; color: #4B5563; flex: 1;">Descrição secundária</div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #9CA3AF;">bodySm 12/400</div></div>
+        </div>
+        <div style="height: 20px;"></div>
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1.1px; color: #4B5563; text-transform: uppercase;">Dados — IBM Plex Mono</div>
+        <div style="height: 14px;"></div>
+        <div style="display: flex; flex-direction: column; gap: 11px; font-family: 'IBM Plex Mono', monospace;">
+          <div style="display: flex; align-items: baseline; gap: 12px;"><div style="font-size: 32px; font-weight: 600; letter-spacing: -1.6px; color: #111827; flex: 1; font-variant-numeric: tabular-nums;">R$ 4,82M</div><div style="font-size: 10px; color: #9CA3AF;">kpiXl 32/600</div></div>
+          <div style="display: flex; align-items: baseline; gap: 12px;"><div style="font-size: 26px; font-weight: 600; letter-spacing: -1.2px; color: #111827; flex: 1; font-variant-numeric: tabular-nums;">R$ 964,3K</div><div style="font-size: 10px; color: #9CA3AF;">kpiLg 26/600</div></div>
+          <div style="display: flex; align-items: baseline; gap: 12px;"><div style="font-size: 13px; color: #374151; flex: 1; font-variant-numeric: tabular-nums;">11.688 matrículas · 2026-07 · v3</div><div style="font-size: 10px; color: #9CA3AF;">data 13/400</div></div>
+          <div style="display: flex; align-items: baseline; gap: 12px;"><div style="font-size: 10px; font-weight: 600; letter-spacing: 1.1px; color: #4B5563; flex: 1;">CABEÇALHO DE COLUNA</div><div style="font-size: 10px; color: #9CA3AF;">label 10/600 caps</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ 02 ÁTOMOS ══════ -->
+  <div style="display: flex; flex-direction: column; gap: 24px;">
+    <div style="display: flex; align-items: baseline; gap: 12px;">
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: #FFFFFF; background: #049598; padding: 4px 10px; border-radius: 6px;">02</div>
+      <h2 style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -.7px; color: #111827;">Átomos</h2>
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start;">
+
+      <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; padding: 22px; width: 400px;">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1.1px; color: #4B5563; text-transform: uppercase;">Botões · alvo 48px</div>
+        <div style="height: 16px;"></div>
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+          <div style="height: 48px; background: #036B69; color: #FFFFFF; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-weight: 600; letter-spacing: -.1px; cursor: pointer; transition: background .18s ease;" style-hover="background: #025F5D;"><span style="font-family: 'Material Symbols Outlined'; font-size: 18px;">add</span>Primário — Novo levantamento</div>
+          <div style="height: 48px; border: 1px solid #D8DEE6; background: #FFFFFF; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-weight: 600; color: #374151; cursor: pointer; transition: background .18s ease;" style-hover="background: #F7F9FB;">Secundário</div>
+          <div style="height: 48px; border-radius: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-weight: 600; color: #036B69; cursor: pointer; transition: background .18s ease;" style-hover="background: #DCF2F0;">Ghost</div>
+          <div style="display: flex; gap: 10px;">
+            <div style="flex: 1; height: 40px; border: 1px solid #F3C2C2; background: #FEF2F2; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: #991B1B; cursor: pointer;" style-hover="background: #FDE8E8;">Destrutivo</div>
+            <div style="flex: 1; height: 40px; background: #F1F3F7; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: #9CA3AF; cursor: not-allowed;">Desabilitado</div>
+          </div>
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <div style="width: 40px; height: 40px; border: 1px solid #D8DEE6; border-radius: 10px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: border-color .18s ease;" style-hover="border-color: #049598;"><span style="font-family: 'Material Symbols Outlined'; font-size: 18px; color: #4B5563;">download</span></div>
+            <div style="height: 40px; background: #036B69; border-radius: 10px; display: flex; align-items: center; gap: 8px; padding: 0 14px; cursor: pointer; transition: background .18s ease;" style-hover="background: #025F5D;"><span style="font-family: 'Material Symbols Outlined'; font-size: 17px; color: #FFFFFF;">add</span><div style="font-size: 13px; font-weight: 600; color: #FFFFFF;">Com atalho</div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: rgba(255,255,255,.72);">⌘N</div></div>
+          </div>
+        </div>
+        <sc-if value="{{ mostrarSpecs }}" hint-placeholder-val="{{ true }}">
+          <div style="height: 14px;"></div>
+          <div style="font-size: 12px; color: #4B5563; line-height: 1.5; border-top: 1px solid #EEF1F6; padding-top: 12px;">Texto sobre teal usa <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">primary-strong #036B69</span> (6,34:1) — nunca <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px;">#049598</span>, que reprova AA.</div>
+        </sc-if>
+      </div>
+
+      <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; padding: 22px; width: 400px;">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1.1px; color: #4B5563; text-transform: uppercase;">Campos de formulário</div>
+        <div style="height: 16px;"></div>
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: .9px; color: #4B5563; text-transform: uppercase;">Padrão</div>
+            <div style="height: 7px;"></div>
+            <div style="height: 48px; border: 1px solid #D8DEE6; border-radius: 10px; display: flex; align-items: center; padding: 0 14px; font-size: 14px; color: #9CA3AF; cursor: text; transition: border-color .18s ease;" style-hover="border-color: #9CA3AF;">Nome do município…</div>
+          </div>
+          <div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: .9px; color: #4B5563; text-transform: uppercase;">Foco</div>
+            <div style="height: 7px;"></div>
+            <div style="height: 48px; border: 1.5px solid #049598; border-radius: 10px; display: flex; align-items: center; padding: 0 14px; font-size: 14px; color: #111827;">Cristalina<span style="display: inline-block; width: 1.5px; height: 18px; background: #049598; margin-left: 2px;"></span></div>
+          </div>
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: baseline;"><div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: .9px; color: #991B1B; text-transform: uppercase;">Erro</div><div style="font-size: 11px; color: #991B1B;">CNPJ inválido</div></div>
+            <div style="height: 7px;"></div>
+            <div style="height: 48px; border: 1.5px solid #EF4444; background: #FEF2F2; border-radius: 10px; display: flex; align-items: center; padding: 0 14px; font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #111827;">12.345.678/0001-0</div>
+          </div>
+          <div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: .9px; color: #4B5563; text-transform: uppercase;">Busca global</div>
+            <div style="height: 7px;"></div>
+            <div style="height: 40px; border: 1px solid #E2E8F0; border-radius: 10px; display: flex; align-items: center; gap: 9px; padding: 0 12px; cursor: text; transition: border-color .18s ease;" style-hover="border-color: #049598;"><span style="font-family: 'Material Symbols Outlined'; font-size: 17px; color: #9CA3AF;">search</span><div style="flex: 1; font-size: 13px; color: #9CA3AF;">Buscar município, empresa…</div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6B7280; background: #EEF1F6; border: 1px solid #E2E8F0; border-radius: 5px; padding: 1px 6px;">⌘K</div></div>
+          </div>
+          <div style="display: flex; gap: 18px; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 9px; cursor: pointer;" onClick="{{ toggleSessao }}">
+              <sc-if value="{{ chkSessao }}" hint-placeholder-val="{{ true }}">
+                <div style="width: 18px; height: 18px; border-radius: 5px; background: #049598; display: flex; align-items: center; justify-content: center;"><span style="font-family: 'Material Symbols Outlined'; font-size: 14px; color: #FFFFFF;">check</span></div>
+              </sc-if>
+              <sc-if value="{{ chkSessaoOff }}" hint-placeholder-val="{{ false }}">
+                <div style="width: 18px; height: 18px; border-radius: 5px; border: 1.5px solid #C9D0DB; background: #FFFFFF;"></div>
+              </sc-if>
+              <div style="font-size: 13px; color: #374151;">Checkbox</div>
+            </div>
+            <div style="display: flex; align-items: center; gap: 9px; cursor: pointer;" onClick="{{ toggleNotif }}">
+              <div style="width: 38px; height: 22px; border-radius: 20px; background: {{ swTrackCor }}; position: relative; transition: background .18s ease;">
+                <div style="position: absolute; top: 2px; left: {{ swKnobLeft }}; width: 18px; height: 18px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 1px 3px rgba(16,24,40,.2); transition: left .18s ease;"></div>
+              </div>
+              <div style="font-size: 13px; color: #374151;">Switch</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; padding: 22px; width: 400px;">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1.1px; color: #4B5563; text-transform: uppercase;">Chips de status · raio 6 · mono</div>
+        <div style="height: 16px;"></div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; color: #065F46; background: #E7F7F1; border-radius: 6px; padding: 4px 9px;">ativo</div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; color: #B45309; background: #FEF6E7; border-radius: 6px; padding: 4px 9px;">pendência</div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; color: #4B5563; background: #EEF1F6; border-radius: 6px; padding: 4px 9px;">inativo</div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; color: #036B69; background: #DCF2F0; border-radius: 6px; padding: 4px 9px;">contrato</div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; color: #036B69; background: #FFFFFF; border: 1px solid #C7E7E5; border-radius: 6px; padding: 3px 8px;">FUNDEB</div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; color: #991B1B; background: #FEF2F2; border-radius: 6px; padding: 4px 9px;">vencido</div>
+        </div>
+        <div style="height: 20px;"></div>
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1.1px; color: #4B5563; text-transform: uppercase;">Contadores &amp; kbd</div>
+        <div style="height: 14px;"></div>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; color: #FFFFFF; background: #049598; border-radius: 20px; padding: 2px 8px;">4</div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #B45309;">3</div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; color: #6B7280; border: 1px solid #E2E8F0; border-radius: 5px; padding: 2px 6px;">⌘K</div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; color: #6B7280; border: 1px solid #E2E8F0; border-radius: 5px; padding: 2px 6px;">⌘/</div>
+          <div style="display: flex; align-items: center; gap: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6B7280; border: 1px solid #E2E8F0; border-radius: 20px; padding: 5px 11px; white-space: nowrap;"><div style="width: 6px; height: 6px; border-radius: 50%; background: #10B981; animation: gsPulse 2.4s ease-in-out infinite;"></div>sincronizado 14:32</div>
+        </div>
+        <div style="height: 20px;"></div>
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1.1px; color: #4B5563; text-transform: uppercase;">Segmento (período)</div>
+        <div style="height: 14px;"></div>
+        <div style="display: inline-flex; border: 1px solid #E2E8F0; border-radius: 10px; overflow: hidden; background: #FFFFFF;">
+          <sc-for list="{{ segmentos }}" as="seg" hint-placeholder-count="5">
+            <div style="padding: 9px 14px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: {{ seg.peso }}; color: {{ seg.cor }}; background: {{ seg.fundo }}; cursor: pointer; border-left: 1px solid #E2E8F0;" onClick="{{ seg.selecionar }}">{{ seg.nome }}</div>
+          </sc-for>
+        </div>
+        <div style="height: 20px;"></div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1.1px; color: #4B5563; text-transform: uppercase;">Avatares</div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; color: #92400E; background: #FEF6E7; border-radius: 6px; padding: 2px 7px;">novo · stack</div>
+        </div>
+        <div style="height: 14px;"></div>
+        <div style="display: flex; align-items: center; gap: 16px;">
+          <div style="width: 36px; height: 36px; border-radius: 11px; background: #049598; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #FFFFFF;">MR</div>
+          <div style="width: 36px; height: 36px; border-radius: 50%; background: #DCF2F0; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #036B69;">AD</div>
+          <div style="display: flex;">
+            <div style="width: 30px; height: 30px; border-radius: 50%; background: #049598; border: 2px solid #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #FFFFFF;">MR</div>
+            <div style="width: 30px; height: 30px; border-radius: 50%; background: #5FA3A0; border: 2px solid #FFFFFF; margin-left: -8px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #FFFFFF;">AD</div>
+            <div style="width: 30px; height: 30px; border-radius: 50%; background: #036B69; border: 2px solid #FFFFFF; margin-left: -8px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: #FFFFFF;">JL</div>
+            <div style="width: 30px; height: 30px; border-radius: 50%; background: #EEF1F6; border: 2px solid #FFFFFF; margin-left: -8px; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; color: #4B5563;">+4</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ 03 MOLÉCULAS ══════ -->
+  <div style="display: flex; flex-direction: column; gap: 24px;">
+    <div style="display: flex; align-items: baseline; gap: 12px;">
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: #FFFFFF; background: #049598; padding: 4px 10px; border-radius: 6px;">03</div>
+      <h2 style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -.7px; color: #111827;">Moléculas</h2>
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start;">
+
+      <div style="display: flex; flex-direction: column; gap: 10px; width: 840px;">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1.1px; color: #4B5563; text-transform: uppercase;">Cartões de KPI — 1 linha de apoio, nunca as três</div>
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;">
+          <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; padding: 18px 18px 16px;">
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1.1px; color: #4B5563; text-transform: uppercase;">Lucro projetado</div>
+            <div style="height: 10px;"></div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 32px; font-weight: 600; letter-spacing: -1.6px; color: #111827; line-height: 1; font-variant-numeric: tabular-nums; white-space: nowrap;">R$ 4,82M</div>
+            <div style="height: 10px;"></div>
+            <div style="display: flex; align-items: center; gap: 5px;"><span style="font-family: 'Material Symbols Outlined'; font-size: 15px; color: #10B981;">trending_up</span><div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: #047857;">+12,4%</div><div style="font-size: 12px; color: #6B7280;">vs. 2025</div></div>
+          </div>
+          <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; padding: 18px 18px 16px;">
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1.1px; color: #4B5563; text-transform: uppercase;">Margem</div>
+            <div style="height: 10px;"></div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 32px; font-weight: 600; letter-spacing: -1.6px; color: #111827; line-height: 1; font-variant-numeric: tabular-nums;">38,6%</div>
+            <div style="height: 12px;"></div>
+            <div style="height: 5px; border-radius: 4px; background: #EEF1F6; overflow: hidden;"><div style="width: 62%; height: 100%; background: #049598;"></div></div>
+          </div>
+          <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; padding: 18px 18px 16px;">
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1.1px; color: #4B5563; text-transform: uppercase;">Cobertura</div>
+            <div style="height: 10px;"></div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 32px; font-weight: 600; letter-spacing: -1.6px; color: #111827; line-height: 1; font-variant-numeric: tabular-nums;">71%</div>
+            <div style="height: 10px;"></div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6B7280;">24 de 34 municípios</div>
+          </div>
+          <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; padding: 18px 18px 16px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;"><div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1.1px; color: #4B5563; text-transform: uppercase;">Receita mensal</div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 600; color: #92400E; background: #FEF6E7; border-radius: 5px; padding: 2px 6px; white-space: nowrap;">novo</div></div>
+            <div style="height: 10px;"></div>
+            <div style="display: flex; align-items: flex-end; gap: 10px;">
+              <div style="font-family: 'IBM Plex Mono', monospace; font-size: 32px; font-weight: 600; letter-spacing: -1.6px; color: #111827; line-height: 1; font-variant-numeric: tabular-nums;">1,4M</div>
+              <div style="display: flex; align-items: flex-end; gap: 3px; height: 30px; flex: 1;">
+                <div style="flex: 1; height: 40%; background: #DCF2F0; border-radius: 2px;"></div>
+                <div style="flex: 1; height: 55%; background: #DCF2F0; border-radius: 2px;"></div>
+                <div style="flex: 1; height: 48%; background: #DCF2F0; border-radius: 2px;"></div>
+                <div style="flex: 1; height: 70%; background: #5FA3A0; border-radius: 2px;"></div>
+                <div style="flex: 1; height: 62%; background: #5FA3A0; border-radius: 2px;"></div>
+                <div style="flex: 1; height: 100%; background: #049598; border-radius: 2px;"></div>
+              </div>
+            </div>
+            <div style="height: 10px;"></div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6B7280;">sparkline no próprio cartão</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; padding: 22px; width: 340px;">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1.1px; color: #4B5563; text-transform: uppercase;">Navegação lateral — estados</div>
+        <div style="height: 16px;"></div>
+        <div style="display: flex; flex-direction: column; gap: 3px; background: #FFFFFF;">
+          <div style="height: 44px; border-radius: 10px; background: #DCF2F0; display: flex; align-items: center; gap: 11px; padding-right: 12px;">
+            <div style="width: 3px; height: 24px; border-radius: 2px; background: #049598; margin-left: 8px;"></div>
+            <span style="font-family: 'Material Symbols Outlined'; font-size: 19px; color: #036B69;">space_dashboard</span>
+            <div style="flex: 1; font-size: 14px; font-weight: 600; color: #036B69; letter-spacing: -.2px;">Ativo</div>
+            <div style="width: 6px; height: 6px; border-radius: 50%; background: #10B981; box-shadow: 0 0 6px rgba(16,185,129,.5);"></div>
+          </div>
+          <div style="height: 44px; border-radius: 10px; display: flex; align-items: center; gap: 11px; padding-left: 22px; padding-right: 12px; cursor: pointer; transition: background .18s ease;" style-hover="background: #EEF1F6;">
+            <span style="font-family: 'Material Symbols Outlined'; font-size: 19px; color: #9CA3AF;">inbox</span>
+            <div style="flex: 1; font-size: 14px; font-weight: 500; color: #6B7280;">Com contador</div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; color: #FFFFFF; background: #049598; border-radius: 20px; padding: 2px 7px;">4</div>
+          </div>
+          <div style="height: 44px; border-radius: 10px; display: flex; align-items: center; gap: 11px; padding-left: 22px; cursor: pointer; transition: background .18s ease;" style-hover="background: #EEF1F6;">
+            <span style="font-family: 'Material Symbols Outlined'; font-size: 19px; color: #9CA3AF;">apartment</span>
+            <div style="font-size: 14px; font-weight: 500; color: #6B7280;">Inativo</div>
+          </div>
+          <div style="height: 44px; border-radius: 10px; display: flex; align-items: center; gap: 11px; padding-left: 22px; padding-right: 12px;">
+            <span style="font-family: 'Material Symbols Outlined'; font-size: 19px; color: #C9D0DB;">tune</span>
+            <div style="flex: 1; font-size: 14px; font-weight: 500; color: #C9D0DB;">Em breve</div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 600; letter-spacing: .8px; color: #9CA3AF; border: 1px solid #E2E8F0; border-radius: 5px; padding: 2px 6px; white-space: nowrap;">EM BREVE</div>
+          </div>
+        </div>
+        <div style="height: 18px;"></div>
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1.1px; color: #4B5563; text-transform: uppercase;">Cartão do usuário</div>
+        <div style="height: 12px;"></div>
+        <div style="border: 1px solid #E2E8F0; background: #F7F9FB; border-radius: 12px; padding: 9px 10px; display: flex; align-items: center; gap: 10px; cursor: pointer; transition: border-color .18s ease;" style-hover="border-color: #049598;">
+          <div style="width: 36px; height: 36px; flex: none; border-radius: 11px; background: #049598; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #FFFFFF;">MR</div>
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-size: 14px; font-weight: 600; color: #111827;">Marcos Rocha</div>
+            <div style="display: flex; align-items: center; gap: 5px; margin-top: 3px;"><div style="width: 5px; height: 5px; border-radius: 50%; background: #10B981;"></div><div style="font-size: 11px; color: #6B7280;">Admin do grupo</div></div>
+          </div>
+          <span style="font-family: 'Material Symbols Outlined'; font-size: 18px; color: #9CA3AF;">more_vert</span>
+        </div>
+        <div style="height: 18px;"></div>
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1.1px; color: #4B5563; text-transform: uppercase;">Seletor de grupo</div>
+        <div style="height: 12px;"></div>
+        <div style="border: 1px solid #E2E8F0; border-radius: 11px; padding: 8px 10px; display: flex; align-items: center; gap: 9px; cursor: pointer; transition: border-color .18s ease;" style-hover="border-color: #049598;">
+          <img src="assets/gs-icon.png" alt="" style="width: 26px; height: 26px;">
+          <div style="flex: 1; min-width: 0;">
+            <div style="font-size: 13px; font-weight: 600; color: #111827;">Global Services</div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #6B7280;">grupo · 5 empresas</div>
+          </div>
+          <span style="font-family: 'Material Symbols Outlined'; font-size: 18px; color: #9CA3AF;">unfold_more</span>
+        </div>
+      </div>
+
+      <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; padding: 22px; width: 420px;">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1.1px; color: #4B5563; text-transform: uppercase;">Alertas do radar</div>
+        <div style="height: 16px;"></div>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+          <div style="display: flex; gap: 10px; align-items: flex-start; padding: 11px 12px; border: 1px solid #FDE9C8; background: #FEFAF2; border-radius: 10px;">
+            <span style="font-family: 'Material Symbols Outlined'; font-size: 17px; color: #F59E0B;">schedule</span>
+            <div><div style="font-size: 13px; font-weight: 600; color: #111827;">Contrato Cristalina vence em 12 dias</div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6B7280; margin-top: 2px;">renovação não iniciada</div></div>
+          </div>
+          <div style="display: flex; gap: 10px; align-items: flex-start; padding: 11px 12px; border: 1px solid #E2E8F0; border-radius: 10px;">
+            <span style="font-family: 'Material Symbols Outlined'; font-size: 17px; color: #049598;">description</span>
+            <div><div style="font-size: 13px; font-weight: 600; color: #111827;">4 levantamentos aguardando revisão</div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6B7280; margin-top: 2px;">FUNDEB · lote 2026-07</div></div>
+          </div>
+          <div style="display: flex; gap: 10px; align-items: flex-start; padding: 11px 12px; border: 1px solid #F3C2C2; background: #FEF6F6; border-radius: 10px;">
+            <span style="font-family: 'Material Symbols Outlined'; font-size: 17px; color: #EF4444;">badge</span>
+            <div><div style="font-size: 13px; font-weight: 600; color: #111827;">Certidão de Ana Duarte expirou</div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6B7280; margin-top: 2px;">20/07 · bloqueia kit documental</div></div>
+          </div>
+        </div>
+        <div style="height: 20px;"></div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1.1px; color: #4B5563; text-transform: uppercase;">Estado vazio</div>
+        </div>
+        <div style="height: 12px;"></div>
+        <div style="border: 1px dashed #C9D0DB; border-radius: 12px; padding: 26px 20px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;">
+          <span style="font-family: 'Material Symbols Outlined'; font-size: 26px; color: #9CA3AF;">travel_explore</span>
+          <div style="font-size: 14px; font-weight: 600; color: #374151;">Nenhum município na carteira</div>
+          <div style="font-size: 12px; color: #6B7280; max-width: 240px;">Adicione o primeiro pelo levantamento automático.</div>
+          <div style="height: 4px;"></div>
+          <div style="height: 36px; background: #036B69; border-radius: 10px; display: flex; align-items: center; gap: 7px; padding: 0 14px; cursor: pointer; transition: background .18s ease;" style-hover="background: #025F5D;"><span style="font-family: 'Material Symbols Outlined'; font-size: 16px; color: #FFFFFF;">add</span><div style="font-size: 13px; font-weight: 600; color: #FFFFFF;">Novo levantamento</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ 04 ORGANISMOS ══════ -->
+  <div style="display: flex; flex-direction: column; gap: 24px;">
+    <div style="display: flex; align-items: baseline; gap: 12px;">
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600; color: #FFFFFF; background: #049598; padding: 4px 10px; border-radius: 6px;">04</div>
+      <h2 style="margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -.7px; color: #111827;">Organismos</h2>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 10px; width: 1100px;">
+      <div style="display: flex; align-items: center; justify-content: space-between;">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1.1px; color: #4B5563; text-transform: uppercase;">Tabela — densidade alternável · dados reais da carteira</div>
+        <div style="display: flex; align-items: center; gap: 8px; border: 1px solid #E2E8F0; background: #FFFFFF; border-radius: 8px; padding: 6px 10px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #036B69; cursor: pointer;" onClick="{{ toggleDensidade }}" style-hover="border-color: #049598;"><span style="font-family: 'Material Symbols Outlined'; font-size: 15px;">density_medium</span>densidade: {{ densLabel }}</div>
+      </div>
+      <div style="background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; overflow: hidden;">
+        <div style="padding: 15px 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #E2E8F0;">
+          <div style="display: flex; align-items: baseline; gap: 10px;"><div style="font-size: 16px; font-weight: 600; color: #111827; letter-spacing: -.3px;">Cidades com maior projeção</div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6B7280;">34 municípios</div></div>
+          <div style="border: 1px solid #E2E8F0; border-radius: 8px; padding: 6px 10px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6B7280; cursor: pointer;" style-hover="border-color: #049598; color: #036B69;">exportar csv</div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1.8fr .45fr 1.15fr 1.1fr 1.1fr .7fr .3fr; background: #F7F9FB; border-bottom: 1px solid #E2E8F0; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: .9px; color: #4B5563; text-transform: uppercase;">
+          <div style="padding: 10px 10px 10px 20px;">Município</div>
+          <div style="padding: 10px;">UF</div>
+          <div style="padding: 10px;">Estágio</div>
+          <div style="padding: 10px; text-align: right;">VAAT 2026</div>
+          <div style="padding: 10px; text-align: right;">Lucro proj.</div>
+          <div style="padding: 10px; text-align: right;">Margem</div>
+          <div></div>
+        </div>
+        <sc-for list="{{ cidades }}" as="c" hint-placeholder-count="5">
+          <div style="display: grid; grid-template-columns: 1.8fr .45fr 1.15fr 1.1fr 1.1fr .7fr .3fr; align-items: center; border-bottom: 1px solid #EEF1F6; cursor: pointer; transition: background .15s ease;" style-hover="background: #F7F9FB;">
+            <div style="padding: {{ rowPad }}; padding-left: 20px; font-size: 14px; font-weight: 600; color: #111827;">{{ c.nome }}</div>
+            <div style="padding: {{ rowPad }}; font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #6B7280;">{{ c.uf }}</div>
+            <div style="padding: {{ rowPad }};"><span style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; color: {{ c.chipCor }}; background: {{ c.chipFundo }}; border-radius: 6px; padding: 3px 8px;">{{ c.estagio }}</span></div>
+            <div style="padding: {{ rowPad }}; font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: #374151; text-align: right; font-variant-numeric: tabular-nums;">{{ c.vaat }}</div>
+            <div style="padding: {{ rowPad }}; font-family: 'IBM Plex Mono', monospace; font-size: 13px; font-weight: 600; color: #111827; text-align: right; font-variant-numeric: tabular-nums;">{{ c.lucro }}</div>
+            <div style="padding: {{ rowPad }}; font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: {{ c.margemCor }}; text-align: right; font-variant-numeric: tabular-nums;">{{ c.margem }}</div>
+            <div style="text-align: center;"><span style="font-family: 'Material Symbols Outlined'; font-size: 17px; color: #C9D0DB;">chevron_right</span></div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start;">
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1.1px; color: #4B5563; text-transform: uppercase;">Cabeçalho de página</div>
+        <div style="width: 760px; height: 62px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 14px; display: flex; align-items: center; padding: 0 18px; gap: 12px;">
+          <div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1.1px; color: #6B7280;">WORKSPACE</div>
+            <div style="font-size: 15px; font-weight: 600; color: #111827; letter-spacing: -.25px;">Pipeline</div>
+          </div>
+          <div style="flex: none; width: 230px; margin-left: 16px; height: 38px; border: 1px solid #E2E8F0; border-radius: 10px; display: flex; align-items: center; gap: 9px; padding: 0 12px; cursor: text;" style-hover="border-color: #049598;">
+            <span style="font-family: 'Material Symbols Outlined'; font-size: 17px; color: #9CA3AF;">search</span>
+            <div style="flex: 1; font-size: 13px; color: #9CA3AF; white-space: nowrap; overflow: hidden;">Buscar…</div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6B7280; background: #EEF1F6; border: 1px solid #E2E8F0; border-radius: 5px; padding: 1px 6px;">⌘K</div>
+          </div>
+          <div style="flex: 1;"></div>
+          <div style="display: flex; align-items: center; gap: 8px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6B7280; border: 1px solid #E2E8F0; border-radius: 20px; padding: 5px 11px; white-space: nowrap;"><div style="width: 6px; height: 6px; border-radius: 50%; background: #10B981; animation: gsPulse 2.4s ease-in-out infinite;"></div>sincronizado 14:32</div>
+          <span style="font-family: 'Material Symbols Outlined'; font-size: 19px; color: #6B7280; cursor: pointer;" style-hover="color: #111827;">notifications</span>
+          <div style="width: 34px; height: 34px; border-radius: 10px; background: #049598; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #FFFFFF;">MR</div>
+        </div>
+
+        <div style="height: 8px;"></div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1.1px; color: #4B5563; text-transform: uppercase;">Cartão de pipeline (kanban)</div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; color: #92400E; background: #FEF6E7; border-radius: 6px; padding: 2px 7px;">novo</div>
+        </div>
+        <div style="display: flex; gap: 14px;">
+          <div style="width: 300px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 14px; cursor: pointer; transition: border-color .18s ease;" style-hover="border-color: #049598;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div style="font-size: 14px; font-weight: 600; color: #111827;">Cristalina</div>
+              <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6B7280;">GO</div>
+            </div>
+            <div style="height: 8px;"></div>
+            <div style="display: flex; align-items: baseline; gap: 6px;">
+              <div style="font-family: 'IBM Plex Mono', monospace; font-size: 18px; font-weight: 600; letter-spacing: -.8px; color: #111827; font-variant-numeric: tabular-nums;">R$ 1,12M</div>
+              <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #047857;">41,2%</div>
+            </div>
+            <div style="height: 10px;"></div>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; color: #036B69; background: #DCF2F0; border-radius: 6px; padding: 3px 8px;">contrato</div>
+              <div style="display: flex; align-items: center; gap: 5px; font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #B45309;"><span style="font-family: 'Material Symbols Outlined'; font-size: 13px;">schedule</span>12d</div>
+            </div>
+          </div>
+          <div style="width: 300px; background: #FFFFFF; border: 1px solid #E2E8F0; border-radius: 12px; padding: 14px; opacity: .6;">
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div style="font-size: 14px; font-weight: 600; color: #4B5563;">Miradouro</div>
+              <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #9CA3AF;">MG</div>
+            </div>
+            <div style="height: 8px;"></div>
+            <div style="display: flex; align-items: baseline; gap: 6px;">
+              <div style="font-family: 'IBM Plex Mono', monospace; font-size: 18px; font-weight: 600; letter-spacing: -.8px; color: #4B5563; font-variant-numeric: tabular-nums;">R$ 388,5K</div>
+              <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6B7280;">33,4%</div>
+            </div>
+            <div style="height: 10px;"></div>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; color: #4B5563; background: #EEF1F6; border-radius: 6px; padding: 3px 8px;">inativo 30d+</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1.1px; color: #4B5563; text-transform: uppercase;">Paleta de comando ⌘K</div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; color: #92400E; background: #FEF6E7; border-radius: 6px; padding: 2px 7px;">novo</div>
+        </div>
+        <div style="width: 480px; background: #FFFFFF; border: 1px solid #C9D0DB; border-radius: 14px; overflow: hidden; box-shadow: 0 24px 56px rgba(16,24,40,.18);">
+          <div style="display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid #E2E8F0;">
+            <span style="font-family: 'Material Symbols Outlined'; font-size: 19px; color: #9CA3AF;">search</span>
+            <div style="flex: 1; font-size: 15px; color: #111827;">crista<span style="display: inline-block; width: 1.5px; height: 18px; background: #049598; vertical-align: middle; margin-left: 1px;"></span></div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #6B7280; border: 1px solid #E2E8F0; border-radius: 5px; padding: 2px 6px;">esc</div>
+          </div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1.1px; color: #6B7280; background: #F7F9FB; padding: 7px 16px;">MUNICÍPIOS</div>
+          <div style="display: flex; align-items: center; gap: 11px; padding: 11px 16px; background: #DCF2F0; cursor: pointer;">
+            <span style="font-family: 'Material Symbols Outlined'; font-size: 18px; color: #036B69;">location_city</span>
+            <div style="flex: 1; font-size: 14px; font-weight: 600; color: #111827;">Cristalina <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 400; color: #6B7280;">· GO</span></div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; color: #036B69; background: #FFFFFF; border: 1px solid #C7E7E5; border-radius: 6px; padding: 2px 7px;">contrato</div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 11px; padding: 11px 16px; cursor: pointer;" style-hover="background: #F7F9FB;">
+            <span style="font-family: 'Material Symbols Outlined'; font-size: 18px; color: #9CA3AF;">location_city</span>
+            <div style="flex: 1; font-size: 14px; color: #374151;">Cristalândia <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #9CA3AF;">· TO</span></div>
+          </div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1.1px; color: #6B7280; background: #F7F9FB; padding: 7px 16px;">AÇÕES</div>
+          <div style="display: flex; align-items: center; gap: 11px; padding: 11px 16px; cursor: pointer;" style-hover="background: #F7F9FB;">
+            <span style="font-family: 'Material Symbols Outlined'; font-size: 18px; color: #9CA3AF;">note_add</span>
+            <div style="flex: 1; font-size: 14px; color: #374151;">Novo levantamento para "crista…"</div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #6B7280; border: 1px solid #E2E8F0; border-radius: 5px; padding: 2px 6px;">⌘N</div>
+          </div>
+        </div>
+
+        <div style="height: 8px;"></div>
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1.1px; color: #4B5563; text-transform: uppercase;">Diálogo de confirmação</div>
+        <div style="width: 480px; background: #FFFFFF; border: 1px solid #C9D0DB; border-radius: 16px; padding: 24px; box-shadow: 0 24px 56px rgba(16,24,40,.18);">
+          <div style="font-size: 20px; font-weight: 700; letter-spacing: -.6px; color: #111827;">Aprovar e enviar levantamento?</div>
+          <div style="height: 8px;"></div>
+          <div style="font-size: 13px; color: #374151; line-height: 1.5;">Cristalina · GO — lote <span style="font-family: 'IBM Plex Mono', monospace; font-size: 12px;">2026-07 · v3</span>. O gestor municipal será notificado por e-mail.</div>
+          <div style="height: 20px;"></div>
+          <div style="display: flex; gap: 10px; justify-content: flex-end;">
+            <div style="height: 44px; border: 1px solid #D8DEE6; border-radius: 10px; display: flex; align-items: center; padding: 0 16px; font-size: 14px; font-weight: 600; color: #374151; cursor: pointer;" style-hover="background: #F7F9FB;">Cancelar</div>
+            <div style="height: 44px; background: #036B69; border-radius: 10px; display: flex; align-items: center; gap: 7px; padding: 0 18px; cursor: pointer; transition: background .18s ease;" style-hover="background: #025F5D;"><span style="font-family: 'Material Symbols Outlined'; font-size: 17px; color: #FFFFFF;">check</span><div style="font-size: 14px; font-weight: 600; color: #FFFFFF;">Aprovar e enviar</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div style="max-width: 880px; font-size: 13px; color: #4B5563; line-height: 1.6; border-top: 1px solid #C9D0DB; padding-top: 20px;">
+    <strong style="color: #111827;">Próximos passos</strong> — (1) telas completas consumindo este kit, como protótipo navegável: Painel → Pipeline → Empresas → Pessoas → Caixa → Módulos → Ajustes → Login; (2) variações de layout e densidade por tela; (3) novos organismos conforme a necessidade (drawer de detalhe, stepper de geração de kit).
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;mostrarSpecs&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Documentação&quot;}}">
+class Component extends DCLogic {
+  state = { densa: false, chkSessao: true, swNotif: true, segAtivo: 2 };
+  renderVals() {
+    const s = this.state;
+    const segNomes = ['Dia', 'Semana', 'Mês', 'Trimestre', 'Ano'];
+    return {
+      mostrarSpecs: this.props.mostrarSpecs ?? true,
+      rowPad: s.densa ? '8px 10px' : '13px 10px',
+      densLabel: s.densa ? 'compacta' : 'confortável',
+      toggleDensidade: () => this.setState({ densa: !s.densa }),
+      chkSessao: s.chkSessao,
+      chkSessaoOff: !s.chkSessao,
+      toggleSessao: () => this.setState({ chkSessao: !s.chkSessao }),
+      swTrackCor: s.swNotif ? '#049598' : '#C9D0DB',
+      swKnobLeft: s.swNotif ? '18px' : '2px',
+      toggleNotif: () => this.setState({ swNotif: !s.swNotif }),
+      segmentos: segNomes.map((nome, i) => ({
+        nome,
+        peso: i === s.segAtivo ? 600 : 400,
+        cor: i === s.segAtivo ? '#FFFFFF' : '#6B7280',
+        fundo: i === s.segAtivo ? '#036B69' : '#FFFFFF',
+        selecionar: () => this.setState({ segAtivo: i }),
+      })),
+      cores: [
+        { nome: 'scaffold', hex: '#EEF1F6' }, { nome: 'card', hex: '#FFFFFF' }, { nome: 'subtle', hex: '#F7F9FB' }, { nome: 'alt', hex: '#F1F3F7' }, { nome: 'border', hex: '#E2E8F0' },
+        { nome: 'title', hex: '#111827' }, { nome: 'body', hex: '#374151' }, { nome: 'soft', hex: '#4B5563' }, { nome: 'muted', hex: '#6B7280' }, { nome: 'dim', hex: '#9CA3AF' },
+        { nome: 'primary', hex: '#049598' }, { nome: 'p-strong', hex: '#036B69' }, { nome: 'p-light', hex: '#DCF2F0' }, { nome: 'p-dim', hex: '#5FA3A0' }, { nome: 'success', hex: '#10B981' },
+        { nome: 'succ-light', hex: '#E7F7F1' }, { nome: 'warning', hex: '#F59E0B' }, { nome: 'warn-light', hex: '#FEF6E7' }, { nome: 'error', hex: '#EF4444' }, { nome: 'err-light', hex: '#FEF2F2' },
+      ],
+      cidades: [
+        { nome: 'Cristalina', uf: 'GO', estagio: 'contrato', chipCor: '#036B69', chipFundo: '#DCF2F0', vaat: 'R$ 8,41M', lucro: 'R$ 1,12M', margem: '41,2%', margemCor: '#047857' },
+        { nome: 'Águas Lindas de Goiás', uf: 'GO', estagio: 'contrato', chipCor: '#036B69', chipFundo: '#DCF2F0', vaat: 'R$ 7,96M', lucro: 'R$ 964,3K', margem: '38,7%', margemCor: '#047857' },
+        { nome: 'Senador José Porfírio', uf: 'PA', estagio: 'proposta', chipCor: '#92400E', chipFundo: '#FEF6E7', vaat: 'R$ 6,20M', lucro: 'R$ 742,0K', margem: '35,1%', margemCor: '#374151' },
+        { nome: 'Miradouro', uf: 'MG', estagio: 'levantamento', chipCor: '#4B5563', chipFundo: '#EEF1F6', vaat: 'R$ 3,08M', lucro: 'R$ 388,5K', margem: '33,4%', margemCor: '#374151' },
+        { nome: 'Inhapi', uf: 'AL', estagio: 'levantamento', chipCor: '#4B5563', chipFundo: '#EEF1F6', vaat: 'R$ 2,74M', lucro: 'R$ 321,9K', margem: '31,8%', margemCor: '#374151' },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

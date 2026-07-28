@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { buildGoviaMunicipioCompleto } from "@/core/lib/govia-compat";
+import { buildMunicipalProfile } from "@/core/lib/municipal-profile";
 import { markGoviaMunicipioAccess } from "@/core/lib/govia-storage";
 import { generateMunicipalXrayPdf } from "@/core/lib/municipal-xray-pdf";
 import { generateMunicipalXrayHtml, mapMunicipalXrayModel } from "@/core/lib/municipal-xray-template";
@@ -43,9 +44,17 @@ export async function POST(request: NextRequest) {
       nome: body.nome,
       uf: body.uf,
     };
-    const [currentResult, baseResult] = await Promise.allSettled([
+    // O Perfil Municipal fala com bases que nada têm a ver com o FUNDEB
+    // (Censo, CNES, CAGED, CadÚnico, MUNIC), então roda junto com os dois
+    // exercícios em vez de esperar por eles.
+    const [currentResult, baseResult, profileResult] = await Promise.allSettled([
       buildGoviaMunicipioCompleto({ ...identifier, exercicio: currentYear }),
       buildGoviaMunicipioCompleto({ ...identifier, exercicio: baseYear }),
+      buildMunicipalProfile({
+        codigoIbge: body.codigo_ibge ?? "",
+        uf: body.uf ?? "",
+        municipio: body.nome ?? "",
+      }),
     ]);
     const current = currentResult.status === "fulfilled" ? currentResult.value : null;
     if (!current) {
@@ -68,6 +77,7 @@ export async function POST(request: NextRequest) {
       currentPayload: current.payload,
       baseYear,
       currentYear,
+      profile: profileResult.status === "fulfilled" ? profileResult.value : null,
     });
     const html = generateMunicipalXrayHtml(model);
     const municipalitySlug = `${slug(model.municipality)}_${slug(model.uf)}_${baseYear}_${currentYear}`;

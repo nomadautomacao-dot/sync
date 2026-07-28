@@ -683,7 +683,11 @@ export function hydrateRelatorioFundeb(input: Partial<RelatorioFundeb> & { ident
     identificacao: input.identificacao,
     ...(input.parametros ? { parametros: input.parametros } : {}),
     receitas,
-    projecao: input.projecao ?? projecao,
+    // Espelha `RelatorioFundeb.activeProjection` do Dart:
+    // `projecaoComercial ?? projecaoRecuperavel`. A camada comercial (benchmark
+    // por score) é a manchete do relatório; a recuperável fica exposta ao lado
+    // como "já evidenciada nas bases oficiais".
+    projecao: input.projecao ?? projecaoPrincipal,
     projecaoRecuperavel,
     projecaoComercial: input.projecaoComercial ?? null,
     upsideCondicionado,

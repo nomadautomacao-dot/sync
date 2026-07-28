@@ -91,6 +91,11 @@ COPY --from=builder /app/kit_padrao_pdf_rocha_prime ./kit_padrao_pdf_rocha_prime
 # Copy bundled FNDE CSV data (fallback when gov.br blocks Cloud Run IPs)
 COPY --from=builder /app/data/fnde ./data/fnde
 
+# Copy the CAGED snapshot. Without it the Employment block falls back to
+# downloading ~117MB from IPEADATA on every cold start (see
+# core/lib/municipal-profile/emprego.ts).
+COPY --from=builder /app/data/caged-municipios.json ./data/caged-municipios.json
+
 # Set permissions
 RUN chown -R nextjs:nodejs /app
 

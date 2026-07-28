@@ -282,10 +282,23 @@ export async function findGoviaMunicipio(params: GoviaBuscarMunicipioParams): Pr
       });
 
       if (response.ok) {
-        return (await response.json()) as IbgeMunicipioResponse;
+        // Código inexistente devolve HTTP 200 com `[]`, não 404. Um array vazio
+        // é truthy: sem esta checagem ele viraria um "município" de id
+        // undefined e o relatório sairia intitulado "undefined - UF".
+        const dados = (await response.json().catch(() => null)) as unknown;
+        if (dados && !Array.isArray(dados) && typeof (dados as IbgeMunicipioResponse).id === "number") {
+          return dados as IbgeMunicipioResponse;
+        }
       }
+
+      // 7 dígitos que não existem são erro de digitação, não código curto. Cair
+      // no prefixo aqui faria "2703209" virar Igreja Nova (2703205) — relatório
+      // da cidade errada, que é pior do que nenhum relatório.
+      return null;
     }
 
+    // Só chega aqui com 6 dígitos (código sem o verificador), onde casar por
+    // prefixo é o comportamento correto.
     const normalized = normalizarIBGE(digits);
     const municipios = await fetchAllIbgeMunicipios();
     return municipios.find((municipio) => String(municipio.id).startsWith(normalized)) ?? null;
@@ -1095,7 +1108,7 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
   const fontes = [
     "IBGE Localidades",
     "Sync Next API",
-    "Modelo tecnico de levantamento FUNDEB",
+    "Modelo técnico de levantamento FUNDEB",
   ];
 
   if (receitasBase) {
@@ -1105,7 +1118,7 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
     fontes.splice(2, 0, "FNDE VAAT 2026");
   }
   if (inepRecord) {
-    fontes.push(`INEP Sinopse Educacao Basica ${inepRecord.anoReferencia}`);
+    fontes.push(`INEP Sinopse Educação Básica ${inepRecord.anoReferencia}`);
   }
   if ((inepRecord?.escolasInfraPublicasTotal ?? 0) > 0) {
     fontes.push(`INEP Microdados de Escola ${inepRecord?.anoReferencia}`);
@@ -1189,29 +1202,38 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
       matriculas_ensino_medio_total: inepRecord?.ensinoMedioTotal ?? null,
       matriculas_educacao_especial: relatorio.censoEscolar?.matriculasEtapa.educacaoEspecial ?? 0,
       matriculas_tempo_integral: relatorio.censoEscolar?.tempoIntegral.total ?? 0,
-      ideb_anos_iniciais: qeduIndicators?.anosIniciais?.idebObservado ?? idebRecord?.anosIniciaisPublica ?? 0,
-      ideb_anos_finais: qeduIndicators?.anosFinais?.idebObservado ?? idebRecord?.anosFinaisPublica ?? 0,
-      taxa_aprovacao: qeduIndicators?.anosIniciais?.taxaAprovacao ?? idebRecord?.taxaAprovacaoIniciais ?? 0,
-      taxa_aprovacao_anos_finais: qeduIndicators?.anosFinais?.taxaAprovacao ?? idebRecord?.taxaAprovacaoFinais ?? 0,
-      taxa_abandono: 0,
-      nota_portugues_anos_iniciais: qeduIndicators?.anosIniciais?.notaPortugues ?? 0,
-      nota_matematica_anos_iniciais: qeduIndicators?.anosIniciais?.notaMatematica ?? 0,
-      nota_media_anos_iniciais: qeduIndicators?.anosIniciais?.notaMedia ?? 0,
-      nota_portugues_anos_finais: qeduIndicators?.anosFinais?.notaPortugues ?? 0,
-      nota_matematica_anos_finais: qeduIndicators?.anosFinais?.notaMatematica ?? 0,
-      nota_media_anos_finais: qeduIndicators?.anosFinais?.notaMedia ?? 0,
-      distorcao_idade_serie_total: qeduIndicators?.distorcaoIdadeSerie?.fundamentalTotal ?? 0,
-      distorcao_idade_serie_anos_iniciais: qeduIndicators?.distorcaoIdadeSerie?.anosIniciais ?? 0,
-      distorcao_idade_serie_anos_finais: qeduIndicators?.distorcaoIdadeSerie?.anosFinais ?? 0,
+      // Taxas, notas e indices NUNCA caem para zero: zero e uma afirmacao ("IDEB 0,0",
+      // "nenhum aluno abandonou"), enquanto a fonte muda (QEdu/INEP fora do ar, municipio
+      // sem divulgacao por sigilo estatistico) significa apenas "nao sabemos". O template
+      // imprime "N/D" para null e "0,0" para zero -- confundir os dois inverte o diagnostico.
+      ideb_anos_iniciais: qeduIndicators?.anosIniciais?.idebObservado ?? idebRecord?.anosIniciaisPublica ?? null,
+      ideb_anos_finais: qeduIndicators?.anosFinais?.idebObservado ?? idebRecord?.anosFinaisPublica ?? null,
+      taxa_aprovacao: qeduIndicators?.anosIniciais?.taxaAprovacao ?? idebRecord?.taxaAprovacaoIniciais ?? null,
+      taxa_aprovacao_anos_finais: qeduIndicators?.anosFinais?.taxaAprovacao ?? idebRecord?.taxaAprovacaoFinais ?? null,
+      taxa_reprovacao: qeduIndicators?.taxasRendimento?.reprovacao?.total ?? null,
+      taxa_abandono: qeduIndicators?.taxasRendimento?.abandono?.total ?? null,
+      taxa_abandono_anos_finais: qeduIndicators?.taxasRendimento?.abandono?.anosFinais ?? null,
+      nota_portugues_anos_iniciais: qeduIndicators?.anosIniciais?.notaPortugues ?? null,
+      nota_matematica_anos_iniciais: qeduIndicators?.anosIniciais?.notaMatematica ?? null,
+      nota_media_anos_iniciais: qeduIndicators?.anosIniciais?.notaMedia ?? null,
+      nota_portugues_anos_finais: qeduIndicators?.anosFinais?.notaPortugues ?? null,
+      nota_matematica_anos_finais: qeduIndicators?.anosFinais?.notaMatematica ?? null,
+      nota_media_anos_finais: qeduIndicators?.anosFinais?.notaMedia ?? null,
+      distorcao_idade_serie_total: qeduIndicators?.distorcaoIdadeSerie?.fundamentalTotal ?? null,
+      distorcao_idade_serie_anos_iniciais: qeduIndicators?.distorcaoIdadeSerie?.anosIniciais ?? null,
+      distorcao_idade_serie_anos_finais: qeduIndicators?.distorcaoIdadeSerie?.anosFinais ?? null,
       escolas_sem_agua: infraestruturaEscolar.escolas_sem_agua,
       escolas_sem_esgoto: infraestruturaEscolar.escolas_sem_esgoto,
       escolas_sem_cozinha: infraestruturaEscolar.escolas_sem_cozinha,
       escolas_sem_acessibilidade: infraestruturaEscolar.escolas_sem_acessibilidade,
-      escolas_alugadas: 0,
-      alunos_transporte_escolar: 0,
-      frota_propria: 0,
-      frota_terceirizada: 0,
-      idade_media_frota: 0,
+      // Infraestrutura predial e transporte escolar nao sao coletados por nenhuma fonte
+      // deste pipeline. Zero aqui afirmaria "o municipio nao aluga escola / nao tem frota",
+      // o oposto do real na maioria dos municipios rurais. Ausencia = null.
+      escolas_alugadas: null as number | null,
+      alunos_transporte_escolar: null as number | null,
+      frota_propria: null as number | null,
+      frota_terceirizada: null as number | null,
+      idade_media_frota: null as number | null,
       infraestrutura_rede_publica: infraestruturaEscolar,
       indicadores_aprendizagem: aprendizagemPayload,
       escolas: [],

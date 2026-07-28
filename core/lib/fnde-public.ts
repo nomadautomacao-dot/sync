@@ -498,13 +498,13 @@ export async function getFndePublicEnrichment(params: {
     : { caminhoEscola: [], observacoes: [] };
 
   const pddeContextoEscolas = pddeResumo?.totalEscolas
-    ? `Consulta publica localizou ${pddeResumo.totalEscolas} escola(s) neste municipio.`
+    ? `Consulta pública localizou ${pddeResumo.totalEscolas} escola(s) neste município.`
     : "";
   const pddeStatus =
     pddeResumo?.adesaoEntidade ??
-    (pddeResumo ? "Consulta publica do PDDE Info localizada para o municipio." : "Consulta publica disponivel.");
+    (pddeResumo ? "Consulta pública do PDDE Info localizada para o município." : "Consulta pública disponível.");
   const pddePrestacao =
-    pddeResumo?.prestacaoEntidade ?? "Prestacao de contas exige diligencia complementar quando necessario.";
+    pddeResumo?.prestacaoEntidade ?? "Prestação de contas exige diligência complementar quando necessário.";
   const sigarpEntityDescription = sigarpResumo?.prefeitura?.NO_RAZAO_SOCIAL
     ? `Entidade localizada: ${sigarpResumo.prefeitura.NO_RAZAO_SOCIAL}.`
     : sigarpResumo?.fundoEducacao?.NO_RAZAO_SOCIAL
@@ -579,8 +579,8 @@ export async function getFndePublicEnrichment(params: {
 
   const fontes = [
     "FNDE / PDDE Info",
-    "FNDE / SIGARPWEB Consulta Publica",
-    "FNDE / SIGPC Consulta Publica",
+    "FNDE / SIGARPWEB Consulta Pública",
+    "FNDE / SIGPC Consulta Pública",
     "FNDE / PAR institucional",
     ...obrasPublicas.fontes,
   ];

@@ -453,11 +453,11 @@ export async function getFndeObrasEnrichment(params: { municipio: string; uf: st
 
   if (municipioRows.length > 0) {
     observacoes.push(
-      `Painel publico do Pacto de Retomada localizou ${municipioRows.length} obra(s) para ${params.municipio}/${params.uf.toUpperCase()}.`,
+      `Painel público do Pacto de Retomada localizou ${municipioRows.length} obra(s) para ${params.municipio}/${params.uf.toUpperCase()}.`,
     );
 
     if (deferidas > 0) {
-      observacoes.push(`${deferidas} obra(s) aparecem como deferidas no processo de pactuacao/retomada.`);
+      observacoes.push(`${deferidas} obra(s) aparecem como deferidas no processo de pactuação/retomada.`);
     }
 
     if (estimativaRepactuacao > 0) {
@@ -471,7 +471,7 @@ export async function getFndeObrasEnrichment(params: { municipio: string; uf: st
 
     if (execucaoFinanceira > 0) {
       observacoes.push(
-        `Execucao financeira ja registrada no painel: ${execucaoFinanceira.toLocaleString("pt-BR", {
+        `Execução financeira já registrada no painel: ${execucaoFinanceira.toLocaleString("pt-BR", {
           style: "currency",
           currency: "BRL",
         })}.`,
@@ -480,18 +480,18 @@ export async function getFndeObrasEnrichment(params: { municipio: string; uf: st
 
     if (paralisadas > 0 || inacabadas > 0) {
       observacoes.push(
-        `O painel aponta ${paralisadas} obra(s) paralisada(s) e ${inacabadas} inacabada(s), indicando frente potencial de regularizacao e retomada.`,
+        `O painel aponta ${paralisadas} obra(s) paralisada(s) e ${inacabadas} inacabada(s), indicando frente potencial de regularização e retomada.`,
       );
     }
 
     if (diligencias > 0) {
-      observacoes.push(`${diligencias} obra(s) ainda constam em diligencia na base publica do pacto.`);
+      observacoes.push(`${diligencias} obra(s) ainda constam em diligência na base pública do pacto.`);
     }
   }
 
   if (infraestruturaRepasse && infraestruturaRepasse.valorPago > 0) {
     observacoes.push(
-      `O FNDE publicou repasse publico de infraestrutura escolar para o municipio no valor de ${infraestruturaRepasse.valorPago.toLocaleString(
+      `O FNDE publicou repasse público de infraestrutura escolar para o município no valor de ${infraestruturaRepasse.valorPago.toLocaleString(
         "pt-BR",
         {
           style: "currency",
@@ -503,9 +503,9 @@ export async function getFndeObrasEnrichment(params: { municipio: string; uf: st
 
   const simECStatusHint =
     municipioRows.length > 0
-      ? `Painel publico do Pacto/FNDE localizou ${municipioRows.length} obra(s) vinculada(s) ao municipio. O acompanhamento operacional detalhado no Simec segue dependente de credencial do ente.`
+      ? `Painel público do Pacto/FNDE localizou ${municipioRows.length} obra(s) vinculada(s) ao município. O acompanhamento operacional detalhado no Simec segue dependente de credencial do ente.`
       : infraestruturaRepasse
-      ? "Painel publico do FNDE identificou repasse de infraestrutura escolar para o municipio. O detalhamento operacional no Simec segue dependente de credencial do ente."
+      ? "Painel público do FNDE identificou repasse de infraestrutura escolar para o município. O detalhamento operacional no Simec segue dependente de credencial do ente."
       : null;
 
   return {
@@ -513,7 +513,7 @@ export async function getFndeObrasEnrichment(params: { municipio: string; uf: st
     observacoes,
     fontes: [
       "FNDE / Painel Pacto de Retomada de Obras (dados abertos)",
-      "FNDE / Repasses de infraestrutura escolar por municipio",
+      "FNDE / Repasses de infraestrutura escolar por município",
     ],
     simECStatusHint,
     totalObras: municipioRows.length,

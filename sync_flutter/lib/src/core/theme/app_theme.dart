@@ -16,9 +16,12 @@ abstract final class SaaSTokens {
   static const surfaceAlt    = Color(0xFFF1F3F7); // campo desabilitado, trilho
 
   // Bordas — 1px sempre; a separacao vem de borda, nunca de sombra
-  static const borderLight   = Color(0xFFE2E8F0); // padrao
+  static const borderLight   = Color(0xFFE2E8F0); // padrao, uso decorativo
   static const borderStrong  = Color(0xFFD8DEE6); // divisor com mais peso
   static const borderStronger= Color(0xFFC9D0DB); // contorno de controle
+  /// Contorno de campo interativo. 3.06:1 sobre branco — `borderLight` da
+  /// 1.23:1 e reprova o WCAG 1.4.11, deixando o input invisivel sob luz forte.
+  static const borderInput   = Color(0xFF8A94A6);
 
   // Texto — nunca preto puro
   static const textTitle = Color(0xFF111827);
@@ -27,9 +30,14 @@ abstract final class SaaSTokens {
   static const textMuted = Color(0xFF6B7280);
   static const textDim   = Color(0xFF9CA3AF);
 
-  // Accent unico — teal institucional
-  static const primary      = Color(0xFF049598);
-  static const primaryHover = Color(0xFF036B69); // hover/pressed e links
+  // Accent unico — teal institucional, em tres profundidades
+  static const primary      = Color(0xFF049598); // identidade: foco, nav ativa
+  /// Preenchimento de botao primario e links. Branco sobre ele da 6.34:1;
+  /// sobre `primary` daria 3.65:1 e reprovaria o AA no elemento mais
+  /// importante da tela. Mesma familia, so mais fundo.
+  static const primaryStrong  = Color(0xFF036B69);
+  static const primaryPressed = Color(0xFF02534F); // pressionado/hover
+  static const primaryHover = primaryStrong; // compat: usos existentes
   static const primaryLight = Color(0xFFDCF2F0); // chip ativo, tinta de fundo
   static const primaryDim   = Color(0xFF5FA3A0);
 
@@ -37,6 +45,9 @@ abstract final class SaaSTokens {
   static const success      = Color(0xFF10B981);
   static const successLight = Color(0xFFE7F7F1);
   static const successDark  = Color(0xFF065F46);
+  /// Ponto de status sobre superficie clara: 4.76:1. O `success` puro da
+  /// 2.20:1 sobre o fundo tintado e some como indicador.
+  static const successDot   = Color(0xFF047857);
 
   static const warning       = Color(0xFFF59E0B);
   static const warningLight  = Color(0xFFFEF6E7);
@@ -269,8 +280,12 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           elevation: 0,
-          backgroundColor: SaaSTokens.primary,
+          // `primary` puro daria 3.65:1 com texto branco e reprovaria o AA no
+          // elemento mais importante de cada tela.
+          backgroundColor: SaaSTokens.primaryStrong,
           foregroundColor: Colors.white,
+          disabledBackgroundColor: SaaSTokens.primaryDim,
+          disabledForegroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           minimumSize: const Size(64, 48),
           shape: RoundedRectangleBorder(
@@ -278,7 +293,15 @@ class AppTheme {
           ),
           textStyle: GsText.button,
         ).copyWith(
-          overlayColor: const WidgetStatePropertyAll(SaaSTokens.primaryHover),
+          overlayColor: const WidgetStatePropertyAll(SaaSTokens.primaryPressed),
+          // Foco visivel: sem isto o unico sinal e a troca de fundo, que rende
+          // 1.74:1 entre estados e passa despercebida.
+          side: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.focused)) {
+              return const BorderSide(color: SaaSTokens.textTitle, width: 2);
+            }
+            return null;
+          }),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -295,17 +318,27 @@ class AppTheme {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          minimumSize: const Size(64, 48),
-          foregroundColor: SaaSTokens.primary,
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          minimumSize: const Size(48, 48),
+          foregroundColor: SaaSTokens.primaryStrong,
           textStyle: GsText.button,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(SaaSTokens.rControl),
+            borderRadius: BorderRadius.circular(SaaSTokens.rChip),
           ),
+        ).copyWith(
+          side: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.focused)) {
+              return const BorderSide(color: SaaSTokens.primaryStrong, width: 2);
+            }
+            return null;
+          }),
         ),
       ),
       iconButtonTheme: IconButtonThemeData(
-        style: IconButton.styleFrom(minimumSize: const Size(48, 48)),
+        style: IconButton.styleFrom(minimumSize: const Size(48, 48)).copyWith(
+          // O halo padrao rende 1.13:1 e e invisivel.
+          overlayColor: const WidgetStatePropertyAll(SaaSTokens.primaryLight),
+        ),
       ),
 
       // Inputs: sem preenchimento, borda de 1px, foco em teal
@@ -313,17 +346,17 @@ class AppTheme {
         filled: false,
         isDense: true,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        hintStyle: GsText.body.copyWith(color: SaaSTokens.textDim, fontSize: 14),
+        hintStyle: GsText.body.copyWith(color: SaaSTokens.textMuted, fontSize: 14),
         labelStyle: GsText.body.copyWith(color: SaaSTokens.textMuted, fontSize: 14),
         // O rotulo flutuante vira mono maiusculo, como no design.
         floatingLabelStyle: GsText.fieldLabel.copyWith(fontSize: 11),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(SaaSTokens.rControl),
-          borderSide: const BorderSide(color: SaaSTokens.borderLight),
+          borderSide: const BorderSide(color: SaaSTokens.borderInput),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(SaaSTokens.rControl),
-          borderSide: const BorderSide(color: SaaSTokens.borderLight),
+          borderSide: const BorderSide(color: SaaSTokens.borderInput),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(SaaSTokens.rControl),

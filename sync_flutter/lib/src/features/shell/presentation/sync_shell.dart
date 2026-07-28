@@ -12,6 +12,18 @@ import '../../people/presentation/people_screen.dart';
 import '../../pipeline/presentation/pipeline_screen.dart';
 import '../../settings/presentation/settings_screen.dart';
 
+/// Altura da faixa de cabecalho. A barra lateral abre com um bloco de marca
+/// desta mesma altura e com a mesma borda inferior: sem isso o divisor do
+/// cabecalho morre na borda do painel e as duas metades do app nao alinham.
+const double _kHeaderHeight = 62;
+
+/// Barra lateral aberta e recolhida. O recuo do trilho nao muda entre os dois
+/// estados (16 de respiro + 12 de recuo), entao o icone nao se desloca um
+/// pixel ao recolher — so o rotulo sai. Em 80 sobram 2px depois do icone: em
+/// 78 a conta fechava exata e o Flex estourava por 1px de arredondamento.
+const double _kSidebarWidth = 292;
+const double _kSidebarRailWidth = 80;
+
 class SyncShell extends StatefulWidget {
   const SyncShell({super.key, required this.controller});
 
@@ -25,16 +37,26 @@ class _SyncShellState extends State<SyncShell> {
   bool _isContextPanelOpen = false;
 
   // O shell inteiro e reconstruido a cada notificacao do AppController, entao
-  // os futuros do enquadramento (grupo e modulos) sao resolvidos uma unica vez
-  // aqui — cria-los dentro do build dispararia uma busca por frame.
-  late final Future<WorkspaceSettings> _workspaceFuture =
-      widget.controller.repository.getWorkspaceSettings();
-  late final Future<List<ModuleDefinition>> _modulesFuture =
-      widget.controller.repository.getModules();
+  // o futuro dos modulos e resolvido uma unica vez aqui — cria-lo dentro do
+  // build dispararia uma busca por frame.
+  late final Future<List<ModuleDefinition>> _modulesFuture = widget
+      .controller
+      .repository
+      .getModules();
+
+  /// Recolhimento da barra lateral. Mora no shell, entao atravessa troca de
+  /// secao; volta ao padrao so num recarregamento da aplicacao.
+  bool _sidebarCollapsed = false;
 
   void _toggleContextPanel() {
     setState(() {
       _isContextPanelOpen = !_isContextPanelOpen;
+    });
+  }
+
+  void _toggleSidebar() {
+    setState(() {
+      _sidebarCollapsed = !_sidebarCollapsed;
     });
   }
 
@@ -66,7 +88,6 @@ class _SyncShellState extends State<SyncShell> {
               child: SafeArea(
                 child: _ShellSidebar(
                   controller: widget.controller,
-                  workspaceFuture: _workspaceFuture,
                   modulesFuture: _modulesFuture,
                   isDrawer: true,
                 ),
@@ -76,12 +97,15 @@ class _SyncShellState extends State<SyncShell> {
         child: Row(
           children: [
             if (isDesktop)
-              SizedBox(
-                width: 292,
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 260),
+                curve: Curves.easeOutQuart,
+                width: _sidebarCollapsed ? _kSidebarRailWidth : _kSidebarWidth,
                 child: _ShellSidebar(
                   controller: widget.controller,
-                  workspaceFuture: _workspaceFuture,
                   modulesFuture: _modulesFuture,
+                  collapsed: _sidebarCollapsed,
+                  onToggleCollapsed: _toggleSidebar,
                 ),
               ),
             Expanded(
@@ -176,7 +200,7 @@ class _ShellHeader extends StatelessWidget {
     final showSearch = width >= 980;
 
     return Container(
-      height: compact ? 58 : 62,
+      height: compact ? 58 : _kHeaderHeight,
       padding: EdgeInsets.symmetric(horizontal: compact ? 12 : 18),
       decoration: const BoxDecoration(
         color: SaaSTokens.cardWhite,
@@ -189,7 +213,11 @@ class _ShellHeader extends StatelessWidget {
             Builder(
               builder: (ctx) => IconButton(
                 onPressed: () => Scaffold.of(ctx).openDrawer(),
-                icon: const Icon(LucideIcons.panelLeft, size: 18, color: SaaSTokens.textMuted),
+                icon: const Icon(
+                  LucideIcons.panelLeft,
+                  size: 18,
+                  color: SaaSTokens.textMuted,
+                ),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 40, minHeight: 40),
               ),
@@ -234,15 +262,23 @@ class _ShellHeader extends StatelessWidget {
           ],
           IconButton(
             onPressed: () {},
-            icon: const Icon(LucideIcons.bellDot, size: 18, color: SaaSTokens.textMuted),
+            icon: const Icon(
+              LucideIcons.bellDot,
+              size: 18,
+              color: SaaSTokens.textMuted,
+            ),
           ),
           const SizedBox(width: 4),
           IconButton(
             onPressed: onToggleContextPanel,
             icon: Icon(
-              isContextPanelOpen ? LucideIcons.panelRightClose : LucideIcons.panelRightOpen,
+              isContextPanelOpen
+                  ? LucideIcons.panelRightClose
+                  : LucideIcons.panelRightOpen,
               size: 18,
-              color: isContextPanelOpen ? SaaSTokens.primary : SaaSTokens.textMuted,
+              color: isContextPanelOpen
+                  ? SaaSTokens.primary
+                  : SaaSTokens.textMuted,
             ),
           ),
           const SizedBox(width: 8),
@@ -404,15 +440,17 @@ class _Avatar extends StatelessWidget {
 class _ShellSidebar extends StatelessWidget {
   const _ShellSidebar({
     required this.controller,
-    required this.workspaceFuture,
     required this.modulesFuture,
     this.isDrawer = false,
+    this.collapsed = false,
+    this.onToggleCollapsed,
   });
 
   final AppController controller;
-  final Future<WorkspaceSettings> workspaceFuture;
   final Future<List<ModuleDefinition>> modulesFuture;
   final bool isDrawer;
+  final bool collapsed;
+  final VoidCallback? onToggleCollapsed;
 
   @override
   Widget build(BuildContext context) {
@@ -423,77 +461,192 @@ class _ShellSidebar extends StatelessWidget {
             ? null
             : const Border(right: BorderSide(color: SaaSTokens.borderLight)),
       ),
-      padding: EdgeInsets.fromLTRB(16, isDrawer ? 14 : 24, 16, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Marca — icone + wordmark
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
+          // Bloco de marca com a altura e a borda do cabecalho: e o que faz o
+          // divisor atravessar o app inteiro em vez de parar na barra.
+          Container(
+            height: isDrawer ? 58 : _kHeaderHeight,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: const BoxDecoration(
+              border: Border(bottom: BorderSide(color: SaaSTokens.borderLight)),
+            ),
             child: Row(
               children: [
-                Image.asset(
-                  'assets/branding/global-sync-icon.png',
-                  height: 32,
-                  width: 32,
-                  fit: BoxFit.contain,
+                Padding(
+                  padding: const EdgeInsets.only(left: _kRailInset),
+                  child: Image.asset(
+                    'assets/branding/global-sync-icon.png',
+                    height: 28,
+                    width: 28,
+                    fit: BoxFit.contain,
+                  ),
                 ),
-                const SizedBox(width: 10),
-                Text(
-                  'Global Sync',
-                  style: GsText.panelTitle.copyWith(color: SaaSTokens.primary),
-                ),
+                if (!collapsed) ...[
+                  const SizedBox(width: 10),
+                  // Flexivel de proposito: a 20px o wordmark estourava os
+                  // 236px uteis da barra de 292.
+                  Expanded(
+                    child: Text(
+                      'Global Sync',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GsText.panelTitle.copyWith(fontSize: 18),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
-          const SizedBox(height: 16),
-          _GroupSelector(workspaceFuture: workspaceFuture),
-          const SizedBox(height: 10),
-          _PrimaryActionButton(
-            icon: LucideIcons.plus,
-            label: 'Novo levantamento',
-            shortcut: '⌘N',
-            onTap: () => controller.selectModule('levantamento-fundeb'),
-          ),
-          const SizedBox(height: 18),
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.only(bottom: 8),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const _SidebarSectionLabel('WORKSPACE'),
-                  const SizedBox(height: 10),
-                  for (final section in AppSection.values)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 3),
-                      child: _SidebarButton(
-                        icon: section.icon,
-                        label: section.label,
-                        selected: controller.currentSection == section,
-                        // TODO(redesign): contagem de nao lidos (badge da Inbox)
-                        // ainda nao existe no repositorio
-                        badge: null,
-                        onTap: () => controller.selectSection(section),
+                  _PrimaryActionButton(
+                    icon: LucideIcons.plus,
+                    label: 'Novo levantamento',
+                    shortcut: '⌘N',
+                    collapsed: collapsed,
+                    onTap: () => controller.selectModule('levantamento-fundeb'),
+                  ),
+                  const SizedBox(height: 18),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Recolhida, a barra nao tem largura para o rotulo —
+                          // e a lista curta dispensa o sobretitulo.
+                          if (!collapsed) ...[
+                            const _SidebarSectionLabel('WORKSPACE'),
+                            const SizedBox(height: 10),
+                          ],
+                          for (final section in AppSection.values)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 3),
+                              child: _SidebarButton(
+                                icon: section.icon,
+                                label: section.label,
+                                selected: controller.currentSection == section,
+                                collapsed: collapsed,
+                                // TODO(redesign): contagem de nao lidos
+                                // (badge da Inbox) ainda nao existe no
+                                // repositorio
+                                badge: null,
+                                onTap: () => controller.selectSection(section),
+                              ),
+                            ),
+                          if (!collapsed)
+                            _ActiveModuleChip(
+                              controller: controller,
+                              modulesFuture: modulesFuture,
+                            ),
+                        ],
                       ),
                     ),
-                  _ActiveModuleChip(
-                    controller: controller,
-                    modulesFuture: modulesFuture,
                   ),
+                  if (onToggleCollapsed != null) ...[
+                    _SidebarToggleRow(
+                      collapsed: collapsed,
+                      onTap: onToggleCollapsed!,
+                    ),
+                    const SizedBox(height: 2),
+                  ],
+                  _HelpRow(collapsed: collapsed),
+                  const SizedBox(height: 10),
+                  _UserCard(controller: controller, collapsed: collapsed),
                 ],
               ),
             ),
           ),
-          const SizedBox(height: 12),
-          const _HelpRow(),
-          const SizedBox(height: 10),
-          _UserCard(controller: controller),
         ],
       ),
     );
   }
 }
+
+/// Alterna o recolhimento. Fica no rodape, no mesmo trilho dos itens de nav:
+/// no bloco de marca ele nao caberia recolhido, e mudar de lugar conforme o
+/// estado esconderia justamente o controle que devolve a barra.
+class _SidebarToggleRow extends StatefulWidget {
+  const _SidebarToggleRow({required this.collapsed, required this.onTap});
+
+  final bool collapsed;
+  final VoidCallback onTap;
+
+  @override
+  State<_SidebarToggleRow> createState() => _SidebarToggleRowState();
+}
+
+class _SidebarToggleRowState extends State<_SidebarToggleRow> {
+  bool _hovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = widget.collapsed ? 'Expandir barra' : 'Recolher barra';
+
+    return Tooltip(
+      message: label,
+      waitDuration: const Duration(milliseconds: 400),
+      child: Semantics(
+        button: true,
+        label: label,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          onEnter: (_) => setState(() => _hovered = true),
+          onExit: (_) => setState(() => _hovered = false),
+          child: GestureDetector(
+            onTap: widget.onTap,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              height: 40,
+              decoration: BoxDecoration(
+                color: _hovered ? SaaSTokens.scaffold : Colors.transparent,
+                borderRadius: BorderRadius.circular(SaaSTokens.rControl),
+              ),
+              padding: const EdgeInsets.only(left: _kRailInset, right: 12),
+              child: Row(
+                children: [
+                  SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: Icon(
+                      widget.collapsed
+                          ? LucideIcons.panelLeftOpen
+                          : LucideIcons.panelLeftClose,
+                      size: 18,
+                      color: SaaSTokens.textDim,
+                    ),
+                  ),
+                  if (!widget.collapsed) ...[
+                    const SizedBox(width: 11),
+                    Expanded(
+                      child: Text(
+                        label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GsText.body.copyWith(color: SaaSTokens.textSoft),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Recuo do trilho de icones da barra lateral. Todo icone — marca, item de
+/// nav, ajuda e avatar — comeca nesta distancia da borda do painel; sem uma
+/// constante unica cada peca escolhia o proprio recuo e nada alinhava.
+const double _kRailInset = 12;
 
 /// Sobretitulo de secao da barra lateral — mono, caixa alta.
 class _SidebarSectionLabel extends StatelessWidget {
@@ -504,80 +657,11 @@ class _SidebarSectionLabel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6),
+      padding: const EdgeInsets.symmetric(horizontal: _kRailInset),
       child: Text(
         text,
         style: GsText.label.copyWith(color: SaaSTokens.textDim),
       ),
-    );
-  }
-}
-
-/// Seletor de grupo — nome do grupo e linha de contexto tecnica.
-// TODO(redesign): contagem de empresas do grupo ainda nao existe no
-// repositorio (getSidebarCompanies() limita a 8 e nao e um total); a linha de
-// contexto usa o slug do workspace, que e dado real. Trocar por "N empresas"
-// quando o total existir.
-// TODO(redesign): troca de grupo ainda nao tem handler — o icone de expandir
-// e apenas a afordancia visual do design.
-class _GroupSelector extends StatelessWidget {
-  const _GroupSelector({required this.workspaceFuture});
-
-  final Future<WorkspaceSettings> workspaceFuture;
-
-  @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<WorkspaceSettings>(
-      future: workspaceFuture,
-      builder: (context, snapshot) {
-        final settings = snapshot.data;
-        final contextLine =
-            settings == null ? 'grupo' : 'grupo · ${settings.slug}';
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(11),
-            border: Border.all(color: SaaSTokens.borderLight),
-          ),
-          child: Row(
-            children: [
-              Image.asset(
-                'assets/branding/global-sync-icon.png',
-                height: 26,
-                width: 26,
-                fit: BoxFit.contain,
-              ),
-              const SizedBox(width: 9),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      settings?.groupName ?? 'Grupo',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GsText.bodyStrong,
-                    ),
-                    Text(
-                      contextLine,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GsText.dataXs.copyWith(color: SaaSTokens.textDim),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 6),
-              const Icon(
-                LucideIcons.chevronsUpDown,
-                size: 16,
-                color: SaaSTokens.textDim,
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 }
@@ -589,12 +673,14 @@ class _PrimaryActionButton extends StatefulWidget {
     required this.label,
     required this.shortcut,
     required this.onTap,
+    this.collapsed = false,
   });
 
   final IconData icon;
   final String label;
   final String shortcut;
   final VoidCallback onTap;
+  final bool collapsed;
 
   @override
   State<_PrimaryActionButton> createState() => _PrimaryActionButtonState();
@@ -605,40 +691,60 @@ class _PrimaryActionButtonState extends State<_PrimaryActionButton> {
 
   @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          height: 40,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: _hovered ? SaaSTokens.primaryHover : SaaSTokens.primary,
-            borderRadius: BorderRadius.circular(SaaSTokens.rControl),
-          ),
-          child: Row(
-            children: [
-              Icon(widget.icon, size: 17, color: Colors.white),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  widget.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GsText.button.copyWith(color: Colors.white),
-                ),
+    return Tooltip(
+      message: widget.collapsed ? '${widget.label}  ${widget.shortcut}' : '',
+      waitDuration: const Duration(milliseconds: 400),
+      child: Semantics(
+        button: true,
+        label: widget.label,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          onEnter: (_) => setState(() => _hovered = true),
+          onExit: (_) => setState(() => _hovered = false),
+          child: GestureDetector(
+            onTap: widget.onTap,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              height: 44,
+              padding: const EdgeInsets.only(left: _kRailInset, right: 12),
+              decoration: BoxDecoration(
+                // Branco sobre `primary` rende 3.65:1 e reprova o AA na acao
+                // mais importante da barra. `primaryStrong` da 6.34:1.
+                color: _hovered
+                    ? SaaSTokens.primaryPressed
+                    : SaaSTokens.primaryStrong,
+                borderRadius: BorderRadius.circular(SaaSTokens.rControl),
               ),
-              const SizedBox(width: 8),
-              Text(
-                widget.shortcut,
-                style: GsText.kbd.copyWith(
-                  color: Colors.white.withValues(alpha: 0.72),
-                ),
+              child: Row(
+                children: [
+                  // Mesma caixa de 22px do item de nav: o icone cai no trilho
+                  // e nao se move quando a barra recolhe.
+                  SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: Icon(widget.icon, size: 18, color: Colors.white),
+                  ),
+                  if (!widget.collapsed) ...[
+                    const SizedBox(width: 11),
+                    Expanded(
+                      child: Text(
+                        widget.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GsText.button.copyWith(color: Colors.white),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      widget.shortcut,
+                      style: GsText.kbd.copyWith(
+                        color: Colors.white.withValues(alpha: 0.78),
+                      ),
+                    ),
+                  ],
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -709,33 +815,48 @@ class _ActiveModuleChip extends StatelessWidget {
 /// Linha "Ajuda e atalhos" do rodape.
 // TODO(redesign): painel de ajuda/atalhos (⌘/) ainda nao existe no app
 class _HelpRow extends StatelessWidget {
-  const _HelpRow();
+  const _HelpRow({this.collapsed = false});
+
+  final bool collapsed;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 34,
-      child: Row(
-        children: [
-          const SizedBox(width: 8),
-          const Icon(
-            LucideIcons.circleQuestionMark,
-            size: 16,
-            color: SaaSTokens.textDim,
+    return Tooltip(
+      message: collapsed ? 'Ajuda e atalhos  ⌘/' : '',
+      waitDuration: const Duration(milliseconds: 400),
+      child: SizedBox(
+        height: 40,
+        child: Padding(
+          padding: const EdgeInsets.only(left: _kRailInset, right: 12),
+          child: Row(
+            children: [
+              // Mesma caixa de 22px do item de nav, para o icone cair no
+              // trilho.
+              const SizedBox(
+                width: 22,
+                height: 22,
+                child: Icon(
+                  LucideIcons.circleQuestionMark,
+                  size: 18,
+                  color: SaaSTokens.textDim,
+                ),
+              ),
+              if (!collapsed) ...[
+                const SizedBox(width: 11),
+                Expanded(
+                  child: Text(
+                    'Ajuda e atalhos',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GsText.body.copyWith(color: SaaSTokens.textSoft),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const _KbdChip('⌘/'),
+              ],
+            ],
           ),
-          const SizedBox(width: 9),
-          Expanded(
-            child: Text(
-              'Ajuda e atalhos',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: GsText.body,
-            ),
-          ),
-          const SizedBox(width: 8),
-          const _KbdChip('⌘/'),
-          const SizedBox(width: 8),
-        ],
+        ),
       ),
     );
   }
@@ -743,18 +864,85 @@ class _HelpRow extends StatelessWidget {
 
 /// Cartao do usuario no rodape, com menu de acoes.
 // TODO(redesign): papel/perfil do usuario (ex.: "Admin do grupo") ainda nao
-// existe em SyncUser; a linha de contexto mostra o e-mail da sessao.
+// existe em SyncUser.
 class _UserCard extends StatelessWidget {
-  const _UserCard({required this.controller});
+  const _UserCard({required this.controller, this.collapsed = false});
 
   final AppController controller;
+  final bool collapsed;
+
+  void _onSelected(String value) {
+    switch (value) {
+      case 'settings':
+        controller.selectSection(AppSection.settings);
+      case 'signout':
+        controller.signOut();
+    }
+  }
+
+  List<PopupMenuEntry<String>> _items(BuildContext context) => [
+    PopupMenuItem<String>(
+      value: 'settings',
+      height: 40,
+      child: Row(
+        children: [
+          const Icon(
+            LucideIcons.settings2,
+            size: 15,
+            color: SaaSTokens.textMuted,
+          ),
+          const SizedBox(width: 10),
+          Text('Configurações', style: GsText.body),
+        ],
+      ),
+    ),
+    PopupMenuItem<String>(
+      value: 'signout',
+      height: 40,
+      child: Row(
+        children: [
+          const Icon(LucideIcons.logOut, size: 15, color: SaaSTokens.textMuted),
+          const SizedBox(width: 10),
+          Text('Sair', style: GsText.body),
+        ],
+      ),
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
     final user = controller.user;
+    final email = user?.email ?? '';
+    // Sem `displayName` no Firebase, `name` cai para o proprio e-mail. Repetir
+    // a mesma string em duas linhas — ambas truncadas — nao informa nada.
+    final name = user?.name ?? 'Conta';
+    final hasRealName = name.isNotEmpty && name != email;
+
+    // Recolhida, o cartao vira so o avatar — que centrado em 78px cai no mesmo
+    // eixo dos icones de nav — e o cartao inteiro abre o menu.
+    if (collapsed) {
+      return Tooltip(
+        message: hasRealName ? '$name\n$email' : email,
+        waitDuration: const Duration(milliseconds: 400),
+        child: PopupMenuButton<String>(
+          tooltip: '',
+          padding: EdgeInsets.zero,
+          position: PopupMenuPosition.under,
+          onSelected: _onSelected,
+          itemBuilder: _items,
+          child: Center(
+            child: _Avatar(
+              initials: user?.initials ?? 'U',
+              size: 34,
+              radius: 11,
+            ),
+          ),
+        ),
+      );
+    }
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(9, 9, 2, 9),
+      padding: const EdgeInsets.fromLTRB(_kRailInset, 9, 2, 9),
       decoration: BoxDecoration(
         color: SaaSTokens.surfaceSubtle,
         borderRadius: BorderRadius.circular(12),
@@ -762,7 +950,7 @@ class _UserCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          _Avatar(initials: user?.initials ?? 'U', size: 36, radius: 11),
+          _Avatar(initials: user?.initials ?? 'U', size: 34, radius: 11),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -770,7 +958,7 @@ class _UserCard extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  user?.name ?? 'Conta',
+                  hasRealName ? name : email,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: GsText.bodyStrong,
@@ -783,16 +971,22 @@ class _UserCard extends StatelessWidget {
                       height: 5,
                       decoration: const BoxDecoration(
                         shape: BoxShape.circle,
-                        color: SaaSTokens.success,
+                        // `success` puro rende 2.20:1 sobre a superficie
+                        // clara.
+                        color: SaaSTokens.successDot,
                       ),
                     ),
-                    const SizedBox(width: 5),
+                    const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        user?.email ?? '',
+                        // A segunda linha diz o que o ponto significa quando o
+                        // e-mail ja ocupa a primeira.
+                        hasRealName ? email : 'Sessão ativa',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: GsText.dataXs,
+                        style: GsText.dataXs.copyWith(
+                          color: SaaSTokens.textMuted,
+                        ),
                       ),
                     ),
                   ],
@@ -810,38 +1004,8 @@ class _UserCard extends StatelessWidget {
               size: 16,
               color: SaaSTokens.textDim,
             ),
-            onSelected: (value) {
-              switch (value) {
-                case 'settings':
-                  controller.selectSection(AppSection.settings);
-                case 'signout':
-                  controller.signOut();
-              }
-            },
-            itemBuilder: (context) => [
-              PopupMenuItem<String>(
-                value: 'settings',
-                height: 40,
-                child: Row(
-                  children: [
-                    const Icon(LucideIcons.settings2, size: 15, color: SaaSTokens.textMuted),
-                    const SizedBox(width: 10),
-                    Text('Configurações', style: GsText.body),
-                  ],
-                ),
-              ),
-              PopupMenuItem<String>(
-                value: 'signout',
-                height: 40,
-                child: Row(
-                  children: [
-                    const Icon(LucideIcons.logOut, size: 15, color: SaaSTokens.textMuted),
-                    const SizedBox(width: 10),
-                    Text('Sair', style: GsText.body),
-                  ],
-                ),
-              ),
-            ],
+            onSelected: _onSelected,
+            itemBuilder: _items,
           ),
         ],
       ),
@@ -856,12 +1020,14 @@ class _SidebarButton extends StatefulWidget {
     required this.selected,
     required this.onTap,
     this.badge,
+    this.collapsed = false,
   });
 
   final IconData icon;
   final String label;
   final bool selected;
   final VoidCallback onTap;
+  final bool collapsed;
 
   /// Contagem numerica a direita do item (ex.: nao lidos da Inbox), em mono.
   final int? badge;
@@ -880,86 +1046,106 @@ class _SidebarButtonState extends State<_SidebarButton> {
     final fg = active
         ? SaaSTokens.primary
         : hover
-            ? SaaSTokens.textTitle
-            : SaaSTokens.textDim;
+        ? SaaSTokens.textTitle
+        : SaaSTokens.textDim;
 
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      onEnter: (_) => setState(() => _hovered = true),
-      onExit: (_) => setState(() => _hovered = false),
-      child: GestureDetector(
-        onTap: widget.onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOutQuart,
-          height: 44,
-          decoration: BoxDecoration(
-            color: active
-                ? SaaSTokens.primaryLight
-                : hover
+    return Tooltip(
+      // Recolhida, o icone e tudo o que sobra: sem o rotulo em algum lugar a
+      // barra vira adivinhacao.
+      message: widget.collapsed ? widget.label : '',
+      waitDuration: const Duration(milliseconds: 400),
+      child: Semantics(
+        button: true,
+        selected: active,
+        label: widget.label,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          onEnter: (_) => setState(() => _hovered = true),
+          onExit: (_) => setState(() => _hovered = false),
+          child: GestureDetector(
+            onTap: widget.onTap,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOutQuart,
+              height: 44,
+              decoration: BoxDecoration(
+                color: active
+                    ? SaaSTokens.primaryLight
+                    : hover
                     ? SaaSTokens.scaffold
                     : Colors.transparent,
-            borderRadius: BorderRadius.circular(SaaSTokens.rControl),
-          ),
-          child: Row(
-            children: [
-              const SizedBox(width: 8),
-              // Barra indicadora lateral do item ativo
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 250),
-                curve: Curves.easeOutQuart,
-                width: 3,
-                height: active ? 24 : 0,
-                decoration: BoxDecoration(
-                  color: active ? SaaSTokens.primary : Colors.transparent,
-                  borderRadius: BorderRadius.circular(2),
-                ),
+                borderRadius: BorderRadius.circular(SaaSTokens.rControl),
               ),
-              // O icone comeca em 22px nos dois estados
-              SizedBox(width: active ? 11 : 14),
-              SizedBox(
-                width: 22,
-                height: 22,
-                child: Icon(widget.icon, size: 19, color: fg),
-              ),
-              const SizedBox(width: 11),
-              Expanded(
-                child: Text(
-                  widget.label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GsText.navItem.copyWith(color: fg),
-                ),
-              ),
-              if (widget.badge != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: SaaSTokens.primary,
-                    borderRadius: BorderRadius.circular(SaaSTokens.rPill),
-                  ),
-                  child: Text(
-                    '${widget.badge}',
-                    style: GsText.dataXsStrong.copyWith(color: Colors.white),
-                  ),
-                )
-              else if (active)
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: SaaSTokens.success,
-                    boxShadow: [
-                      BoxShadow(
-                        color: SaaSTokens.success.withValues(alpha: 0.4),
-                        blurRadius: 6,
+              child: Stack(
+                children: [
+                  // A barra indicadora fica FORA do fluxo: dentro dele ela
+                  // empurrava o icone para 22px e o item de nav era a unica
+                  // peca da barra que nao assentava no trilho.
+                  Positioned(
+                    left: 4,
+                    top: 0,
+                    bottom: 0,
+                    child: Center(
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        curve: Curves.easeOutQuart,
+                        width: 3,
+                        height: active ? 22 : 0,
+                        decoration: BoxDecoration(
+                          color: SaaSTokens.primary,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              const SizedBox(width: 12),
-            ],
+                  Padding(
+                    padding: const EdgeInsets.only(
+                      left: _kRailInset,
+                      right: 12,
+                    ),
+                    child: Row(
+                      children: [
+                        SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: Icon(widget.icon, size: 19, color: fg),
+                        ),
+                        if (!widget.collapsed) ...[
+                          const SizedBox(width: 11),
+                          Expanded(
+                            child: Text(
+                              widget.label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GsText.navItem.copyWith(color: fg),
+                            ),
+                          ),
+                          if (widget.badge != null)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 7,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: SaaSTokens.primary,
+                                borderRadius: BorderRadius.circular(
+                                  SaaSTokens.rPill,
+                                ),
+                              ),
+                              child: Text(
+                                '${widget.badge}',
+                                style: GsText.dataXsStrong.copyWith(
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -996,7 +1182,9 @@ class _ShellContextPanel extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           _buildContextCard(
-            icon: controller.repository.remoteEnabled ? LucideIcons.wifi : LucideIcons.wifiOff,
+            icon: controller.repository.remoteEnabled
+                ? LucideIcons.wifi
+                : LucideIcons.wifiOff,
             title: 'Status da Conexao',
             body: controller.repository.remoteEnabled
                 ? 'Conectado à nuvem oficial. Dados sincronizados com sucesso.'
@@ -1022,8 +1210,8 @@ class _ShellContextPanel extends StatelessWidget {
                           : modules.first,
                     );
               return _buildContextCard(
-                icon: controller.selectedCompanyId != null 
-                    ? LucideIcons.building2 
+                icon: controller.selectedCompanyId != null
+                    ? LucideIcons.building2
                     : (selectedModule?.icon ?? LucideIcons.layoutGrid),
                 title: controller.selectedCompanyId != null
                     ? 'Dados da Empresa'
@@ -1043,18 +1231,24 @@ class _ShellContextPanel extends StatelessWidget {
           _buildContextCard(
             icon: LucideIcons.lifeBuoy,
             title: 'Suporte',
-            body: 'Para assistencia, entre em contato com a equipe de TI da Global Sync.',
+            body:
+                'Para assistencia, entre em contato com a equipe de TI da Global Sync.',
           ),
         ],
       ),
     );
   }
 
-  Widget _buildContextCard({required IconData icon, required String title, required String body}) {
+  Widget _buildContextCard({
+    required IconData icon,
+    required String title,
+    required String body,
+  }) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: SaaSTokens.scaffold, // Inner background to contrast with white panel
+        color: SaaSTokens
+            .scaffold, // Inner background to contrast with white panel
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: SaaSTokens.borderLight),
       ),
@@ -1064,7 +1258,11 @@ class _ShellContextPanel extends StatelessWidget {
 }
 
 class _ContextDescription extends StatelessWidget {
-  const _ContextDescription({required this.icon, required this.title, required this.body});
+  const _ContextDescription({
+    required this.icon,
+    required this.title,
+    required this.body,
+  });
 
   final IconData icon;
   final String title;

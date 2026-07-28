@@ -83,36 +83,36 @@ export function DialogoRedefinirSenha({
       // `m-auto` não é cosmético: o preflight do Tailwind zera a margem de todo
       // elemento, e é justamente o `margin:auto` do UA que centra um <dialog>
       // modal. Sem ele o diálogo encosta no canto superior esquerdo.
-      className="m-auto w-[calc(100vw-2rem)] max-w-[420px] rounded-card border border-line bg-card p-0 backdrop:bg-title/25"
+      className="m-auto w-[calc(100vw-2rem)] max-w-[420px] bg-white/97 backdrop-blur-[14px] border border-white rounded-[18px] shadow-[0_24px_60px_rgba(22,24,29,.18)] p-0 backdrop:bg-[#16181D]/25"
     >
       <div className="p-7">
-        <h2 id="titulo-redefinir" className="text-[20px] font-bold tracking-[-0.6px] text-title">
+        <h2 id="titulo-redefinir" className="text-[20px] font-bold tracking-[-0.6px] text-[#16181D]">
           {enviado ? "Verifique seu e-mail" : "Redefinir senha"}
         </h2>
 
         {enviado ? (
           <>
-            <p role="status" className="mt-2 text-[13px] leading-relaxed text-soft">
-              Se houver uma conta para <span className="font-mono text-title">{email.trim()}</span>,
+            <p role="status" className="mt-2 text-[13px] leading-relaxed text-[#767A86]">
+              Se houver uma conta para <span className="font-mono text-[#16181D]">{email.trim()}</span>,
               o link de redefinição chega em alguns minutos. Confira também a caixa de spam.
             </p>
             <button
               type="button"
               onClick={aoFechar}
-              className="mt-6 h-12 w-full rounded-control bg-primary-strong text-[15px] font-semibold text-white transition-colors hover:bg-primary-deep"
+              className="mt-6 h-12 w-full bg-[#16181D] rounded-[20px] text-[15px] font-semibold text-white transition-colors hover:bg-[#2C2F38]"
             >
               Fechar
             </button>
           </>
         ) : (
           <form onSubmit={aoEnviar} noValidate>
-            <p className="mt-2 text-[13px] leading-relaxed text-soft">
+            <p className="mt-2 text-[13px] leading-relaxed text-[#767A86]">
               Enviamos um link para você criar uma senha nova.
             </p>
 
             <label
               htmlFor="email-redefinir"
-              className="mt-6 block font-mono text-[11px] font-semibold uppercase tracking-[0.9px] text-muted"
+              className="mt-6 block font-mono text-[11px] font-semibold uppercase tracking-[0.9px] text-[#A2A6B2]"
             >
               E-mail
             </label>
@@ -127,13 +127,13 @@ export function DialogoRedefinirSenha({
               aria-invalid={erro !== null}
               aria-describedby={erro ? "erro-redefinir" : undefined}
               placeholder="nome@consultoria.com.br"
-              className={`mt-2 h-12 w-full rounded-control border bg-card px-4 text-[15px] text-title outline-none transition-colors placeholder:text-muted focus:border-primary ${
-                erro ? "border-error" : "border-line-input"
+              className={`mt-2 h-12 w-full rounded-[24px] border bg-[#F2F1F7] border-white/90 px-4 text-[15px] text-[#16181D] outline-none transition-colors placeholder:text-[#A2A6B2] focus:bg-white focus:ring-2 focus:ring-[#16181D] focus:border-[#16181D] ${
+                erro ? "border-[#991B1B] bg-[#FFE5E5] focus:border-[#991B1B] focus:ring-[#991B1B]/20" : ""
               }`}
             />
             {/* A linha de erro existe desde o primeiro render: sem ela, o erro
                 aparece e empurra os botões para baixo enquanto o dedo desce. */}
-            <p id="erro-redefinir" role="alert" className="mt-1.5 min-h-[18px] text-[12px] text-error-dark">
+            <p id="erro-redefinir" role="alert" className="mt-1.5 min-h-[18px] text-[12px] text-[#991B1B]">
               {erro}
             </p>
 
@@ -142,7 +142,7 @@ export function DialogoRedefinirSenha({
                 type="button"
                 onClick={aoFechar}
                 disabled={enviando}
-                className="h-12 rounded-control px-5 text-[15px] font-semibold text-soft transition-colors hover:bg-surface-alt disabled:opacity-50"
+                className="h-12 bg-[#F2F1F7] rounded-[20px] px-5 text-[15px] font-semibold text-[#16181D] transition-colors hover:bg-[#E5E4EA] disabled:opacity-50"
               >
                 Cancelar
               </button>
@@ -150,7 +150,7 @@ export function DialogoRedefinirSenha({
                 type="submit"
                 disabled={enviando}
                 aria-busy={enviando}
-                className="h-12 rounded-control bg-primary-strong px-5 text-[15px] font-semibold text-white transition-colors hover:bg-primary-deep disabled:bg-primary-dim"
+                className="h-12 bg-[#16181D] rounded-[20px] px-5 text-[15px] font-semibold text-white transition-colors hover:bg-[#2C2F38] disabled:bg-[#4A4E5A]"
               >
                 {enviando ? "Enviando…" : "Enviar link"}
               </button>

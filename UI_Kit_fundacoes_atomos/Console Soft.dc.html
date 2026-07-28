@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400&amp;family=IBM+Plex+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,200..600,0..1,-25..0&amp;display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; background: #E8E7EF; -webkit-font-smoothing: antialiased; }
+  a { color: #16181D; text-decoration: none; }
+  a:hover { color: #4A4E5A; }
+  @keyframes gsPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.8); } }
+</style>
+</helmet>
+
+<div style="font-family: 'Instrument Sans', sans-serif; background: linear-gradient(170deg, #F0EEF5 0%, #E9E6F0 45%, #ECEAF1 100%); min-height: 100vh; min-width: 1240px; display: flex; gap: 14px; padding: 14px; position: relative; overflow: hidden;">
+
+  <sc-if value="{{ brilho }}" hint-placeholder-val="{{ true }}">
+    <div style="position: absolute; top: -60px; right: 240px; width: 560px; height: 300px; background: radial-gradient(ellipse, rgba(255,255,255,.9), transparent 65%); pointer-events: none;"></div>
+    <div style="position: absolute; bottom: 120px; left: -140px; width: 460px; height: 20px; background: linear-gradient(90deg, transparent, rgba(245,163,181,.5), rgba(247,199,126,.5), transparent); filter: blur(24px); pointer-events: none;"></div>
+  </sc-if>
+
+  <!-- SIDEBAR -->
+  <div style="width: 240px; flex: none; background: rgba(255,255,255,.85); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,.95); border-radius: 18px; box-shadow: 0 14px 36px rgba(22,24,29,.07); padding: 20px 14px 14px; display: flex; flex-direction: column; position: relative; z-index: 2;">
+    <div style="display: flex; align-items: center; gap: 11px; padding: 4px 8px 0;">
+      <img src="assets/gs-icon.png" alt="Global Sync" style="width: 34px; height: 34px;">
+      <div style="font-size: 20px; font-weight: 700; letter-spacing: -.6px; color: #16181D;">{{ marca }}</div>
+    </div>
+    <div style="height: 24px;"></div>
+    <div style="font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; font-weight: 600; letter-spacing: 1.4px; color: #A2A6B2; padding: 0 8px;">WORKSPACE</div>
+    <div style="height: 8px;"></div>
+    <div style="display: flex; flex-direction: column; gap: 2px;">
+      <sc-for list="{{ navItens }}" as="n" hint-placeholder-count="7">
+        <div style="height: 40px; border-radius: 12px; background: {{ n.fundo }}; display: flex; align-items: center; gap: 10px; padding: 0 10px; cursor: pointer; transition: background .15s ease;" style-hover="background: #F2F1F7;" onClick="{{ n.selecionar }}">
+          <span style="font-family: 'Material Symbols Outlined'; font-size: 18px; color: {{ n.iconeCor }};">{{ n.icone }}</span>
+          <div style="flex: 1; font-size: 13.5px; font-weight: {{ n.peso }}; color: {{ n.cor }}; letter-spacing: -.2px;">{{ n.nome }}</div>
+          <sc-if value="{{ n.contador }}" hint-placeholder-val="{{ false }}">
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; color: #FFFFFF; background: #16181D; border-radius: 20px; padding: 2px 7px;">{{ n.contador }}</div>
+          </sc-if>
+        </div>
+      </sc-for>
+    </div>
+    <div style="height: 20px;"></div>
+    <div style="font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; font-weight: 600; letter-spacing: 1.4px; color: #A2A6B2; padding: 0 8px;">MÓDULO ATIVO</div>
+    <div style="height: 8px;"></div>
+    <div style="border-radius: 14px; background: linear-gradient(140deg, #EEE7F9, #E2EDFA); border: 1px solid rgba(255,255,255,.9); padding: 12px 12px 10px;">
+      <div style="display: flex; align-items: center; gap: 9px;">
+        <span style="font-family: 'Material Symbols Outlined'; font-size: 16px; color: #16181D;">school</span>
+        <div style="flex: 1; font-size: 12.5px; font-weight: 600; color: #16181D;">FUNDEB 2026</div>
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: #5A5E6A;">18</div>
+      </div>
+      <div style="height: 10px;"></div>
+      <div style="height: 38px; background: #16181D; border-radius: 20px; display: flex; align-items: center; gap: 7px; padding: 0 13px; cursor: pointer; box-shadow: 0 8px 18px rgba(22,24,29,.16); transition: background .18s ease;" style-hover="background: #2C2F38;" onClick="{{ abrirNovo }}">
+        <span style="font-family: 'Material Symbols Outlined'; font-size: 16px; color: #FFFFFF;">add</span>
+        <div style="flex: 1; font-size: 12.5px; font-weight: 600; color: #FFFFFF; white-space: nowrap;">Novo levantamento</div>
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; color: rgba(255,255,255,.6);">⌘N</div>
+      </div>
+    </div>
+    <div style="flex: 1; min-height: 16px;"></div>
+    <div style="height: 34px; border-radius: 10px; display: flex; align-items: center; gap: 9px; padding: 0 10px; cursor: pointer; transition: background .15s ease;" style-hover="background: #F2F1F7;">
+      <span style="font-family: 'Material Symbols Outlined'; font-size: 16px; color: #A2A6B2;">help</span>
+      <div style="flex: 1; font-size: 12.5px; color: #767A86;">Ajuda e atalhos</div>
+      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; color: #A2A6B2; border: 1px solid #ECEDF2; border-radius: 5px; padding: 1px 5px;">⌘/</div>
+    </div>
+    <div style="height: 10px;"></div>
+    <div style="background: #F7F6FA; border: 1px solid rgba(255,255,255,.95); border-radius: 14px; padding: 9px 10px; display: flex; align-items: center; gap: 10px; cursor: pointer;">
+      <div style="width: 34px; height: 34px; flex: none; border-radius: 50%; background: linear-gradient(140deg, #16181D, #3B3F4A); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #FFFFFF;">MR</div>
+      <div style="flex: 1; min-width: 0;">
+        <div style="font-size: 13px; font-weight: 600; color: #16181D; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Marcos Rocha</div>
+        <div style="font-size: 10.5px; color: #767A86;">Admin do grupo</div>
+      </div>
+      <span style="font-family: 'Material Symbols Outlined'; font-size: 17px; color: #A2A6B2;">more_vert</span>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div style="flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 14px; position: relative; z-index: 1;">
+
+    <!-- header -->
+    <div style="height: 60px; flex: none; background: rgba(255,255,255,.85); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,.95); border-radius: 18px; box-shadow: 0 10px 26px rgba(22,24,29,.06); display: flex; align-items: center; padding: 0 18px; gap: 12px; position: relative; z-index: 40;">
+      <div style="white-space: nowrap;">
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 600; letter-spacing: 1.3px; color: #A2A6B2;">WORKSPACE</div>
+        <div style="font-size: 15px; font-weight: 700; letter-spacing: -.35px; color: #16181D; margin-top: 1px;">{{ telaAtiva }}</div>
+      </div>
+      <div style="flex: 1;"></div>
+      <div style="width: 280px; height: 38px; background: #F2F1F7; border: 1px solid rgba(255,255,255,.9); border-radius: 22px; display: flex; align-items: center; gap: 9px; padding: 0 14px; cursor: text;">
+        <span style="font-family: 'Material Symbols Outlined'; font-size: 16px; color: #A2A6B2;">search</span>
+        <div style="flex: 1; font-size: 13px; color: #A2A6B2; white-space: nowrap; overflow: hidden;">Buscar município, empresa…</div>
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #767A86; background: #FFFFFF; border-radius: 5px; padding: 1px 6px;">⌘K</div>
+      </div>
+      <sc-if value="{{ temAtraso }}" hint-placeholder-val="{{ true }}">
+        <div style="display: flex; align-items: center; gap: 7px; font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; font-weight: 600; color: #8A5A00; background: #FBF0D9; border-radius: 20px; padding: 6px 12px; white-space: nowrap; cursor: pointer;">
+          <span style="font-family: 'Material Symbols Outlined'; font-size: 14px;">warning</span>
+          SICONFI · atraso 2d
+        </div>
+      </sc-if>
+      <div style="position: relative;">
+        <div style="width: 36px; height: 36px; border-radius: 50%; background: {{ sinoFundo }}; display: flex; align-items: center; justify-content: center; cursor: pointer;" style-hover="background: #ECEBF2;" onClick="{{ alternarNotifs }}">
+          <span style="font-family: 'Material Symbols Outlined'; font-size: 18px; color: #3B3F4A;">notifications</span>
+          <sc-if value="{{ temNaoLidas }}" hint-placeholder-val="{{ true }}">
+            <div style="position: absolute; top: 5px; right: 5px; min-width: 15px; height: 15px; border-radius: 8px; background: #16181D; border: 1.5px solid #FFFFFF; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 8.5px; font-weight: 600; color: #FFFFFF; padding: 0 3px;">{{ naoLidas }}</div>
+          </sc-if>
+        </div>
+        <sc-if value="{{ notifAberto }}" hint-placeholder-val="{{ false }}">
+          <div style="position: absolute; top: 46px; right: 0; width: 360px; background: rgba(255,255,255,.97); backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,1); border-radius: 18px; box-shadow: 0 24px 60px rgba(22,24,29,.18); overflow: hidden; z-index: 60;">
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 10px;">
+              <div style="font-size: 14px; font-weight: 700; letter-spacing: -.3px; color: #16181D;">Notificações</div>
+              <div style="font-size: 11.5px; font-weight: 600; color: #767A86; cursor: pointer;" style-hover="color: #16181D;" onClick="{{ lerTodas }}">Marcar todas como lidas</div>
+            </div>
+            <sc-for list="{{ notifs }}" as="n" hint-placeholder-count="4">
+              <div style="display: flex; gap: 11px; align-items: flex-start; padding: 11px 16px; border-top: 1px solid #F4F5F8; cursor: pointer; opacity: {{ n.opacidade }}; transition: background .15s ease, opacity .2s ease;" style-hover="background: #F7F6FA;" onClick="{{ n.ler }}">
+                <div style="width: 30px; height: 30px; flex: none; border-radius: 10px; background: {{ n.iconeFundo }}; display: flex; align-items: center; justify-content: center;"><span style="font-family: 'Material Symbols Outlined'; font-size: 15px; color: {{ n.iconeCor }};">{{ n.icone }}</span></div>
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-size: 12.5px; font-weight: 600; color: #16181D; line-height: 1.35;">{{ n.titulo }}</div>
+                  <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #767A86; margin-top: 2px;">{{ n.meta }}</div>
+                </div>
+                <sc-if value="{{ n.naoLida }}" hint-placeholder-val="{{ true }}">
+                  <div style="width: 7px; height: 7px; border-radius: 50%; background: #F5A3B5; flex: none; margin-top: 5px;"></div>
+                </sc-if>
+              </div>
+            </sc-for>
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: #F7F6FA; border-top: 1px solid #F0F1F5;">
+              <div style="display: flex; align-items: center; gap: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; color: #767A86;">
+                <div style="width: 5px; height: 5px; border-radius: 50%; background: #34C388; animation: gsPulse 2.4s ease-in-out infinite;"></div>
+                sincronizado hoje 14:32
+              </div>
+              <div style="font-size: 11.5px; font-weight: 600; color: #16181D; cursor: pointer;">Ver caixa de entrada →</div>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+
+    <!-- conteúdo -->
+    <div style="flex: 1; display: flex; flex-direction: column; gap: 14px;">
+
+      <sc-if value="{{ telaPainel }}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; align-items: baseline; justify-content: space-between; padding: 4px 4px 0;">
+        <div style="font-size: 21px; font-weight: 700; letter-spacing: -.7px; color: #16181D;">Olá, Marcos Rocha!</div>
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #767A86;">seg, 27 jul 2026 · exercício 2026</div>
+      </div>
+
+      <!-- KPIs -->
+      <div style="display: grid; grid-template-columns: 1fr 1.6fr 1fr 1fr; gap: 14px;">
+        <div style="background: rgba(255,255,255,.88); border: 1px solid rgba(255,255,255,.95); border-radius: 16px; box-shadow: 0 10px 26px rgba(22,24,29,.05); padding: 18px;">
+          <div style="font-size: 12px; color: #767A86;">Municípios ativos</div>
+          <div style="height: 10px;"></div>
+          <div style="display: flex; align-items: baseline; gap: 6px;">
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 34px; font-weight: 600; letter-spacing: -1.8px; color: #16181D; line-height: 1;">34</div>
+            <div style="font-size: 11.5px; color: #A2A6B2;">na carteira</div>
+          </div>
+          <div style="height: 12px;"></div>
+          <div style="font-size: 11.5px; color: #767A86;">12 com contrato vigente</div>
+        </div>
+
+        <div style="background: rgba(255,255,255,.88); border: 1px solid rgba(255,255,255,.95); border-radius: 16px; box-shadow: 0 10px 26px rgba(22,24,29,.05); padding: 18px;">
+          <div style="display: flex; justify-content: space-between; align-items: baseline;">
+            <div style="font-size: 12px; color: #767A86;">Distribuição do pipeline</div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: #A2A6B2;">34 municípios</div>
+          </div>
+          <div style="height: 16px;"></div>
+          <div style="display: flex; height: 14px; border-radius: 8px; overflow: hidden; gap: 3px;">
+            <div style="width: 35%; background: linear-gradient(90deg, #F5A3B5, #F7B99B); cursor: pointer;"></div>
+            <div style="width: 24%; background: linear-gradient(90deg, #F7C77E, #F5D89B); cursor: pointer;"></div>
+            <div style="width: 26%; background: linear-gradient(90deg, #8FD3B6, #A9DFC6); cursor: pointer;"></div>
+            <div style="width: 15%; background: linear-gradient(90deg, #93B8F2, #B5CDF6); cursor: pointer;"></div>
+          </div>
+          <div style="height: 14px;"></div>
+          <div style="display: flex; gap: 18px; font-size: 11.5px; color: #5A5E6A;">
+            <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 8px; height: 8px; border-radius: 3px; background: #F5A3B5;"></div><span style="font-family: 'IBM Plex Mono', monospace; font-weight: 600;">12</span> Contrato</div>
+            <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 8px; height: 8px; border-radius: 3px; background: #F7C77E;"></div><span style="font-family: 'IBM Plex Mono', monospace; font-weight: 600;">8</span> Proposta</div>
+            <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 8px; height: 8px; border-radius: 3px; background: #8FD3B6;"></div><span style="font-family: 'IBM Plex Mono', monospace; font-weight: 600;">9</span> Estudo</div>
+            <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 8px; height: 8px; border-radius: 3px; background: #93B8F2;"></div><span style="font-family: 'IBM Plex Mono', monospace; font-weight: 600;">5</span> Contato</div>
+          </div>
+        </div>
+
+        <div style="background: linear-gradient(150deg, rgba(255,255,255,.92) 30%, #F3EEFB); border: 1px solid rgba(255,255,255,.95); border-radius: 16px; box-shadow: 0 10px 26px rgba(22,24,29,.05); padding: 18px;">
+          <div style="font-size: 12px; color: #767A86;">Lucro projetado</div>
+          <div style="height: 10px;"></div>
+          <div style="display: flex; align-items: baseline; gap: 4px;">
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 34px; font-weight: 600; letter-spacing: -1.8px; color: #16181D; line-height: 1;">R$ 4,82M</div>
+          </div>
+          <div style="height: 12px;"></div>
+          <div style="display: flex; align-items: center; gap: 5px;">
+            <span style="font-family: 'Material Symbols Outlined'; font-size: 15px; color: #1F6A47;">trending_up</span>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; font-weight: 600; color: #1F6A47;">+12,4%</div>
+            <div style="font-size: 11.5px; color: #767A86;">vs. 2025</div>
+          </div>
+        </div>
+
+        <div style="background: rgba(255,255,255,.88); border: 1px solid rgba(255,255,255,.95); border-radius: 16px; box-shadow: 0 10px 26px rgba(22,24,29,.05); padding: 18px;">
+          <div style="font-size: 12px; color: #767A86;">Pendências</div>
+          <div style="height: 10px;"></div>
+          <div style="font-family: 'IBM Plex Mono', monospace; font-size: 34px; font-weight: 600; letter-spacing: -1.8px; color: #16181D; line-height: 1;">3</div>
+          <div style="height: 12px;"></div>
+          <div style="display: inline-flex; align-items: center; gap: 5px; background: #FBF0D9; border-radius: 6px; padding: 3px 8px;">
+            <span style="font-family: 'Material Symbols Outlined'; font-size: 13px; color: #8A5A00;">schedule</span>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; font-weight: 600; color: #8A5A00;">2 contratos a vencer</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- linha 2: gráfico + radar -->
+      <div style="display: grid; grid-template-columns: 1.7fr 1fr; gap: 14px;">
+        <div style="background: rgba(255,255,255,.88); border: 1px solid rgba(255,255,255,.95); border-radius: 16px; box-shadow: 0 10px 26px rgba(22,24,29,.05); padding: 18px 20px;">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <div>
+              <div style="font-size: 14.5px; font-weight: 700; letter-spacing: -.3px; color: #16181D;">Receita no ano</div>
+              <div style="font-size: 12px; color: #767A86; margin-top: 2px;">Tendência mensal consolidada · <span style="font-family: 'IBM Plex Mono', monospace; font-size: 11.5px;">R$ 12,47M acum.</span></div>
+            </div>
+            <div style="display: flex; background: #F2F1F7; border-radius: 20px; padding: 3px;">
+              <sc-for list="{{ periodos }}" as="p" hint-placeholder-count="3">
+                <div style="padding: 6px 14px; border-radius: 17px; font-size: 11.5px; font-weight: {{ p.peso }}; color: {{ p.cor }}; background: {{ p.fundo }}; cursor: pointer; box-shadow: {{ p.sombra }};" onClick="{{ p.selecionar }}">{{ p.nome }}</div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="height: 20px;"></div>
+          <div style="display: flex; align-items: flex-end; gap: 9px; height: 150px;">
+            <sc-for list="{{ meses }}" as="m" hint-placeholder-count="12">
+              <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; justify-content: flex-end;">
+                <div style="width: 100%; height: {{ m.altura }}; background: {{ m.grad }}; border-radius: 7px; cursor: pointer; transition: filter .15s ease;" style-hover="filter: brightness(.94);"></div>
+                <div style="font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; color: #A2A6B2;">{{ m.nome }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+
+        <div style="background: rgba(255,255,255,.88); border: 1px solid rgba(255,255,255,.95); border-radius: 16px; box-shadow: 0 10px 26px rgba(22,24,29,.05); padding: 18px 20px;">
+          <div style="display: flex; align-items: baseline; justify-content: space-between;">
+            <div style="font-size: 14.5px; font-weight: 700; letter-spacing: -.3px; color: #16181D;">Radar executivo</div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: #A2A6B2;">hoje</div>
+          </div>
+          <div style="height: 14px;"></div>
+          <div style="display: flex; flex-direction: column; gap: 9px;">
+            <div style="display: flex; gap: 10px; align-items: flex-start; padding: 12px; background: linear-gradient(140deg, #FBF3DE, #FBEDE0); border: 1px solid rgba(255,255,255,.9); border-radius: 12px; cursor: pointer;">
+              <span style="font-family: 'Material Symbols Outlined'; font-size: 17px; color: #8A5A00;">schedule</span>
+              <div><div style="font-size: 12.5px; font-weight: 600; color: #16181D;">Contrato Cristalina vence em 12 dias</div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: #767A86; margin-top: 2px;">renovação não iniciada</div></div>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: flex-start; padding: 12px; background: linear-gradient(140deg, #E2EDFA, #EAE7F8); border: 1px solid rgba(255,255,255,.9); border-radius: 12px; cursor: pointer;">
+              <span style="font-family: 'Material Symbols Outlined'; font-size: 17px; color: #2C4E82;">description</span>
+              <div><div style="font-size: 12.5px; font-weight: 600; color: #16181D;">4 levantamentos aguardando revisão</div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: #767A86; margin-top: 2px;">FUNDEB · lote 2026-07</div></div>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: flex-start; padding: 12px; background: linear-gradient(140deg, #E4F4EC, #E9F5E4); border: 1px solid rgba(255,255,255,.9); border-radius: 12px; cursor: pointer;">
+              <span style="font-family: 'Material Symbols Outlined'; font-size: 17px; color: #1F6A47;">verified</span>
+              <div><div style="font-size: 12.5px; font-weight: 600; color: #16181D;">Base FNDE atualizada</div><div style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: #767A86; margin-top: 2px;">VAAT 2026 · hoje 06:10</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- tabela -->
+      <div style="background: rgba(255,255,255,.88); border: 1px solid rgba(255,255,255,.95); border-radius: 16px; box-shadow: 0 10px 26px rgba(22,24,29,.05); overflow: hidden;">
+        <div style="padding: 16px 20px; display: flex; align-items: center; justify-content: space-between;">
+          <div style="display: flex; align-items: baseline; gap: 10px;">
+            <div style="font-size: 14.5px; font-weight: 700; letter-spacing: -.3px; color: #16181D;">Cidades com maior projeção</div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: #A2A6B2;">34 municípios</div>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <div style="height: 32px; background: #F2F1F7; border-radius: 18px; display: flex; align-items: center; gap: 6px; padding: 0 13px; font-size: 12px; font-weight: 500; color: #3B3F4A; cursor: pointer;" style-hover="background: #ECEBF2;"><span style="font-family: 'Material Symbols Outlined'; font-size: 15px;">filter_list</span>Filtrar</div>
+            <div style="height: 32px; background: #F2F1F7; border-radius: 18px; display: flex; align-items: center; gap: 6px; padding: 0 13px; font-size: 12px; font-weight: 500; color: #3B3F4A; cursor: pointer;" style-hover="background: #ECEBF2;"><span style="font-family: 'Material Symbols Outlined'; font-size: 15px;">download</span>Exportar</div>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1.8fr .45fr 1.1fr 1.1fr 1.1fr .7fr .3fr; padding: 0 8px; font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; font-weight: 600; letter-spacing: 1px; color: #A2A6B2; text-transform: uppercase; border-bottom: 1px solid #F0F1F5;">
+          <div style="padding: 8px 12px;">Município</div>
+          <div style="padding: 8px 6px;">UF</div>
+          <div style="padding: 8px 6px;">Estágio</div>
+          <div style="padding: 8px 6px; text-align: right;">VAAT 2026</div>
+          <div style="padding: 8px 6px; text-align: right;">Lucro proj.</div>
+          <div style="padding: 8px 6px; text-align: right;">Margem</div>
+          <div></div>
+        </div>
+        <sc-for list="{{ cidades }}" as="c" hint-placeholder-count="5">
+          <div style="display: grid; grid-template-columns: 1.8fr .45fr 1.1fr 1.1fr 1.1fr .7fr .3fr; align-items: center; margin: 0 8px; border-radius: 12px; cursor: pointer; transition: background .15s ease;" style-hover="background: #F7F6FA;">
+            <div style="padding: 12px; font-size: 13.5px; font-weight: 600; color: #16181D;">{{ c.nome }}</div>
+            <div style="padding: 12px 6px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #767A86;">{{ c.uf }}</div>
+            <div style="padding: 12px 6px;"><span style="display: inline-flex; align-items: center; gap: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; font-weight: 600; color: {{ c.chipTexto }}; background: {{ c.chipFundo }}; border-radius: 14px; padding: 4px 10px;"><span style="width: 6px; height: 6px; border-radius: 50%; background: {{ c.chipPonto }};"></span>{{ c.estagio }}</span></div>
+            <div style="padding: 12px 6px; font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; color: #5A5E6A; text-align: right; font-variant-numeric: tabular-nums;">{{ c.vaat }}</div>
+            <div style="padding: 12px 6px; font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; font-weight: 600; color: #16181D; text-align: right; font-variant-numeric: tabular-nums;">{{ c.lucro }}</div>
+            <div style="padding: 12px 6px; font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; color: {{ c.margemCor }}; text-align: right; font-variant-numeric: tabular-nums;">{{ c.margem }}</div>
+            <div style="text-align: center;"><span style="font-family: 'Material Symbols Outlined'; font-size: 17px; color: #C9CBD4;">chevron_right</span></div>
+          </div>
+        </sc-for>
+        <div style="height: 8px;"></div>
+      </div>
+      </sc-if>
+
+      <sc-if value="{{ telaNovo }}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; align-items: center; padding: 4px 0 40px;">
+        <div style="width: 820px; max-width: 100%;">
+
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <div style="width: 38px; height: 38px; border-radius: 50%; background: rgba(255,255,255,.88); border: 1px solid rgba(255,255,255,.95); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 6px 16px rgba(22,24,29,.07);" style-hover="background: #FFFFFF;" onClick="{{ voltarPainel }}">
+              <span style="font-family: 'Material Symbols Outlined'; font-size: 18px; color: #16181D;">arrow_back</span>
+            </div>
+            <div>
+              <div style="font-size: 21px; font-weight: 700; letter-spacing: -.7px; color: #16181D;">Novo levantamento FUNDEB</div>
+              <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: #767A86; margin-top: 2px;">exercício 2026 · bases oficiais FNDE · INEP · SICONFI</div>
+            </div>
+            <div style="flex: 1;"></div>
+            <div style="display: flex; gap: 6px;">
+              <sc-for list="{{ etapas }}" as="e" hint-placeholder-count="3">
+                <div style="display: flex; align-items: center; gap: 7px; background: {{ e.fundo }}; border: 1px solid rgba(255,255,255,.9); border-radius: 18px; padding: 6px 13px 6px 7px;">
+                  <div style="width: 20px; height: 20px; border-radius: 50%; background: {{ e.numFundo }}; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; color: {{ e.numCor }};">{{ e.num }}</div>
+                  <div style="font-size: 12px; font-weight: 600; color: {{ e.cor }};">{{ e.nome }}</div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="height: 20px;"></div>
+
+          <!-- ETAPA 1: município -->
+          <sc-if value="{{ etapa1 }}" hint-placeholder-val="{{ true }}">
+          <div style="background: rgba(255,255,255,.88); border: 1px solid rgba(255,255,255,.95); border-radius: 18px; box-shadow: 0 14px 36px rgba(22,24,29,.06); padding: 22px;">
+            <div style="font-size: 15px; font-weight: 700; letter-spacing: -.3px; color: #16181D;">Escolha o município</div>
+            <div style="font-size: 12.5px; color: #767A86; margin-top: 3px;">Qualquer um dos 5.570 municípios. Os dados são consultados nas bases oficiais na hora.</div>
+            <div style="height: 16px;"></div>
+            <div style="height: 46px; background: #F2F1F7; border: 1px solid rgba(255,255,255,.9); border-radius: 24px; display: flex; align-items: center; gap: 10px; padding: 0 16px;">
+              <span style="font-family: 'Material Symbols Outlined'; font-size: 18px; color: #A2A6B2;">search</span>
+              <div style="flex: 1; font-size: 13.5px; color: #A2A6B2;">Nome do município ou código IBGE…</div>
+            </div>
+            <div style="height: 16px;"></div>
+            <div style="font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; font-weight: 600; letter-spacing: 1.3px; color: #A2A6B2; padding: 0 4px;">SUGESTÕES · REGIÃO DA CARTEIRA</div>
+            <div style="height: 8px;"></div>
+            <div style="display: flex; flex-direction: column; gap: 4px;">
+              <sc-for list="{{ municipios }}" as="m" hint-placeholder-count="5">
+                <div style="display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: 12px; background: {{ m.fundo }}; border: 1px solid {{ m.bordaCor }}; cursor: pointer; transition: background .15s ease;" style-hover="background: #F7F6FA;" onClick="{{ m.selecionar }}">
+                  <div style="width: 30px; height: 30px; border-radius: 10px; background: {{ m.avatarFundo }}; display: flex; align-items: center; justify-content: center; font-family: 'IBM Plex Mono', monospace; font-size: 11px; font-weight: 600; color: {{ m.avatarCor }};">{{ m.uf }}</div>
+                  <div style="flex: 1; min-width: 0;">
+                    <div style="font-size: 13.5px; font-weight: 600; color: #16181D;">{{ m.nome }}</div>
+                    <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #767A86; margin-top: 1px;">IBGE {{ m.ibge }} · {{ m.matriculas }} matrículas · {{ m.escolas }} escolas</div>
+                  </div>
+                  <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; color: {{ m.chipTexto }}; background: {{ m.chipFundo }}; border-radius: 12px; padding: 3px 9px; white-space: nowrap;">{{ m.chip }}</div>
+                  <sc-if value="{{ m.selecionado }}" hint-placeholder-val="{{ false }}">
+                    <span style="font-family: 'Material Symbols Outlined'; font-size: 18px; color: #16181D;">check_circle</span>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+            <div style="height: 18px;"></div>
+            <div style="display: flex; justify-content: flex-end;">
+              <div style="height: 44px; background: #16181D; border-radius: 24px; display: flex; align-items: center; gap: 8px; padding: 0 22px; cursor: pointer; opacity: {{ podeContinuar1 }}; transition: background .18s ease;" style-hover="background: #2C2F38;" onClick="{{ continuar1 }}">
+                <div style="font-size: 13.5px; font-weight: 600; color: #FFFFFF;">Continuar</div>
+                <span style="font-family: 'Material Symbols Outlined'; font-size: 17px; color: #FFFFFF;">arrow_forward</span>
+              </div>
+            </div>
+          </div>
+          </sc-if>
+
+          <!-- ETAPA 2: parâmetros -->
+          <sc-if value="{{ etapa2 }}" hint-placeholder-val="{{ false }}">
+          <div style="background: rgba(255,255,255,.88); border: 1px solid rgba(255,255,255,.95); border-radius: 18px; box-shadow: 0 14px 36px rgba(22,24,29,.06); padding: 22px;">
+            <div style="font-size: 15px; font-weight: 700; letter-spacing: -.3px; color: #16181D;">Parâmetros da projeção</div>
+            <div style="font-size: 12.5px; color: #767A86; margin-top: 3px;">{{ municipioNome }} · os padrões abaixo seguem a metodologia da consultoria.</div>
+            <div style="height: 20px;"></div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 22px;">
+              <div>
+                <div style="font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; font-weight: 600; letter-spacing: 1.3px; color: #A2A6B2;">EXERCÍCIO</div>
+                <div style="height: 8px;"></div>
+                <div style="display: flex; background: #F2F1F7; border-radius: 20px; padding: 3px; width: fit-content;">
+                  <sc-for list="{{ exercicios }}" as="ex" hint-placeholder-count="2">
+                    <div style="padding: 7px 18px; border-radius: 17px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: {{ ex.peso }}; color: {{ ex.cor }}; background: {{ ex.fundo }}; box-shadow: {{ ex.sombra }}; cursor: pointer;" onClick="{{ ex.selecionar }}">{{ ex.nome }}</div>
+                  </sc-for>
+                </div>
+                <div style="height: 20px;"></div>
+                <div style="font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; font-weight: 600; letter-spacing: 1.3px; color: #A2A6B2;">RECORTE DO CENSO</div>
+                <div style="height: 8px;"></div>
+                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                  <sc-for list="{{ recortes }}" as="r" hint-placeholder-count="3">
+                    <div style="padding: 8px 14px; border-radius: 18px; font-size: 12.5px; font-weight: 600; color: {{ r.cor }}; background: {{ r.fundo }}; border: 1px solid {{ r.borda }}; cursor: pointer;" onClick="{{ r.selecionar }}">{{ r.nome }}</div>
+                  </sc-for>
+                </div>
+                <div style="height: 20px;"></div>
+                <div style="font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; font-weight: 600; letter-spacing: 1.3px; color: #A2A6B2;">METODOLOGIA</div>
+                <div style="height: 8px;"></div>
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                  <sc-for list="{{ metodos }}" as="mt" hint-placeholder-count="2">
+                    <div style="display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 12px; background: {{ mt.fundo }}; border: 1px solid {{ mt.borda }}; cursor: pointer;" onClick="{{ mt.selecionar }}">
+                      <div style="width: 16px; height: 16px; border-radius: 50%; border: {{ mt.radioBorda }}; background: {{ mt.radioFundo }}; margin-top: 1px; flex: none;"></div>
+                      <div>
+                        <div style="font-size: 13px; font-weight: 600; color: #16181D;">{{ mt.nome }}</div>
+                        <div style="font-size: 11.5px; color: #767A86; margin-top: 2px; line-height: 1.4;">{{ mt.desc }}</div>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+              <div>
+                <div style="font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; font-weight: 600; letter-spacing: 1.3px; color: #A2A6B2;">SEÇÕES DO RELATÓRIO</div>
+                <div style="height: 8px;"></div>
+                <div style="display: flex; flex-direction: column;">
+                  <sc-for list="{{ secoes }}" as="sec" hint-placeholder-count="4">
+                    <div style="display: flex; align-items: center; gap: 11px; padding: 12px 4px; border-bottom: 1px solid #F0F1F5; cursor: pointer;" onClick="{{ sec.alternar }}">
+                      <span style="font-family: 'Material Symbols Outlined'; font-size: 17px; color: #767A86;">{{ sec.icone }}</span>
+                      <div style="flex: 1;">
+                        <div style="font-size: 13px; font-weight: 600; color: #16181D;">{{ sec.nome }}</div>
+                        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; color: #A2A6B2; margin-top: 1px;">{{ sec.fonte }}</div>
+                      </div>
+                      <div style="width: 36px; height: 21px; border-radius: 20px; background: {{ sec.trackCor }}; position: relative; transition: background .18s ease; flex: none;">
+                        <div style="position: absolute; top: 2px; left: {{ sec.knobLeft }}; width: 17px; height: 17px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 1px 3px rgba(22,24,29,.2); transition: left .18s ease;"></div>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+
+            <div style="height: 20px;"></div>
+            <div style="display: flex; justify-content: space-between;">
+              <div style="height: 44px; border-radius: 24px; display: flex; align-items: center; gap: 7px; padding: 0 18px; cursor: pointer; background: #F2F1F7;" style-hover="background: #ECEBF2;" onClick="{{ voltar1 }}">
+                <span style="font-family: 'Material Symbols Outlined'; font-size: 17px; color: #3B3F4A;">arrow_back</span>
+                <div style="font-size: 13.5px; font-weight: 600; color: #3B3F4A;">Voltar</div>
+              </div>
+              <div style="height: 44px; background: #16181D; border-radius: 24px; display: flex; align-items: center; gap: 8px; padding: 0 22px; cursor: pointer; transition: background .18s ease;" style-hover="background: #2C2F38;" onClick="{{ continuar2 }}">
+                <div style="font-size: 13.5px; font-weight: 600; color: #FFFFFF;">Revisar e gerar</div>
+                <span style="font-family: 'Material Symbols Outlined'; font-size: 17px; color: #FFFFFF;">arrow_forward</span>
+              </div>
+            </div>
+          </div>
+          </sc-if>
+
+          <!-- ETAPA 3: gerar -->
+          <sc-if value="{{ etapa3 }}" hint-placeholder-val="{{ false }}">
+          <div style="background: rgba(255,255,255,.88); border: 1px solid rgba(255,255,255,.95); border-radius: 18px; box-shadow: 0 14px 36px rgba(22,24,29,.06); padding: 22px;">
+            <sc-if value="{{ naoConcluido }}" hint-placeholder-val="{{ true }}">
+              <div style="font-size: 15px; font-weight: 700; letter-spacing: -.3px; color: #16181D;">Revisão</div>
+              <div style="height: 14px;"></div>
+              <div style="background: #F7F6FA; border-radius: 14px; padding: 6px 16px;">
+                <sc-for list="{{ resumo }}" as="rs" hint-placeholder-count="5">
+                  <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 10px 0; border-bottom: 1px solid #EFEFF4;">
+                    <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: 1px; color: #A2A6B2;">{{ rs.rotulo }}</div>
+                    <div style="font-size: 13px; font-weight: 600; color: #16181D;">{{ rs.valor }}</div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="height: 18px;"></div>
+              <sc-if value="{{ naoGerando }}" hint-placeholder-val="{{ true }}">
+                <div style="display: flex; justify-content: space-between;">
+                  <div style="height: 44px; border-radius: 24px; display: flex; align-items: center; gap: 7px; padding: 0 18px; cursor: pointer; background: #F2F1F7;" style-hover="background: #ECEBF2;" onClick="{{ voltar2 }}">
+                    <span style="font-family: 'Material Symbols Outlined'; font-size: 17px; color: #3B3F4A;">arrow_back</span>
+                    <div style="font-size: 13.5px; font-weight: 600; color: #3B3F4A;">Voltar</div>
+                  </div>
+                  <div style="height: 46px; background: #16181D; border-radius: 26px; display: flex; align-items: center; gap: 9px; padding: 0 26px; cursor: pointer; box-shadow: 0 12px 26px rgba(22,24,29,.2); transition: background .18s ease;" style-hover="background: #2C2F38;" onClick="{{ gerar }}">
+                    <span style="font-family: 'Material Symbols Outlined'; font-size: 18px; color: #FFFFFF;">bolt</span>
+                    <div style="font-size: 14px; font-weight: 600; color: #FFFFFF;">Gerar levantamento</div>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ gerando }}" hint-placeholder-val="{{ false }}">
+                <div style="display: flex; flex-direction: column; gap: 4px;">
+                  <sc-for list="{{ progresso }}" as="pg" hint-placeholder-count="4">
+                    <div style="display: flex; align-items: center; gap: 11px; padding: 9px 4px; opacity: {{ pg.opacidade }};">
+                      <span style="font-family: 'Material Symbols Outlined'; font-size: 17px; color: {{ pg.iconeCor }};">{{ pg.icone }}</span>
+                      <div style="flex: 1; font-size: 13px; font-weight: {{ pg.peso }}; color: #16181D;">{{ pg.nome }}</div>
+                      <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #A2A6B2;">{{ pg.status }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </sc-if>
+
+            <sc-if value="{{ concluido }}" hint-placeholder-val="{{ false }}">
+              <div style="display: flex; flex-direction: column; align-items: center; text-align: center; padding: 10px 0 6px;">
+                <div style="width: 52px; height: 52px; border-radius: 50%; background: linear-gradient(140deg, #E4F4EC, #E9F5E4); display: flex; align-items: center; justify-content: center;">
+                  <span style="font-family: 'Material Symbols Outlined'; font-size: 26px; color: #1F6A47;">task_alt</span>
+                </div>
+                <div style="height: 12px;"></div>
+                <div style="font-size: 18px; font-weight: 700; letter-spacing: -.5px; color: #16181D;">Levantamento pronto</div>
+                <div style="font-family: 'IBM Plex Mono', monospace; font-size: 10.5px; color: #767A86; margin-top: 3px;">{{ municipioNome }} · lote 2026-07 · v1 · 4 min 12 s</div>
+              </div>
+              <div style="height: 18px;"></div>
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+                <div style="background: #F7F6FA; border-radius: 14px; padding: 15px 16px;">
+                  <div style="font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; font-weight: 600; letter-spacing: 1.1px; color: #A2A6B2;">TOTAL ATUAL</div>
+                  <div style="height: 8px;"></div>
+                  <div style="font-family: 'IBM Plex Mono', monospace; font-size: 24px; font-weight: 600; letter-spacing: -1.2px; color: #16181D; font-variant-numeric: tabular-nums;">R$ 8,41M</div>
+                </div>
+                <div style="background: linear-gradient(150deg, #EEE7F9, #E2EDFA); border-radius: 14px; padding: 15px 16px;">
+                  <div style="font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; font-weight: 600; letter-spacing: 1.1px; color: #5A5E6A;">TOTAL PROJETADO</div>
+                  <div style="height: 8px;"></div>
+                  <div style="font-family: 'IBM Plex Mono', monospace; font-size: 24px; font-weight: 600; letter-spacing: -1.2px; color: #16181D; font-variant-numeric: tabular-nums;">R$ 9,24M</div>
+                </div>
+                <div style="background: linear-gradient(150deg, #E4F4EC, #E9F5E4); border-radius: 14px; padding: 15px 16px;">
+                  <div style="font-family: 'IBM Plex Mono', monospace; font-size: 9.5px; font-weight: 600; letter-spacing: 1.1px; color: #1F6A47;">GANHO RECUPERÁVEL</div>
+                  <div style="height: 8px;"></div>
+                  <div style="font-family: 'IBM Plex Mono', monospace; font-size: 24px; font-weight: 600; letter-spacing: -1.2px; color: #1F6A47; font-variant-numeric: tabular-nums;">+R$ 828,7K</div>
+                </div>
+              </div>
+              <div style="height: 18px;"></div>
+              <div style="display: flex; justify-content: center; gap: 10px;">
+                <div style="height: 44px; background: #16181D; border-radius: 24px; display: flex; align-items: center; gap: 8px; padding: 0 20px; cursor: pointer; transition: background .18s ease;" style-hover="background: #2C2F38;">
+                  <span style="font-family: 'Material Symbols Outlined'; font-size: 17px; color: #FFFFFF;">download</span>
+                  <div style="font-size: 13.5px; font-weight: 600; color: #FFFFFF;">Baixar PDF</div>
+                </div>
+                <div style="height: 44px; background: #F2F1F7; border-radius: 24px; display: flex; align-items: center; gap: 8px; padding: 0 20px; cursor: pointer;" style-hover="background: #ECEBF2;">
+                  <span style="font-family: 'Material Symbols Outlined'; font-size: 17px; color: #3B3F4A;">request_quote</span>
+                  <div style="font-size: 13.5px; font-weight: 600; color: #3B3F4A;">Criar proposta</div>
+                </div>
+                <div style="height: 44px; border-radius: 24px; display: flex; align-items: center; padding: 0 18px; cursor: pointer;" style-hover="background: #F2F1F7;" onClick="{{ reiniciar }}">
+                  <div style="font-size: 13.5px; font-weight: 600; color: #767A86;">Novo levantamento</div>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+          </sc-if>
+        </div>
+      </div>
+      </sc-if>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;marca&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;default&quot;: &quot;Global Sync&quot;, &quot;options&quot;: [&quot;Global Sync&quot;, &quot;Global&quot;, &quot;G-Sync&quot;, &quot;GSync&quot;, &quot;global sync&quot;], &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Marca&quot;}, &quot;brilho&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Efeitos&quot;}}">
+class Component extends DCLogic {
+  state = {
+    navAtiva: 0, periodo: 1, notifAberto: false,
+    tela: 'painel', etapa: 1, munSel: -1, exercicioSel: 1, recorteSel: 0, metodoSel: 0,
+    secoesOn: [true, true, true, false], progresso: -1,
+    notifs: [
+      { icone: 'fact_check', iconeFundo: '#FBF0D9', iconeCor: '#8A5A00', titulo: 'Levantamento Cristalina aguarda sua revisão', meta: 'FUNDEB · lote 2026-07 · 09:14', naoLida: true },
+      { icone: 'event_busy', iconeFundo: '#FBE9EE', iconeCor: '#8A3A50', titulo: 'Contrato Cristalina vence em 12 dias', meta: 'renovação não iniciada · 08:40', naoLida: true },
+      { icone: 'draft', iconeFundo: '#E2EDFA', iconeCor: '#2C4E82', titulo: 'Proposta aprovada pelo gestor', meta: 'Senador José Porfírio · PA · ontem', naoLida: true },
+      { icone: 'cloud_sync', iconeFundo: '#E4F4EC', iconeCor: '#1F6A47', titulo: 'Base FNDE atualizada sem divergência', meta: 'VAAT 2026 · 5.570 municípios · 06:10', naoLida: true },
+    ],
+  };
+  renderVals() {
+    const s = this.state;
+    const nav = [
+      { nome: 'Painel', icone: 'space_dashboard' },
+      { nome: 'Caixa de entrada', icone: 'inbox', contador: '4' },
+      { nome: 'Pipeline', icone: 'track_changes' },
+      { nome: 'Empresas', icone: 'apartment' },
+      { nome: 'Pessoas', icone: 'groups' },
+      { nome: 'Módulos', icone: 'grid_view' },
+      { nome: 'Ajustes', icone: 'tune' },
+    ];
+    const periodos = ['Mês', 'Trimestre', 'Ano'];
+    const alturas = [44, 52, 47, 63, 58, 74, 69, 88, 100, 34, 30, 26];
+    const nomes = ['JAN','FEV','MAR','ABR','MAI','JUN','JUL','AGO','SET','OUT','NOV','DEZ'];
+    return {
+      brilho: this.props.brilho ?? true,
+      marca: this.props.marca ?? 'Global Sync',
+      telaAtiva: nav[s.navAtiva].nome,
+      temAtraso: true,
+      ...this._novoVals(s, nav),
+      notifAberto: s.notifAberto,
+      alternarNotifs: () => this.setState({ notifAberto: !s.notifAberto }),
+      sinoFundo: s.notifAberto ? '#ECEBF2' : '#F2F1F7',
+      naoLidas: String(s.notifs.filter((n) => n.naoLida).length),
+      temNaoLidas: s.notifs.some((n) => n.naoLida),
+      lerTodas: () => this.setState({ notifs: s.notifs.map((n) => ({ ...n, naoLida: false })) }),
+      notifs: s.notifs.map((n, i) => ({
+        ...n,
+        opacidade: n.naoLida ? 1 : 0.55,
+        ler: () => this.setState({ notifs: s.notifs.map((x, j) => (j === i ? { ...x, naoLida: false } : x)) }),
+      })),
+      navItens: nav.map((n, i) => ({
+        ...n,
+        contador: n.contador || false,
+        fundo: i === s.navAtiva ? '#F2F1F7' : 'transparent',
+        cor: i === s.navAtiva ? '#16181D' : '#767A86',
+        iconeCor: i === s.navAtiva ? '#16181D' : '#A2A6B2',
+        peso: i === s.navAtiva ? 600 : 500,
+        selecionar: () => this.setState({ navAtiva: i }),
+      })),
+      periodos: periodos.map((nome, i) => ({
+        nome,
+        peso: i === s.periodo ? 600 : 500,
+        cor: i === s.periodo ? '#16181D' : '#767A86',
+        fundo: i === s.periodo ? '#FFFFFF' : 'transparent',
+        sombra: i === s.periodo ? '0 3px 8px rgba(22,24,29,.1)' : 'none',
+        selecionar: () => this.setState({ periodo: i }),
+      })),
+      meses: nomes.map((nome, i) => ({
+        nome,
+        altura: alturas[i] + '%',
+        grad: i > 8
+          ? 'linear-gradient(180deg, #ECEBF2, #F2F1F7)'
+          : (i >= 6 ? 'linear-gradient(180deg, #C9A6EF, #93B8F2)' : 'linear-gradient(180deg, #E5D9F6, #DDE7F8)'),
+      })),
+      cidades: [
+        { nome: 'Cristalina', uf: 'GO', estagio: 'contrato', chipTexto: '#8A3A50', chipFundo: '#FBE9EE', chipPonto: '#F5A3B5', vaat: 'R$ 8,41M', lucro: 'R$ 1,12M', margem: '41,2%', margemCor: '#1F6A47' },
+        { nome: 'Águas Lindas de Goiás', uf: 'GO', estagio: 'contrato', chipTexto: '#8A3A50', chipFundo: '#FBE9EE', chipPonto: '#F5A3B5', vaat: 'R$ 7,96M', lucro: 'R$ 964,3K', margem: '38,7%', margemCor: '#1F6A47' },
+        { nome: 'Senador José Porfírio', uf: 'PA', estagio: 'proposta', chipTexto: '#8A5A00', chipFundo: '#FBF0D9', chipPonto: '#F7C77E', vaat: 'R$ 6,20M', lucro: 'R$ 742,0K', margem: '35,1%', margemCor: '#5A5E6A' },
+        { nome: 'Miradouro', uf: 'MG', estagio: 'estudo', chipTexto: '#1F6A47', chipFundo: '#E4F4EC', chipPonto: '#8FD3B6', vaat: 'R$ 3,08M', lucro: 'R$ 388,5K', margem: '33,4%', margemCor: '#5A5E6A' },
+        { nome: 'Inhapi', uf: 'AL', estagio: 'estudo', chipTexto: '#1F6A47', chipFundo: '#E4F4EC', chipPonto: '#8FD3B6', vaat: 'R$ 2,74M', lucro: 'R$ 321,9K', margem: '31,8%', margemCor: '#5A5E6A' },
+      ],
+    };
+  }
+  _novoVals(s, nav) {
+    const municipios = [
+      { nome: 'Senhor do Bonfim', uf: 'BA', ibge: '2930105', matriculas: '14.203', escolas: '58', chip: 'novo', chipTexto: '#5A5E6A', chipFundo: '#EFEFF4' },
+      { nome: 'Cristalina', uf: 'GO', ibge: '5206206', matriculas: '11.688', escolas: '42', chip: 'na carteira', chipTexto: '#8A3A50', chipFundo: '#FBE9EE' },
+      { nome: 'Águas Lindas de Goiás', uf: 'GO', ibge: '5200258', matriculas: '10.914', escolas: '39', chip: 'na carteira', chipTexto: '#8A3A50', chipFundo: '#FBE9EE' },
+      { nome: 'Senador José Porfírio', uf: 'PA', ibge: '1507805', matriculas: '8.442', escolas: '31', chip: 'proposta', chipTexto: '#8A5A00', chipFundo: '#FBF0D9' },
+      { nome: 'Miradouro', uf: 'MG', ibge: '3142304', matriculas: '4.170', escolas: '17', chip: 'estudo', chipTexto: '#1F6A47', chipFundo: '#E4F4EC' },
+    ];
+    const recortes = ['Municipal', 'Pública', 'Total'];
+    const metodos = [
+      { nome: 'Projeção recuperável', desc: 'Ganho realista via correção de matrículas e habilitação VAAT/VAAR. É o número da proposta.' },
+      { nome: 'Benchmark', desc: 'Compara com municípios semelhantes que otimizaram o fundo. Usado como teto de referência.' },
+    ];
+    const secoes = [
+      { nome: 'Cronograma VAAF mensal', fonte: 'FNDE · portaria 2026', icone: 'calendar_month' },
+      { nome: 'IDEB histórico e metas', fonte: 'INEP · 2015–2023', icone: 'insights' },
+      { nome: 'Censo escolar detalhado', fonte: 'INEP · censo 2025', icone: 'school' },
+      { nome: 'Obras PAC2 e frota escolar', fonte: 'FNDE · SIMEC', icone: 'construction' },
+    ];
+    const passos = ['Consultando FNDE — receitas e complementações', 'Consultando INEP — censo escolar 2025', 'Calculando projeção VAAF · VAAT · VAAR', 'Formatando relatório dirigido'];
+    const etapaNomes = ['Município', 'Parâmetros', 'Gerar'];
+    const mun = s.munSel >= 0 ? municipios[s.munSel] : null;
+    const chipRadio = (ativo) => ({
+      cor: ativo ? '#16181D' : '#767A86',
+      fundo: ativo ? '#FFFFFF' : 'transparent',
+      borda: ativo ? '#16181D' : '#ECEDF2',
+    });
+    return {
+      telaPainel: s.tela === 'painel',
+      telaNovo: s.tela === 'novo',
+      abrirNovo: () => this.setState({ tela: 'novo', etapa: 1, progresso: -1 }),
+      voltarPainel: () => this.setState({ tela: 'painel' }),
+      etapa1: s.etapa === 1, etapa2: s.etapa === 2, etapa3: s.etapa === 3,
+      etapas: etapaNomes.map((nome, i) => {
+        const ativa = s.etapa === i + 1, feita = s.etapa > i + 1;
+        return {
+          nome, num: feita ? '✓' : String(i + 1),
+          fundo: ativa ? '#FFFFFF' : 'rgba(255,255,255,.5)',
+          numFundo: ativa || feita ? '#16181D' : '#ECEBF2',
+          numCor: ativa || feita ? '#FFFFFF' : '#767A86',
+          cor: ativa ? '#16181D' : '#767A86',
+        };
+      }),
+      municipios: municipios.map((m, i) => ({
+        ...m,
+        selecionado: s.munSel === i,
+        fundo: s.munSel === i ? '#F2F1F7' : 'transparent',
+        bordaCor: s.munSel === i ? '#D9D7E2' : 'transparent',
+        avatarFundo: s.munSel === i ? '#16181D' : '#F2F1F7',
+        avatarCor: s.munSel === i ? '#FFFFFF' : '#5A5E6A',
+        selecionar: () => this.setState({ munSel: i }),
+      })),
+      podeContinuar1: s.munSel >= 0 ? 1 : 0.4,
+      continuar1: () => { if (s.munSel >= 0) this.setState({ etapa: 2 }); },
+      municipioNome: mun ? mun.nome + ' · ' + mun.uf : '',
+      exercicios: ['2025', '2026'].map((nome, i) => ({
+        nome, peso: s.exercicioSel === i ? 600 : 500,
+        cor: s.exercicioSel === i ? '#16181D' : '#767A86',
+        fundo: s.exercicioSel === i ? '#FFFFFF' : 'transparent',
+        sombra: s.exercicioSel === i ? '0 3px 8px rgba(22,24,29,.1)' : 'none',
+        selecionar: () => this.setState({ exercicioSel: i }),
+      })),
+      recortes: recortes.map((nome, i) => ({
+        nome, ...chipRadio(s.recorteSel === i),
+        selecionar: () => this.setState({ recorteSel: i }),
+      })),
+      metodos: metodos.map((mt, i) => ({
+        ...mt,
+        fundo: s.metodoSel === i ? '#F2F1F7' : 'transparent',
+        borda: s.metodoSel === i ? '#D9D7E2' : '#ECEDF2',
+        radioBorda: s.metodoSel === i ? '5px solid #16181D' : '2px solid #C9CBD4',
+        radioFundo: '#FFFFFF',
+        selecionar: () => this.setState({ metodoSel: i }),
+      })),
+      secoes: secoes.map((sec, i) => ({
+        ...sec,
+        trackCor: s.secoesOn[i] ? '#16181D' : '#C9CBD4',
+        knobLeft: s.secoesOn[i] ? '17px' : '2px',
+        alternar: () => this.setState({ secoesOn: s.secoesOn.map((v, j) => (j === i ? !v : v)) }),
+      })),
+      voltar1: () => this.setState({ etapa: 1 }),
+      continuar2: () => this.setState({ etapa: 3 }),
+      voltar2: () => this.setState({ etapa: 2 }),
+      resumo: [
+        { rotulo: 'MUNICÍPIO', valor: mun ? mun.nome + ' · ' + mun.uf + ' · IBGE ' + mun.ibge : '—' },
+        { rotulo: 'EXERCÍCIO', valor: ['2025', '2026'][s.exercicioSel] },
+        { rotulo: 'RECORTE DO CENSO', valor: recortes[s.recorteSel] },
+        { rotulo: 'METODOLOGIA', valor: metodos[s.metodoSel].nome },
+        { rotulo: 'SEÇÕES', valor: s.secoesOn.filter(Boolean).length + ' de 4 incluídas' },
+      ],
+      naoGerando: s.progresso < 0,
+      gerando: s.progresso >= 0 && s.progresso < 4,
+      naoConcluido: s.progresso < 4,
+      concluido: s.progresso >= 4,
+      gerar: () => {
+        this.setState({ progresso: 0 });
+        let p = 0;
+        const timer = setInterval(() => {
+          p += 1;
+          if (p >= 4) clearInterval(timer);
+          this.setState({ progresso: p });
+        }, 850);
+      },
+      progresso: passos.map((nome, i) => {
+        const feito = s.progresso > i, ativo = s.progresso === i;
+        return {
+          nome,
+          icone: feito ? 'check_circle' : (ativo ? 'progress_activity' : 'circle'),
+          iconeCor: feito ? '#1F6A47' : (ativo ? '#16181D' : '#C9CBD4'),
+          peso: ativo ? 600 : 500,
+          opacidade: feito || ativo ? 1 : 0.45,
+          status: feito ? 'ok' : (ativo ? '…' : ''),
+        };
+      }),
+      reiniciar: () => this.setState({ etapa: 1, munSel: -1, progresso: -1 }),
+    };
+  }
+}
+</script>
+</body>
+</html>
