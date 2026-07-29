@@ -4,7 +4,11 @@ import {
   normalizarIBGE,
 } from "@/modules/levantamento-fundeb/utils/calculos";
 import type { FundebRelatorioParametros, RelatorioFundeb } from "@/modules/levantamento-fundeb/types";
-import { getFundebReceitasOficiais, getFundebVaatContext } from "@/core/lib/fundeb-fnde";
+import {
+  getFundebReceitasOficiais,
+  getFundebVaatContext,
+  type FndeVaatContext,
+} from "@/core/lib/fundeb-fnde";
 import { getInepCensoMunicipalRecord, getInepCensoMunicipalHistory } from "@/core/lib/inep-censo";
 import type { InepCensoMunicipalRecord } from "@/core/lib/inep-censo";
 import { getIbgeCidadeIndicators } from "@/core/lib/ibge-cidade-indicators";
@@ -575,6 +579,7 @@ function buildRelatorioDirigidoBase({
   qeduIndicators,
   inepRecord,
   siconfiFiscal,
+  vaatContext,
 }: {
   relatorio: RelatorioFundeb;
   comparativo: Awaited<ReturnType<typeof buildFundebComparativeSnapshot>>;
@@ -583,6 +588,7 @@ function buildRelatorioDirigidoBase({
   qeduIndicators: Awaited<ReturnType<typeof getQeduMunicipalIndicators>> | null;
   inepRecord: InepCensoMunicipalRecord | null;
   siconfiFiscal: Awaited<ReturnType<typeof getSiconfiFiscalRecord>> | null;
+  vaatContext: FndeVaatContext | null;
 }) {
   const ident = relatorio.identificacao;
   const exercicio = ident.exercicio;
@@ -884,6 +890,41 @@ function buildRelatorioDirigidoBase({
      * Ver `core/lib/siope-indicadores.ts`.
      */
     conformidade: getConformidadeSiope(ident.codigoIBGE),
+    /**
+     * Leitura prospectiva do VAAT.
+     *
+     * A complementação VAAT é equalização por insuficiência: a União completa
+     * cada rede até o VAAT-MIN, então quem arrecada mais recebe menos, por
+     * construção. Quando o VAAT próprio alcança o mínimo, a complementação
+     * vai a zero — e o art. 15, II manda calcular sobre as receitas do
+     * **penúltimo** exercício, o que torna a saída da faixa previsível com
+     * dois anos de antecedência.
+     */
+    vaat: vaatContext
+      ? (() => {
+          const proprio = vaatContext.vaatAnterior;
+          const minimo = vaatContext.vaatComComplementacao;
+          const complementacao = vaatContext.complementacaoVAAT;
+          return {
+            exercicio,
+            /** VAAT do município antes da complementação. */
+            proprio,
+            /** VAAT-MIN do exercício — o patamar que a União garante. */
+            minimo,
+            complementacao,
+            /** Quanto falta para o VAAT próprio alcançar o mínimo, em %. */
+            distanciaPercentual: minimo > 0 ? ((minimo - proprio) / minimo) * 100 : null,
+            /**
+             * Exercício cuja arrecadação define este VAAT (art. 15, II:
+             * penúltimo exercício anterior).
+             */
+            exercicioBaseReceita: exercicio - 2,
+            habilitacao: vaatContext.habilitacao,
+            pendencia: vaatContext.pendencia,
+            ieiPercentual: vaatContext.ieiPercentual,
+          };
+        })()
+      : null,
     perfilIBGE: ibgeIndicators ? {
       disponivel: true,
       populacaoEstimada: ibgeIndicators.populacaoEstimada,
@@ -1395,6 +1436,7 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
       qeduIndicators,
       inepRecord,
       siconfiFiscal,
+      vaatContext,
     }),
   };
 

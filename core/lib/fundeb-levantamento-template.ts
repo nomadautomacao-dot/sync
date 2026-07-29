@@ -154,6 +154,21 @@ export interface LevantamentoPayload {
       }>;
       descumpridas?: Array<{ cod?: string; rotulo?: string; valor?: number; limite?: number | null }>;
     } | null;
+    /**
+     * Leitura prospectiva do VAAT: quanto falta para o VAAT próprio alcançar o
+     * mínimo, e sobre qual exercício a conta foi feita.
+     */
+    vaat?: {
+      exercicio?: number;
+      proprio?: number;
+      minimo?: number;
+      complementacao?: number;
+      distanciaPercentual?: number | null;
+      exercicioBaseReceita?: number;
+      habilitacao?: string;
+      pendencia?: string | null;
+      ieiPercentual?: number | null;
+    } | null;
     perfilIBGE?: {
       /** O IBGE devolve o ano como texto; não assuma número. */
       pibAnoReferencia?: string | number | null;
@@ -1041,24 +1056,59 @@ function paginaVaar(i: LevantamentoTemplateInput, pagina: number): string {
   // contábeis no Siconfi e no Siope. Não se confunde com as condicionalidades
   // do VAAR, e é a outra parcela que o município perde por inteiro.
   const perfil = i.relatorio.perfilComercial;
-  const habilitacaoVaat = (perfil?.habilitacaoVaat ?? "").trim();
+  const t = i.payload?.relatorio_dirigido_base?.vaat;
+  const habilitacaoVaat = (t?.habilitacao ?? perfil?.habilitacaoVaat ?? "").trim();
   const vaatConhecida = habilitacaoVaat && !/^n[aã]o informado$/i.test(habilitacaoVaat);
   const vaatInabilitado = /inabilit|n[aã]o habilit/i.test(habilitacaoVaat);
+  const pendenciaVaat = t?.pendencia ?? perfil?.pendenciaVaat ?? null;
+
+  // Quem já encostou no VAAT-MIN perde a complementação assim que a
+  // arrecadação subir — e como o cálculo usa o penúltimo exercício, isso é
+  // visível dois anos antes de acontecer.
+  const distancia = num(t?.distanciaPercentual);
+  const recebeVaat = num(t?.complementacao) > 0;
+  const proximoDoTeto = recebeVaat && distancia > 0 && distancia < 10;
 
   const blocoVaat = vaatConhecida
     ? `<div class="sec-label" style="margin-top:.16in">A outra parcela condicionada &middot; VAAT</div>
        <div class="status ${vaatInabilitado ? "bad" : "good"}"><span class="dot"></span>
-       Habilitação VAAT ${ou(id.exercicio, "")}: ${esc(habilitacaoVaat)}</div>
+       Habilitação VAAT ${ou(t?.exercicio ?? id.exercicio, "")}: ${esc(habilitacaoVaat)}</div>
+       ${
+         t && num(t.minimo) > 0
+           ? `<div class="grid-3 mt-1">
+                ${kpi("VAAT próprio", `R$ ${brl(t.proprio)}`, "por aluno, antes da complementação")}
+                ${kpi("VAAT-MIN", `R$ ${brl(t.minimo)}`, `patamar garantido em ${ou(t.exercicio, "—")}`)}
+                ${kpi(
+                  "Distância até o mínimo",
+                  distancia > 0 ? pct(distancia) : "—",
+                  recebeVaat ? "quanto a arrecadação pode subir antes de zerar" : "não recebe complementação",
+                  proximoDoTeto ? "" : "up",
+                )}
+              </div>`
+           : ""
+       }
        <p class="small mt-1">A condição do VAAT é <b>uma só, e é fiscal</b> (art. 13, §4º da Lei nº
        14.113/2020): disponibilizar os dados contábeis, orçamentários e fiscais no <b>Siconfi</b> e no
        <b>Siope</b> até <b>31 de agosto</b> do exercício seguinte ao dos dados. Não se confunde com as
        condicionalidades do VAAR acima &mdash; plano de carreira, Saeb e gestão democrática pertencem ao
        art. 14, não ao 13. A habilitação é <b>anual e não se acumula</b>, e o inabilitado não tem o VAAT
        apurado: perde 100% da complementação no exercício.${
-         perfil?.pendenciaVaat
-           ? ` Pendência registrada: <i>${esc(perfil.pendenciaVaat)}</i>.`
+         pendenciaVaat ? ` Pendência registrada: <i>${esc(pendenciaVaat)}</i>.` : ""
+       }</p>
+       ${
+         t && recebeVaat
+           ? `<p class="small">A complementação é <b>equalização por insuficiência</b>: a União completa a
+              rede até o VAAT-MIN, então arrecadar mais reduz o repasse, por construção. E o art. 15, II
+              manda calcular sobre as receitas do <b>penúltimo exercício</b> &mdash; a base deste cálculo é
+              a arrecadação de <b>${ou(t.exercicioBaseReceita, "—")}</b>. Por isso a saída da faixa é
+              previsível com dois anos de antecedência${
+                proximoDoTeto
+                  ? `, e este município está a <b>${pct(distancia)}</b> do mínimo: uma alta de arrecadação
+                     nessa ordem zera a complementação.`
+                  : "."
+              }</p>`
            : ""
-       }</p>`
+       }`
     : "";
 
   return `<section class="page content-page">

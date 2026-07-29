@@ -154,6 +154,50 @@ describe("template do Levantamento FUNDEB", () => {
     expect(html).not.toContain("Declaração do município ao SIOPE não localizada");
   });
 
+  it("avisa quem está prestes a sair da faixa do VAAT", () => {
+    // A complementação é equalização por insuficiência: encostar no VAAT-MIN
+    // zera o repasse. Como o art. 15, II calcula sobre o penúltimo exercício,
+    // isso é visível dois anos antes — e é esse aviso que justifica o bloco.
+    const proximo = gerar({
+      payload: {
+        relatorio_dirigido_base: {
+          vaat: {
+            exercicio: 2026,
+            proprio: 9_700,
+            minimo: 10_194.38,
+            complementacao: 2_000_000,
+            distanciaPercentual: 4.85,
+            exercicioBaseReceita: 2024,
+            habilitacao: "Habilitado",
+          },
+        },
+      } as LevantamentoTemplateInput["payload"],
+    });
+
+    expect(proximo).toContain("está a <b>4,9%</b> do mínimo");
+    expect(proximo).toContain("arrecadação de <b>2024</b>");
+
+    // Longe do mínimo, o aviso de proximidade não aparece — só a explicação.
+    const folgado = gerar({
+      payload: {
+        relatorio_dirigido_base: {
+          vaat: {
+            exercicio: 2026,
+            proprio: 4_000,
+            minimo: 10_194.38,
+            complementacao: 9_000_000,
+            distanciaPercentual: 60.76,
+            exercicioBaseReceita: 2024,
+            habilitacao: "Habilitado",
+          },
+        },
+      } as LevantamentoTemplateInput["payload"],
+    });
+
+    expect(folgado).not.toContain("do mínimo: uma alta de arrecadação");
+    expect(folgado).toContain("penúltimo exercício");
+  });
+
   it("mostra o denominador ponderado ao lado da matrícula bruta", () => {
     // A receita do fundo é proporcional a Σ(matrícula × fator), e os fatores
     // vão de 1,00 a 2,17. Sem esta página o relatório apresenta uma receita
