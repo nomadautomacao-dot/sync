@@ -8,6 +8,7 @@ import {
 import { getSituacaoVaar } from "@/core/lib/fundeb-vaar";
 import { getPonderacaoMunicipal } from "@/core/lib/fundeb-ponderacao";
 import { getConformidadeSiope } from "@/core/lib/siope-indicadores";
+import { getEstimativaPnae } from "@/core/lib/fundeb-pnae";
 import type { RelatorioFundeb } from "@/modules/levantamento-fundeb/types";
 
 /**
@@ -152,6 +153,46 @@ describe("template do Levantamento FUNDEB", () => {
     expect(html).toContain("Não trava o FUNDEB");
     expect(html).toContain("Trava convênio e contas");
     expect(html).not.toContain("Declaração do município ao SIOPE não localizada");
+  });
+
+  it("liga o Censo aos três fluxos que ele define", () => {
+    // A tese da página: o Censo não define só o FUNDEB. Alimentação escolar e
+    // salário-educação usam as mesmas matrículas, então um erro cadastral
+    // custa três vezes — e a janela de correção é de 30 dias, uma vez por ano.
+    const html = gerar({
+      payload: {
+        relatorio_dirigido_base: { pnae: getEstimativaPnae("2801207") },
+      } as LevantamentoTemplateInput["payload"],
+    });
+
+    expect(paginas(html)).toBe(LEVANTAMENTO_TOTAL_PAGINAS);
+    expect(html).toContain("PNAE estimado");
+    expect(html).toContain("salário-educação");
+    expect(html).toContain("Confirmação de matrículas duplicadas");
+    // A estimativa não pode ser apresentada como o valor empenhado. O texto
+    // quebra linha no meio da frase, então a asserção é sobre o trecho final.
+    expect(html).toContain("valor empenhado");
+    expect(html).toContain("Estimativa sobre as matrículas");
+  });
+
+  it("não afirma que pendência administrativa bloqueia o FUNDEB", () => {
+    // É o erro mais caro do material de mercado: destrói a credibilidade do
+    // resto do diagnóstico diante de quem conhece a lei. O art. 21 manda
+    // repassar automaticamente e a LRF exclui educação do conceito de
+    // transferência voluntária.
+    const html = gerar();
+
+    expect(html).toContain("O FUNDEB não é bloqueado por pendência administrativa");
+    expect(html).toContain("CAUC não alcança o FUNDEB");
+    expect(html).toContain("transferências constitucionais");
+  });
+
+  it("registra a vedação de consultoria no CACS", () => {
+    // Art. 34, §5º, II: veda no conselho funcionário de empresa de assessoria
+    // que preste serviços de controle dos recursos do Fundo. É restrição que
+    // afeta o desenho do nosso próprio contrato.
+    const html = gerar();
+    expect(html).toContain("empresa de assessoria ou consultoria");
   });
 
   it("avisa quem está prestes a sair da faixa do VAAT", () => {

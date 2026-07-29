@@ -14,7 +14,7 @@ import { DESCRICAO_CONDICIONALIDADE, type Condicionalidade } from "@/core/lib/fu
  * confere antes de devolver o PDF.
  */
 
-export const LEVANTAMENTO_TOTAL_PAGINAS = 13;
+export const LEVANTAMENTO_TOTAL_PAGINAS = 15;
 
 /** Payload do `buildGoviaMunicipioCompleto`, na parte que este template lê. */
 export interface LevantamentoPayload {
@@ -153,6 +153,14 @@ export interface LevantamentoPayload {
         folga?: number | null;
       }>;
       descumpridas?: Array<{ cod?: string; rotulo?: string; valor?: number; limite?: number | null }>;
+    } | null;
+    /** Estimativa do PNAE — ver `core/lib/fundeb-pnae.ts`. */
+    pnae?: {
+      exercicio?: number;
+      diasLetivos?: number;
+      matriculasConsideradas?: number;
+      valorAnual?: number;
+      faixas?: Array<{ rotulo?: string; perCapita?: number; matriculas?: number; valorAnual?: number }>;
     } | null;
     /**
      * Leitura prospectiva do VAAT: quanto falta para o VAAT próprio alcançar o
@@ -1763,6 +1771,212 @@ function paginaConformidade(i: LevantamentoTemplateInput, pagina: number): strin
 </section>`;
 }
 
+/**
+ * O Censo Escolar como fonte comum de dois fluxos.
+ *
+ * A tese da página: o Censo não define só o FUNDEB. A alimentação escolar é
+ * rateada pelas mesmas matrículas, e a quota do salário-educação também. Um
+ * erro de declaração custa três vezes, e a janela para corrigi-lo é curta e
+ * anual — 30 dias após a publicação dos dados preliminares.
+ */
+function paginaProgramas(i: LevantamentoTemplateInput, pagina: number): string {
+  const id = i.relatorio.identificacao;
+  const municipio = `${id.municipioNome} — ${id.uf}`;
+  const p = i.payload?.relatorio_dirigido_base?.pnae;
+  const faixas = (p?.faixas ?? []).filter((f) => num(f.matriculas) > 0);
+  const anoCenso = id.exercicio - 1;
+
+  const tabelaPnae = faixas.length
+    ? `<table class="tb">
+        <tr><th>Faixa do Anexo V</th><th class="r">Matrículas</th><th class="r">Por aluno/dia</th><th class="r">Estimativa anual</th></tr>
+        ${faixas
+          .map(
+            (f) => `<tr>
+              <td>${esc(f.rotulo)}</td>
+              <td class="r">${int(f.matriculas)}</td>
+              <td class="r">R$ ${num(f.perCapita).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+              <td class="r"><b>R$ ${brl(f.valorAnual)}</b></td>
+            </tr>`,
+          )
+          .join("")}
+        <tr class="total"><td>Total estimado</td><td class="r">${int(p?.matriculasConsideradas)}</td><td class="r">&mdash;</td><td class="r">R$ ${brl(p?.valorAnual)}</td></tr>
+      </table>`
+    : `<p class="small">Matrículas insuficientes para estimar o repasse do PNAE.</p>`;
+
+  return `<section class="page content-page">
+  ${cabecalho(municipio, "Parte IV · O Censo como fonte comum")}
+  <div class="page-body">
+    <div class="kicker">Parte IV &middot; Um erro de declaração custa três vezes</div>
+
+    <p class="small">O Censo Escolar não define apenas o FUNDEB. A <b>alimentação escolar</b> é rateada pelas
+    mesmas matrículas, pela fórmula <b>VT = A &times; D &times; C</b> (Resolução CD/FNDE nº 4/2026, art. 47),
+    com 200 dias letivos. A <b>quota do salário-educação</b> é redistribuída "proporcionalmente ao número de
+    alunos matriculados na educação básica &hellip; conforme o censo escolar" (Decreto nº 6.003/2006, art. 9º,
+    §1º), em crédito mensal e automático. Corrigir o cadastro melhora os três fluxos de uma vez.</p>
+
+    ${
+      p
+        ? `<div class="grid-3 mt-1">
+             ${kpi("PNAE estimado", brlCompact(p.valorAnual), `${int(p.matriculasConsideradas)} estudantes &middot; 200 dias`, "up")}
+             ${kpi(
+               "Por aluno/ano",
+               num(p.matriculasConsideradas) > 0 ? `R$ ${brl(num(p.valorAnual) / num(p.matriculasConsideradas))}` : "—",
+               "média ponderada das faixas",
+             )}
+             ${kpi("Faixas aplicadas", int(faixas.length), "modalidades do Anexo V presentes na rede")}
+           </div>
+
+           <div class="sec-label" style="margin-top:.14in">Alimentação escolar por faixa &middot; estimativa</div>
+           ${tabelaPnae}
+           <p class="micro" style="margin-top:.04in">Estimativa sobre as matrículas da filtragem do FUNDEB, não o
+           valor empenhado: o FNDE reparte por entidade executora, admite delegação de rede entre entes e usa o
+           Censo do ano anterior. Serve para comparar com o que foi de fato recebido.</p>`
+        : `<div class="status mt-1"><span class="dot"></span> Estimativa do PNAE indisponível para este município</div>`
+    }
+
+    <div class="sec-label" style="margin-top:.16in">O calendário que decide o FUNDEB de ${id.exercicio + 1}</div>
+    <table class="tb">
+      <tr><th>Etapa</th><th>Prazo</th><th>Responsável</th></tr>
+      <tr><td>Data de referência do Censo</td><td>última quarta-feira de maio</td><td>&mdash;</td></tr>
+      <tr><td>Coleta e digitação no Educacenso</td><td>de maio a 31 de julho</td><td>Diretor e gestores</td></tr>
+      <tr><td>Publicação dos dados preliminares no DOU</td><td>agosto</td><td>INEP</td></tr>
+      <tr><td><b>Conferência, ratificação e retificação</b></td><td><b>30 dias da publicação</b></td><td>Diretor e gestor municipal</td></tr>
+      <tr><td>Verificação dos dados processados</td><td>5 dias após</td><td>Gestor municipal</td></tr>
+      <tr><td><b>Confirmação de matrículas duplicadas</b></td><td>10 dias, janela própria</td><td>Diretor e gestores</td></tr>
+      <tr><td>Envio ao FNDE para cálculo dos coeficientes</td><td>dezembro</td><td>INEP</td></tr>
+    </table>
+
+    <div class="grid-2 mt-2">
+      <div class="card">
+        <h3>Por que o prazo é o produto</h3>
+        <p class="micro">O art. 8º, §5º da Lei nº 14.113/2020, na redação da Lei nº 14.276/2021, deixou de
+        dizer que os entes <i>poderão</i> apresentar recursos: agora é <b>dever</b>, "sob pena de
+        responsabilização administrativa". E o §7º fecha a porta: <b>"fica vedada a alteração nos dados após
+        realizada a publicação final"</b>.</p>
+        <p class="micro" style="margin-top:.04in">A janela de <b>confirmação de matrículas duplicadas</b> é a
+        etapa em que o município disputa o aluno contado em outra rede. É posterior aos 30 dias de retificação
+        e costuma passar em branco.</p>
+      </div>
+      <div class="card">
+        <h3>Quem deveria estar olhando</h3>
+        <p class="micro">O art. 33, §2º, II atribui ao <b>CACS</b> o dever de "supervisionar o censo escolar
+        anual &hellip; com o objetivo de concorrer para o regular e tempestivo tratamento e encaminhamento dos
+        dados estatísticos e financeiros que alicerçam a operacionalização dos Fundos".</p>
+        <p class="micro" style="margin-top:.04in">Conselho parado significa ninguém supervisionando o Censo &mdash;
+        e erro cadastral que passa vira coeficiente do exercício seguinte, com o repasse já calculado sobre ele.</p>
+      </div>
+    </div>
+
+    <p class="small mt-1">O Censo de ${anoCenso} define o FUNDEB de ${id.exercicio}; o de ${id.exercicio}
+    definirá o de ${id.exercicio + 1}. A preclusão do §7º é, na prática, superável por portaria específica do
+    MEC com recálculo pelo FNDE, mas os casos documentados são pontuais e vários exigiram via judicial &mdash;
+    é recuperação excepcional, não rotina de gestão.</p>
+  </div>
+  ${rodape(pagina)}
+</section>`;
+}
+
+/**
+ * O que trava o quê.
+ *
+ * O achado estrutural da auditoria: **nenhuma pendência administrativa
+ * suspende o FUNDEB**. A palavra "suspens" aparece duas vezes em toda a Lei
+ * 14.113/2020 — no art. 14 (VAAR) e no art. 38, §1º — e nenhuma delas alcança
+ * o repasse do fundo. O que trava são os programas complementares e os
+ * convênios. Confundir os dois é o erro mais caro do material de mercado,
+ * porque destrói a credibilidade do resto do diagnóstico.
+ */
+function paginaGovernanca(i: LevantamentoTemplateInput, pagina: number): string {
+  const id = i.relatorio.identificacao;
+  const municipio = `${id.municipioNome} — ${id.uf}`;
+  const ponderacao = i.payload?.relatorio_dirigido_base?.ponderacao;
+  const equidade = i.payload?.relatorio_dirigido_base?.equidade;
+
+  const conveniadas = (ponderacao?.segmentos ?? [])
+    .filter((s) => /Conveniada/i.test(s.nome ?? ""))
+    .reduce((total, s) => total + num(s.matriculas), 0);
+
+  const escolasCampo = num(equidade?.escolas?.municipaisRurais);
+
+  return `<section class="page content-page">
+  ${cabecalho(municipio, "Parte IV · Governança e bloqueios")}
+  <div class="page-body">
+    <div class="kicker">Parte IV &middot; O que trava o quê</div>
+
+    <div class="insight">
+      <h3>O FUNDEB não é bloqueado por pendência administrativa</h3>
+      <p style="font-size:8.2pt;line-height:1.42">O art. 21 da Lei nº 14.113/2020 manda repassar o fundo
+      automaticamente, "observados os mesmos prazos, procedimentos e forma de divulgação adotados para o
+      repasse do restante dessas <b>transferências constitucionais</b>". A LRF exclui expressamente as
+      transferências de educação, saúde e assistência do conceito de transferência voluntária (art. 25, §3º),
+      e por isso o <b>CAUC não alcança o FUNDEB</b>. A exposição real é outra: a habilitação ao VAAT, que não
+      bloqueia repasse &mdash; impede que a complementação seja apurada.</p>
+    </div>
+
+    <div class="sec-label" style="margin-top:.14in">O que cada pendência efetivamente trava</div>
+    <table class="tb">
+      <tr><th>Pendência</th><th>Base</th><th>Recurso travado</th><th class="r">FUNDEB?</th></tr>
+      <tr><td>SIOPE sem registro após 30 dias do bimestre</td><td>art. 38, §1º</td><td>Transferências voluntárias e operações de crédito</td><td class="r">não</td></tr>
+      <tr><td>Dados ausentes no Siconfi/SIOPE em 31 de agosto</td><td>art. 13, §§4º e 5º</td><td><b>Inabilita à complementação VAAT</b></td><td class="r">&mdash;</td></tr>
+      <tr><td>DCA fora do prazo</td><td>LRF art. 51, §2º</td><td>Voluntárias e operações de crédito</td><td class="r">não</td></tr>
+      <tr><td>CACS não cadastrado no SisCACS</td><td>Port. FNDE 808/2022</td><td>PNATE, PEJA e PAR</td><td class="r">não</td></tr>
+      <tr><td>CAE não constituído ou mandato vencido</td><td>Res. CD/FNDE 4/2026, art. 56</td><td>PNAE</td><td class="r">não</td></tr>
+      <tr><td>Prestação de contas do PDDE omissa ou rejeitada</td><td>Res. CD/FNDE 15/2021, art. 39</td><td>PDDE e ações integradas</td><td class="r">não</td></tr>
+      <tr><td>Salário-educação</td><td>&mdash;</td><td>Nenhuma condicionalidade localizada</td><td class="r">não</td></tr>
+    </table>
+    <p class="micro" style="margin-top:.04in">PNATE e PDDE têm janela de recuperação: parcelas retidas no
+    exercício voltam a ser liberadas se a regularização ocorrer até 31 de outubro.</p>
+
+    <div class="grid-2 mt-2">
+      <div class="card">
+        <h3>Conselhos: prazo e composição</h3>
+        <p class="micro">O <b>SisCACS</b> é cadastro do conselho; o <b>SIGECON</b> é onde o presidente emite o
+        parecer conclusivo sobre a prestação de contas. São sistemas distintos e confundi-los é comum.</p>
+        <p class="micro" style="margin-top:.04in">A Lei nº 14.113/2020, art. 34, §5º, II <b>veda a
+        participação no CACS de funcionário de empresa de assessoria ou consultoria</b> que preste serviços
+        relacionados ao controle interno dos recursos do Fundo, e de cônjuges e parentes até 3º grau dos
+        demais membros. É restrição a observar no desenho de qualquer contrato de assessoria.</p>
+      </div>
+      <div class="card">
+        <h3>Educação do campo &mdash; a regra dos 50%</h3>
+        <p class="micro">${
+          escolasCampo > 0
+            ? `A rede declara <b>${int(escolasCampo)}</b> escolas municipais no campo, que ponderam 15% acima da
+               matrícula urbana comum.`
+            : "A rede não declara escolas municipais em localização rural no Censo."
+        }</p>
+        <p class="micro" style="margin-top:.04in">A planilha oficial do FNDE acrescenta uma captura pouco
+        usada: também é considerada educação no campo a oferta por <b>escolas de localização urbana que
+        atendam 50% ou mais de alunos de residência rural</b> &mdash; incluídos assentamentos e territórios de
+        povos e comunidades tradicionais. Vale conferir escola a escola: a condição existe no dado de
+        residência do aluno, não na classificação da escola.</p>
+      </div>
+    </div>
+
+    ${
+      conveniadas > 0
+        ? `<div class="note mt-2">
+             <p style="font-size:7.9pt;line-height:1.4"><b>Conveniadas:</b> a rede computa
+             <b>${int(conveniadas)}</b> matrículas em instituições conveniadas. O art. 7º, §4º exige cinco
+             requisitos cumulativos (gratuidade e igualdade de acesso, finalidade não lucrativa comprovada,
+             destinação do patrimônio, padrões mínimos com projeto pedagógico aprovado e CEBAS) e o §7º é o
+             ponto decisivo: eles "deverão ser comprovados pelas instituições convenentes e <b>conferidos e
+             validados pelo Poder Executivo do respectivo ente</b>, em momento <b>anterior</b> à formalização
+             do convênio e ao repasse". O FNDE não audita isso na filtragem &mdash; computa o que o Censo
+             declara. Convênio irregular vira passivo do município no tribunal, com o recurso já gasto.</p>
+           </div>`
+        : ""
+    }
+
+    <p class="small mt-1">A repressão ao descumprimento não está na Lei do FUNDEB: a palavra "glosa" não
+    aparece no texto e não há dispositivo de devolução ao FNDE. Ela opera no <b>julgamento das contas</b>
+    pelo tribunal, com imputação de débito e multa pelas leis orgânicas, e pelas vias de improbidade e
+    Ministério Público.</p>
+  </div>
+  ${rodape(pagina)}
+</section>`;
+}
+
 function paginaCenario(i: LevantamentoTemplateInput, pagina: number): string {
   const r = i.relatorio;
   const id = r.identificacao;
@@ -1965,6 +2179,8 @@ export function generateLevantamentoHtml(input: LevantamentoTemplateInput): stri
     paginaIdeb,
     paginaFiscal,
     paginaConformidade,
+    paginaProgramas,
+    paginaGovernanca,
     paginaCenario,
     paginaCaderno,
   ].map((fn, indice) => fn(input, indice + 1));

@@ -27,6 +27,7 @@ import { getEquidadeMunicipal } from "@/core/lib/inep-equidade";
 import { getSituacaoVaar } from "@/core/lib/fundeb-vaar";
 import { getPonderacaoMunicipal } from "@/core/lib/fundeb-ponderacao";
 import { getConformidadeSiope } from "@/core/lib/siope-indicadores";
+import { getEstimativaPnae } from "@/core/lib/fundeb-pnae";
 
 interface IbgeMunicipioResponse {
   id: number;
@@ -890,6 +891,11 @@ function buildRelatorioDirigidoBase({
      * Ver `core/lib/siope-indicadores.ts`.
      */
     conformidade: getConformidadeSiope(ident.codigoIBGE),
+    /**
+     * Estimativa do PNAE sobre as mesmas matriculas do fundo. O Censo custa
+     * duas vezes: define a ponderacao do FUNDEB e o rateio da merenda.
+     */
+    pnae: getEstimativaPnae(ident.codigoIBGE),
     /**
      * Leitura prospectiva do VAAT.
      *
