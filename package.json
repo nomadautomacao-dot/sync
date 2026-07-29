@@ -26,6 +26,7 @@
     "supabase:reset": "npm run supabase:bootstrap && npm run supabase:clean",
     "dados:caged": "node scripts/dados/gerar-caged-municipios.mjs",
     "dados:equidade": "node scripts/dados/gerar-equidade-censo-municipal.mjs",
+    "dados:vaar": "node scripts/dados/gerar-vaar-municipios.mjs",
     "dev:flutter:web": "cd sync_flutter && /home/AdrielT87/sync_tooling/flutter/bin/flutter run -d chrome --dart-define=SYNC_API_BASE_URL=http://localhost:3100",
     "dev:flutter:web:prod": "cd sync_flutter && /home/AdrielT87/sync_tooling/flutter/bin/flutter run -d chrome --dart-define=SYNC_API_BASE_URL=https://sync-app-621901234263.us-central1.run.app",
     "dev:legado:flutter": "bash sync_flutter/run_local.sh --web",

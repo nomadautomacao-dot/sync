@@ -1,4 +1,5 @@
 import type { IDEBDado, RelatorioFundeb } from "@/modules/levantamento-fundeb/types";
+import { DESCRICAO_CONDICIONALIDADE, type Condicionalidade } from "@/core/lib/fundeb-vaar";
 
 /**
  * Template do Levantamento FUNDEB — "novo modelo".
@@ -13,7 +14,7 @@ import type { IDEBDado, RelatorioFundeb } from "@/modules/levantamento-fundeb/ty
  * confere antes de devolver o PDF.
  */
 
-export const LEVANTAMENTO_TOTAL_PAGINAS = 10;
+export const LEVANTAMENTO_TOTAL_PAGINAS = 11;
 
 /** Payload do `buildGoviaMunicipioCompleto`, na parte que este template lê. */
 export interface LevantamentoPayload {
@@ -80,6 +81,31 @@ export interface LevantamentoPayload {
       negraMunicipal?: number;
       naoDeclaradaPct?: number | null;
       cadastroFragil?: boolean;
+    } | null;
+    /**
+     * Situação no VAAR — ver `core/lib/fundeb-vaar.ts`. É a única parcela do
+     * FUNDEB que se perde inteira por descumprimento, e a única que o gestor
+     * reverte por ato próprio.
+     */
+    vaar?: {
+      exercicio?: number;
+      habilitado?: boolean;
+      beneficiario?: boolean;
+      complementacao?: number;
+      coeficiente?: number | null;
+      condicionalidades?: Record<string, boolean | null>;
+      reprovadas?: string[];
+      evoluiuAtendimento?: boolean | null;
+      evoluiuAprendizagem?: boolean | null;
+      pendencia?: string | null;
+      condIVEstadual?: boolean;
+      habilitadoSemRepasse?: boolean;
+      referencia?: {
+        medianaNacional?: number;
+        medianaUf?: number | null;
+        ufBeneficiadas?: number;
+        ufAvaliadas?: number;
+      } | null;
     } | null;
     perfilIBGE?: {
       /** O IBGE devolve o ano como texto; não assuma número. */
@@ -222,6 +248,116 @@ function rotuloFaixa(faixa: unknown): string {
   };
   const chave = String(faixa ?? "").trim();
   return esc(mapa[chave] ?? chave);
+}
+
+const ORDEM_CONDICIONALIDADES: Condicionalidade[] = ["I", "II", "III", "IV", "V"];
+
+/**
+ * Situação no VAAR — a parcela do FUNDEB que se perde inteira.
+ *
+ * VAAF e VAAT saem por fórmula: todo município recebe algo. O VAAR é filtro
+ * binário — reprovar em uma das cinco condicionalidades do art. 14, §1º da Lei
+ * 14.113/2020 zera a parcela. Por isso este bloco não mostra só o valor: mostra
+ * *qual* condicionalidade reprovou, porque é isso que o gestor pode agir.
+ *
+ * A referência por UF existe para dar ordem de grandeza a quem está fora. Não é
+ * previsão: o rateio entre habilitados é proporcional à evolução dos
+ * indicadores, então o município que se habilitar não recebe necessariamente a
+ * mediana. O texto diz isso.
+ */
+function blocoVaar(i: LevantamentoTemplateInput): string {
+  const v = i.payload?.relatorio_dirigido_base?.vaar;
+  if (!v || (v.habilitado === undefined && v.beneficiario === undefined)) return "";
+
+  const ref = v.referencia;
+  const habilitado = v.habilitado === true;
+  const complementacao = num(v.complementacao);
+  const medianaUf = num(ref?.medianaUf);
+  const reprovadas = (v.reprovadas ?? []) as Condicionalidade[];
+
+  const linhas = ORDEM_CONDICIONALIDADES.map((n) => {
+    const estado = v.condicionalidades?.[n];
+    const marca = estado === true ? "✓" : estado === false ? "✕" : "—";
+    const cor = estado === false ? ' style="color:var(--red)"' : "";
+    return `<tr>
+      <td class="r"${cor}><b>${marca}</b></td>
+      <td><b>${n}.</b> ${esc(DESCRICAO_CONDICIONALIDADE[n])}</td>
+    </tr>`;
+  }).join("");
+
+  // Quem está fora precisa de um número para dimensionar o que perde; quem
+  // está dentro precisa saber o que está em risco se cair.
+  const chamada = habilitado
+    ? `<div class="kpi"><div class="kpi-v">${brlCompact(complementacao)}</div>
+       <div class="kpi-l">recebidos de VAAR em ${ou(v.exercicio, "—")}</div></div>`
+    : `<div class="kpi"><div class="kpi-v" style="color:var(--red)">R$${NBSP}0</div>
+       <div class="kpi-l">não habilitado ao VAAR em ${ou(v.exercicio, "—")}</div></div>`;
+
+  const diagnostico = (() => {
+    if (v.condIVEstadual) {
+      return `<b>A reprovação não é do município.</b> A Condicionalidade IV é avaliada no estado, e a
+        Resolução CIF nº 15/2025 (art. 3º, §2º) aplica aos municípios a habilitação do respectivo estado.
+        Os ${int(ref?.ufAvaliadas)} municípios do estado ficaram sem VAAR em ${ou(v.exercicio, "—")} pelo
+        mesmo motivo. <b>Nenhuma ação municipal reverte isso</b> &mdash; a agenda é de articulação junto
+        ao governo estadual.`;
+    }
+    if (v.habilitadoSemRepasse) {
+      return `O município <b>cumpriu as cinco condicionalidades</b>, mas não evoluiu em nenhum dos dois
+        indicadores no período. O rateio entre habilitados é proporcional ao avanço, então habilitação sem
+        evolução não gera repasse. A habilitação está preservada: basta evoluir para passar a receber.`;
+    }
+    if (!habilitado && reprovadas.length) {
+      const nomes = reprovadas.map((n) => `<b>${n}</b>`).join(", ");
+      return `Reprovado ${reprovadas.length === 1 ? "na condicionalidade" : "nas condicionalidades"} ${nomes}.
+        ${
+          medianaUf > 0
+            ? `Os ${int(ref?.ufBeneficiadas)} municípios habilitados do estado receberam, na mediana,
+               <b>${brlCompact(medianaUf)}</b> em ${ou(v.exercicio, "—")} &mdash; referência de ordem de
+               grandeza, não previsão: o rateio é proporcional à evolução dos indicadores.`
+            : ""
+        }
+        ${
+          reprovadas.length === 1
+            ? "Como a reprovação é isolada, a habilitação depende de corrigir um único item."
+            : ""
+        }`;
+    }
+    if (habilitado) {
+      return `Habilitado nas cinco condicionalidades e beneficiário do rateio. O VAAR é reavaliado a cada
+        exercício e <b>não se acumula</b>: perder uma condicionalidade zera a parcela inteira no ano
+        seguinte. ${
+          medianaUf > 0
+            ? `A mediana dos habilitados do estado é ${brlCompact(medianaUf)}.`
+            : ""
+        }`;
+    }
+    return "";
+  })();
+
+  return `
+    <div class="sec-label">Complementação VAAR &middot; exercício ${ou(v.exercicio, "—")}</div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>As cinco condicionalidades</h3>
+        <table class="tb">${linhas}</table>
+        ${
+          v.pendencia
+            ? `<p class="micro" style="margin-top:.05in">Pendência registrada pelo FNDE:
+               <i>${esc(v.pendencia)}</i></p>`
+            : ""
+        }
+      </div>
+      <div class="card">
+        <h3>Situação e o que está em jogo</h3>
+        ${chamada}
+        <p class="micro" style="margin-top:.05in">${diagnostico}</p>
+        <p class="micro">Diferente do VAAF e do VAAT, que são calculados por fórmula e alcançam todo
+        município, o VAAR é filtro: basta reprovar em uma condicionalidade para perder a parcela inteira.
+        É a única parcela do FUNDEB que depende de ato de gestão &mdash; e o art. 26 a exclui da base dos
+        70%, o que a torna também a de aplicação mais livre.</p>
+      </div>
+    </div>
+`;
 }
 
 /**
@@ -632,13 +768,22 @@ function paginaReceita(i: LevantamentoTemplateInput): string {
         .join("")}
       <tr class="total"><td>Total de receitas</td><td class="r">${brl(total)}</td><td class="r">100,0%</td></tr>
     </table>
-    ${
-      rec.complementacaoVAAR <= 0
-        ? `<p class="small mt-1">O município não captura hoje a complementação VAAR (vinculada a
-    resultados). A ausência pode estar ligada às condições de habilitação junto ao
-    FNDE &mdash; recomenda-se análise dos requisitos de acesso.</p>`
-        : ""
-    }
+    ${(() => {
+      // Este parágrafo já existiu como conjectura ("a ausência pode estar
+      // ligada às condições de habilitação"). Desde que o dataset do VAAR
+      // entrou, a razão é conhecida por município e nomeada aqui.
+      if (rec.complementacaoVAAR > 0) return "";
+      const v = i.payload?.relatorio_dirigido_base?.vaar;
+      const reprovadas = (v?.reprovadas ?? []) as string[];
+      if (!v || !reprovadas.length) {
+        return `<p class="small mt-1">O município não captura hoje a complementação VAAR (vinculada a
+    resultados). A Parte I detalha as condicionalidades de habilitação.</p>`;
+      }
+      return `<p class="small mt-1">O município <b>não captura a complementação VAAR</b> porque foi reprovado
+    ${reprovadas.length === 1 ? "na condicionalidade" : "nas condicionalidades"}
+    <b>${reprovadas.join(", ")}</b> do art. 14 da Lei nº 14.113/2020&nbsp;&mdash; detalhamento e agenda de
+    correção na página seguinte.</p>`;
+    })()}
 
     <div class="divider"></div>
 
@@ -785,6 +930,109 @@ function serieHistorica(i: LevantamentoTemplateInput): AnoSerie[] {
     .sort((a, b) => a.ano - b.ano);
 }
 
+/**
+ * O que fazer diante de cada condicionalidade reprovada. É a parte do
+ * relatório que vira plano de trabalho — sem ela o bloco diagnostica sem
+ * dizer por onde começar.
+ */
+const AGENDA_CONDICIONALIDADE: Record<Condicionalidade, string> = {
+  I: "Instituir em lei o provimento do cargo de diretor por mérito e desempenho e comprovar que mais da metade da rede foi provida por esse critério.",
+  II: "Mobilizar a participação no Saeb: o corte de 80% é aferido por ano escolar avaliado, não pela média da rede — uma única série abaixo reprova.",
+  III: "Atacar a desigualdade de aprendizagem entre estudantes pretos, pardos e indígenas e de menor nível socioeconômico. É a condicionalidade que mais reprova no país.",
+  IV: "Articular com o governo do estado: a condicionalidade é avaliada na esfera estadual e o resultado é aplicado a todos os municípios da UF.",
+  V: "Aprovar o referencial curricular alinhado à BNCC no conselho municipal de educação e registrar a homologação.",
+};
+
+/**
+ * Página dedicada ao VAAR.
+ *
+ * Ganhou página própria porque é a única parcela do FUNDEB que se perde
+ * inteira — e porque a informação que importa não é o valor, é *qual* das
+ * cinco condicionalidades reprovou e o que se faz a respeito. Espremer isso
+ * num canto da página de receita reduziria de novo o assunto a um número.
+ */
+function paginaVaar(i: LevantamentoTemplateInput): string {
+  const id = i.relatorio.identificacao;
+  const municipio = `${id.municipioNome} — ${id.uf}`;
+  const v = i.payload?.relatorio_dirigido_base?.vaar;
+  const ref = v?.referencia;
+  const habilitado = v?.habilitado === true;
+  const reprovadas = (v?.reprovadas ?? []) as Condicionalidade[];
+
+  const faixaStatus = !v
+    ? `<div class="status"><span class="dot"></span> Situação no VAAR não disponível nas bases consultadas</div>`
+    : habilitado
+      ? `<div class="status good"><span class="dot"></span> Habilitado ao VAAR ${ou(v.exercicio, "")}${
+          v.beneficiario ? ` &middot; beneficiário do rateio` : " &middot; sem repasse por ausência de evolução"
+        }</div>`
+      : `<div class="status bad"><span class="dot"></span> Não habilitado ao VAAR ${ou(v.exercicio, "")} &middot; ${
+          reprovadas.length === 1
+            ? `reprovado na condicionalidade ${reprovadas[0]}`
+            : `reprovado em ${reprovadas.length} condicionalidades`
+        }</div>`;
+
+  const agenda = reprovadas.length
+    ? `<div class="sec-label" style="margin-top:.16in">Agenda para recuperar a parcela</div>
+       <table class="tb">
+         <tr><th>Condicionalidade</th><th>Providência</th></tr>
+         ${reprovadas
+           .map(
+             (n) =>
+               `<tr><td style="white-space:nowrap"><b>${n}</b> &middot; ${esc(
+                 DESCRICAO_CONDICIONALIDADE[n].split("—")[0].trim(),
+               )}</td><td>${esc(AGENDA_CONDICIONALIDADE[n])}</td></tr>`,
+           )
+           .join("")}
+       </table>`
+    : `<div class="sec-label" style="margin-top:.16in">Manutenção da habilitação</div>
+       <p class="small">A habilitação é aferida a cada exercício e <b>não se acumula</b>: o município recomeça
+       a avaliação todo ano nas cinco condicionalidades. A prioridade deixa de ser conquistar a parcela e passa
+       a ser não perdê-la &mdash; com atenção à Condicionalidade III, que sozinha responde pela maioria das
+       reprovações no país, e à IV, que depende do estado e independe de esforço municipal.</p>`;
+
+  return `<section class="page content-page">
+  ${cabecalho(municipio, "Parte I · Complementação VAAR")}
+  <div class="page-body">
+    <div class="kicker">Parte I &middot; A parcela do FUNDEB que se perde inteira</div>
+
+    ${faixaStatus}
+
+    <div class="grid-4 mt-1">
+      ${kpi(
+        "VAAR recebido",
+        num(v?.complementacao) > 0 ? brlCompact(v?.complementacao) : "R$ 0",
+        `exercício ${ou(v?.exercicio, "—")}`,
+        habilitado ? "up" : "",
+      )}
+      ${kpi(
+        "Mediana no estado",
+        num(ref?.medianaUf) > 0 ? brlCompact(ref?.medianaUf) : "—",
+        `${int(ref?.ufBeneficiadas)} de ${int(ref?.ufAvaliadas)} municípios habilitados`,
+      )}
+      ${kpi("Mediana nacional", num(ref?.medianaNacional) > 0 ? brlCompact(ref?.medianaNacional) : "—", "entre os beneficiados do país")}
+      ${kpi(
+        "Coeficiente de rateio",
+        num(v?.coeficiente) > 0 ? v!.coeficiente!.toFixed(8).replace(".", ",") : "—",
+        "participação no bolo nacional",
+      )}
+    </div>
+
+    ${blocoVaar(i)}
+
+    ${agenda}
+
+    <div class="note mt-2">
+      <p style="font-size:7.9pt;line-height:1.4">Base legal: art. 14 da Lei nº 14.113/2020 e Decreto nº
+      10.656/2021. As condicionalidades e os indicadores são fixados por resolução da Comissão
+      Intergovernamental de Financiamento (CIF) &mdash; não por portaria do MEC. A habilitação abre o direito;
+      o valor recebido é rateado entre os habilitados <b>proporcionalmente à evolução</b> dos indicadores de
+      atendimento e aprendizagem, e por isso habilitar-se não garante, por si só, um valor determinado.</p>
+    </div>
+  </div>
+  ${rodape(5)}
+</section>`;
+}
+
 function paginaSerie(i: LevantamentoTemplateInput): string {
   const r = i.relatorio;
   const id = r.identificacao;
@@ -801,7 +1049,7 @@ function paginaSerie(i: LevantamentoTemplateInput): string {
     <p class="lede">As bases oficiais não retornaram série de repasses para este município no momento da
     emissão. A leitura por exercício será incorporada assim que o histórico do FNDE estiver acessível.</p>
   </div>
-  ${rodape(5)}
+  ${rodape(6)}
 </section>`;
   }
 
@@ -853,7 +1101,7 @@ function paginaSerie(i: LevantamentoTemplateInput): string {
       e complementações &mdash; e não de rede &mdash; perde força a cada Censo sem recomposição de matrícula.</p>
     </div>
   </div>
-  ${rodape(5)}
+  ${rodape(6)}
 </section>`;
 }
 
@@ -925,7 +1173,7 @@ function paginaRede(i: LevantamentoTemplateInput): string {
     <p class="small mt-1">Cada matrícula migrada para jornada integral vale mais no fundo &mdash; é o elo
     entre esta página e o cenário de estruturação da Parte V.</p>
   </div>
-  ${rodape(6)}
+  ${rodape(7)}
 </section>`;
 }
 
@@ -1066,7 +1314,7 @@ function paginaIdeb(i: LevantamentoTemplateInput): string {
     <p class="small">O Censo Escolar não retornou o detalhamento de infraestrutura para esta rede no momento da emissão.</p>`
     }
   </div>
-  ${rodape(7)}
+  ${rodape(8)}
 </section>`;
 }
 
@@ -1161,7 +1409,7 @@ function paginaFiscal(i: LevantamentoTemplateInput): string {
     <p class="small mt-1">Situação do PAR: ${ou(r.situacaoPAR)}. O acesso credenciado a SIMEC e Habilita é o
     primeiro passo operacional do plano de trabalho.</p>
   </div>
-  ${rodape(8)}
+  ${rodape(9)}
 </section>`;
 }
 
@@ -1261,7 +1509,7 @@ function paginaCenario(i: LevantamentoTemplateInput): string {
       </div>
     </div>
   </div>
-  ${rodape(9)}
+  ${rodape(10)}
 </section>`;
 }
 
@@ -1346,7 +1594,7 @@ function paginaCaderno(i: LevantamentoTemplateInput): string {
       </div>
     </div>
   </div>
-  ${rodape(10, ` &middot; Emitido em ${dataCurta(r.geradoEm)}`)}
+  ${rodape(11, ` &middot; Emitido em ${dataCurta(r.geradoEm)}`)}
 </section>`;
 }
 
@@ -1360,6 +1608,7 @@ export function generateLevantamentoHtml(input: LevantamentoTemplateInput): stri
     paginaSumario,
     paginaReceita,
     paginaProjecao,
+    paginaVaar,
     paginaSerie,
     paginaRede,
     paginaIdeb,

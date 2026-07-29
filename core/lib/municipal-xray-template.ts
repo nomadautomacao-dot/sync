@@ -68,6 +68,22 @@ interface MunicipalXrayModel {
     settlementSchools: number;
   } | null;
   /**
+   * Situação na complementação VAAR. É a única parcela do FUNDEB perdida por
+   * inteiro quando o município reprova numa condicionalidade — e por isso a
+   * única cuja ausência tem causa nomeável e agenda de correção.
+   */
+  vaar: {
+    year: number | null;
+    qualified: boolean;
+    beneficiary: boolean;
+    amount: number;
+    failed: string[];
+    stateWideFailure: boolean;
+    stateMedian: number | null;
+    stateQualified: number;
+    stateAssessed: number;
+  } | null;
+  /**
    * Escolas da rede **pública** — é o universo dos percentuais de
    * infraestrutura, que não coincide com `schools` (rede municipal).
    */
@@ -202,6 +218,25 @@ export function mapMunicipalXrayModel(params: {
     idebTargetIsNational:
       latestInitial?.metaOrigem === "nacional" || latestFinal?.metaOrigem === "nacional",
     pibYear: text(at(currentPayload, "relatorio_dirigido_base.perfilIBGE.pibAnoReferencia"), ""),
+    vaar: (() => {
+      const bruto = asRecord(at(currentPayload, "relatorio_dirigido_base.vaar"));
+      if (!bruto) return null;
+
+      const referencia = asRecord(bruto.referencia);
+      const medianaUf = number(referencia?.medianaUf);
+      return {
+        year: number(bruto.exercicio),
+        qualified: bruto.habilitado === true,
+        beneficiary: bruto.beneficiario === true,
+        amount: number(bruto.complementacao) ?? 0,
+        failed: array(bruto.reprovadas).map((n) => String(n)),
+        stateWideFailure: bruto.condIVEstadual === true,
+        // Mediana zero significa "nenhum habilitado na UF", não "recebem zero".
+        stateMedian: medianaUf && medianaUf > 0 ? medianaUf : null,
+        stateQualified: number(referencia?.ufBeneficiadas) ?? 0,
+        stateAssessed: number(referencia?.ufAvaliadas) ?? 0,
+      };
+    })(),
     equity: (() => {
       const bruto = asRecord(at(currentPayload, "relatorio_dirigido_base.equidade"));
       const municipal = asRecord(bruto?.municipal);
@@ -300,6 +335,44 @@ function metric(value: string, label: string) {
  * rede que simplesmente não preencheu o campo aparece como rede sem alunos
  * negros ou indígenas.
  */
+/**
+ * Situação no VAAR, na página do FUNDEB.
+ *
+ * Ocupa o lugar de um par "alavanca / risco" que era genérico — valia para
+ * qualquer município do país e portanto não informava nenhum. Com o dataset do
+ * FNDE dá para dizer se **este** município recebe a parcela, e quando não
+ * recebe, qual condicionalidade a bloqueou.
+ *
+ * Sem dado, o texto genérico volta: é melhor do que uma lacuna na página.
+ */
+function vaarBlock(model: MunicipalXrayModel): string {
+  const v = model.vaar;
+  const generico = `<div class="grid-2 mt-3"><div class="insight"><b>Alavanca:</b> transformar o novo volume em plano anual com metas, responsáveis, evidências e revisão mensal.</div><div class="risk"><b>Risco:</b> expansão de despesa sem vínculo verificável com aprendizagem, acesso, permanência e infraestrutura.</div></div>`;
+
+  if (!v) return generico;
+
+  const ano = v.year ? ` ${v.year}` : "";
+
+  if (v.stateWideFailure) {
+    return `<div class="grid-2 mt-3"><div class="risk"><b>VAAR${ano}: R$ 0 por reprovação do estado.</b> A condicionalidade IV é avaliada na esfera estadual e seu resultado é aplicado a todos os municípios da UF — os ${integer.format(v.stateAssessed)} municípios do estado ficaram sem a parcela pelo mesmo motivo. <b>Nenhuma ação municipal reverte isso</b>; a agenda é de articulação com o governo estadual.</div><div class="note"><b>Leitura:</b> não trate a ausência do VAAR como falha de gestão local neste caso. As demais condicionalidades seguem valendo para o ciclo seguinte e devem ser mantidas em dia.</div></div>`;
+  }
+
+  if (!v.qualified && v.failed.length) {
+    const quais = v.failed.join(", ");
+    const referencia =
+      v.stateMedian !== null
+        ? ` Os ${integer.format(v.stateQualified)} municípios habilitados do estado receberam, na mediana, <b>${esc(compactMoney(v.stateMedian))}</b> — ordem de grandeza, não previsão: o rateio é proporcional à evolução dos indicadores.`
+        : "";
+    return `<div class="grid-2 mt-3"><div class="risk"><b>VAAR${ano}: R$ 0.</b> O município reprovou ${v.failed.length === 1 ? "na condicionalidade" : "nas condicionalidades"} <b>${esc(quais)}</b> do art. 14 da Lei nº 14.113/2020, e a complementação vinculada a resultados é perdida por inteiro quando uma delas falha.${referencia}</div><div class="insight"><b>Alavanca:</b> ${v.failed.length === 1 ? "a reprovação é isolada, então a habilitação depende de corrigir um único item." : "cada condicionalidade recuperada aproxima a rede da habilitação, mas só a última destrava a parcela — todas precisam fechar no mesmo ciclo."} A aferição é anual e recomeça do zero a cada exercício.</div></div>`;
+  }
+
+  if (v.qualified && !v.beneficiary) {
+    return `<div class="grid-2 mt-3"><div class="note"><b>VAAR${ano}: habilitado, sem repasse.</b> As cinco condicionalidades foram cumpridas, mas não houve evolução nos indicadores de atendimento e aprendizagem no período — e o rateio entre habilitados é proporcional ao avanço.</div><div class="insight"><b>Alavanca:</b> a parte difícil já está feita. Com a habilitação preservada, qualquer evolução mensurável nos indicadores passa a converter em receita.</div></div>`;
+  }
+
+  return `<div class="grid-2 mt-3"><div class="insight"><b>VAAR${ano}: ${esc(compactMoney(v.amount))} recebidos.</b> O município está habilitado nas cinco condicionalidades e é beneficiário do rateio.${v.stateMedian !== null ? ` A mediana dos habilitados do estado é ${esc(compactMoney(v.stateMedian))}.` : ""} O art. 26 exclui o VAAR da base dos 70%, o que o torna o recurso do fundo com aplicação mais livre.</div><div class="risk"><b>Risco:</b> a habilitação <b>não se acumula</b> — é reavaliada a cada exercício, e perder uma única condicionalidade zera a parcela inteira no ano seguinte. Manter é uma rotina anual, não uma conquista definitiva.</div></div>`;
+}
+
 function equityBlock(model: MunicipalXrayModel): string {
   const eq = model.equity;
   if (!eq) return "";
@@ -731,7 +804,7 @@ h1,h2,h3,.metric-value,.big{font-family:Arial,"Noto Sans",sans-serif}h1,h2,h3,p{
 
 <section class="page content-page">${header(`${model.currentYear} até agora`)}<main class="page-body"><div class="kicker">Situação atual</div><h2>Capacidade fiscal disponível para agir</h2><p class="lede">A fotografia atual mostra a última execução recuperada pelo sistema. Ela não é confundida com o fechamento de ${model.currentYear}.</p><div class="grid-4 mt-3">${metric(compactMoney(model.revenueCurrent),"receita realizada · parcial")}${metric(compactMoney(model.rcl),"RCL ajustada")}${metric(compactMoney(model.personnelExpense),"despesa de pessoal")}${metric(pct(model.personnelPercent),"pessoal sobre RCL")}</div><div class="grid-2 mt-3"><div class="card ${model.personnelPercent !== null && model.personnelLimit !== null && model.personnelPercent > model.personnelLimit ? "bad" : "accent"}"><h3>Lei de Responsabilidade Fiscal</h3><table><tbody><tr><td>Situação</td><td class="num"><b>${esc(model.fiscalStatus)}</b></td></tr><tr><td>Percentual de pessoal</td><td class="num"><b>${esc(pct(model.personnelPercent))}</b></td></tr><tr><td>Limite máximo informado</td><td class="num"><b>${esc(pct(model.personnelLimit))}</b></td></tr></tbody></table></div><div class="card"><h3>Leitura gerencial</h3><p>A margem fiscal deve ser lida em conjunto com obrigações de pessoal, cronograma de repasses, restos a pagar e capacidade de execução das secretarias.</p><div class="note mt-2">A confirmação contábil deve ocorrer nos demonstrativos oficiais e no fechamento do período.</div></div></div></main>${footer(6,"Siconfi/Tesouro, última entrega disponível")}</section>
 
-<section class="page content-page">${header("FUNDEB")}<main class="page-body"><div class="kicker">Financiamento da educação</div><h2>O salto de receita precisa ter destino mensurável</h2><p class="lede">A comparação do FUNDEB é o eixo financeiro central do raio-X. O crescimento é oportunidade, mas também amplia a necessidade de governança e prestação de contas.</p><div class="grid-3 mt-3">${metric(compactMoney(model.fundebBase),String(model.baseYear))}${metric(compactMoney(model.fundebCurrent),String(model.currentYear))}${metric(deltaText(model.fundebBase,model.fundebCurrent),"variação")}</div><table class="mt-3"><thead><tr><th>Indicador</th><th class="num">${model.baseYear}</th><th class="num">${model.currentYear}</th><th class="num">Evolução</th></tr></thead><tbody><tr><td>Receita total FUNDEB</td><td class="num">${esc(money(model.fundebBase))}</td><td class="num">${esc(money(model.fundebCurrent))}</td><td class="num ${fundebClass}">${esc(deltaText(model.fundebBase,model.fundebCurrent))}</td></tr><tr><td>Receita por matrícula conhecida</td><td class="num">N/D</td><td class="num">${esc(model.fundebCurrent !== null && model.enrollments ? brl.format(model.fundebCurrent/model.enrollments) : "N/D")}</td><td class="num">referencial</td></tr></tbody></table><div class="grid-2 mt-3"><div class="insight"><b>Alavanca:</b> transformar o novo volume em plano anual com metas, responsáveis, evidências e revisão mensal.</div><div class="risk"><b>Risco:</b> expansão de despesa sem vínculo verificável com aprendizagem, acesso, permanência e infraestrutura.</div></div></main>${footer(7,"FNDE e série histórica integrada ao Sync")}</section>
+<section class="page content-page">${header("FUNDEB")}<main class="page-body"><div class="kicker">Financiamento da educação</div><h2>O salto de receita precisa ter destino mensurável</h2><p class="lede">A comparação do FUNDEB é o eixo financeiro central do raio-X. O crescimento é oportunidade, mas também amplia a necessidade de governança e prestação de contas.</p><div class="grid-3 mt-3">${metric(compactMoney(model.fundebBase),String(model.baseYear))}${metric(compactMoney(model.fundebCurrent),String(model.currentYear))}${metric(deltaText(model.fundebBase,model.fundebCurrent),"variação")}</div><table class="mt-3"><thead><tr><th>Indicador</th><th class="num">${model.baseYear}</th><th class="num">${model.currentYear}</th><th class="num">Evolução</th></tr></thead><tbody><tr><td>Receita total FUNDEB</td><td class="num">${esc(money(model.fundebBase))}</td><td class="num">${esc(money(model.fundebCurrent))}</td><td class="num ${fundebClass}">${esc(deltaText(model.fundebBase,model.fundebCurrent))}</td></tr><tr><td>Receita por matrícula conhecida</td><td class="num">N/D</td><td class="num">${esc(model.fundebCurrent !== null && model.enrollments ? brl.format(model.fundebCurrent/model.enrollments) : "N/D")}</td><td class="num">referencial</td></tr></tbody></table>${vaarBlock(model)}</main>${footer(7,"FNDE — receita do FUNDEB e complementação VAAR")}</section>
 
 <section class="page content-page">${header("Rede de ensino")}<main class="page-body"><div class="kicker">Acesso e oferta</div><h2>A rede precisa crescer com qualidade e capacidade física</h2><p class="lede">O Censo Escolar informa o porte da rede no ano de referência disponível. Matrículas não são projetadas para ${model.currentYear} quando o Inep ainda não publicou a base correspondente.</p><div class="grid-4 mt-3">${metric(int(model.enrollments),"matrículas municipais")}${metric(int(model.schools),"escolas")}${metric(int(model.fullTime),"tempo integral")}${metric(int(model.specialEducation),"educação especial")}</div><div class="grid-2 mt-3"><div class="card accent"><h3>Composição disponível</h3><table><tbody><tr><td>Ano-base do Censo</td><td class="num"><b>${esc(model.enrollmentYear ?? "N/D")}</b></td></tr><tr><td>Educação de jovens e adultos</td><td class="num"><b>${esc(int(model.eja))}</b></td></tr><tr><td>Educação especial</td><td class="num"><b>${esc(int(model.specialEducation))}</b></td></tr><tr><td>Tempo integral</td><td class="num"><b>${esc(int(model.fullTime))}</b></td></tr></tbody></table></div><div class="card warn"><h3>Perguntas para auditoria</h3><ul><li>A expansão aparece por escola e etapa?</li><li>A infraestrutura acompanhou o novo atendimento?</li><li>Há coerência entre Censo, sistemas locais e documentação?</li><li>O financiamento por matrícula está evoluindo de forma sustentável?</li></ul></div></div>${equityBlock(model)}</main>${footer(8,"Censo Escolar/Inep")}</section>
 

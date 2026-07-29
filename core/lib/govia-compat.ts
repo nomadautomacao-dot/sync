@@ -20,6 +20,7 @@ import { getSiconfiFiscalRecord } from "@/core/lib/siconfi-fiscal";
 import { getSimecObrasRecord } from "@/core/lib/simec-obras";
 import { getValorAlunoAno } from "@/core/lib/fundeb-valor-aluno";
 import { getEquidadeMunicipal } from "@/core/lib/inep-equidade";
+import { getSituacaoVaar } from "@/core/lib/fundeb-vaar";
 
 interface IbgeMunicipioResponse {
   id: number;
@@ -865,6 +866,11 @@ function buildRelatorioDirigidoBase({
      * ver `core/lib/inep-equidade.ts` para por que isto condiciona o FUNDEB.
      */
     equidade: getEquidadeMunicipal(ident.codigoIBGE),
+    /**
+     * Situação no VAAR. Também leitura local: o FNDE publica o status por
+     * município num CSV que já baixamos para `data/fnde/vaar-2026.json`.
+     */
+    vaar: getSituacaoVaar(ident.codigoIBGE),
     perfilIBGE: ibgeIndicators ? {
       disponivel: true,
       populacaoEstimada: ibgeIndicators.populacaoEstimada,
