@@ -16,40 +16,37 @@ npm test                          # 343 testes — confirma que a base chegou í
 npm run dev                       # Next em :3100
 ```
 
-### Variáveis de ambiente
+### Variáveis de ambiente — vão à mão, não pelo git
 
-Por decisão do dono do projeto (repositório privado), os arquivos de
-configuração **devem vir versionados**: `.env`, `.env.local`,
-`cloudrun.env.yaml`. Com eles no clone, o app roda direto, sem preencher nada.
+Os arquivos de configuração (`.env`, `.env.local`, `cloudrun.env.yaml`) **não
+estão no repositório**, e o motivo não é só o `.gitignore`: o **GitHub Push
+Protection rejeita o push** por regra do repositório. A tentativa de 2026-07-29
+foi recusada com quatro detecções — Google OAuth Client ID, Google OAuth Client
+Secret, OpenRouter API Key e Google Cloud Service Account Credentials.
 
-> **Se não estiverem no clone**, é porque o assistente é impedido de adicionar
-> arquivos ignorados pelo `.gitignore` (guardrail contra vazamento de segredo).
-> Rode você mesmo, na máquina Windows:
->
-> ```bash
-> git add -f .env .env.local cloudrun.env.yaml .mcp.json \
->            .claude/settings.local.json .impeccable/config.json
-> git commit -m "chore: versiona configuracao local (repo privado)"
-> git push
-> ```
->
-> Alternativa sem histórico permanente: copiar os três arquivos direto para o
-> Mac (AirDrop, pendrive, gerenciador de senhas) e manter o `.gitignore` como
-> está.
+**Como levar a configuração para a máquina nova** (12 KB no total): copiar estes
+três arquivos por AirDrop, pendrive, `scp` ou gerenciador de senhas, e colar na
+raiz do projeto depois do clone.
 
-**Consequências de versionar, que valem saber:**
+```
+.env
+.env.local
+cloudrun.env.yaml
+```
 
-1. `.env.local` agora é **arquivo rastreado**. O `.gitignore` deixou de
-   protegê-lo: qualquer edição local aparece em `git status` e vai no próximo
-   commit. Cuidado ao trocar valores em teste.
-2. As credenciais estão no **histórico do git**, de forma permanente. Se este
-   repositório algum dia virar público, ganhar colaborador externo ou for
-   clonado por terceiro, **rotacionar é a única correção** — apagar o arquivo
-   depois não remove dos commits antigos. As duas mais sensíveis são
-   `FIREBASE_SERVICE_ACCOUNT` (admin do projeto `globalconsultorias`: lê e
-   escreve todo o Firestore, personifica qualquer usuário) e
-   `SUPABASE_SERVICE_ROLE_KEY` (admin do Postgres). `GEMINI_API_KEY` e
-   `OPENROUTER_API_KEY` são faturáveis.
+É o único passo manual do setup, e substitui qualquer preenchimento variável por
+variável.
+
+**Se algum dia quiser versionar mesmo assim** (não recomendado): é preciso
+aprovar cada segredo pelas URLs de *unblock* que o GitHub imprime no push
+recusado. A partir daí `.env.local` passa a ser arquivo rastreado — o
+`.gitignore` deixa de protegê-lo, qualquer edição local entra no próximo commit,
+e as credenciais ficam no histórico de forma permanente. Nesse cenário,
+**rotacionar é a única correção possível** se o repositório vazar: apagar o
+arquivo depois não o remove dos commits antigos. As duas mais sensíveis são
+`FIREBASE_SERVICE_ACCOUNT` (admin do projeto `globalconsultorias`: lê e escreve
+todo o Firestore e personifica qualquer usuário) e `SUPABASE_SERVICE_ROLE_KEY`
+(admin do Postgres); `GEMINI_API_KEY` e `OPENROUTER_API_KEY` são faturáveis.
 
 ### Dois ajustes obrigatórios no macOS
 
