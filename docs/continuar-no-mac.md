@@ -12,23 +12,68 @@
 git clone <repo> && cd Sync
 npm install
 npx playwright install chromium   # obrigatório: os PDFs são gerados no Chromium
+npm test                          # 343 testes — confirma que a base chegou íntegra
+npm run dev                       # Next em :3100
 ```
 
-### Variáveis de ambiente (`.env.local`, nunca versionado)
+### Variáveis de ambiente
 
-O `.gitignore` bloqueia `.env*` (exceto `.env.example`). Copie o template e
-preencha:
+Por decisão do dono do projeto (repositório privado), os arquivos de
+configuração **devem vir versionados**: `.env`, `.env.local`,
+`cloudrun.env.yaml`. Com eles no clone, o app roda direto, sem preencher nada.
 
-| Variável | Onde conseguir | Sem ela |
-|---|---|---|
-| `NEXT_PUBLIC_FIREBASE_*` | já estão no `.env.example` (identificadores públicos) | login não funciona |
-| `FIREBASE_SERVICE_ACCOUNT` | Firebase Console → Contas de serviço → gerar chave (JSON em uma linha) | rotas de API respondem 401 |
-| `QEDU_TOKEN` | painel QEdu | indicadores QEdu ficam `null` |
-| `PORTAL_TRANSPARENCIA_TOKEN` | **chave gratuita já cadastrada** para `adrieltavares87@gmail.com` — está no `.env.local` da máquina Windows e no e-mail de confirmação do Portal | convênios e sanções CEIS/CNEP degradam para "indisponível" no Raio-X |
+> **Se não estiverem no clone**, é porque o assistente é impedido de adicionar
+> arquivos ignorados pelo `.gitignore` (guardrail contra vazamento de segredo).
+> Rode você mesmo, na máquina Windows:
+>
+> ```bash
+> git add -f .env .env.local cloudrun.env.yaml .mcp.json \
+>            .claude/settings.local.json .impeccable/config.json
+> git commit -m "chore: versiona configuracao local (repo privado)"
+> git push
+> ```
+>
+> Alternativa sem histórico permanente: copiar os três arquivos direto para o
+> Mac (AirDrop, pendrive, gerenciador de senhas) e manter o `.gitignore` como
+> está.
 
-> A chave do Portal da Transparência **não está no git** de propósito. Copie do
-> `.env.local` antigo ou gere outra em `portaldatransparencia.gov.br/api-de-dados`.
-> Ela também precisa entrar no Cloud Run (ver `cloudrun.env.yaml.example`).
+**Consequências de versionar, que valem saber:**
+
+1. `.env.local` agora é **arquivo rastreado**. O `.gitignore` deixou de
+   protegê-lo: qualquer edição local aparece em `git status` e vai no próximo
+   commit. Cuidado ao trocar valores em teste.
+2. As credenciais estão no **histórico do git**, de forma permanente. Se este
+   repositório algum dia virar público, ganhar colaborador externo ou for
+   clonado por terceiro, **rotacionar é a única correção** — apagar o arquivo
+   depois não remove dos commits antigos. As duas mais sensíveis são
+   `FIREBASE_SERVICE_ACCOUNT` (admin do projeto `globalconsultorias`: lê e
+   escreve todo o Firestore, personifica qualquer usuário) e
+   `SUPABASE_SERVICE_ROLE_KEY` (admin do Postgres). `GEMINI_API_KEY` e
+   `OPENROUTER_API_KEY` são faturáveis.
+
+### Dois ajustes obrigatórios no macOS
+
+O `.env.local` foi escrito na máquina Windows/WSL e traz dois caminhos que não
+existem no Mac — eles resolvem onde ficam os anexos de contrato e os dados
+brutos (a pasta irmã `Sync-Arquivos/`, que **não** está no git):
+
+```bash
+CONTRATOS_ASSETS_DIR="/Users/<você>/.../Sync-Arquivos/assets-contratos"
+DADOS_BRUTOS_DIR="/Users/<você>/.../Sync-Arquivos/dados-brutos"
+```
+
+Sem ajustar, a geração de kit documental não encontra os anexos. O resto
+(relatórios FUNDEB, Raio-X, Histórico do Censo) funciona sem essa pasta, porque
+lê apenas os JSON de `data/`.
+
+### O que ficou fora do repositório de propósito
+
+- `.code-review-graph/` (455 MB) — cache do grafo de código, se reconstrói sozinho.
+- `.claude/skills/` e `.superpowers/` — ferramentas instaladas por máquina.
+- `.env.local.bak-pre-migracao` — backup de config anterior à migração Firebase;
+  só confundiria.
+- `Sync-Arquivos/` — a pasta irmã com PDFs, DOCX e fontes brutas de negócio
+  (ver `CLAUDE.md`, seção "O que NÃO fica no repositório"). Copiar à mão.
 
 ### Verificação rápida
 
