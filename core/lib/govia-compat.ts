@@ -28,6 +28,7 @@ import { getSituacaoVaar } from "@/core/lib/fundeb-vaar";
 import { getPonderacaoMunicipal } from "@/core/lib/fundeb-ponderacao";
 import { getConformidadeSiope } from "@/core/lib/siope-indicadores";
 import { getEstimativaPnae } from "@/core/lib/fundeb-pnae";
+import { getRemuneracaoMunicipal } from "@/core/lib/remuneracao-docente";
 
 interface IbgeMunicipioResponse {
   id: number;
@@ -896,6 +897,11 @@ function buildRelatorioDirigidoBase({
      * duas vezes: define a ponderacao do FUNDEB e o rateio da merenda.
      */
     pnae: getEstimativaPnae(ident.codigoIBGE),
+    /**
+     * Remuneracao do magisterio e adimplencia ao piso -- ver
+     * core/lib/remuneracao-docente.ts. Agregado municipal, sem dado pessoal.
+     */
+    remuneracao: getRemuneracaoMunicipal(ident.codigoIBGE),
     /**
      * Leitura prospectiva do VAAT.
      *

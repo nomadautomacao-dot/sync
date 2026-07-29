@@ -154,6 +154,25 @@ export interface LevantamentoPayload {
       }>;
       descumpridas?: Array<{ cod?: string; rotulo?: string; valor?: number; limite?: number | null }>;
     } | null;
+    /**
+     * Remuneração do magistério e adimplência ao piso — ver
+     * `core/lib/remuneracao-docente.ts`.
+     */
+    remuneracao?: {
+      ano?: number;
+      piso?: number;
+      jornadaReferencia?: number;
+      magisterio?: number;
+      docentes?: number;
+      efetivos?: number;
+      temporarios?: number;
+      medianaMagisterio?: number | null;
+      medianaDocentes?: number | null;
+      abaixoDoPiso?: number;
+      abaixoDoPisoPct?: number;
+      razaoMedianaPiso?: number | null;
+      temporariosPct?: number | null;
+    } | null;
     /** Estimativa do PNAE — ver `core/lib/fundeb-pnae.ts`. */
     pnae?: {
       exercicio?: number;
@@ -1658,6 +1677,60 @@ function paginaFiscal(i: LevantamentoTemplateInput, pagina: number): string {
 }
 
 /**
+ * Piso salarial e a folha do magistério.
+ *
+ * O piso é o que mais pressiona os 70% do fundo, e 2026 mudou duas coisas que
+ * quase ninguém absorveu: a fórmula de reajuste deixou de acompanhar o VAAF e
+ * o art. 4º da Lei 11.738/2008 — que dava direito a complementação da União a
+ * quem não tivesse caixa — foi revogado.
+ *
+ * A adimplência vem do SIOPE, proporcionalizada à jornada de 40h. Não existe
+ * painel federal disso, então é o único lugar em que o gestor vê o próprio
+ * número.
+ */
+function blocoPiso(i: LevantamentoTemplateInput): string {
+  const r = i.payload?.relatorio_dirigido_base?.remuneracao;
+  if (!r || num(r.magisterio) === 0) return "";
+
+  const mediana = num(r.medianaMagisterio);
+  const piso = num(r.piso);
+  const abaixoPct = num(r.abaixoDoPisoPct);
+  const razao = num(r.razaoMedianaPiso);
+
+  return `
+    <div class="sec-label" style="margin-top:.16in">Piso do magistério &middot; declaração de ${ou(r.ano, "—")}</div>
+    <div class="grid-4">
+      ${kpi("Piso nacional", `R$ ${brl(piso)}`, `jornada de ${int(r.jornadaReferencia)}h`)}
+      ${kpi(
+        "Mediana do magistério",
+        mediana > 0 ? `R$ ${brl(mediana)}` : "—",
+        razao > 0 ? `${razao.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}× o piso` : "proporcionalizada a 40h",
+        razao >= 1 ? "up" : "",
+      )}
+      ${kpi(
+        "Abaixo do piso",
+        abaixoPct > 0 ? pct(abaixoPct) : "nenhum",
+        `${int(r.abaixoDoPiso)} de ${int(r.magisterio)} profissionais`,
+        abaixoPct > 0 ? "" : "up",
+      )}
+      ${kpi(
+        "Vínculo temporário",
+        r.temporariosPct == null ? "—" : pct(r.temporariosPct),
+        `${int(r.temporarios)} de ${int(r.magisterio)} no magistério`,
+      )}
+    </div>
+    <p class="micro" style="margin-top:.05in">Salários proporcionalizados à jornada de referência do piso, como
+    admite o art. 2º, §3º da Lei nº 11.738/2008 &mdash; comparar um contrato de 20h com o piso cheio produziria
+    descumprimento onde não há. <b>A fórmula do piso mudou em 2026:</b> a Lei nº 15.437/2026 substituiu o
+    reajuste vinculado ao VAAF por INPC mais metade da média quinquenal da variação da receita do fundo, e
+    <b>revogou o art. 4º</b> da Lei nº 11.738/2008 &mdash; o dispositivo que previa complementação da União ao
+    ente sem disponibilidade orçamentária. Esse direito deixou de existir: o custo do piso é integralmente do
+    município. Há ainda tese pendente no STF (Tema 1.218) sobre o piso ser vencimento inicial ou base de toda a
+    carreira, sem decisão definitiva até esta emissão.</p>
+`;
+}
+
+/**
  * Vinculações da educação, como o SIOPE as apura.
  *
  * O relatório cobria 25% de MDE e 70% de remuneração por estimativa e não
@@ -1761,6 +1834,8 @@ function paginaConformidade(i: LevantamentoTemplateInput, pagina: number): strin
         igual para todo município.</p>
       </div>
     </div>
+
+    ${blocoPiso(i)}
 
     <p class="small mt-1">Declaração de ${ou(c.ano, "—")} ao SIOPE, 6º bimestre. O registro é obrigatório em
     até 30 dias do encerramento de cada bimestre; a omissão suspende transferências voluntárias e operações
