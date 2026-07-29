@@ -1016,10 +1016,34 @@ function paginaVaar(i: LevantamentoTemplateInput, pagina: number): string {
        a ser não perdê-la &mdash; com atenção à Condicionalidade III, que sozinha responde pela maioria das
        reprovações no país, e à IV, que depende do estado e independe de esforço municipal.</p>`;
 
+  // O VAAT tem condição única e fiscal (art. 13, §4º): publicar os dados
+  // contábeis no Siconfi e no Siope. Não se confunde com as condicionalidades
+  // do VAAR, e é a outra parcela que o município perde por inteiro.
+  const perfil = i.relatorio.perfilComercial;
+  const habilitacaoVaat = (perfil?.habilitacaoVaat ?? "").trim();
+  const vaatConhecida = habilitacaoVaat && !/^n[aã]o informado$/i.test(habilitacaoVaat);
+  const vaatInabilitado = /inabilit|n[aã]o habilit/i.test(habilitacaoVaat);
+
+  const blocoVaat = vaatConhecida
+    ? `<div class="sec-label" style="margin-top:.16in">A outra parcela condicionada &middot; VAAT</div>
+       <div class="status ${vaatInabilitado ? "bad" : "good"}"><span class="dot"></span>
+       Habilitação VAAT ${ou(id.exercicio, "")}: ${esc(habilitacaoVaat)}</div>
+       <p class="small mt-1">A condição do VAAT é <b>uma só, e é fiscal</b> (art. 13, §4º da Lei nº
+       14.113/2020): disponibilizar os dados contábeis, orçamentários e fiscais no <b>Siconfi</b> e no
+       <b>Siope</b> até <b>31 de agosto</b> do exercício seguinte ao dos dados. Não se confunde com as
+       condicionalidades do VAAR acima &mdash; plano de carreira, Saeb e gestão democrática pertencem ao
+       art. 14, não ao 13. A habilitação é <b>anual e não se acumula</b>, e o inabilitado não tem o VAAT
+       apurado: perde 100% da complementação no exercício.${
+         perfil?.pendenciaVaat
+           ? ` Pendência registrada: <i>${esc(perfil.pendenciaVaat)}</i>.`
+           : ""
+       }</p>`
+    : "";
+
   return `<section class="page content-page">
-  ${cabecalho(municipio, "Parte I · Complementação VAAR")}
+  ${cabecalho(municipio, "Parte I · Complementações condicionadas")}
   <div class="page-body">
-    <div class="kicker">Parte I &middot; A parcela do FUNDEB que se perde inteira</div>
+    <div class="kicker">Parte I &middot; As parcelas do FUNDEB que se perdem inteiras</div>
 
     ${faixaStatus}
 
@@ -1046,6 +1070,8 @@ function paginaVaar(i: LevantamentoTemplateInput, pagina: number): string {
     ${blocoVaar(i)}
 
     ${agenda}
+
+    ${blocoVaat}
 
     <div class="note mt-2">
       <p style="font-size:7.9pt;line-height:1.4">Base legal: art. 14 da Lei nº 14.113/2020 e Decreto nº
