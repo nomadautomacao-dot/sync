@@ -281,27 +281,37 @@ def gerar_executiva(payload_raw) -> str:
     sistemas = d.get("sistemas") or []
 
     # Textos
+    # Os quatro textos abaixo sao os padroes usados quando o chamador nao envia
+    # os seus. Como nenhum chamador envia, eles valem sempre — e por isso nao
+    # podem afirmar achado que nao foi feito. As versoes anteriores diziam que
+    # "identificamos oportunidade real" e que a consultoria "identificou
+    # divergencias entre os dados declarados e os criterios do FNDE" para
+    # qualquer municipio, antes de qualquer conferencia. Bastava o gestor pedir
+    # a lista de divergencias para o documento inteiro perder credibilidade.
     carta           = safe(d.get("carta_apresentacao") or
-        f"O municipio de {mun} figura entre os entes que apresentam condicoes tecnicas"
-        " para maximizacao dos recursos do FUNDEB. Com base em analise aprofundada das"
-        " bases do FNDE, identificamos oportunidade real de crescimento de receita sem"
-        " alteracao do perfil fiscal, exclusivamente pela correcao tecnica das informacoes"
-        " junto aos sistemas federais.")
+        f"O municipio de {mun} reune condicoes tecnicas para revisao da sua posicao"
+        " no FUNDEB. Este documento organiza o que as bases do FNDE ja mostram e"
+        " aponta os pontos que precisam ser conferidos junto aos sistemas federais —"
+        " a correcao cadastral eleva a receita sem alterar o perfil fiscal do ente.")
     txt_importancia = safe(d.get("texto_importancia_municipio") or
-        f"A rede publica de {mun} possui caracteristicas que ampliam o peso comercial"
-        " do municipio na formula do FUNDEB, em especial no calculo do VAAT e na"
-        " habilitacao para complementacoes federais.")
+        f"A rede publica de {mun} tem caracteristicas que pesam na formula do FUNDEB,"
+        " em especial no calculo do VAAT e na habilitacao as complementacoes federais.")
     txt_leitura     = safe(d.get("texto_leitura_rocha_prime") or
-        "A Global Sync realizou levantamento detalhado das bases de calculo e identificou"
-        " divergencias entre os dados declarados e os criterios vigentes do FNDE. A correcao"
-        " dessas inconsistencias representa o principal vetor de ganho tecnico mapeado.")
+        "A Global Sync levantou as bases de calculo e mapeou os pontos em que os dados"
+        " declarados precisam ser confrontados com os criterios vigentes do FNDE. A"
+        " conferencia desses pontos e o principal vetor de ganho tecnico — o que cada um"
+        " vale so se determina apos a verificacao documental.")
+    # "A camada recuperavel ja evidenciada nas bases oficiais" descrevia
+    # `projecaoRecuperavel`, que e VAAF x 1,40 + VAAT x 1,30 + VAAR x 1,25:
+    # multiplicadores fixos, iguais para todo municipio, sem base nenhuma atras.
     txt_oportunidade= safe(d.get("texto_oportunidade_final") or
         f"Com base no cenario atual, o ganho potencial estimado para"
         f" {mun} e de {money(ganho_total)} (+{pct(ganho_pct)})."
         + (
-            f" A camada recuperavel ja evidenciada nas bases oficiais soma {money(ganho_recuperavel)} (+{pct(ganho_recuperavel_pct)})."
+            f" Num cenario conservador, o incremento fica em {money(ganho_recuperavel)} (+{pct(ganho_recuperavel_pct)})."
+            " Ambos sao estimativas e dependem de validacao nas bases oficiais."
             if ganho_recuperavel > 0 and abs(ganho_recuperavel - ganho_total) > 0.01
-            else ""
+            else " Estimativa sujeita a validacao nas bases oficiais."
         ))
 
     # ── Arquivo temporario ───────────────────────────

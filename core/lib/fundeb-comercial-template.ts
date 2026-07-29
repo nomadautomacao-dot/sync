@@ -1388,8 +1388,13 @@ export function generateComercialHtml(data: ComercialPdfData): string {
   ];
 
   // Recomendações
+  // O texto anterior recomendava validar "o percentual mínimo de 28%" do ICMS
+  // para qualquer município do país. Não existem 28% na legislação: o mínimo de
+  // MDE é 25% (CF art. 212). Os 28% são tese jurídica restrita a Goiás, e o
+  // próprio `fundeb-directed-report.ts` a classifica como "jurídico-tributário
+  // sensível", confiança 5, a não fechar sem parecer especializado.
   const recomendacoes = data.recomendacoes ?? [
-    'Validar a base de cálculo do ICMS e a aplicação do percentual mínimo de 28% com assessoria jurídico-tributária especializada.',
+    'Conferir a quota-parte do ICMS e a aplicação do mínimo de 25% da receita de impostos em MDE (CF art. 212) — a lei orgânica municipal pode fixar percentual maior, e é ele que o tribunal cobra.',
     'Conferir documentalmente as bases que determinam a captura de VAAF, VAAT e VAAR junto ao FNDE.',
     'Verificar atos normativos locais referentes à oferta de EJA, educação em tempo integral e parcerias intersetoriais com impacto no Censo Escolar.',
   ];

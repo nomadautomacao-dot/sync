@@ -6,6 +6,7 @@ import {
   type LevantamentoTemplateInput,
 } from "@/core/lib/fundeb-levantamento-template";
 import { getSituacaoVaar } from "@/core/lib/fundeb-vaar";
+import { getGanhoApurado } from "@/core/lib/fundeb-ganho-apurado";
 import { getPonderacaoMunicipal } from "@/core/lib/fundeb-ponderacao";
 import { getConformidadeSiope } from "@/core/lib/siope-indicadores";
 import { getEstimativaPnae } from "@/core/lib/fundeb-pnae";
@@ -253,6 +254,65 @@ describe("template do Levantamento FUNDEB", () => {
 
     expect(folgado).not.toContain("do mínimo: uma alta de arrecadação");
     expect(folgado).toContain("penúltimo exercício");
+  });
+
+  it("não chama de evidenciado um número que é premissa", () => {
+    // O KPI "Já evidenciado" exibia `projecaoRecuperavel`, que é
+    // `VAAF × 1,40 + VAAT × 1,30 + VAAR × 1,25` — multiplicadores fixos iguais
+    // para todo município. "Evidenciado" significa comprovado, e era a única
+    // afirmação do relatório que um gestor bem assessorado derrubava com uma
+    // pergunta: "me mostra em qual base isso está evidenciado?".
+    const html = gerar({
+      payload: {
+        relatorio_dirigido_base: { ganho: getGanhoApurado("2930154", "BA", 37_000_000) },
+      } as LevantamentoTemplateInput["payload"],
+    });
+
+    expect(html).not.toContain("Já evidenciado");
+    expect(html).not.toContain("evidenciada");
+    expect(html).not.toContain("sinalizado nas bases oficiais atuais");
+
+    expect(html).toContain("Ganho apurado");
+    expect(html).toContain("mediana nacional");
+    expect(html).toContain("Não é valor perdido comprovado");
+  });
+
+  it("distingue o cenário da apuração em vez de somá-los", () => {
+    const html = gerar({
+      payload: {
+        relatorio_dirigido_base: { ganho: getGanhoApurado("2930154", "BA", 37_000_000) },
+      } as LevantamentoTemplateInput["payload"],
+    });
+
+    expect(html).toContain("não têm a mesma natureza");
+    expect(html).toContain("cenário, não apuração");
+  });
+
+  it("omite o ganho em vez de estimá-lo quando falta o dataset", () => {
+    const html = gerar();
+    expect(paginas(html)).toBe(LEVANTAMENTO_TOTAL_PAGINAS);
+    expect(html).toContain("prefere omitir o número a estimá-lo");
+  });
+
+  it("não repete o percentual de ICMS que é tese local", () => {
+    // Os 28% são tese jurídico-tributária restrita a Goiás; o próprio
+    // `fundeb-directed-report.ts` a marca com confiança 5 e "não deve ser
+    // fechado automaticamente". O template a imprimia como "percentual mínimo"
+    // para qualquer município do país. O mínimo de MDE é 25% (CF art. 212).
+    const html = gerar();
+    expect(html).not.toContain("28%");
+    expect(html).toContain("CF art. 212");
+  });
+
+  it("não atribui a nenhuma etapa a maior ponderação do fundo", () => {
+    // Educação especial urbano pondera 1,40 e tempo integral do fundamental
+    // 1,50 — o teto é 2,17 (creche integral indígena ou quilombola). Duas
+    // páginas afirmavam que cada uma delas era a maior da tabela.
+    const html = gerar();
+    expect(html).not.toContain("maior ponderação no fundo");
+    expect(html).not.toContain("maior valor por aluno na tabela oficial");
+    // EJA urbano pondera 1,00: vendê-la como alavanca de receita é enganoso.
+    expect(html).not.toContain("modalidade com expansão possível");
   });
 
   it("mostra o denominador ponderado ao lado da matrícula bruta", () => {

@@ -26,6 +26,7 @@ import { getValorAlunoAno } from "@/core/lib/fundeb-valor-aluno";
 import { getEquidadeMunicipal } from "@/core/lib/inep-equidade";
 import { getSituacaoVaar } from "@/core/lib/fundeb-vaar";
 import { getPonderacaoMunicipal } from "@/core/lib/fundeb-ponderacao";
+import { getGanhoApurado } from "@/core/lib/fundeb-ganho-apurado";
 import { getConformidadeSiope } from "@/core/lib/siope-indicadores";
 import { getEstimativaPnae } from "@/core/lib/fundeb-pnae";
 import { getRemuneracaoMunicipal } from "@/core/lib/remuneracao-docente";
@@ -886,6 +887,15 @@ function buildRelatorioDirigidoBase({
      * usa. Ver `core/lib/fundeb-ponderacao.ts`.
      */
     ponderacao: getPonderacaoMunicipal(ident.codigoIBGE),
+    /**
+     * Ganho **apurado** em reais — ver `core/lib/fundeb-ganho-apurado.ts`.
+     *
+     * Substitui o KPI "Já evidenciado", que exibia `projecaoRecuperavel`:
+     * `VAAF × 1,40 + VAAT × 1,30 + VAAR × 1,25`, multiplicadores fixos iguais
+     * para todo município do país. "Evidenciado" significa comprovado, então o
+     * gestor lia "esse dinheiro já existe e estou perdendo" — e era premissa.
+     */
+    ganho: getGanhoApurado(ident.codigoIBGE, ident.uf, relatorio.receitas.totalReceitas),
     /**
      * Vinculações da educação como o SIOPE as apura — 25% MDE, 70%
      * remuneração, 15% capital do VAAT, IEI, teto de 10% não aplicado.

@@ -130,7 +130,37 @@ export interface LevantamentoPayload {
         titulo?: string;
         matriculas?: number;
         ganhoEquivalentes?: number;
+        indicador?: number;
+        mediana?: number;
+        matriculasAteMediana?: number;
+        ganhoEquivalentesMediana?: number;
         detalhe?: string;
+      }>;
+    } | null;
+    /**
+     * Ganho **apurado** em reais — ver `core/lib/fundeb-ganho-apurado.ts`.
+     * Substitui o antigo KPI "Já evidenciado", que na verdade era
+     * `VAAF × 1,40 + VAAT × 1,30 + VAAR × 1,25` e não saía de base nenhuma.
+     */
+    ganho?: {
+      valorPorEquivalente?: number;
+      total?: number;
+      percentualSobreReceita?: number | null;
+      componentes?: Array<{
+        chave?: string;
+        titulo?: string;
+        valor?: number;
+        certeza?: "apurado" | "referencia";
+        origem?: string;
+        conferir?: string;
+      }>;
+      referencias?: Array<{
+        chave?: string;
+        titulo?: string;
+        valor?: number;
+        certeza?: "apurado" | "referencia";
+        origem?: string;
+        conferir?: string;
       }>;
     } | null;
     /**
@@ -750,6 +780,56 @@ function paginaSumario(i: LevantamentoTemplateInput, pagina: number): string {
 
   const vaarZerado = rec.complementacaoVAAR <= 0;
 
+  // O KPI que ficava aqui se chamava "Já evidenciado" e mostrava
+  // `projecaoRecuperavel` — multiplicadores fixos (1,40 / 1,30 / 1,25) iguais
+  // para todo município do país. "Evidenciado" quer dizer comprovado, e o
+  // gestor lia "esse dinheiro já existe e estou perdendo". Nada ali saía de
+  // base nenhuma. Agora o número é apurado sobre o dado do próprio município.
+  const ganho = i.payload?.relatorio_dirigido_base?.ganho ?? null;
+  const ganhoTotal = ganho?.total ?? 0;
+  const kpiGanho =
+    ganho && ganhoTotal > 0
+      ? kpi(
+          "Ganho apurado",
+          `+${brlCompact(ganhoTotal)}`,
+          "lacunas de declaração, com fonte",
+          "up",
+        )
+      : ganho
+        ? kpi("Ganho apurado", "sem lacuna", "declaração na mediana nacional ou acima")
+        : kpi("Ganho apurado", "—", "matrícula ponderada não disponível");
+
+  // As duas frases abaixo eram fixas. "Vetores de trabalho: condicionalidades
+  // de desempenho e regularidade informacional para VAAR" saía igual para quem
+  // já estava habilitado, e "recuperar matrícula perdida no Censo, habilitar o
+  // VAAR" saía até para município cuja reprovação é do estado e que nenhuma
+  // ação local reverte. Prometer o que não se pode entregar é o mesmo defeito
+  // do antigo "Já evidenciado", em prosa.
+  const v = i.payload?.relatorio_dirigido_base?.vaar ?? null;
+  const reprovadas = (v?.reprovadas ?? []) as string[];
+
+  const vetorDeTrabalho = !v
+    ? "Vetores de trabalho: conferência cadastral do Censo e acompanhamento das vinculações da educação."
+    : v.condIVEstadual
+      ? `Vetor de trabalho: a reprovação no VAAR vem da condicionalidade IV, avaliada <b>no estado</b> &mdash; nenhuma ação municipal a reverte neste ciclo.`
+      : reprovadas.length
+        ? `Vetores de trabalho: ${reprovadas.length === 1 ? "a condicionalidade" : "as condicionalidades"} <b>${reprovadas.join(", ")}</b> do VAAR e a conferência cadastral do Censo.`
+        : v.habilitadoSemRepasse
+          ? "Vetor de trabalho: o município está habilitado ao VAAR, mas o rateio é proporcional ao avanço em atendimento e aprendizagem &mdash; o que falta é resultado medido, não habilitação."
+          : "Vetores de trabalho: manutenção das condicionalidades do VAAR já cumpridas e conferência cadastral do Censo.";
+
+  const maiorParcela = [...(ganho?.componentes ?? [])].sort((a, b) => num(b.valor) - num(a.valor))[0];
+
+  const alavanca =
+    ganhoTotal > 0 && maiorParcela
+      ? `A maior parcela verificável está em <b>${esc(String(maiorParcela.titulo ?? ""))}</b>, que vale
+      <b>+${brlCompact(ganhoTotal)}</b> por ano se a declaração alcançar a mediana nacional &mdash; conferência
+      de Censo, não obra nem contratação.`
+      : v && reprovadas.length && !v.condIVEstadual
+        ? `Com a declaração cadastral já na mediana nacional, a alavanca que resta é a habilitação ao VAAR:
+      ${reprovadas.length === 1 ? "a condicionalidade" : "as condicionalidades"} <b>${reprovadas.join(", ")}</b>.`
+        : "Sem lacuna cadastral e sem condicionalidade pendente, o ganho passa a depender de resultado educacional medido &mdash; expansão de jornada integral e de matrícula, que mudam a rede antes de mudar o repasse.";
+
   return `<section class="page content-page">
   ${cabecalho(municipio, "Sumário executivo")}
   <div class="page-body">
@@ -764,8 +844,8 @@ function paginaSumario(i: LevantamentoTemplateInput, pagina: number): string {
     <div class="grid-4 mt-2">
       ${kpi(`Receita ${id.exercicio}`, brlCompact(rec.totalReceitas), "base oficial do ano")}
       ${kpi(`Estimativa ${id.exercicio + 1}`, brlCompact(r.projecao.totalProjetado), "cenário otimizado")}
-      ${kpi("Ganho potencial", `+${brlCompact(r.projecao.totalGanho)}`, `+${pct(r.projecao.ganhoPercentual)} sobre a base`, "up")}
-      ${kpi("Já evidenciado", `+${brlCompact(r.projecaoRecuperavel.totalGanho)}`, `+${pct(r.projecaoRecuperavel.ganhoPercentual)} nas bases atuais`, "up")}
+      ${kpi("Ganho potencial", `+${brlCompact(r.projecao.totalGanho)}`, `+${pct(r.projecao.ganhoPercentual)} — cenário, não apuração`, "up")}
+      ${kpiGanho}
     </div>
 
     <div class="grid-2 mt-2">
@@ -775,7 +855,7 @@ function paginaSumario(i: LevantamentoTemplateInput, pagina: number): string {
         &bull; Gestor identificado na base atual: <span class="strong">${ou(id.prefeito)}${id.partido && id.partido !== "Nao informado" ? ` (${esc(id.partido)})` : ""}</span>.<br>
         &bull; Habilitação VAAT no exercício ${id.exercicio}: <span class="strong">${ou(perfil?.habilitacaoVaat, "não informada")}</span>.<br>
         &bull; VAAR atual: <span class="strong">R$ ${brl(rec.complementacaoVAAR)}</span>${vaarZerado ? " &mdash; o município não captura a complementação de resultado." : "."}<br>
-        &bull; Vetores de trabalho: condicionalidades de desempenho e regularidade informacional para VAAR.</p>
+        &bull; ${vetorDeTrabalho}</p>
       </div>
       <div class="card">
         <h3>Composição da receita ${id.exercicio}</h3>
@@ -788,16 +868,27 @@ function paginaSumario(i: LevantamentoTemplateInput, pagina: number): string {
       <h3>A alavanca em uma frase</h3>
       <p style="font-size:8.6pt;line-height:1.42">${pct(share(rec.receitaContribuicaoMunicipal, total), 0)} da receita vem da contribuição do
       próprio município${vaarZerado ? ' &mdash; e a fatia que premia resultado (VAAR) está <span class="strong">zerada</span>' : ""}.
-      Recuperar matrícula perdida no Censo, habilitar o VAAR e expandir EJA e tempo integral são os três
-      movimentos que separam a base atual do cenário otimizado.</p>
+      ${alavanca}</p>
     </div>
 
     <div class="note mt-1">
-      <p style="font-size:7.8pt;line-height:1.38"><span class="strong" style="color:#584416">Nota de método:</span>
-      a estimativa ${id.exercicio + 1} usa benchmark comercial Global Company${
-        perfil ? ` (cenário ${rotuloFaixa(perfil.faixa)}, score ${perfil.score.toFixed(2)})` : ""
-      } e inclui potencial prospectivo de VAAR condicionado a condicionalidades e desempenho. Os valores projetados têm caráter
-      estimativo e dependem de validação documental nas bases oficiais FUNDEB e MEC/FNDE.</p>
+      <p style="font-size:7.8pt;line-height:1.38"><span class="strong" style="color:#584416">Nota de método &mdash; os dois números não têm a mesma natureza:</span>
+      o <b>ganho potencial</b> é cenário: benchmark comercial Global Company${
+        perfil ? ` (${rotuloFaixa(perfil.faixa)}, score ${perfil.score.toFixed(2)})` : ""
+      }, de caráter estimativo, que depende de validação documental nas bases FUNDEB e MEC/FNDE.
+      O <b>ganho apurado</b> é cálculo: ${
+        ganho && ganhoTotal > 0
+          ? `fator de ponderação legal &times; valor aluno/ano da UF (R$ ${brl(ganho.valorPorEquivalente ?? 0)}
+      por matrícula-equivalente) &times; matrícula que <b>o próprio município declarou</b> ao Censo. Mede o que o
+      fundo pagaria a mais se essa declaração alcançasse a <b>mediana nacional</b> das redes municipais &mdash;
+      não o teto teórico. <b>Não é valor perdido comprovado</b>, é o que está em jogo na conferência cadastral,
+      e a Parte III abre parcela por parcela.`
+          : ganho
+            ? `a mesma conta, mas aqui sem lacuna a monetizar &mdash; a rede já declara na mediana nacional ou acima
+      nos dois pontos verificáveis (jornada da creche e cobertura de AEE). É resultado bom, não falta de dado.`
+            : `depende da planilha de matrículas ponderadas do FNDE, que não trouxe este município. Sem ela o
+      relatório prefere omitir o número a estimá-lo.`
+      }</p>
     </div>
 
     <div class="sec-label" style="margin-top:.22in">Como este relatório está organizado</div>
@@ -919,8 +1010,9 @@ function paginaProjecao(i: LevantamentoTemplateInput, pagina: number): string {
   const id = r.identificacao;
   const municipio = `${id.municipioNome} — ${id.uf}`;
   const p = r.projecao;
-  const rc = r.projecaoRecuperavel;
   const perfil = r.perfilComercial;
+  const ganho = i.payload?.relatorio_dirigido_base?.ganho ?? null;
+  const ganhoTotal = ganho?.total ?? 0;
 
   const maiorPar = Math.max(p.vaafProjetado, p.vaatProjetado, p.vaarProjetado, p.vaafAtual, p.vaatAtual, p.vaarAtual, 1);
   const par = (nome: string, atual: number, projetado: number) => `<div class="pair">
@@ -967,15 +1059,22 @@ function paginaProjecao(i: LevantamentoTemplateInput, pagina: number): string {
 
     <div class="grid-2 mt-2">
       <div class="kpi hero"><em>Receita total projetada &middot; cenário otimizado</em><b>${brlCompact(p.totalProjetado)}</b><span>potencial de incremento: +${brlCompact(p.totalGanho)} (+${pct(p.ganhoPercentual)})</span></div>
-      <div class="kpi up"><em>Camada recuperável já evidenciada</em><b>+${brlCompact(rc.totalGanho)}</b><span>+${pct(rc.ganhoPercentual)} sinalizado nas bases oficiais atuais</span></div>
+      ${
+        ganhoTotal > 0
+          ? `<div class="kpi up"><em>Ganho apurado &middot; lacunas de declaração</em><b>+${brlCompact(ganhoTotal)}</b><span>fatores do FUNDEB sobre a matrícula declarada pelo município</span></div>`
+          : `<div class="kpi"><em>Ganho apurado &middot; lacunas de declaração</em><b>${ganho ? "sem lacuna" : "—"}</b><span>${ganho ? "declaração na mediana nacional ou acima" : "matrícula ponderada não disponível"}</span></div>`
+      }
     </div>
 
     <div class="note mt-2">
-      <p style="font-size:7.9pt;line-height:1.4">A estimativa mostra uma leitura possível do próximo ciclo a
-      partir da receita atual, do histórico e dos pontos de conferência do FUNDEB &mdash; ela <b>não
-      substitui a validação nas bases oficiais</b>.${
-        perfil ? ` Referência: benchmark comercial Global Company (${rotuloFaixa(perfil.faixa)}), score ${perfil.score.toFixed(2)}, com potencial prospectivo de VAAR condicionado a condicionalidades e desempenho.` : ""
-      }</p>
+      <p style="font-size:7.9pt;line-height:1.4"><b>Os dois números acima não têm a mesma natureza.</b>
+      À esquerda, um <b>cenário</b>: uma leitura possível do próximo ciclo a partir da receita atual, do
+      histórico e do benchmark comercial${
+        perfil ? ` (${rotuloFaixa(perfil.faixa)}, score ${perfil.score.toFixed(2)})` : ""
+      } &mdash; é premissa, não apuração, e <b>não substitui a validação nas bases oficiais</b>.
+      À direita, uma <b>apuração</b>: fator de ponderação legal &times; valor aluno/ano da UF &times; matrícula
+      que o próprio município declarou. Cada parcela dela aparece nomeada na Parte III, com o artigo de lei
+      e o que precisa ser conferido antes de tratá-la como recuperável.</p>
     </div>
 
     ${
@@ -1211,6 +1310,7 @@ function paginaSerie(i: LevantamentoTemplateInput, pagina: number): string {
   const ultimo = serie[serie.length - 1];
   const variacaoTotal = primeiro.total > 0 ? ((ultimo.total - primeiro.total) / primeiro.total) * 100 : 0;
   const maiorTotal = Math.max(...serie.map((a) => a.total));
+  const subiu = ultimo.total >= primeiro.total;
 
   return `<section class="page content-page">
   ${cabecalho(municipio, `Parte II · Série ${primeiro.ano}–${ultimo.ano}`)}
@@ -1218,7 +1318,13 @@ function paginaSerie(i: LevantamentoTemplateInput, pagina: number): string {
     <div class="kicker">Parte II &middot; Comparativo por ano</div>
 
     <div class="grid-3">
-      ${kpi(`Receita ${primeiro.ano} → ${ultimo.ano}`, `+${brlCompact(ultimo.total - primeiro.total)}`, `de ${brlCompact(primeiro.total)} para ${brlCompact(ultimo.total)} (+${pct(variacaoTotal)})`, "up")}
+      ${kpi(
+        `Receita ${primeiro.ano} → ${ultimo.ano}`,
+        // O sinal era fixo em "+". Numa série que cai, saía "+-R$ 2,1 mi".
+        `${subiu ? "+" : ""}${brlCompact(ultimo.total - primeiro.total)}`,
+        `de ${brlCompact(primeiro.total)} para ${brlCompact(ultimo.total)} (${subiu ? "+" : ""}${pct(variacaoTotal)})`,
+        subiu ? "up" : "",
+      )}
       ${kpi("Matrículas municipais", rede.matriculas > 0 ? int(rede.matriculas) : "—", `Censo ${ou(rede.anoCenso, "—")} &middot; rede municipal`)}
       ${kpi("Unidades escolares", rede.escolas > 0 ? int(rede.escolas) : "—", "rede municipal")}
     </div>
@@ -1251,8 +1357,10 @@ function paginaSerie(i: LevantamentoTemplateInput, pagina: number): string {
 
     <div class="insight mt-1">
       <p style="font-size:8.2pt;line-height:1.4"><span class="strong">O que a série mostra:</span> a receita
-      variou ${pct(variacaoTotal)} entre ${primeiro.ano} e ${ultimo.ano}. Crescimento que vem de correção de valor por aluno
-      e complementações &mdash; e não de rede &mdash; perde força a cada Censo sem recomposição de matrícula.</p>
+      ${subiu ? "cresceu" : "caiu"} ${pct(Math.abs(variacaoTotal))} entre ${primeiro.ano} e ${ultimo.ano}.
+      A série não separa, sozinha, o que veio de correção do valor por aluno do que veio de matrícula &mdash;
+      e a distinção importa: reajuste do valor aluno/ano é conjuntural, matrícula recomposta permanece na base
+      do exercício seguinte. A Parte III mostra a rede que sustenta este número.</p>
     </div>
   </div>
   ${rodape(pagina)}
@@ -1321,11 +1429,12 @@ function paginaRede(i: LevantamentoTemplateInput, pagina: number): string {
     <div class="sec-label">Leitura do valor por aluno</div>
     <div class="grid-3">
       ${kpi("Recurso real por aluno", recursoAluno > 0 ? `R$ ${brl(recursoAluno)}` : "—", "receita FUNDEB &divide; matrículas municipais")}
-      ${kpi("Matrículas em EJA", int(etapa?.eja), "modalidade com expansão possível")}
-      ${kpi("Educação especial", int(etapa?.educacaoEspecial), "maior ponderação no fundo", "up")}
+      ${kpi("Matrículas em EJA", int(etapa?.eja), "pondera 1,00 no urbano &mdash; o piso da tabela")}
+      ${kpi("Educação especial", int(etapa?.educacaoEspecial), "pondera 1,40 no urbano, mais o AEE", "up")}
     </div>
-    <p class="small mt-1">Cada matrícula migrada para jornada integral vale mais no fundo &mdash; é o elo
-    entre esta página e o cenário de estruturação da Parte V.</p>
+    <p class="small mt-1">Nem toda matrícula vale o mesmo no fundo: o fator vai de 1,00 (anos iniciais e EJA
+    urbanos) a 2,17 (creche integral indígena ou quilombola). Migrar jornada para integral e registrar o AEE
+    devido elevam o fator sem mudar o público atendido &mdash; a página seguinte quantifica os dois.</p>
   </div>
   ${rodape(pagina)}
 </section>`;
@@ -1353,6 +1462,9 @@ function paginaPonderacao(i: LevantamentoTemplateInput, pagina: number): string 
   const ponderada = num(p?.ponderadaVaaf);
   const fatorMedio = num(p?.fatorMedio);
   const oportunidades = p?.oportunidades ?? [];
+  const ganho = i.payload?.relatorio_dirigido_base?.ganho ?? null;
+  const componentesGanho = ganho?.componentes ?? [];
+  const valorEquivalente = ganho?.valorPorEquivalente ?? 0;
 
   if (!p || brutas === 0) {
     return `<section class="page content-page">
@@ -1413,17 +1525,34 @@ function paginaPonderacao(i: LevantamentoTemplateInput, pagina: number): string 
 
     ${
       oportunidades.length
-        ? `<div class="sec-label" style="margin-top:.16in">Pontos de conferência no Censo</div>
+        ? `<div class="sec-label" style="margin-top:.16in">Pontos de conferência no Censo &mdash; e o que valem</div>
            <div class="grid-${oportunidades.length > 1 ? "2" : "1"}">
              ${oportunidades
-               .map(
-                 (o) => `<div class="card">
+               .map((o) => {
+                 // O valor em reais vem do ganho apurado, que monetiza a
+                 // distância até a mediana nacional — não o teto. O teto supõe
+                 // creche 100% integral e AEE para todo aluno de educação
+                 // especial: em São Paulo isso dava R$ 173,9 milhões.
+                 const parcela = componentesGanho.find((c) => c.chave === o.chave);
+                 const ateMediana = num(o.matriculasAteMediana);
+                 return `<div class="card">
                    <h3>${esc(o.titulo)}</h3>
-                   <p class="micro"><b>${int(o.matriculas)}</b> matrículas &middot; até
-                   <b>+${int(o.ganhoEquivalentes)}</b> matrículas-equivalentes se a condição for outra.</p>
+                   <p class="micro">Rede em <b>${pct(num(o.indicador) * 100, 1)}</b> &middot; mediana nacional
+                   <b>${pct(num(o.mediana) * 100, 1)}</b>${
+                     ateMediana > 0
+                       ? ` &middot; faltam <b>${int(ateMediana)}</b> matrículas para alcançá-la`
+                       : " &middot; <b>já na mediana ou acima</b>"
+                   }.</p>
+                   ${
+                     parcela && num(parcela.valor) > 0
+                       ? `<p class="micro" style="margin-top:.04in">Fechar essa distância vale
+                          <b>+R$ ${brl(parcela.valor)}</b> por ano no fundo. Teto teórico, se toda a condição
+                          mudasse: R$ ${brl(num(o.ganhoEquivalentes) * num(valorEquivalente))}.</p>`
+                       : ""
+                   }
                    <p class="micro" style="margin-top:.04in">${esc(o.detalhe)}</p>
-                 </div>`,
-               )
+                 </div>`;
+               })
                .join("")}
            </div>`
         : ""
@@ -1572,10 +1701,11 @@ function paginaIdeb(i: LevantamentoTemplateInput, pagina: number): string {
     </div>
 
     <div class="insight mt-1">
-      <p style="font-size:8.2pt;line-height:1.4"><span class="strong">Onde a infraestrutura trava a receita:</span>
-      esgoto, quadra e laboratórios são exatamente os itens que limitam a expansão de tempo integral &mdash; a
-      modalidade com maior valor por aluno na tabela oficial. Investimento dirigido nesses itens habilita a
-      migração de matrícula para faixas mais valorizadas.</p>
+      <p style="font-size:8.2pt;line-height:1.4"><span class="strong">Por que a infraestrutura entra num relatório de receita:</span>
+      jornada integral exige a escola aberta 7 horas por dia, o que puxa cozinha, água e esgoto antes de puxar
+      matrícula. No FUNDEB o tempo integral pondera acima do parcial na mesma etapa &mdash; 1,50 contra 1,00 no
+      fundamental, 1,55 contra 1,25 na creche. Estes percentuais dizem o que a rede tem hoje; <b>não medem</b>
+      quanto cada item trava a expansão, que depende do projeto de cada unidade.</p>
     </div>`
         : `<div class="sec-label">Infraestrutura da rede pública</div>
     <p class="small">O Censo Escolar não retornou o detalhamento de infraestrutura para esta rede no momento da emissão.</p>`
@@ -1653,7 +1783,8 @@ function paginaFiscal(i: LevantamentoTemplateInput, pagina: number): string {
         <div class="card">
           <h3>Por que isso importa para o FUNDEB</h3>
           <p style="font-size:8.2pt;line-height:1.42;color:#33454f">Acima do limite da LRF, o município perde
-          liberdade para expandir folha &mdash; e 70% do FUNDEB é justamente remuneração.
+          liberdade para expandir folha &mdash; e o art. 26 exige que <b>no mínimo</b> 70% do fundo vá para
+          remuneração dos profissionais da educação básica.
           Aumentar a <span class="strong">receita do fundo</span> (Censo íntegro, VAAR, matrículas de maior
           ponderação) é o caminho que amplia a capacidade de pagamento da educação sem
           pressionar a RCL: receita nova do FUNDEB financia a folha da rede dentro da própria vinculação.</p>
@@ -2222,7 +2353,8 @@ function paginaCaderno(i: LevantamentoTemplateInput, pagina: number): string {
       <div class="card">
         <h3>Recomendações técnicas</h3>
         <p style="font-size:8pt;line-height:1.45;color:#33454f">
-        &bull; Validar a base de cálculo do ICMS e a aplicação do percentual mínimo de 28% com assessoria jurídico-tributária.<br>
+        &bull; Conferir a quota-parte do ICMS e a aplicação do mínimo de <b>25%</b> da receita de impostos em MDE
+        (CF art. 212) &mdash; lei orgânica municipal pode fixar percentual maior, e é ele que o tribunal cobra.<br>
         &bull; Conferir documentalmente as bases que determinam a captura de VAAF, VAAT e VAAR junto ao FNDE.<br>
         &bull; Verificar atos normativos locais de EJA, tempo integral e parcerias intersetoriais com impacto no Censo Escolar.</p>
       </div>
