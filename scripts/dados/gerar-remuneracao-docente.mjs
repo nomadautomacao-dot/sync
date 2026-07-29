@@ -60,12 +60,39 @@ const UFS = [
 const DESTINO = join(process.cwd(), "data", "fnde", "remuneracao-docente.json");
 
 /**
- * Salário mensal abaixo disto é resíduo de admissão ou rescisão parcial, não
- * remuneração de referência. Entra na contagem de registros descartados, não
- * na mediana — senão um punhado de meses fracionados derruba a estatística do
- * município inteiro.
+ * Faixa de jornada semanal em que a declaração é inequívoca.
+ *
+ * Vários entes não declaram a carga em horas semanais. A Paraíba é o caso
+ * mais visível: numa amostra de 400 registros, 101 vêm com `"7"` e 22 com
+ * `"2"` — jornadas diárias, ou outra unidade. Proporcionalizar `salário × 40 /
+ * 2` transforma um salário comum em R$ 100 mil, e foi exatamente isso que
+ * produziu medianas municipais de meio milhão na primeira geração.
+ *
+ * Não há como distinguir um contrato legítimo de 7h semanais de uma unidade
+ * trocada. A saída honesta é restringir a estatística à faixa em que a leitura
+ * não é ambígua — 20h a 44h cobre a quase totalidade dos contratos reais do
+ * magistério — e **declarar a cobertura**, para que o relatório saiba dizer
+ * sobre quantos profissionais a mediana foi calculada.
  */
-const SALARIO_MINIMO_PLAUSIVEL = 500;
+const JORNADA_MINIMA = 20;
+const JORNADA_MAXIMA = 44;
+
+/**
+ * Salário mensal, já proporcionalizado, fora desta faixa é resíduo de
+ * admissão ou rescisão parcial, valor anual declarado no lugar do mensal, ou
+ * erro de digitação. Abaixo do mínimo nacional de 2025 (R$ 1.518) ninguém é
+ * contratado em jornada de 20h ou mais.
+ */
+const SALARIO_MINIMO_PLAUSIVEL = 1518;
+const SALARIO_MAXIMO_PLAUSIVEL = 60_000;
+
+/**
+ * Cobertura mínima para a mediana ser publicável. Abaixo disso o número
+ * descreve o subconjunto que sobrou, não a rede — e o relatório precisa
+ * dizer isso em vez de exibir uma cifra.
+ */
+const COBERTURA_MINIMA = 60;
+const REGISTROS_MINIMOS = 5;
 
 function log(mensagem) {
   console.log(`[remuneracao] ${mensagem}`);
@@ -104,8 +131,12 @@ function mediana(valores) {
  */
 function normalizar(salario, cargaHoraria) {
   const carga = Number.parseFloat(cargaHoraria);
-  if (!Number.isFinite(carga) || carga <= 0) return null;
-  return (salario * JORNADA_REFERENCIA) / carga;
+  if (!Number.isFinite(carga) || carga < JORNADA_MINIMA || carga > JORNADA_MAXIMA) return null;
+
+  const normalizado = (salario * JORNADA_REFERENCIA) / carga;
+  if (normalizado < SALARIO_MINIMO_PLAUSIVEL || normalizado > SALARIO_MAXIMO_PLAUSIVEL) return null;
+
+  return normalizado;
 }
 
 function agregar(registros, destino) {
@@ -114,18 +145,6 @@ function agregar(registros, destino) {
 
   for (const registro of registros) {
     if (!registro.COD_MUNI) continue;
-
-    const salario = Number.parseFloat(registro.VL_SALARIO);
-    if (!Number.isFinite(salario) || salario < SALARIO_MINIMO_PLAUSIVEL) {
-      descartados += 1;
-      continue;
-    }
-
-    const normalizado = normalizar(salario, registro.NU_CARGA_HORARIA);
-    if (normalizado === null) {
-      descartados += 1;
-      continue;
-    }
 
     const codigo = String(registro.COD_MUNI);
     let ente = porMunicipio.get(codigo);
@@ -138,11 +157,27 @@ function agregar(registros, destino) {
         efetivos: 0,
         temporarios: 0,
         outrosProfissionais: 0,
+        magisterioDeclarado: 0,
       };
       porMunicipio.set(codigo, ente);
     }
 
-    if (registro.TP_CATEGORIA === "Profissionais do magistério") {
+    const ehMagisterio = registro.TP_CATEGORIA === "Profissionais do magistério";
+    // Contado antes de qualquer filtro: é o denominador da cobertura, e sem
+    // ele não dá para saber se a mediana descreve a rede ou uma sobra dela.
+    if (ehMagisterio) ente.magisterioDeclarado += 1;
+
+    const salario = Number.parseFloat(registro.VL_SALARIO);
+    const normalizado = Number.isFinite(salario) && salario > 0
+      ? normalizar(salario, registro.NU_CARGA_HORARIA)
+      : null;
+
+    if (normalizado === null) {
+      descartados += 1;
+      continue;
+    }
+
+    if (ehMagisterio) {
       ente.magisterio.push(normalizado);
       // "Docente ..." separa quem está em regência de quem exerce direção ou
       // coordenação — ambos são magistério, mas a remuneração docente é a
@@ -163,15 +198,30 @@ function agregar(registros, destino) {
     if (ente.magisterio.length === 0) continue;
 
     const abaixoDoPiso = ente.magisterio.filter((s) => s < piso).length;
+    const cobertura =
+      ente.magisterioDeclarado > 0
+        ? Math.round((ente.magisterio.length / ente.magisterioDeclarado) * 10000) / 100
+        : 0;
 
     destino[codigo] = {
       uf: ente.uf,
       nome: ente.nome,
+      /** Profissionais do magistério declarados, antes dos filtros. */
+      magisterioDeclarado: ente.magisterioDeclarado,
+      /** Subconjunto com jornada e salário em faixa inequívoca. */
       magisterio: ente.magisterio.length,
       docentes: ente.docentes.length,
       efetivos: ente.efetivos,
       temporarios: ente.temporarios,
       outros: ente.outrosProfissionais,
+      cobertura,
+      /**
+       * Cobertura baixa não invalida o dado — indica que a declaração do ente
+       * usa outra unidade de jornada ou tem muito registro parcial. O leitor
+       * usa isto para omitir a cifra em vez de exibir um número que descreve
+       * a sobra e não a rede.
+       */
+      confiavel: cobertura >= COBERTURA_MINIMA && ente.magisterio.length >= REGISTROS_MINIMOS,
       medianaMagisterio: mediana(ente.magisterio),
       medianaDocentes: mediana(ente.docentes),
       abaixoDoPiso,
@@ -221,13 +271,17 @@ async function main() {
   const json = JSON.stringify(conteudo);
   writeFileSync(DESTINO, json, "utf8");
 
-  const abaixo = Object.values(municipios).filter((m) => m.abaixoDoPisoPct > 50).length;
+  const confiaveis = Object.values(municipios).filter((m) => m.confiavel);
+  const abaixo = confiaveis.filter((m) => m.abaixoDoPisoPct > 50).length;
   log(
     `escrito ${DESTINO} — ${(json.length / 1024 / 1024).toFixed(2)} MB, ` +
       `${total.toLocaleString("pt-BR")} municípios, ${(bytesTotal / 1024 / 1024).toFixed(0)} MB lidos, ` +
       `${descartadosTotal.toLocaleString("pt-BR")} registros descartados`,
   );
-  log(`municípios com mais da metade do magistério abaixo do piso: ${abaixo.toLocaleString("pt-BR")}`);
+  log(
+    `${confiaveis.length.toLocaleString("pt-BR")} municípios com cobertura suficiente; ` +
+      `${abaixo.toLocaleString("pt-BR")} deles com mais da metade do magistério abaixo do piso`,
+  );
 }
 
 main().catch((erro) => {

@@ -162,7 +162,10 @@ export interface LevantamentoPayload {
       ano?: number;
       piso?: number;
       jornadaReferencia?: number;
+      magisterioDeclarado?: number;
       magisterio?: number;
+      cobertura?: number;
+      confiavel?: boolean;
       docentes?: number;
       efetivos?: number;
       temporarios?: number;
@@ -1696,6 +1699,10 @@ function blocoPiso(i: LevantamentoTemplateInput): string {
   const piso = num(r.piso);
   const abaixoPct = num(r.abaixoDoPisoPct);
   const razao = num(r.razaoMedianaPiso);
+  // Cobertura baixa significa que o ente declara a jornada em outra unidade.
+  // Exibir a mediana com ressalva não resolve: número errado com asterisco
+  // continua sendo lido como número.
+  const confiavel = r.confiavel !== false;
 
   return `
     <div class="sec-label" style="margin-top:.16in">Piso do magistério &middot; declaração de ${ou(r.ano, "—")}</div>
@@ -1703,22 +1710,35 @@ function blocoPiso(i: LevantamentoTemplateInput): string {
       ${kpi("Piso nacional", `R$ ${brl(piso)}`, `jornada de ${int(r.jornadaReferencia)}h`)}
       ${kpi(
         "Mediana do magistério",
-        mediana > 0 ? `R$ ${brl(mediana)}` : "—",
-        razao > 0 ? `${razao.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}× o piso` : "proporcionalizada a 40h",
-        razao >= 1 ? "up" : "",
+        confiavel && mediana > 0 ? `R$ ${brl(mediana)}` : "—",
+        confiavel && razao > 0
+          ? `${razao.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}× o piso`
+          : "jornada declarada em unidade não comparável",
+        confiavel && razao >= 1 ? "up" : "",
       )}
       ${kpi(
         "Abaixo do piso",
-        abaixoPct > 0 ? pct(abaixoPct) : "nenhum",
-        `${int(r.abaixoDoPiso)} de ${int(r.magisterio)} profissionais`,
-        abaixoPct > 0 ? "" : "up",
+        !confiavel ? "—" : abaixoPct > 0 ? pct(abaixoPct) : "nenhum",
+        confiavel
+          ? `${int(r.abaixoDoPiso)} de ${int(r.magisterio)} profissionais`
+          : "não apurável nesta declaração",
+        confiavel && abaixoPct === 0 ? "up" : "",
       )}
       ${kpi(
-        "Vínculo temporário",
-        r.temporariosPct == null ? "—" : pct(r.temporariosPct),
-        `${int(r.temporarios)} de ${int(r.magisterio)} no magistério`,
+        "Magistério declarado",
+        int(r.magisterioDeclarado),
+        r.temporariosPct == null ? "profissionais" : `${pct(r.temporariosPct)} em vínculo temporário`,
       )}
     </div>
+    ${
+      !confiavel
+        ? `<p class="micro" style="margin-top:.04in"><b>Por que a mediana não é exibida:</b> apenas
+           ${int(r.magisterio)} dos ${int(r.magisterioDeclarado)} registros do magistério
+           (${pct(r.cobertura)}) trazem jornada semanal em faixa comparável ao piso. O ente declara a carga
+           horária em outra unidade, e proporcionalizar esses registros produziria uma cifra sem sentido.
+           A conferência precisa ser feita na folha.</p>`
+        : ""
+    }
     <p class="micro" style="margin-top:.05in">Salários proporcionalizados à jornada de referência do piso, como
     admite o art. 2º, §3º da Lei nº 11.738/2008 &mdash; comparar um contrato de 20h com o piso cheio produziria
     descumprimento onde não há. <b>A fórmula do piso mudou em 2026:</b> a Lei nº 15.437/2026 substituiu o

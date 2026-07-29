@@ -28,6 +28,21 @@ import { join } from "node:path";
 
 const ARQUIVO = join("data", "fnde", "remuneracao-docente.json");
 
+/**
+ * Teto de plausibilidade para a **mediana municipal** do magistério.
+ *
+ * O gerador já descarta registro a registro fora de faixa, mas isso não pega
+ * o ente que declara um valor fixo e errado para a folha inteira: sobram
+ * registros "válidos" e a mediana inteira sai deslocada. Taquaral de Goiás é
+ * o caso — mediana cravada no teto do filtro sobre 14 registros.
+ *
+ * A distribuição nacional resolve: a mediana das medianas é ~R$ 5,3 mil e o
+ * p90 é ~R$ 8,2 mil. Uma mediana municipal acima de R$ 25 mil, cerca de cinco
+ * vezes o piso, não descreve nenhuma rede real do país — descreve um erro de
+ * declaração. Marcar como não confiável é mais honesto que exibir.
+ */
+const MEDIANA_MAXIMA_PLAUSIVEL = 25_000;
+
 export interface RemuneracaoMunicipal {
   fonte: string;
   ano: number;
@@ -36,8 +51,22 @@ export interface RemuneracaoMunicipal {
   jornadaReferencia: number;
   uf: string;
   nome: string;
-  /** Profissionais do magistério declarados (docentes, direção e coordenação). */
+  /** Profissionais do magistério declarados pelo ente, antes dos filtros. */
+  magisterioDeclarado: number;
+  /**
+   * Subconjunto com jornada e salário em faixa inequívoca — a base da
+   * mediana. Vários entes declaram a carga em unidade que não é a hora
+   * semanal, e proporcionalizar esses registros produz cifras absurdas.
+   */
   magisterio: number;
+  /** Participação do subconjunto sobre o declarado, em %. */
+  cobertura: number;
+  /**
+   * `false` quando a cobertura é baixa demais para a mediana descrever a
+   * rede. O relatório deve omitir a cifra nesse caso, não exibi-la com
+   * ressalva — número errado com asterisco continua sendo lido como número.
+   */
+  confiavel: boolean;
   /** Subconjunto em regência de classe. */
   docentes: number;
   efetivos: number;
@@ -65,7 +94,10 @@ interface ArquivoRemuneracao {
     {
       uf?: string;
       nome?: string;
+      magisterioDeclarado?: number;
       magisterio?: number;
+      cobertura?: number;
+      confiavel?: boolean;
       docentes?: number;
       efetivos?: number;
       temporarios?: number;
@@ -111,7 +143,11 @@ export function getRemuneracaoMunicipal(codigoIBGE: string): RemuneracaoMunicipa
     jornadaReferencia: arquivo.jornadaReferencia ?? 40,
     uf: registro.uf ?? "",
     nome: registro.nome ?? "",
+    magisterioDeclarado: registro.magisterioDeclarado ?? registro.magisterio,
     magisterio: registro.magisterio,
+    cobertura: registro.cobertura ?? 100,
+    confiavel:
+      registro.confiavel !== false && mediana !== null && mediana <= MEDIANA_MAXIMA_PLAUSIVEL,
     docentes: registro.docentes ?? 0,
     efetivos: registro.efetivos ?? 0,
     temporarios: registro.temporarios ?? 0,
