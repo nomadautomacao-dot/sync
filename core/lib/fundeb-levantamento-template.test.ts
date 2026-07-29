@@ -7,6 +7,7 @@ import {
 } from "@/core/lib/fundeb-levantamento-template";
 import { getSituacaoVaar } from "@/core/lib/fundeb-vaar";
 import { getPonderacaoMunicipal } from "@/core/lib/fundeb-ponderacao";
+import { getConformidadeSiope } from "@/core/lib/siope-indicadores";
 import type { RelatorioFundeb } from "@/modules/levantamento-fundeb/types";
 
 /**
@@ -132,6 +133,25 @@ describe("template do Levantamento FUNDEB", () => {
     expect(paginas(html)).toBe(LEVANTAMENTO_TOTAL_PAGINAS);
     expect(html).toContain("Situação no VAAR não disponível");
     expect(html).toContain("Matrícula ponderada não disponível");
+    expect(html).toContain("Declaração do município ao SIOPE não localizada");
+  });
+
+  it("apura as vinculações e não confunde o que elas travam", () => {
+    // O erro mais comum do material de mercado é dizer que descumprir uma
+    // vinculação bloqueia o FUNDEB. Não bloqueia: o art. 21 manda repassar
+    // automaticamente. O que trava é convênio, via CAUC, e a aprovação de
+    // contas no tribunal.
+    const html = gerar({
+      payload: {
+        relatorio_dirigido_base: { conformidade: getConformidadeSiope("2801207") },
+      } as LevantamentoTemplateInput["payload"],
+    });
+
+    expect(paginas(html)).toBe(LEVANTAMENTO_TOTAL_PAGINAS);
+    expect(html).toContain("Percentuais apurados pelo SIOPE");
+    expect(html).toContain("Não trava o FUNDEB");
+    expect(html).toContain("Trava convênio e contas");
+    expect(html).not.toContain("Declaração do município ao SIOPE não localizada");
   });
 
   it("mostra o denominador ponderado ao lado da matrícula bruta", () => {

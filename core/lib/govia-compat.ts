@@ -22,6 +22,7 @@ import { getValorAlunoAno } from "@/core/lib/fundeb-valor-aluno";
 import { getEquidadeMunicipal } from "@/core/lib/inep-equidade";
 import { getSituacaoVaar } from "@/core/lib/fundeb-vaar";
 import { getPonderacaoMunicipal } from "@/core/lib/fundeb-ponderacao";
+import { getConformidadeSiope } from "@/core/lib/siope-indicadores";
 
 interface IbgeMunicipioResponse {
   id: number;
@@ -877,6 +878,12 @@ function buildRelatorioDirigidoBase({
      * usa. Ver `core/lib/fundeb-ponderacao.ts`.
      */
     ponderacao: getPonderacaoMunicipal(ident.codigoIBGE),
+    /**
+     * Vinculações da educação como o SIOPE as apura — 25% MDE, 70%
+     * remuneração, 15% capital do VAAT, IEI, teto de 10% não aplicado.
+     * Ver `core/lib/siope-indicadores.ts`.
+     */
+    conformidade: getConformidadeSiope(ident.codigoIBGE),
     perfilIBGE: ibgeIndicators ? {
       disponivel: true,
       populacaoEstimada: ibgeIndicators.populacaoEstimada,

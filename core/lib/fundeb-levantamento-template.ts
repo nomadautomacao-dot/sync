@@ -14,7 +14,7 @@ import { DESCRICAO_CONDICIONALIDADE, type Condicionalidade } from "@/core/lib/fu
  * confere antes de devolver o PDF.
  */
 
-export const LEVANTAMENTO_TOTAL_PAGINAS = 12;
+export const LEVANTAMENTO_TOTAL_PAGINAS = 13;
 
 /** Payload do `buildGoviaMunicipioCompleto`, na parte que este template lê. */
 export interface LevantamentoPayload {
@@ -132,6 +132,27 @@ export interface LevantamentoPayload {
         ganhoEquivalentes?: number;
         detalhe?: string;
       }>;
+    } | null;
+    /**
+     * Vinculações da educação apuradas pelo SIOPE — ver
+     * `core/lib/siope-indicadores.ts`. Não bloqueiam o FUNDEB, mas entram no
+     * CAUC e viciam a prestação de contas.
+     */
+    conformidade?: {
+      ano?: number;
+      defasado?: boolean;
+      indicadores?: Array<{
+        cod?: string;
+        chave?: string;
+        rotulo?: string;
+        valor?: number;
+        limite?: number | null;
+        sentido?: "min" | "max" | null;
+        base?: string | null;
+        conforme?: boolean | null;
+        folga?: number | null;
+      }>;
+      descumpridas?: Array<{ cod?: string; rotulo?: string; valor?: number; limite?: number | null }>;
     } | null;
     perfilIBGE?: {
       /** O IBGE devolve o ano como texto; não assuma número. */
@@ -1578,6 +1599,120 @@ function paginaFiscal(i: LevantamentoTemplateInput, pagina: number): string {
 </section>`;
 }
 
+/**
+ * Vinculações da educação, como o SIOPE as apura.
+ *
+ * O relatório cobria 25% de MDE e 70% de remuneração por estimativa e não
+ * cobria nada das outras: 15% de capital do VAAT, o percentual da educação
+ * infantil, o teto de 10% não aplicado e o piso de 20% de destinação ao fundo.
+ *
+ * A distinção que a página precisa fazer com clareza: **nenhuma delas bloqueia
+ * o FUNDEB** — o repasse é automático (art. 21) e a busca textual da lei não
+ * encontra hipótese de suspensão nem de devolução. O que elas travam é
+ * convênio (via CAUC) e aprovação de contas no tribunal. Dizer "você perde o
+ * FUNDEB" seria falso e é o erro mais comum do material de mercado.
+ */
+function paginaConformidade(i: LevantamentoTemplateInput, pagina: number): string {
+  const id = i.relatorio.identificacao;
+  const municipio = `${id.municipioNome} — ${id.uf}`;
+  const c = i.payload?.relatorio_dirigido_base?.conformidade;
+  const indicadores = c?.indicadores ?? [];
+
+  if (!c || indicadores.length === 0) {
+    return `<section class="page content-page">
+  ${cabecalho(municipio, "Parte IV · Vinculações da educação")}
+  <div class="page-body">
+    <div class="kicker">Parte IV &middot; O que precisa ser cumprido para usar o recurso</div>
+    <div class="status"><span class="dot"></span> Declaração do município ao SIOPE não localizada</div>
+    <p class="small mt-1">O SIOPE não devolveu indicadores para este município nos dois últimos exercícios.
+    A ausência de declaração é, em si, um achado: o art. 38, §1º da Lei nº 14.113/2020 condiciona
+    transferências voluntárias e operações de crédito ao registro no sistema em até 30 dias do encerramento
+    de cada bimestre.</p>
+  </div>
+  ${rodape(pagina)}
+</section>`;
+  }
+
+  const comParametro = indicadores.filter((ind) => ind.limite != null && ind.sentido);
+  const descumpridas = comParametro.filter((ind) => ind.conforme === false);
+  const cumpridas = comParametro.length - descumpridas.length;
+
+  const linha = (ind: NonNullable<typeof indicadores>[number]) => {
+    const temParametro = ind.limite != null && ind.sentido;
+    const marca =
+      ind.conforme === true ? "✓" : ind.conforme === false ? "✕" : "—";
+    const cor = ind.conforme === false ? ' style="color:var(--red)"' : ind.conforme === true ? ' style="color:var(--good)"' : "";
+    return `<tr>
+      <td class="r"${cor}><b>${marca}</b></td>
+      <td>${esc(ind.rotulo)}${ind.base ? ` <span class="micro">${esc(ind.base)}</span>` : ""}</td>
+      <td class="r"><b>${pct(ind.valor, 2)}</b></td>
+      <td class="r">${temParametro ? `${ind.sentido === "min" ? "mín." : "máx."} ${pct(ind.limite, 0)}` : "—"}</td>
+      <td class="r"${cor}>${
+        ind.folga == null ? "—" : `${num(ind.folga) < 0 ? "&minus;" : "+"}${pct(Math.abs(num(ind.folga)), 2)}`
+      }</td>
+    </tr>`;
+  };
+
+  return `<section class="page content-page">
+  ${cabecalho(municipio, "Parte IV · Vinculações da educação")}
+  <div class="page-body">
+    <div class="kicker">Parte IV &middot; O que precisa ser cumprido para usar o recurso</div>
+
+    ${
+      descumpridas.length === 0
+        ? `<div class="status good"><span class="dot"></span> As ${int(comParametro.length)} vinculações com
+           parâmetro legal estão cumpridas na declaração de ${ou(c.ano, "—")}</div>`
+        : `<div class="status bad"><span class="dot"></span> ${int(descumpridas.length)} de
+           ${int(comParametro.length)} vinculações descumpridas na declaração de ${ou(c.ano, "—")}</div>`
+    }
+    ${
+      c.defasado
+        ? `<p class="micro" style="margin-top:.04in"><b>Atenção:</b> o município não consta com declaração no
+           exercício de referência; os percentuais acima são de ${ou(c.ano, "—")}.</p>`
+        : ""
+    }
+
+    <div class="sec-label" style="margin-top:.14in">Percentuais apurados pelo SIOPE</div>
+    <table class="tb">
+      <tr><th></th><th>Vinculação</th><th class="r">Apurado</th><th class="r">Parâmetro</th><th class="r">Folga</th></tr>
+      ${indicadores.map(linha).join("")}
+    </table>
+
+    <div class="grid-2 mt-2">
+      <div class="card">
+        <h3>O que o descumprimento trava &mdash; e o que não trava</h3>
+        <p class="micro"><b>Não trava o FUNDEB.</b> O art. 21 da Lei nº 14.113/2020 manda repassar o fundo
+        automaticamente, nos mesmos prazos das demais transferências constitucionais. A lei não prevê
+        hipótese de suspensão do repasse nem de devolução por descumprimento das vinculações.</p>
+        <p class="micro" style="margin-top:.05in"><b>Trava convênio e contas.</b> As quatro vinculações da
+        educação entraram no extrato do <b>CAUC</b> em 2025 (IN STN/MF nº 8/2025, art. 12, XIX a XXII), o que
+        alcança convênios e contratos de repasse. E a repressão real acontece no <b>julgamento das contas</b>
+        pelo tribunal, com imputação de débito e multa &mdash; fora da Lei do FUNDEB.</p>
+      </div>
+      <div class="card">
+        <h3>Leituras que costumam sair erradas</h3>
+        <p class="micro">&bull; Os <b>70%</b> são para <b>profissionais da educação básica em efetivo
+        exercício</b>, não apenas para o magistério: incluem apoio técnico, administrativo e operacional.
+        É piso de destinação, não teto.</p>
+        <p class="micro" style="margin-top:.04in">&bull; O uso no exercício seguinte tem prazo de
+        <b>quadrimestre</b>, não de trimestre, e exige abertura de crédito adicional &mdash; não é
+        automático (art. 25, §3º).</p>
+        <p class="micro" style="margin-top:.04in">&bull; Os <b>15%</b> de capital incidem sobre a
+        complementação VAAT de cada rede (art. 27). O percentual da educação infantil é
+        <b>individualizado</b> pelo IEI &mdash; os 50% do art. 28 são meta agregada nacional, não obrigação
+        igual para todo município.</p>
+      </div>
+    </div>
+
+    <p class="small mt-1">Declaração de ${ou(c.ano, "—")} ao SIOPE, 6º bimestre. O registro é obrigatório em
+    até 30 dias do encerramento de cada bimestre; a omissão suspende transferências voluntárias e operações
+    de crédito (art. 38, §1º) e, desde 2021, a ausência de dados no Siconfi e no SIOPE em 31 de agosto
+    inabilita o município à complementação VAAT do exercício seguinte.</p>
+  </div>
+  ${rodape(pagina)}
+</section>`;
+}
+
 function paginaCenario(i: LevantamentoTemplateInput, pagina: number): string {
   const r = i.relatorio;
   const id = r.identificacao;
@@ -1779,6 +1914,7 @@ export function generateLevantamentoHtml(input: LevantamentoTemplateInput): stri
     paginaPonderacao,
     paginaIdeb,
     paginaFiscal,
+    paginaConformidade,
     paginaCenario,
     paginaCaderno,
   ].map((fn, indice) => fn(input, indice + 1));
