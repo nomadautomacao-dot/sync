@@ -35,6 +35,12 @@ export interface IndicadorSiope {
   chave: string;
   rotulo: string;
   valor: number;
+  /**
+   * Nem todo indicador do SIOPE é percentual. O 4.8 e o 4.10 são valores por
+   * aluno e o 7.3 é saldo — todos em reais. Formatá-los com `%` produzia
+   * "investimento por aluno: 13.466,12%" no relatório.
+   */
+  unidade: "percentual" | "reais";
   /** Parâmetro legal, quando existe. */
   limite: number | null;
   sentido: "min" | "max" | null;
@@ -63,6 +69,7 @@ export interface ConformidadeSiope {
 
 interface MetaIndicador {
   cod?: string;
+  unidade?: "percentual" | "reais";
   chave?: string;
   rotulo?: string;
   limite?: number | null;
@@ -122,6 +129,7 @@ export function getConformidadeSiope(codigoIBGE: string): ConformidadeSiope | nu
       chave: definicao.chave ?? "",
       rotulo: definicao.rotulo ?? "",
       valor,
+      unidade: definicao.unidade ?? "percentual",
       limite,
       sentido,
       base: definicao.base ?? null,
@@ -131,6 +139,20 @@ export function getConformidadeSiope(codigoIBGE: string): ConformidadeSiope | nu
   }
 
   if (indicadores.length === 0) return null;
+
+  // O art. 28 não impõe um percentual igual para todo município: os 50% são
+  // meta agregada nacional, e o mínimo individual é o próprio IEI (art. 16,
+  // VII). Sem cruzar os dois, as duas linhas apareciam no relatório como
+  // "sem parâmetro" — quando uma é exatamente o parâmetro da outra.
+  const iei = indicadores.find((i) => i.chave === "iei");
+  const aplicadoInfantil = indicadores.find((i) => i.chave === "infantilVaat");
+
+  if (iei && aplicadoInfantil) {
+    aplicadoInfantil.limite = iei.valor;
+    aplicadoInfantil.sentido = "min";
+    aplicadoInfantil.conforme = aplicadoInfantil.valor >= iei.valor;
+    aplicadoInfantil.folga = Math.round((aplicadoInfantil.valor - iei.valor) * 100) / 100;
+  }
 
   indicadores.sort((a, b) => a.cod.localeCompare(b.cod, undefined, { numeric: true }));
 

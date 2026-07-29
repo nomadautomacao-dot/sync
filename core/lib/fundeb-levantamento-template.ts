@@ -146,6 +146,7 @@ export interface LevantamentoPayload {
         chave?: string;
         rotulo?: string;
         valor?: number;
+        unidade?: "percentual" | "reais";
         limite?: number | null;
         sentido?: "min" | "max" | null;
         base?: string | null;
@@ -1793,13 +1794,27 @@ function paginaConformidade(i: LevantamentoTemplateInput, pagina: number): strin
     const marca =
       ind.conforme === true ? "✓" : ind.conforme === false ? "✕" : "—";
     const cor = ind.conforme === false ? ' style="color:var(--red)"' : ind.conforme === true ? ' style="color:var(--good)"' : "";
+
+    // Nem todo indicador do SIOPE é percentual: investimento por aluno e saldo
+    // não aplicado vêm em reais, e formatá-los com "%" produzia linhas como
+    // "investimento por aluno: 13.466,12%".
+    const emReais = ind.unidade === "reais";
+    const formatar = (valor: unknown, casas = 2) =>
+      emReais ? `R$ ${brl(valor)}` : pct(valor, casas);
+
     return `<tr>
       <td class="r"${cor}><b>${marca}</b></td>
       <td>${esc(ind.rotulo)}${ind.base ? ` <span class="micro">${esc(ind.base)}</span>` : ""}</td>
-      <td class="r"><b>${pct(ind.valor, 2)}</b></td>
-      <td class="r">${temParametro ? `${ind.sentido === "min" ? "mín." : "máx."} ${pct(ind.limite, 0)}` : "—"}</td>
+      <td class="r"><b>${formatar(ind.valor)}</b></td>
+      <td class="r">${
+        temParametro
+          ? `${ind.sentido === "min" ? "mín." : "máx."} ${formatar(ind.limite, emReais ? 2 : 2)}`
+          : "—"
+      }</td>
       <td class="r"${cor}>${
-        ind.folga == null ? "—" : `${num(ind.folga) < 0 ? "&minus;" : "+"}${pct(Math.abs(num(ind.folga)), 2)}`
+        ind.folga == null
+          ? "—"
+          : `${num(ind.folga) < 0 ? "&minus;" : "+"}${formatar(Math.abs(num(ind.folga)))}`
       }</td>
     </tr>`;
   };
@@ -1894,8 +1909,17 @@ function paginaProgramas(i: LevantamentoTemplateInput, pagina: number): string {
             </tr>`,
           )
           .join("")}
-        <tr class="total"><td>Total estimado</td><td class="r">${int(p?.matriculasConsideradas)}</td><td class="r">&mdash;</td><td class="r">R$ ${brl(p?.valorAnual)}</td></tr>
-      </table>`
+        <tr class="total"><td>Total estimado</td><td class="r">${int(
+          // A soma da coluna, não o total de estudantes: o AEE é contraturno e
+          // aparece como linha própria, então quem somasse a coluna e comparasse
+          // com o número de alunos encontraria uma diferença sem explicação.
+          faixas.reduce((total, f) => total + num(f.matriculas), 0),
+        )}</td><td class="r">&mdash;</td><td class="r">R$ ${brl(p?.valorAnual)}</td></tr>
+      </table>
+      <p class="micro" style="margin-top:.04in">A coluna soma
+      ${int(faixas.reduce((total, f) => total + num(f.matriculas), 0))} linhas para
+      ${int(p?.matriculasConsideradas)} estudantes: o atendimento educacional especializado é contraturno e
+      soma ao repasse sem ser matrícula adicional de escolarização.</p>`
     : `<p class="small">Matrículas insuficientes para estimar o repasse do PNAE.</p>`;
 
   return `<section class="page content-page">

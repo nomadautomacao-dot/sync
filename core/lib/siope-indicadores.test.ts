@@ -64,6 +64,45 @@ describe("conformidade das vinculações no SIOPE", () => {
     expect([...chaves].some((k) => ["capitalVaat", "naoAplicado", "iei"].includes(k))).toBe(true);
   });
 
+  it("distingue indicador em reais de indicador percentual", () => {
+    // Achado num PDF real de Serra do Ramalho/BA: o relatorio exibia
+    // "Investimento por aluno da educação básica — 13.466,12%". São reais,
+    // não percentual, e o mesmo vale para a despesa com professores por aluno
+    // e para o saldo não utilizado.
+    const c = getConformidadeSiope("2930154")!;
+    const porChave = new Map(c.indicadores.map((i) => [i.chave, i]));
+
+    for (const chave of ["investimentoPorAluno", "professorPorAluno", "saldoNaoUtilizado"]) {
+      const ind = porChave.get(chave);
+      if (ind) expect(ind.unidade, `indicador ${chave}`).toBe("reais");
+    }
+
+    for (const chave of ["mde", "remuneracao", "capitalVaat", "naoAplicado"]) {
+      const ind = porChave.get(chave);
+      if (ind) expect(ind.unidade, `indicador ${chave}`).toBe("percentual");
+    }
+
+    // Percentual acima de 1.000 é sinal de que a unidade foi trocada.
+    for (const ind of c.indicadores) {
+      if (ind.unidade === "percentual") expect(ind.valor, ind.rotulo).toBeLessThan(1_000);
+    }
+  });
+
+  it("usa o IEI como mínimo individualizado da educação infantil", () => {
+    // Os 50% do art. 28 são meta agregada nacional; o mínimo de cada município
+    // é o proprio IEI (art. 16, VII). Sem cruzar os dois, as duas linhas saíam
+    // no relatório como "sem parâmetro" — quando uma é o parâmetro da outra.
+    const c = getConformidadeSiope("2930154")!;
+    const iei = c.indicadores.find((i) => i.chave === "iei");
+    const aplicado = c.indicadores.find((i) => i.chave === "infantilVaat");
+
+    expect(iei).toBeDefined();
+    expect(aplicado).toBeDefined();
+    expect(aplicado!.limite).toBe(iei!.valor);
+    expect(aplicado!.sentido).toBe("min");
+    expect(aplicado!.conforme).toBe(aplicado!.valor >= iei!.valor);
+  });
+
   it("marca o ano da declaração e a defasagem", () => {
     const c = getConformidadeSiope("2801207")!;
     expect(c.ano).toBeGreaterThanOrEqual(2024);

@@ -155,6 +155,22 @@ describe("template do Levantamento FUNDEB", () => {
     expect(html).not.toContain("Declaração do município ao SIOPE não localizada");
   });
 
+  it("não formata valor em reais como percentual", () => {
+    // Achado num PDF real de Serra do Ramalho/BA: a tabela de vinculações
+    // exibia "Investimento por aluno da educação básica — 13.466,12%".
+    // São R$ 13.466,12. O mesmo valia para a despesa com professores por aluno
+    // e para o saldo do FUNDEB não utilizado (R$ 195.273,45).
+    const html = gerar({
+      payload: {
+        relatorio_dirigido_base: { conformidade: getConformidadeSiope("2930154") },
+      } as LevantamentoTemplateInput["payload"],
+    });
+
+    // Nenhum percentual de quatro dígitos ou mais deve sobrar na página.
+    expect(html).not.toMatch(/\d{1,3}\.\d{3},\d{2}%/);
+    expect(html).toContain("Investimento por aluno da educação básica");
+  });
+
   it("liga o Censo aos três fluxos que ele define", () => {
     // A tese da página: o Censo não define só o FUNDEB. Alimentação escolar e
     // salário-educação usam as mesmas matrículas, então um erro cadastral

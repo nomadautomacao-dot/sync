@@ -60,20 +60,20 @@ const DESTINO = join(process.cwd(), "data", "fnde", "siope-indicadores.json");
  * bom ou ruim, porque depende do indicador.
  */
 const INDICADORES = [
-  { cod: "1.1", chave: "mde", rotulo: "Aplicação em MDE", limite: 25, sentido: "min", base: "CF art. 212" },
-  { cod: "1.2", chave: "remuneracao", rotulo: "FUNDEB em remuneração dos profissionais", limite: 70, sentido: "min", base: "Lei 14.113/2020, art. 26" },
-  { cod: "1.3", chave: "fundebOutrasMde", rotulo: "FUNDEB em MDE que não remuneração", limite: null, sentido: null, base: "Lei 14.113/2020, art. 25" },
-  { cod: "1.4", chave: "naoAplicado", rotulo: "Recursos do FUNDEB não aplicados no exercício", limite: 10, sentido: "max", base: "Lei 14.113/2020, art. 25, §3º" },
-  { cod: "1.5", chave: "capitalVaat", rotulo: "Complementação VAAT em despesas de capital", limite: 15, sentido: "min", base: "Lei 14.113/2020, art. 27" },
-  { cod: "1.6", chave: "infantilVaat", rotulo: "Complementação VAAT em educação infantil", limite: null, sentido: "min", base: "Lei 14.113/2020, art. 28" },
-  { cod: "1.7", chave: "iei", rotulo: "IEI — mínimo do VAAT para educação infantil", limite: null, sentido: null, base: "Lei 14.113/2020, art. 16, VII" },
-  { cod: "1.8", chave: "destinacaoFundeb", rotulo: "Destinação de impostos ao FUNDEB", limite: 20, sentido: "min", base: "CF art. 212-A, II" },
-  { cod: "2.1", chave: "fundebInfantil", rotulo: "FUNDEB aplicado na educação infantil", limite: null, sentido: null, base: null },
-  { cod: "2.2", chave: "fundebFundamental", rotulo: "FUNDEB aplicado no ensino fundamental", limite: null, sentido: null, base: null },
-  { cod: "3.2", chave: "pessoalEducacao", rotulo: "Pessoal e encargos da educação sobre a despesa em MDE", limite: null, sentido: null, base: null },
-  { cod: "4.8", chave: "investimentoPorAluno", rotulo: "Investimento por aluno da educação básica", limite: null, sentido: null, base: null },
-  { cod: "4.10", chave: "professorPorAluno", rotulo: "Despesa com professores por aluno", limite: null, sentido: null, base: null },
-  { cod: "7.3", chave: "saldoNaoUtilizado", rotulo: "Recursos do FUNDEB não utilizados", limite: null, sentido: null, base: null },
+  { cod: "1.1", unidade: "percentual", chave: "mde", rotulo: "Aplicação em MDE", limite: 25, sentido: "min", base: "CF art. 212" },
+  { cod: "1.2", unidade: "percentual", chave: "remuneracao", rotulo: "FUNDEB em remuneração dos profissionais", limite: 70, sentido: "min", base: "Lei 14.113/2020, art. 26" },
+  { cod: "1.3", unidade: "percentual", chave: "fundebOutrasMde", rotulo: "FUNDEB em MDE que não remuneração", limite: null, sentido: null, base: "Lei 14.113/2020, art. 25" },
+  { cod: "1.4", unidade: "percentual", chave: "naoAplicado", rotulo: "Recursos do FUNDEB não aplicados no exercício", limite: 10, sentido: "max", base: "Lei 14.113/2020, art. 25, §3º" },
+  { cod: "1.5", unidade: "percentual", chave: "capitalVaat", rotulo: "Complementação VAAT em despesas de capital", limite: 15, sentido: "min", base: "Lei 14.113/2020, art. 27" },
+  { cod: "1.6", unidade: "percentual", chave: "infantilVaat", rotulo: "Complementação VAAT em educação infantil", limite: null, sentido: "min", base: "Lei 14.113/2020, art. 28" },
+  { cod: "1.7", unidade: "percentual", chave: "iei", rotulo: "IEI — mínimo do VAAT para educação infantil", limite: null, sentido: null, base: "Lei 14.113/2020, art. 16, VII" },
+  { cod: "1.8", unidade: "percentual", chave: "destinacaoFundeb", rotulo: "Destinação de impostos ao FUNDEB", limite: 20, sentido: "min", base: "CF art. 212-A, II" },
+  { cod: "2.1", unidade: "percentual", chave: "fundebInfantil", rotulo: "FUNDEB aplicado na educação infantil", limite: null, sentido: null, base: null },
+  { cod: "2.2", unidade: "percentual", chave: "fundebFundamental", rotulo: "FUNDEB aplicado no ensino fundamental", limite: null, sentido: null, base: null },
+  { cod: "3.2", unidade: "percentual", chave: "pessoalEducacao", rotulo: "Pessoal e encargos da educação sobre a despesa em MDE", limite: null, sentido: null, base: null },
+  { cod: "4.8", unidade: "reais", chave: "investimentoPorAluno", rotulo: "Investimento por aluno da educação básica", limite: null, sentido: null, base: null },
+  { cod: "4.10", unidade: "reais", chave: "professorPorAluno", rotulo: "Despesa com professores por aluno", limite: null, sentido: null, base: null },
+  { cod: "7.3", unidade: "reais", chave: "saldoNaoUtilizado", rotulo: "Recursos do FUNDEB não utilizados", limite: null, sentido: null, base: null },
 ];
 
 const POR_CODIGO = new Map(INDICADORES.map((i, ordem) => [i.cod, { ...i, ordem }]));
@@ -175,8 +175,9 @@ async function main() {
     periodo: PERIODO,
     geradoEm: new Date().toISOString(),
     /** Metadados por posição; cada município guarda os valores pelo índice. */
-    indicadores: INDICADORES.map(({ cod, chave, rotulo, limite, sentido, base }) => ({
+    indicadores: INDICADORES.map(({ cod, unidade, chave, rotulo, limite, sentido, base }) => ({
       cod,
+      unidade,
       chave,
       rotulo,
       limite,
