@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeftIcon,
   ArrowRightIcon,
@@ -8,15 +9,15 @@ import {
   CheckCircle2Icon,
   BoltIcon,
   DownloadIcon,
+  FileTextIcon,
   FileSpreadsheetIcon,
-  CheckIcon,
   Loader2Icon,
   XIcon,
 } from "lucide-react";
 
 import { useAuth } from "@/core/providers/auth-provider";
 import { getFirebaseDb } from "@/core/lib/firebase-client";
-import { createCity } from "@/core/lib/cities-firestore";
+import { ensureCity } from "@/core/lib/cities-firestore";
 
 interface NovoLevantamentoWizardProps {
   onClose: () => void;
@@ -112,6 +113,7 @@ const PASSOS_GERACAO = [
 ];
 
 export function NovoLevantamentoWizard({ onClose }: NovoLevantamentoWizardProps) {
+  const router = useRouter();
   const [etapa, setEtapa] = useState<1 | 2 | 3>(1);
   const [munSel, setMunSel] = useState<number>(0);
   const [busca, setBusca] = useState("");
@@ -136,7 +138,7 @@ export function NovoLevantamentoWizard({ onClose }: NovoLevantamentoWizardProps)
         if (user?.groupId && mun) {
           try {
             const db = getFirebaseDb();
-            await createCity(db, user.groupId, {
+            await ensureCity(db, user.groupId, {
               name: mun.nome,
               uf: mun.uf,
               codigoIbge: mun.ibge,
@@ -258,7 +260,7 @@ export function NovoLevantamentoWizard({ onClose }: NovoLevantamentoWizardProps)
             <div className="flex flex-col gap-[4px]">
               {MUNICIPIOS_SUGESTOES.filter((m) =>
                 m.nome.toLowerCase().includes(busca.toLowerCase()) || m.ibge.includes(busca)
-              ).map((m, i) => {
+              ).map((m) => {
                 const indexReal = MUNICIPIOS_SUGESTOES.indexOf(m);
                 const selecionado = munSel === indexReal;
 
@@ -610,11 +612,18 @@ export function NovoLevantamentoWizard({ onClose }: NovoLevantamentoWizardProps)
                 <div className="flex justify-center gap-[10px]">
                   <button
                     type="button"
-                    onClick={onClose}
+                    onClick={() => {
+                      onClose();
+                      router.push(
+                        `/modulos/levantamento-fundeb?ibge=${mun.ibge}`,
+                      );
+                    }}
                     className="flex h-[44px] items-center gap-[8px] rounded-[24px] bg-[#16181D] px-[20px] text-white transition-colors hover:bg-[#2C2F38]"
                   >
                     <DownloadIcon className="size-[17px] text-white" />
-                    <span className="text-[13.5px] font-semibold text-white">Baixar PDF</span>
+                    <span className="text-[13.5px] font-semibold text-white">
+                      Abrir e gerar PDF
+                    </span>
                   </button>
 
                   <button

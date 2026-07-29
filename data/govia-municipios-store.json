@@ -17,9 +17,9 @@
       "uf": "BA",
       "regiao": "Nordeste",
       "created_at": "2026-03-17T19:57:46.777Z",
-      "updated_at": "2026-07-27T21:45:52.687Z",
-      "ultimo_acesso": "2026-07-27T21:45:52.687Z",
-      "acessos": 42,
+      "updated_at": "2026-07-29T12:30:06.732Z",
+      "ultimo_acesso": "2026-07-29T12:30:06.732Z",
+      "acessos": 43,
       "in_carteira": false
     },
     {
@@ -1523,9 +1523,9 @@
       "uf": "GO",
       "regiao": "Centro-Oeste",
       "created_at": "2026-06-23T12:00:40.878Z",
-      "updated_at": "2026-06-23T12:18:47.612Z",
-      "ultimo_acesso": "2026-06-23T12:18:47.612Z",
-      "acessos": 2,
+      "updated_at": "2026-07-29T14:48:38.320Z",
+      "ultimo_acesso": "2026-07-29T14:48:38.320Z",
+      "acessos": 4,
       "in_carteira": false
     },
     {
@@ -3165,6 +3165,17 @@
       "updated_at": "2026-07-28T21:58:15.714Z",
       "ultimo_acesso": "2026-07-28T21:58:15.714Z",
       "acessos": 3,
+      "in_carteira": false
+    },
+    {
+      "codigo_ibge": "1302603",
+      "nome": "Manaus",
+      "uf": "AM",
+      "regiao": "Norte",
+      "created_at": "2026-07-29T18:25:51.098Z",
+      "updated_at": "2026-07-29T18:25:51.098Z",
+      "ultimo_acesso": "2026-07-29T18:25:51.098Z",
+      "acessos": 1,
       "in_carteira": false
     }
   ]

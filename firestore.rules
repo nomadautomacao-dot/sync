@@ -45,10 +45,14 @@ service cloud.firestore {
 
     match /cities/{id} {
       allow read: if isSignedIn() && resource.data.groupId == myGroupId();
-      allow create: if isAdmin() && request.resource.data.groupId == myGroupId();
-      allow update: if isAdmin()
+      allow create: if isSignedIn() && request.resource.data.groupId == myGroupId();
+      allow update: if isSignedIn()
                     && resource.data.groupId == myGroupId()
-                    && request.resource.data.groupId == myGroupId();
+                    && request.resource.data.groupId == myGroupId()
+                    && (
+                      !request.resource.data.diff(resource.data).affectedKeys().hasAny(['deletedAt'])
+                      || isAdmin()
+                    );
       allow delete: if false;
     }
 
@@ -90,6 +94,34 @@ service cloud.firestore {
       allow create: if isSignedIn() && request.resource.data.groupId == myGroupId();
       allow delete: if isSignedIn() && resource.data.groupId == myGroupId();
       allow update: if false; // metadado e imutavel apos criado; para trocar, apaga e sobe de novo
+    }
+
+    match /cityDocuments/{id} {
+      allow read: if isSignedIn() && resource.data.groupId == myGroupId();
+      allow create: if isSignedIn()
+                    && request.resource.data.groupId == myGroupId()
+                    && request.resource.data.cityId is string
+                    && request.resource.data.title is string
+                    && request.resource.data.storagePath is string;
+      allow delete: if isSignedIn() && resource.data.groupId == myGroupId();
+      allow update: if false;
+    }
+
+    match /cityReports/{id} {
+      allow read: if isSignedIn() && resource.data.groupId == myGroupId();
+      allow create: if isSignedIn()
+                    && request.resource.data.groupId == myGroupId()
+                    && request.resource.data.cityId is string
+                    && request.resource.data.codigoIbge is string
+                    && request.resource.data.title is string
+                    && request.resource.data.type in ['raio_x', 'diagnostico_fundeb', 'historico_censo']
+                    && request.resource.data.generationId is string
+                    && request.resource.data.snapshot is map
+                    && request.resource.data.snapshotBytes is int
+                    && request.resource.data.snapshotBytes > 0
+                    && request.resource.data.snapshotBytes < 900000;
+      allow delete: if isAdmin() && resource.data.groupId == myGroupId();
+      allow update: if false;
     }
   }
 }

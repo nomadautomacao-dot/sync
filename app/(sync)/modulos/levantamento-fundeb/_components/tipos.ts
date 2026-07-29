@@ -54,6 +54,13 @@ export interface PerfilComercial {
 
 export interface RelatorioFundeb {
   identificacao?: IdentificacaoMunicipio;
+  receitas?: {
+    totalReceitas?: number;
+    receitaContribuicaoMunicipal?: number;
+    complementacaoVAAF?: number;
+    complementacaoVAAT?: number;
+    complementacaoVAAR?: number;
+  };
   projecao?: ProjecaoFundeb;
   projecaoRecuperavel?: ProjecaoFundeb;
   censoEscolar?: CensoEscolar;
@@ -62,4 +69,7 @@ export interface RelatorioFundeb {
 
 export interface RespostaLevantamento {
   relatorio?: RelatorioFundeb;
+  payload?: Record<string, unknown>;
+  municipio?: Record<string, unknown>;
+  oportunidades?: unknown[];
 }

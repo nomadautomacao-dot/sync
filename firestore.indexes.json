@@ -57,6 +57,23 @@
         { "fieldPath": "groupId", "order": "ASCENDING" },
         { "fieldPath": "collaboratorId", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "cityDocuments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "groupId", "order": "ASCENDING" },
+        { "fieldPath": "cityId", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "cityReports",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "groupId", "order": "ASCENDING" },
+        { "fieldPath": "cityId", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

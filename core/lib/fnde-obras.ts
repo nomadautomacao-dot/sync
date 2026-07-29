@@ -36,6 +36,21 @@ interface ObrasCache<T> {
   data: T;
 }
 
+/**
+ * Obra em situação crítica no painel do Pacto de Retomada — paralisada,
+ * inacabada ou em retomada. É dinheiro federal já contratado que não virou
+ * escola: cada uma é vaga que não abre e fator de jornada que não sobe.
+ */
+export interface ObraCritica {
+  ano: number | null;
+  tipo: string;
+  classificacao: string;
+  situacao: string;
+  estimativaRepasse: number;
+  execucao: number;
+  saldoBancario: number;
+}
+
 interface FndeObrasEnrichment {
   obrasPAC2: ObraPAC2[];
   observacoes: string[];
@@ -44,6 +59,13 @@ interface FndeObrasEnrichment {
   totalObras: number;
   valorEstimadoRepactuacao: number | null;
   valorPagoInfraestrutura: number | null;
+  /** Paralisadas, inacabadas e em retomada, com os valores do painel. */
+  obrasCriticas: ObraCritica[];
+  paralisadas: number;
+  inacabadas: number;
+  emRetomada: number;
+  /** Estimativa de repasse FNDE somada nas obras críticas. */
+  valorParadoEstimado: number;
 }
 
 const PACTO_HEADERS = {
@@ -508,6 +530,20 @@ export async function getFndeObrasEnrichment(params: { municipio: string; uf: st
       ? "Painel público do FNDE identificou repasse de infraestrutura escolar para o município. O detalhamento operacional no Simec segue dependente de credencial do ente."
       : null;
 
+  const CRITICAS = new Set(["PARALISADA", "INACABADA", "EM RETOMADA"]);
+  const obrasCriticas: ObraCritica[] = municipioRows
+    .filter((row) => CRITICAS.has(normalizeText(row.situacaoAtual)))
+    .map((row) => ({
+      ano: row.anoTermoConvenio,
+      tipo: row.tipoObra,
+      classificacao: row.classificacao,
+      situacao: normalizeText(row.situacaoAtual),
+      estimativaRepasse: row.estimativaRepasseFnde,
+      execucao: row.execucaoFinanceira,
+      saldoBancario: row.saldoBancarioAprovacao,
+    }))
+    .sort((a, b) => b.estimativaRepasse - a.estimativaRepasse);
+
   return {
     obrasPAC2,
     observacoes,
@@ -519,6 +555,11 @@ export async function getFndeObrasEnrichment(params: { municipio: string; uf: st
     totalObras: municipioRows.length,
     valorEstimadoRepactuacao: estimativaRepactuacao > 0 ? estimativaRepactuacao : null,
     valorPagoInfraestrutura: infraestruturaRepasse?.valorPago ?? null,
+    obrasCriticas,
+    paralisadas,
+    inacabadas,
+    emRetomada: municipioRows.filter((row) => normalizeText(row.situacaoAtual) === "EM RETOMADA").length,
+    valorParadoEstimado: obrasCriticas.reduce((total, obra) => total + obra.estimativaRepasse, 0),
   };
 }
 

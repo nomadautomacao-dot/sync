@@ -3,11 +3,31 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
-import { ChevronRightIcon, FileTextIcon, LoaderIcon, ZapIcon } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  CheckCircle2Icon,
+  ChevronRightIcon,
+  FileTextIcon,
+  HistoryIcon,
+  LoaderIcon,
+  ZapIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import type { IbgeMunicipio } from "@/core/lib/ibge-client";
+import { ensureCity, updateCityPipeline } from "@/core/lib/cities-firestore";
+import {
+  getFirebaseDb,
+  getFirebaseStorage,
+} from "@/core/lib/firebase-client";
+import { useAuth } from "@/core/providers/auth-provider";
+import {
+  createCityReport,
+  cityReportSnapshotFromUnknown,
+  generatedReportBundleFromUnknown,
+} from "@/modules/cidades/city-reports-firestore";
+import type { CityReportType } from "@/modules/cidades/reports-types";
+import { uploadCityDocument } from "@/modules/documentos/documentos-firestore";
 
 import { BuscaMunicipio } from "./_components/busca-municipio";
 import { CabecalhoMunicipio } from "./_components/cabecalho-municipio";
@@ -16,21 +36,23 @@ import { PainelCenso } from "./_components/painel-censo";
 import { PainelProjecao } from "./_components/painel-projecao";
 import type { RespostaLevantamento } from "./_components/tipos";
 
-type Documento = "raio-x" | "levantamento";
+type Documento = "raio-x" | "levantamento" | "historico-censo";
 
 /**
- * Os dois documentos que o módulo produz, nesta ordem de uso.
+ * Os três documentos que o módulo produz, nesta ordem de uso.
  *
  * O Raio-X é a cidade inteira, o passo que antecede a conversa de fundo — a
  * equipe chega sabendo o município. O Diagnóstico é o aprofundamento no FUNDEB.
- * Ambos partem da mesma carga de dados: a rota remonta o município no servidor.
+ * O Histórico do Censo compara os últimos três Censos Escolares em detalhe.
+ * Todos partem da mesma carga de dados: a rota remonta o município no servidor.
  */
 const DOCUMENTOS = [
   {
     id: "raio-x" as const,
+    reportType: "raio_x" as CityReportType,
     icone: ZapIcon,
     nome: "Raio-X Municipal",
-    paginas: 18,
+    paginas: 40,
     variante: "secundario" as const,
     prefixoArquivo: "RaioX_Municipal",
     endpoint: "/api/modulos/levantamento-fundeb/raio-x",
@@ -46,6 +68,7 @@ const DOCUMENTOS = [
   },
   {
     id: "levantamento" as const,
+    reportType: "diagnostico_fundeb" as CityReportType,
     icone: FileTextIcon,
     nome: "Diagnóstico FUNDEB",
     paginas: 10,
@@ -63,7 +86,37 @@ const DOCUMENTOS = [
       "Plano de ação",
     ],
   },
+  {
+    id: "historico-censo" as const,
+    reportType: "historico_censo" as CityReportType,
+    icone: HistoryIcon,
+    nome: "Histórico do Censo Escolar",
+    paginas: 11,
+    variante: "secundario" as const,
+    prefixoArquivo: "Historico_Censo",
+    endpoint: "/api/modulos/levantamento-fundeb/historico-censo",
+    descricao:
+      "Os últimos três Censos lado a lado — e o que a trajetória significa para a receita.",
+    conteudo: [
+      "Matrículas por rede e etapa",
+      "Creche e pré-escola",
+      "Cor/raça em série",
+      "Tempo integral (fator)",
+      "Docentes e rede física",
+      "Infraestrutura em série",
+      "Sinais e perguntas de campo",
+    ],
+  },
 ];
+
+function pdfBlobFromBase64(base64: string): Blob {
+  const binary = window.atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+  return new Blob([bytes], { type: "application/pdf" });
+}
 
 export default function LevantamentoFundebPage() {
   return (
@@ -77,6 +130,8 @@ function Bancada() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   /* O município ativo mora na URL: é o que faz a faixa "retomar" do hub abrir a
      bancada já carregada, e o que deixa a tela sobreviver a um refresh. */
@@ -133,8 +188,12 @@ function Bancada() {
   };
 
   const gerarDocumento = async (documento: (typeof DOCUMENTOS)[number]) => {
-    if (!municipio) {
-      toast.error("Aguarde o município terminar de carregar.");
+    if (!municipio || isLoading || error || !resposta || !relatorio) {
+      toast.error(
+        isLoading
+          ? "Aguarde os dados do município terminarem de carregar."
+          : "Carregue os dados FUNDEB antes de gerar o documento.",
+      );
       return;
     }
 
@@ -147,6 +206,7 @@ function Bancada() {
           codigo_ibge: municipio.codigoIbge,
           nome: municipio.nome,
           uf: municipio.uf,
+          response_format: "bundle",
         }),
       });
 
@@ -157,17 +217,166 @@ function Bancada() {
         throw new Error(detalhe?.error ?? `Falha na geração (HTTP ${res.status}).`);
       }
 
-      const blob = await res.blob();
+      const bundle = generatedReportBundleFromUnknown(
+        await res.json().catch(() => null),
+      );
+      if (!bundle) {
+        throw new Error(
+          "O servidor gerou uma resposta incompleta: o PDF veio sem o JSON de arquivamento.",
+        );
+      }
+      const selectedCode = municipio.codigoIbge.replace(/\D/g, "");
+      const generatedCode =
+        bundle.archive.municipality.codigoIbge.replace(/\D/g, "");
+      if (selectedCode !== generatedCode) {
+        throw new Error(
+          `O relatório retornou o IBGE ${generatedCode}, mas a cidade selecionada é ${selectedCode}. Nada foi arquivado.`,
+        );
+      }
+
+      const blob = pdfBlobFromBase64(bundle.pdfBase64);
+      const fileName = bundle.fileName;
+      const reportSnapshot = cityReportSnapshotFromUnknown(bundle.archive);
+      if (!reportSnapshot) {
+        throw new Error("O JSON do relatório não pôde ser normalizado para arquivamento.");
+      }
+
+      let dataArchived = false;
+      let pdfArchived = false;
+      let linkingFailed = false;
+      let linkedCityId: string | undefined;
+      if (user?.groupId) {
+        try {
+          const db = getFirebaseDb();
+          const city = await ensureCity(db, user.groupId, {
+            name: bundle.archive.municipality.name,
+            uf: bundle.archive.municipality.uf,
+            codigoIbge: bundle.archive.municipality.codigoIbge,
+            region: municipio.regiao,
+            stage: "technical_diagnostic",
+          });
+          linkedCityId = city.id;
+
+          const file = new File([blob], fileName, {
+            type: res.headers.get("Content-Type") || "application/pdf",
+          });
+          let archivedDocument:
+            | Awaited<ReturnType<typeof uploadCityDocument>>
+            | undefined;
+
+          try {
+            archivedDocument = await uploadCityDocument(
+              db,
+              getFirebaseStorage(),
+              file,
+              {
+                groupId: user.groupId,
+                cityId: city.id,
+                cityName: city.name,
+                cityUf: city.uf,
+                category: "relatorio",
+                title: `${documento.nome} ${identificacao?.exercicio ?? new Date().getFullYear()}`,
+                description:
+                  "Relatório gerado pela Central de Relatórios e Levantamentos FUNDEB.",
+                createdBy: user.id,
+                createdByName: user.name,
+                source: "generated",
+              },
+            );
+            pdfArchived = true;
+          } catch (archiveError) {
+            console.warn(
+              "PDF gerado, mas a cópia binária não pôde ser arquivada:",
+              archiveError,
+            );
+          }
+
+          await createCityReport(db, {
+            groupId: user.groupId,
+            cityId: city.id,
+            cityName: city.name,
+            cityUf: city.uf,
+            codigoIbge: city.codigoIbge,
+            type: documento.reportType,
+            title: documento.nome,
+            exercise:
+              Number(bundle.archive.exercise) || new Date().getFullYear(),
+            snapshot: reportSnapshot,
+            generationId: bundle.archive.generationId,
+            documentId: archivedDocument?.id,
+            downloadUrl: archivedDocument?.downloadUrl,
+            fileName: archivedDocument?.fileName,
+            generatedBy: user.id,
+            generatedByName: user.name,
+          });
+          dataArchived = true;
+
+          const receitaFundeb = Number(relatorio?.receitas?.totalReceitas);
+          const pipelinePatch: Record<string, unknown> = {
+            lastActivityAt: new Date().toISOString(),
+          };
+          if (city.stage === "mapping" || city.stage === "first_contact") {
+            pipelinePatch.stage = "technical_diagnostic";
+          }
+          if (Number.isFinite(receitaFundeb) && receitaFundeb > 0) {
+            pipelinePatch.estimatedAnnualRevenue = receitaFundeb;
+          }
+          await updateCityPipeline(db, city.id, pipelinePatch).catch(
+            (stageError) => {
+              console.warn(
+                "Relatório arquivado, mas o pipeline não foi atualizado:",
+                stageError,
+              );
+            },
+          );
+          await Promise.all([
+            queryClient.invalidateQueries({ queryKey: ["pipeline-cities"] }),
+            queryClient.invalidateQueries({ queryKey: ["city-documents"] }),
+            queryClient.invalidateQueries({ queryKey: ["city-reports"] }),
+            queryClient.invalidateQueries({ queryKey: ["cities"] }),
+          ]);
+        } catch (archiveError) {
+          console.error("Erro ao associar relatório à cidade:", archiveError);
+          linkingFailed = true;
+        }
+      }
+
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `${documento.prefixoArquivo}_${municipio.nome}_${municipio.uf}.pdf`;
+      link.download = fileName;
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
 
-      toast.success(`${documento.nome} gerado.`);
+      const toastOptions = linkedCityId
+        ? {
+            action: {
+              label: "Abrir cidade",
+              onClick: () => router.push(`/cidades/${linkedCityId}`),
+            },
+          }
+        : undefined;
+
+      if (dataArchived && !pdfArchived) {
+        toast.warning(
+          `${documento.nome} gerado. Os dados foram vinculados a ${municipio.nome}, mas o PDF não foi arquivado.`,
+          toastOptions,
+        );
+      } else if (linkingFailed) {
+        toast.error(
+          `${documento.nome} baixado, mas o JSON não foi salvo na cidade. Tente gerar novamente.`,
+          toastOptions,
+        );
+      } else {
+        toast.success(
+          dataArchived
+            ? `${documento.nome} gerado e anexado a ${municipio.nome}.`
+            : `${documento.nome} gerado.`,
+          toastOptions,
+        );
+      }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro ao gerar o documento.");
     } finally {
@@ -218,7 +427,21 @@ function Bancada() {
             />
           )}
 
-          <div className="grid grid-cols-1 gap-[14px] lg:grid-cols-2">
+          {municipio && (
+            <div className="flex items-center gap-2 rounded-[12px] border border-[#CFE8DB] bg-[#F2FAF6] px-3.5 py-2.5 text-[10.5px] font-semibold text-[#1F6A47]">
+              <CheckCircle2Icon className="size-3.5 shrink-0" />
+              Todo relatório gerado será baixado e também anexado automaticamente
+              à ficha de {municipio.nome}.
+              <Link
+                href="/cidades"
+                className="ml-auto shrink-0 font-bold underline underline-offset-2"
+              >
+                Ver cidades
+              </Link>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 gap-[14px] lg:grid-cols-2 xl:grid-cols-3">
             {DOCUMENTOS.map((documento) => (
               <DocumentoCard
                 key={documento.id}
@@ -229,7 +452,14 @@ function Bancada() {
                 conteudo={documento.conteudo}
                 variante={documento.variante}
                 gerando={gerando === documento.id}
-                desabilitado={!municipio || gerando !== null}
+                desabilitado={
+                  !municipio ||
+                  isLoading ||
+                  Boolean(error) ||
+                  !resposta ||
+                  !relatorio ||
+                  gerando !== null
+                }
                 onGerar={() => gerarDocumento(documento)}
               />
             ))}

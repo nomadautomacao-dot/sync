@@ -481,6 +481,11 @@ export async function getFndePublicEnrichment(params: {
       totalObras: 0,
       valorEstimadoRepactuacao: null,
       valorPagoInfraestrutura: null,
+      obrasCriticas: [],
+      paralisadas: 0,
+      inacabadas: 0,
+      emRetomada: 0,
+      valorParadoEstimado: 0,
     })),
   ]);
 

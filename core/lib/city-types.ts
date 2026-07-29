@@ -18,6 +18,7 @@ export interface CityAccount {
   name: string;
   uf: string;
   codigoIbge: string;
+  region?: string;
   status: string;
   stage: StageKey;
   collaboratorId?: string;

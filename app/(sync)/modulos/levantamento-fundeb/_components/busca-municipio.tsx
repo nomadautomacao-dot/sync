@@ -20,6 +20,7 @@ export function BuscaMunicipio({ onSelecionar }: BuscaMunicipioProps) {
   const [termo, setTermo] = useState("");
   const [resultados, setResultados] = useState<IbgeMunicipio[]>([]);
   const [buscando, setBuscando] = useState(false);
+  const [erroBusca, setErroBusca] = useState("");
   const sequenciaRef = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -33,6 +34,7 @@ export function BuscaMunicipio({ onSelecionar }: BuscaMunicipioProps) {
 
   const aoDigitar = async (valor: string) => {
     setTermo(valor);
+    setErroBusca("");
 
     const sequencia = ++sequenciaRef.current;
     if (valor.trim().length < 2) {
@@ -42,14 +44,28 @@ export function BuscaMunicipio({ onSelecionar }: BuscaMunicipioProps) {
     }
 
     setBuscando(true);
-    const encontrados = await searchMunicipios(valor);
-    if (sequencia !== sequenciaRef.current) return;
-
-    setResultados(encontrados);
-    setBuscando(false);
+    try {
+      const encontrados = await searchMunicipios(valor);
+      if (sequencia !== sequenciaRef.current) return;
+      setResultados(encontrados);
+    } catch (error) {
+      if (sequencia !== sequenciaRef.current) return;
+      setResultados([]);
+      setErroBusca(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível consultar a base IBGE.",
+      );
+    } finally {
+      if (sequencia === sequenciaRef.current) setBuscando(false);
+    }
   };
 
-  const semResultado = !buscando && termo.trim().length >= 2 && resultados.length === 0;
+  const semResultado =
+    !buscando &&
+    !erroBusca &&
+    termo.trim().length >= 2 &&
+    resultados.length === 0;
 
   return (
     <section className="rounded-[16px] border border-white/95 bg-white/88 p-[20px] shadow-[0_10px_26px_rgba(22,24,29,.05)]">
@@ -109,6 +125,12 @@ export function BuscaMunicipio({ onSelecionar }: BuscaMunicipioProps) {
         {semResultado && (
           <p className="mt-[10px] text-[12px] text-[#767A86]">
             Nenhum município encontrado para “{termo.trim()}”.
+          </p>
+        )}
+
+        {erroBusca && (
+          <p role="alert" className="mt-[10px] text-[12px] text-[#A33D56]">
+            {erroBusca}
           </p>
         )}
       </div>

@@ -6,7 +6,7 @@ const TEMPLATES = [
     id: "institucional",
     label: "Apresentacao Institucional",
     description:
-      "Apresentacao padrao da Rocha Prime com servicos, diferenciais e cases.",
+      "Apresentacao padrao da Global Company Consultorias com servicos, diferenciais e cases.",
     slideCount: 16,
     requiresMunicipio: false,
   },

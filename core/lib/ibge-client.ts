@@ -16,10 +16,14 @@ export async function searchMunicipios(queryStr: string, uf?: string): Promise<I
     }
 
     const res = await fetch(`/api/municipios/buscar?${params.toString()}`);
-    if (!res.ok) return [];
+    if (!res.ok) {
+      throw new Error(`Falha ao consultar a base IBGE (HTTP ${res.status}).`);
+    }
 
     const json = await res.json();
-    if (!json.success || !Array.isArray(json.data)) return [];
+    if (!json.success || !Array.isArray(json.data)) {
+      throw new Error("A base IBGE devolveu uma resposta inválida.");
+    }
 
     return json.data.map((m: Record<string, unknown>, idx: number) => ({
       codigoIbge: String(m.codigo_ibge ?? m.codigoIbge ?? m.ibgeCode ?? m.id ?? `unknown-${idx}`),
@@ -29,7 +33,9 @@ export async function searchMunicipios(queryStr: string, uf?: string): Promise<I
     }));
   } catch (err) {
     console.error("Erro ao buscar municípios via API local:", err);
-    return [];
+    throw err instanceof Error
+      ? err
+      : new Error("Não foi possível consultar a base IBGE.");
   }
 }
 

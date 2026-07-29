@@ -19,5 +19,15 @@ service firebase.storage {
                    && request.resource.size < 10 * 1024 * 1024;
       allow delete: if isSignedIn() && groupId == myGroupId();
     }
+
+    match /city-documents/{groupId}/{cityId}/{fileName} {
+      allow read: if isSignedIn() && groupId == myGroupId();
+      allow create, update: if isSignedIn() && groupId == myGroupId()
+                            && request.resource.size < 20 * 1024 * 1024
+                            && request.resource.contentType.matches(
+                              '(application/pdf|application/msword|application/vnd.openxmlformats-officedocument.wordprocessingml.document|application/vnd.ms-excel|application/vnd.openxmlformats-officedocument.spreadsheetml.sheet|application/zip|image/png|image/jpeg)'
+                            );
+      allow delete: if isSignedIn() && groupId == myGroupId();
+    }
   }
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { centsToReais, reaisToCents, formatCurrency, formatCurrencyCompact, stageProbability, STAGE_LABELS, BOARD_STAGES, INDEX_STAGES, STAGE_KEYS } from './city-types';
+import { centsToReais, reaisToCents, formatCurrency, stageProbability, STAGE_LABELS, BOARD_STAGES, INDEX_STAGES, STAGE_KEYS } from './city-types';
 import { cityFromDoc, cityDocFromInput } from './cities-firestore';
 
 describe('centsToReais / reaisToCents', () => {
@@ -18,7 +18,7 @@ describe('centsToReais / reaisToCents', () => {
 describe('cityFromDoc', () => {
   it('maps a complete Firestore doc to CityAccount', () => {
     const doc = {
-      name: 'Acajutiba', uf: 'BA', codigoIbge: '2900108',
+      name: 'Acajutiba', uf: 'BA', codigoIbge: '2900108', region: 'Nordeste',
       status: 'ativo', stage: 'first_contact',
       collaboratorId: 'c1', collaboratorName: 'João Silva',
       estimatedAnnualRevenueCents: 7095852358,
@@ -31,6 +31,7 @@ describe('cityFromDoc', () => {
     expect(result.name).toBe('Acajutiba');
     expect(result.estimatedAnnualRevenue).toBe(70958523.58);
     expect(result.stage).toBe('first_contact');
+    expect(result.region).toBe('Nordeste');
     expect(result.collaboratorName).toBe('João Silva');
   });
 
@@ -46,15 +47,21 @@ describe('cityFromDoc', () => {
 
 describe('cityDocFromInput', () => {
   it('converts revenue to cents and sets groupId', () => {
-    const input = { name: 'Jequié', uf: 'BA', estimatedAnnualRevenue: 50000 };
+    const input = { name: 'Jequié', uf: 'BA', region: 'Nordeste', estimatedAnnualRevenue: 50000 };
     const doc = cityDocFromInput(input, 'group-abc');
     expect(doc.groupId).toBe('group-abc');
     expect(doc.estimatedAnnualRevenueCents).toBe(5000000);
+    expect(doc.region).toBe('Nordeste');
     expect(doc.deletedAt).toBeNull();
   });
 
   it('never passes groupId or deletedAt from input', () => {
-    const input = { name: 'X', uf: 'SP', groupId: 'hacker', deletedAt: 'now' } as any;
+    const input = {
+      name: 'X',
+      uf: 'SP',
+      groupId: 'hacker',
+      deletedAt: 'now',
+    } as unknown as Parameters<typeof cityDocFromInput>[0];
     const doc = cityDocFromInput(input, 'real-group');
     expect(doc.groupId).toBe('real-group');
     expect(doc.deletedAt).toBeNull();

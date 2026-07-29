@@ -1,0 +1,53 @@
+.optionsMenu {
+  z-index: 220 !important;
+  width: 220px !important;
+  padding: 6px !important;
+  color: #16181d !important;
+  background: #fff !important;
+  border: 1px solid #ecedf2 !important;
+  border-radius: 14px !important;
+  box-shadow:
+    0 24px 60px rgba(22, 24, 29, 0.2),
+    0 6px 18px rgba(22, 24, 29, 0.08) !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  animation: none !important;
+}
+
+.optionsMenuLabel {
+  padding: 8px 10px 7px !important;
+  color: #767a86 !important;
+  font-family: var(--font-sync-mono), monospace !important;
+  font-size: 9px !important;
+  font-weight: 600 !important;
+  line-height: 1.2 !important;
+  letter-spacing: 0.7px !important;
+  text-transform: uppercase !important;
+  opacity: 1 !important;
+}
+
+.optionsMenuSeparator {
+  height: 1px !important;
+  margin: 3px 0 5px !important;
+  background: #f0f1f5 !important;
+}
+
+.optionsMenuItem {
+  display: flex !important;
+  height: 38px !important;
+  align-items: center !important;
+  padding: 0 10px !important;
+  color: #991b1b !important;
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  background: #fff !important;
+  border-radius: 10px !important;
+  opacity: 1 !important;
+}
+
+.optionsMenuItem:focus,
+.optionsMenuItem:hover {
+  color: #991b1b !important;
+  background: #ffe5e5 !important;
+}

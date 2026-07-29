@@ -14,10 +14,18 @@ export async function generateMunicipalXrayPdf(
     await page.setContent(htmlContent, { waitUntil: "networkidle" });
     await page.evaluate(() => document.fonts?.ready);
 
-    // 13 do núcleo (fiscal, FUNDEB, educação) + 7 do Perfil Municipal
-    // (saneamento, saúde, emprego, assistência, capacidade institucional,
-    // governança educacional, conformidade legal) + 2 do roteiro de campo.
-    const PAGINAS_ESPERADAS = 22;
+    // 13 do núcleo (fiscal, FUNDEB, educação) + 16 do FUNDEB profundo
+    // (complementações e por que se perdem, ponderação + ganho apurado,
+    // vinculações SIOPE + piso, obras FNDE, dinheiro federal além do fundo,
+    // requisitos fiscais do CAUC, gêmeos estatísticos, Saeb/IDEB por escola,
+    // contexto por escola, alfabetização, distribuição de proficiência,
+    // demografia e demanda futura, território e fator, mapa das escolas,
+    // frequência do PBF, contexto de segurança)
+    // + 7 do Perfil Municipal (saneamento, saúde, emprego, assistência,
+    // capacidade institucional, governança educacional, conformidade legal)
+    // + 2 do roteiro de campo.
+    // + 1 de ciclo político (calendário que fecha as transferências).
+    const PAGINAS_ESPERADAS = 40;
     const pageCount = await page.locator("section.page").count();
     if (pageCount !== PAGINAS_ESPERADAS) {
       throw new Error(`O template do Raio-X gerou ${pageCount} páginas; eram esperadas ${PAGINAS_ESPERADAS}.`);

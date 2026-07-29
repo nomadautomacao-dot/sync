@@ -1,6 +1,7 @@
 import { getApps, getApp, initializeApp, type FirebaseOptions } from "firebase/app";
 import { getAuth, type Auth } from "firebase/auth";
 import { getFirestore, type Firestore } from "firebase/firestore";
+import { getStorage, type FirebaseStorage } from "firebase/storage";
 
 /**
  * Lê cada variável por acesso literal — `process.env.NEXT_PUBLIC_X` escrito por
@@ -40,3 +41,4 @@ function obrigatoria(nome: string, valor: string | undefined): string {
 const app = () => (getApps().length ? getApp() : initializeApp(firebaseClientConfig()));
 export const getFirebaseAuth = (): Auth => getAuth(app());
 export const getFirebaseDb = (): Firestore => getFirestore(app());
+export const getFirebaseStorage = (): FirebaseStorage => getStorage(app());

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import Link from "next/link";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   DndContext,
@@ -18,8 +19,7 @@ import {
   LayoutGridIcon,
   ListIcon,
   RefreshCwIcon,
-  FilterIcon,
-  TrendingUpIcon,
+  MapPinnedIcon,
 } from "lucide-react";
 
 import { getFirebaseDb } from "@/core/lib/firebase-client";
@@ -28,7 +28,7 @@ import type { CityAccount } from "@/core/lib/city-types";
 import { STAGE_LABELS } from "@/core/lib/city-types";
 import {
   listCities,
-  createCity,
+  ensureCity,
   updateCityStage,
   updateCityPipeline,
 } from "@/core/lib/cities-firestore";
@@ -59,7 +59,7 @@ function PipelineContent({ groupId }: { groupId: string }) {
   const [activeDrag, setActiveDrag] = useState<CityAccount | null>(null);
 
   // ── Data ────────────────────────────────────────────────────
-  const { data: cities = [], isPending, error, isFetching, refetch } = useQuery({
+  const { data: cities = [], isPending, error, isFetching } = useQuery({
     queryKey: ["pipeline-cities", groupId, searchQuery],
     queryFn: () =>
       listCities(getFirebaseDb(), groupId, { search: searchQuery }),
@@ -98,10 +98,10 @@ function PipelineContent({ groupId }: { groupId: string }) {
   const createMutation = useMutation({
     mutationFn: (
       input: Partial<CityAccount> & { name: string; uf: string }
-    ) => createCity(getFirebaseDb(), groupId, input),
+    ) => ensureCity(getFirebaseDb(), groupId, input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pipeline-cities"] });
-      toast.success("Município criado com sucesso.");
+      toast.success("Município adicionado ao pipeline.");
     },
     onError: (err) => {
       toast.error(`Erro ao criar município: ${err.message}`);
@@ -208,6 +208,17 @@ function PipelineContent({ groupId }: { groupId: string }) {
           </div>
 
           <div className="flex items-center gap-2">
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="h-9 gap-1.5 rounded-full border-[#E2E3E9] bg-white text-xs font-bold text-[#5A5E6A]"
+            >
+              <Link href="/cidades">
+                <MapPinnedIcon className="size-4" />
+                Fichas das cidades
+              </Link>
+            </Button>
             {/* Toggle Kanban vs Lista */}
             <div className="flex rounded-[20px] border border-[#F0F1F5] bg-[#F2F1F7] p-1 shadow-2xs">
               <button

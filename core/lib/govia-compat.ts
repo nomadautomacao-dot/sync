@@ -27,6 +27,24 @@ import { getEquidadeMunicipal } from "@/core/lib/inep-equidade";
 import { getSituacaoVaar } from "@/core/lib/fundeb-vaar";
 import { getPonderacaoMunicipal } from "@/core/lib/fundeb-ponderacao";
 import { getGanhoApurado } from "@/core/lib/fundeb-ganho-apurado";
+import { getMunicipiosGemeos } from "@/core/lib/municipios-gemeos";
+import { getIdebEscolas } from "@/core/lib/ideb-escolas";
+import { cruzarContextoResultado, getIndicadoresEscolas } from "@/core/lib/indicadores-escolas";
+import { getSaebDistribuicao } from "@/core/lib/saeb-distribuicao";
+import { getViolenciaMunicipal } from "@/core/lib/violencia-municipal";
+import { getEmendasMunicipio } from "@/core/lib/emendas-municipais";
+import { getConveniosMunicipio, getSancoesMunicipio } from "@/core/lib/portal-transparencia";
+import { getAlfabetizacaoMunicipal } from "@/core/lib/alfabetizacao-municipal";
+import { getCicloPolitico } from "@/core/lib/alternancia-politica";
+import { getCaucMunicipio } from "@/core/lib/cauc-requisitos";
+import { getEscolasTerritorio } from "@/core/lib/escolas-territorio";
+import { getEnemAbstencao } from "@/core/lib/enem-abstencao";
+import { getDemografiaEducacional } from "@/core/lib/demografia-educacional";
+import { getEquidadeTerritorial } from "@/core/lib/equidade-territorial";
+import { getFrequenciaBolsaFamilia } from "@/core/lib/bolsa-familia-frequencia";
+import { getAssentamentos } from "@/core/lib/assentamentos-incra";
+import { getEconomiaLocal } from "@/core/lib/economia-local";
+import { getPontualidadeFiscal } from "@/core/lib/siconfi-entregas";
 import { getConformidadeSiope } from "@/core/lib/siope-indicadores";
 import { getEstimativaPnae } from "@/core/lib/fundeb-pnae";
 import { getRemuneracaoMunicipal } from "@/core/lib/remuneracao-docente";
@@ -486,7 +504,7 @@ function buildAnaliseExecutiva(relatorio: RelatorioFundeb) {
   })}. O ganho potencial estimado nesta fase e de ${gain.toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL",
-  })}, com base na metodologia comercial histórica do levantamento Rocha Prime e sujeito à validação documental das bases do FUNDEB e dos sistemas MEC/FNDE.${recuperavelText}`;
+  })}, com base na metodologia comercial histórica do levantamento Global Company Consultorias e sujeito à validação documental das bases do FUNDEB e dos sistemas MEC/FNDE.${recuperavelText}`;
 }
 
 function buildScoreViabilidade(relatorio: RelatorioFundeb) {
@@ -771,7 +789,7 @@ function buildRelatorioDirigidoBase({
       avisos: [],
       criterios: [
         "Receitas FUNDEB validadas",
-        "Projecao Rocha Prime aplicada",
+        "Projecao Global Company aplicada",
         "Geografia IBGE confirmada",
         "Censo Escolar INEP integrado",
       ],
@@ -1014,7 +1032,7 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
   } catch (e) {
     console.warn(`[govia] FNDE receitas fetch failed for ${exercicio}:`, e instanceof Error ? e.message : e);
   }
-  const [vaatContext, ibgeIndicators, inepRecord, fndePublic, qeduIndicators, siconfiFiscal, simecObras, qeduApiSnapshot] =
+  const [vaatContext, ibgeIndicators, inepRecord, fndePublic, qeduIndicators, siconfiFiscal, simecObras, qeduApiSnapshot, pontualidadeFiscal, demografiaEducacional, equidadeTerritorial, frequenciaBolsaFamilia, economiaLocal, conveniosFederais, sancoesFederais, caucRequisitos] =
     await Promise.all([
     getFundebVaatContext(String(municipio.id), exercicio).catch(() => null),
     getIbgeCidadeIndicators(municipio.nome, municipioUf, String(municipio.id)).catch(() => null),
@@ -1028,7 +1046,19 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
       getSiconfiFiscalRecord(String(municipio.id), exercicio).catch(() => null),
       getSimecObrasRecord(String(municipio.id)).catch(() => null),
       getQeduMunicipalApiSnapshot(String(municipio.id)).catch(() => null),
+      getPontualidadeFiscal(String(municipio.id), exercicio),
+      getDemografiaEducacional(String(municipio.id)),
+      getEquidadeTerritorial(String(municipio.id)),
+      getFrequenciaBolsaFamilia(String(municipio.id)),
+      getEconomiaLocal(String(municipio.id)),
+      getConveniosMunicipio(String(municipio.id)).catch(() => null),
+      getSancoesMunicipio(municipio.nome, municipioUf).catch(() => null),
+      getCaucMunicipio(String(municipio.id)).catch(() => null),
     ]);
+  // Leituras locais síncronas, hoisted porque o cruzamento contexto ×
+  // resultado precisa das duas ao mesmo tempo.
+  const idebEscolas = getIdebEscolas(String(municipio.id));
+  const indicadoresEscolas = getIndicadoresEscolas(String(municipio.id));
   const receitasBase =
     receitasOficiais ??
     estimateFundebReceitas({
@@ -1450,16 +1480,164 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
     },
     fontes_utilizadas: fontesDedupe,
     relatorio_fundeb: relatorio,
-    relatorio_dirigido_base: buildRelatorioDirigidoBase({
-      relatorio,
-      comparativo,
-      censoHistory: getInepCensoMunicipalHistory(String(municipio.id)),
-      ibgeIndicators,
-      qeduIndicators,
-      inepRecord,
-      siconfiFiscal,
-      vaatContext,
-    }),
+    relatorio_dirigido_base: {
+      ...buildRelatorioDirigidoBase({
+        relatorio,
+        comparativo,
+        censoHistory: getInepCensoMunicipalHistory(String(municipio.id)),
+        ibgeIndicators,
+        qeduIndicators,
+        inepRecord,
+        siconfiFiscal,
+        vaatContext,
+      }),
+      /**
+       * Gêmeos estatísticos — percentil do município entre os semelhantes em
+       * porte de rede. Ver `core/lib/municipios-gemeos.ts`.
+       */
+      gemeos: getMunicipiosGemeos(String(municipio.id)),
+      /**
+       * Saeb e IDEB por escola — a via identificada do INEP. A marca `nd`
+       * (participação < 80%) é onde a Cond. II do VAAR morre, escola a
+       * escola. Ver `core/lib/ideb-escolas.ts`.
+       */
+      idebEscolas,
+      /**
+       * INSE, complexidade, distorção, abandono e adequação docente por
+       * escola, com o cruzamento contexto × resultado (INSE × IDEB AI).
+       * Ver `core/lib/indicadores-escolas.ts`.
+       */
+      indicadoresEscolas:
+        indicadoresEscolas === null
+          ? null
+          : {
+              ...indicadoresEscolas,
+              cruzamento: cruzarContextoResultado(
+                new Map(
+                  (idebEscolas?.escolas ?? [])
+                    .filter((e) => typeof e.ai?.ideb === "number")
+                    .map((e) => [e.codigo, e.ai?.ideb as number]),
+                ),
+                indicadoresEscolas.escolas,
+              ),
+            },
+      /**
+       * Distribuição de proficiência do Saeb (rede municipal) — % de alunos
+       * por grupo qualitativo em LP/MT, 5º e 9º ano. A cauda que a média
+       * esconde e que a Cond. III do VAAR observa.
+       */
+      saebDistribuicao: getSaebDistribuicao(String(municipio.id)),
+      /**
+       * Homicídios (total, jovens 15–29 e taxa) — Atlas da Violência via
+       * IPEADATA. Contexto explicativo do território, nunca rótulo.
+       */
+      violencia: getViolenciaMunicipal(String(municipio.id)),
+      /**
+       * Escolas municipais no território — coordenadas, localização
+       * diferenciada (ribeirinha, indígena, quilombola, assentamento) e
+       * transporte público. Ver `core/lib/escolas-territorio.ts`.
+       */
+      escolasTerritorio: getEscolasTerritorio(String(municipio.id)),
+      /**
+       * Abstenção no ENEM por município de PROVA, com a régua da UF —
+       * termômetro de custo de oportunidade no fim da educação básica.
+       */
+      enemAbstencao: getEnemAbstencao(String(municipio.id), municipioUf),
+      /**
+       * Obras do FNDE em situação crítica (Pacto de Retomada) — dinheiro
+       * federal já contratado que não virou escola. Ver `fnde-obras.ts`.
+       */
+      obrasFnde: simecObras
+        ? {
+            totalObras: simecObras.totalObras,
+            paralisadas: simecObras.paralisadas,
+            inacabadas: simecObras.inacabadas,
+            emRetomada: simecObras.emRetomada,
+            valorParadoEstimado: simecObras.valorParadoEstimado,
+            valorEstimadoRepactuacao: simecObras.valorEstimadoRepactuacao,
+            valorPagoInfraestrutura: simecObras.valorPagoInfraestrutura,
+            obrasCriticas: simecObras.obrasCriticas,
+          }
+        : null,
+      /**
+       * Matrículas de TODAS as redes por faixa (Censo Escolar) — denominador
+       * da taxa de atendimento real, contra a população da faixa. A cobertura
+       * municipal é o piso; esta é a foto completa do território.
+       */
+      atendimentoTotal: inepRecord
+        ? {
+            ano: inepRecord.anoReferencia,
+            creche: inepRecord.crecheTotal ?? null,
+            preEscola: inepRecord.preEscolaTotal ?? null,
+            anosIniciais: inepRecord.anosIniciaisFundamentalTotal ?? null,
+            anosFinais: inepRecord.anosFinaisFundamentalTotal ?? null,
+          }
+        : null,
+      /**
+       * Pontualidade das entregas no Siconfi — o preditor da habilitação
+       * VAAT. Consulta viva; `null` quando o Tesouro não responde.
+       */
+      pontualidadeFiscal,
+      /**
+       * População por idade (Censo 2022) e nascidos vivos (Registro Civil) —
+       * as coortes que chegam à rede até 2030. Consulta viva ao IBGE.
+       */
+      demografiaEducacional,
+      /**
+       * População quilombola e indígena (Censo 2022) × matrículas nos
+       * segmentos correspondentes do FUNDEB — fatores de 1,40 a 2,17.
+       */
+      equidadeTerritorial,
+      /**
+       * Condicionalidade de frequência do PBF (SICON/MDS) — o censo mensal
+       * da evasão: não localizados, sem informação e sanções, ao vivo.
+       */
+      frequenciaBolsaFamilia,
+      /**
+       * Assentamentos da reforma agrária (INCRA, dataset local) — famílias e
+       * área, para cruzar com as escolas declaradas em assentamento.
+       */
+      assentamentos: getAssentamentos(String(municipio.id)),
+      /**
+       * VAB por setor (PIB dos Municípios) e alfabetização 15+ (Censo 2022)
+       * — a economia que explica a evasão, ao vivo do IBGE.
+       */
+      economiaLocal,
+      /**
+       * Emendas parlamentares com aplicação carimbada no município (dataset
+       * local do Portal da Transparência) — quem manda dinheiro para cá e
+       * quanto foi para a educação. Ver `core/lib/emendas-municipais.ts`.
+       */
+      emendas: getEmendasMunicipio(String(municipio.id)),
+      /**
+       * Convênios federais com o ente municipal (Portal da Transparência,
+       * consulta viva) — carteira vigente e quanto ainda não foi liberado.
+       */
+      conveniosFederais,
+      /**
+       * CEIS/CNEP — o ente sancionado (bloqueia transferência voluntária) e
+       * as sanções que a própria prefeitura registra contra fornecedores.
+       */
+      sancoesFederais,
+      /**
+       * CAUC (Tesouro) — os 28 requisitos fiscais que a União checa antes de
+       * assinar transferência voluntária, cinco deles de educação/FUNDEB.
+       * Consulta viva: o extrato é atualizado em dias úteis.
+       */
+      caucRequisitos,
+      /**
+       * Indicador Criança Alfabetizada — o único indicador federal de
+       * aprendizagem com meta pactuada por município, ano a ano até 2030.
+       * Ver `core/lib/alfabetizacao-municipal.ts`.
+       */
+      alfabetizacao: getAlfabetizacaoMunicipal(String(municipio.id)),
+      /**
+       * Ciclo político (TSE 2020 × 2024) — reeleição, sucessão ou alternância,
+       * e a posição do mandato no calendário que fecha as transferências
+       * voluntárias no ano eleitoral.
+       */
+      cicloPolitico: getCicloPolitico(String(municipio.id)),
+    },
   };
 
   return {

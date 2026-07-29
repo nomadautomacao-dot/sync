@@ -22,6 +22,12 @@ interface SimecObrasRecord {
   totalObras: number;
   valorEstimadoRepactuacao: number | null;
   valorPagoInfraestrutura: number | null;
+  /** Paralisadas/inacabadas/em retomada, com os valores do painel do Pacto. */
+  obrasCriticas: Awaited<ReturnType<typeof getFndeObrasEnrichment>>["obrasCriticas"];
+  paralisadas: number;
+  inacabadas: number;
+  emRetomada: number;
+  valorParadoEstimado: number;
   situacao: "publico_parcial" | "indisponivel";
 }
 
@@ -61,6 +67,11 @@ export async function getSimecObrasRecord(codigoIBGE: string): Promise<SimecObra
     totalObras: enrichment.totalObras,
     valorEstimadoRepactuacao: enrichment.valorEstimadoRepactuacao,
     valorPagoInfraestrutura: enrichment.valorPagoInfraestrutura,
+    obrasCriticas: enrichment.obrasCriticas,
+    paralisadas: enrichment.paralisadas,
+    inacabadas: enrichment.inacabadas,
+    emRetomada: enrichment.emRetomada,
+    valorParadoEstimado: enrichment.valorParadoEstimado,
     situacao: enrichment.totalObras > 0 || enrichment.valorPagoInfraestrutura ? "publico_parcial" : "indisponivel",
   };
 }

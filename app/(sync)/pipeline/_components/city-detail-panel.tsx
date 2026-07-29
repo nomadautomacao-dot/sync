@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { ArrowUpRightIcon } from "lucide-react";
 import type { CityAccount } from "@/core/lib/city-types";
 import { STAGE_LABELS } from "@/core/lib/city-types";
 import { stagePastelColor } from "./stage-helpers";
@@ -37,6 +39,13 @@ export function CityDetailPanel({ city, onClose, onSave }: CityDetailPanelProps)
             <span className="size-1.5 rounded-full" style={{ backgroundColor: tone.dot }} />
             {STAGE_LABELS[city.stage] ?? city.stage}
           </span>
+          <Link
+            href={`/cidades/${city.id}`}
+            className="mt-2 flex w-fit items-center gap-1 text-[10px] font-bold text-[#2C4E82] hover:underline"
+          >
+            Abrir ficha completa
+            <ArrowUpRightIcon className="size-3" />
+          </Link>
         </div>
         <button
           type="button"

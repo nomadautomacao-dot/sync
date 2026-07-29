@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -39,6 +40,7 @@ interface LevantamentoRequest {
   nome?: string;
   uf?: string;
   exercicio?: number;
+  response_format?: "pdf" | "bundle";
 }
 
 export async function POST(request: NextRequest) {
@@ -86,6 +88,36 @@ export async function POST(request: NextRequest) {
         slug(`${identificacao.municipioNome}_${identificacao.uf}`),
         identificacao.exercicio,
       );
+
+      if (body.response_format === "bundle") {
+        return NextResponse.json(
+          {
+            schemaVersion: 1,
+            fileName: filename,
+            mimeType: "application/pdf",
+            pdfBase64: pdfBuffer.toString("base64"),
+            archive: {
+              schemaVersion: 1,
+              generationId: randomUUID(),
+              reportType: "diagnostico_fundeb",
+              generatedAt: new Date().toISOString(),
+              exercise: identificacao.exercicio,
+              municipality: {
+                name: identificacao.municipioNome,
+                uf: identificacao.uf,
+                codigoIbge: String(identificacao.codigoIBGE),
+              },
+              data: {
+                primary: dados,
+                context: {
+                  generator: "fundeb-levantamento-html",
+                },
+              },
+            },
+          },
+          { headers: { "Cache-Control": "no-store" } },
+        );
+      }
 
       return new NextResponse(new Uint8Array(pdfBuffer), {
         status: 200,
