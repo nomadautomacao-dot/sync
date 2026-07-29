@@ -6,6 +6,7 @@ import {
   type LevantamentoTemplateInput,
 } from "@/core/lib/fundeb-levantamento-template";
 import { getSituacaoVaar } from "@/core/lib/fundeb-vaar";
+import { getPonderacaoMunicipal } from "@/core/lib/fundeb-ponderacao";
 import type { RelatorioFundeb } from "@/modules/levantamento-fundeb/types";
 
 /**
@@ -126,9 +127,27 @@ describe("template do Levantamento FUNDEB", () => {
     expect(html).not.toContain("A reprovação não é do município");
   });
 
-  it("gera a página do VAAR mesmo sem o dataset", () => {
+  it("gera as páginas novas mesmo sem os datasets", () => {
     const html = gerar();
     expect(paginas(html)).toBe(LEVANTAMENTO_TOTAL_PAGINAS);
     expect(html).toContain("Situação no VAAR não disponível");
+    expect(html).toContain("Matrícula ponderada não disponível");
+  });
+
+  it("mostra o denominador ponderado ao lado da matrícula bruta", () => {
+    // A receita do fundo é proporcional a Σ(matrícula × fator), e os fatores
+    // vão de 1,00 a 2,17. Sem esta página o relatório apresenta uma receita
+    // cuja formação não explica.
+    const ponderacao = getPonderacaoMunicipal("2801207")!;
+    const html = gerar({
+      payload: {
+        relatorio_dirigido_base: { ponderacao },
+      } as LevantamentoTemplateInput["payload"],
+    });
+
+    expect(paginas(html)).toBe(LEVANTAMENTO_TOTAL_PAGINAS);
+    expect(html).toContain("Matrículas-equivalentes");
+    expect(html).toContain("Fator médio da rede");
+    expect(html).not.toContain("Matrícula ponderada não disponível");
   });
 });

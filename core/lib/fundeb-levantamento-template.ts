@@ -14,7 +14,7 @@ import { DESCRICAO_CONDICIONALIDADE, type Condicionalidade } from "@/core/lib/fu
  * confere antes de devolver o PDF.
  */
 
-export const LEVANTAMENTO_TOTAL_PAGINAS = 11;
+export const LEVANTAMENTO_TOTAL_PAGINAS = 12;
 
 /** Payload do `buildGoviaMunicipioCompleto`, na parte que este template lê. */
 export interface LevantamentoPayload {
@@ -106,6 +106,32 @@ export interface LevantamentoPayload {
         ufBeneficiadas?: number;
         ufAvaliadas?: number;
       } | null;
+    } | null;
+    /**
+     * Matrícula ponderada — ver `core/lib/fundeb-ponderacao.ts`. É o
+     * denominador real da receita: o fundo paga Σ(matrícula × fator), não
+     * matrícula.
+     */
+    ponderacao?: {
+      exercicio?: number;
+      matriculas?: number;
+      ponderadaVaaf?: number;
+      ponderadaVaat?: number;
+      fatorMedio?: number | null;
+      segmentos?: Array<{
+        nome?: string;
+        matriculas?: number;
+        fatorVaaf?: number | null;
+        equivalentes?: number;
+        participacao?: number;
+      }>;
+      oportunidades?: Array<{
+        chave?: string;
+        titulo?: string;
+        matriculas?: number;
+        ganhoEquivalentes?: number;
+        detalhe?: string;
+      }>;
     } | null;
     perfilIBGE?: {
       /** O IBGE devolve o ano como texto; não assuma número. */
@@ -587,7 +613,7 @@ p+p{margin-top:.08in}
 
 // ── Páginas ─────────────────────────────────────────────────────────────────
 
-function paginaCapa(i: LevantamentoTemplateInput): string {
+function paginaCapa(i: LevantamentoTemplateInput, pagina: number): string {
   const { relatorio: r, logoDataUri } = i;
   const id = r.identificacao;
   const municipio = `${id.municipioNome} — ${id.uf}`;
@@ -640,7 +666,7 @@ function paginaCapa(i: LevantamentoTemplateInput): string {
 </section>`;
 }
 
-function paginaSumario(i: LevantamentoTemplateInput): string {
+function paginaSumario(i: LevantamentoTemplateInput, pagina: number): string {
   const r = i.relatorio;
   const id = r.identificacao;
   const municipio = `${id.municipioNome} — ${id.uf}`;
@@ -723,11 +749,11 @@ function paginaSumario(i: LevantamentoTemplateInput): string {
         .join("")}
     </div>
   </div>
-  ${rodape(2)}
+  ${rodape(pagina)}
 </section>`;
 }
 
-function paginaReceita(i: LevantamentoTemplateInput): string {
+function paginaReceita(i: LevantamentoTemplateInput, pagina: number): string {
   const r = i.relatorio;
   const id = r.identificacao;
   const municipio = `${id.municipioNome} — ${id.uf}`;
@@ -817,11 +843,11 @@ function paginaReceita(i: LevantamentoTemplateInput): string {
       </div>
     </div>
   </div>
-  ${rodape(3)}
+  ${rodape(pagina)}
 </section>`;
 }
 
-function paginaProjecao(i: LevantamentoTemplateInput): string {
+function paginaProjecao(i: LevantamentoTemplateInput, pagina: number): string {
   const r = i.relatorio;
   const id = r.identificacao;
   const municipio = `${id.municipioNome} — ${id.uf}`;
@@ -897,7 +923,7 @@ function paginaProjecao(i: LevantamentoTemplateInput): string {
         : ""
     }
   </div>
-  ${rodape(4)}
+  ${rodape(pagina)}
 </section>`;
 }
 
@@ -951,7 +977,7 @@ const AGENDA_CONDICIONALIDADE: Record<Condicionalidade, string> = {
  * cinco condicionalidades reprovou e o que se faz a respeito. Espremer isso
  * num canto da página de receita reduziria de novo o assunto a um número.
  */
-function paginaVaar(i: LevantamentoTemplateInput): string {
+function paginaVaar(i: LevantamentoTemplateInput, pagina: number): string {
   const id = i.relatorio.identificacao;
   const municipio = `${id.municipioNome} — ${id.uf}`;
   const v = i.payload?.relatorio_dirigido_base?.vaar;
@@ -1029,11 +1055,11 @@ function paginaVaar(i: LevantamentoTemplateInput): string {
       atendimento e aprendizagem, e por isso habilitar-se não garante, por si só, um valor determinado.</p>
     </div>
   </div>
-  ${rodape(5)}
+  ${rodape(pagina)}
 </section>`;
 }
 
-function paginaSerie(i: LevantamentoTemplateInput): string {
+function paginaSerie(i: LevantamentoTemplateInput, pagina: number): string {
   const r = i.relatorio;
   const id = r.identificacao;
   const municipio = `${id.municipioNome} — ${id.uf}`;
@@ -1049,7 +1075,7 @@ function paginaSerie(i: LevantamentoTemplateInput): string {
     <p class="lede">As bases oficiais não retornaram série de repasses para este município no momento da
     emissão. A leitura por exercício será incorporada assim que o histórico do FNDE estiver acessível.</p>
   </div>
-  ${rodape(6)}
+  ${rodape(pagina)}
 </section>`;
   }
 
@@ -1101,11 +1127,11 @@ function paginaSerie(i: LevantamentoTemplateInput): string {
       e complementações &mdash; e não de rede &mdash; perde força a cada Censo sem recomposição de matrícula.</p>
     </div>
   </div>
-  ${rodape(6)}
+  ${rodape(pagina)}
 </section>`;
 }
 
-function paginaRede(i: LevantamentoTemplateInput): string {
+function paginaRede(i: LevantamentoTemplateInput, pagina: number): string {
   const r = i.relatorio;
   const id = r.identificacao;
   const municipio = `${id.municipioNome} — ${id.uf}`;
@@ -1173,11 +1199,124 @@ function paginaRede(i: LevantamentoTemplateInput): string {
     <p class="small mt-1">Cada matrícula migrada para jornada integral vale mais no fundo &mdash; é o elo
     entre esta página e o cenário de estruturação da Parte V.</p>
   </div>
-  ${rodape(7)}
+  ${rodape(pagina)}
 </section>`;
 }
 
-function paginaIdeb(i: LevantamentoTemplateInput): string {
+/**
+ * Página da matrícula ponderada.
+ *
+ * A Parte III mostra a rede em matrículas brutas porque é assim que o gestor a
+ * conhece. Esta página mostra a mesma rede no denominador que o fundo usa:
+ * Σ(matrícula × fator), com fatores de 1,00 a 2,17. Sem ela o relatório
+ * apresenta uma receita cuja formação não explica.
+ *
+ * As "oportunidades" são conferências, não acusações — a creche pode ser
+ * legitimamente parcial e o AEE pode não ser devido. O texto quantifica o que
+ * está em jogo e manda verificar.
+ */
+function paginaPonderacao(i: LevantamentoTemplateInput, pagina: number): string {
+  const id = i.relatorio.identificacao;
+  const municipio = `${id.municipioNome} — ${id.uf}`;
+  const p = i.payload?.relatorio_dirigido_base?.ponderacao;
+
+  const segmentos = (p?.segmentos ?? []).filter((s) => num(s.matriculas) > 0);
+  const brutas = num(p?.matriculas);
+  const ponderada = num(p?.ponderadaVaaf);
+  const fatorMedio = num(p?.fatorMedio);
+  const oportunidades = p?.oportunidades ?? [];
+
+  if (!p || brutas === 0) {
+    return `<section class="page content-page">
+  ${cabecalho(municipio, "Parte III · Matrícula ponderada")}
+  <div class="page-body">
+    <div class="kicker">Parte III &middot; O denominador real da receita</div>
+    <div class="status"><span class="dot"></span> Matrícula ponderada não disponível nas bases consultadas</div>
+    <p class="small mt-1">A planilha de matrículas ponderadas do FNDE não trouxe este município no exercício
+    consultado. A leitura de receita por aluno das páginas anteriores permanece válida, mas usa matrícula
+    bruta &mdash; que não é o denominador com que o fundo calcula o repasse.</p>
+  </div>
+  ${rodape(pagina)}
+</section>`;
+  }
+
+  const linhas = segmentos
+    .slice(0, 12)
+    .map(
+      (s) => `<tr>
+        <td>${esc(s.nome)}</td>
+        <td class="r">${int(s.matriculas)}</td>
+        <td class="r">${s.fatorVaaf == null ? "—" : num(s.fatorVaaf).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</td>
+        <td class="r"><b>${int(s.equivalentes)}</b></td>
+        <td class="r">${pct(s.participacao)}</td>
+      </tr>`,
+    )
+    .join("");
+
+  const restantes = segmentos.length - Math.min(12, segmentos.length);
+
+  return `<section class="page content-page">
+  ${cabecalho(municipio, "Parte III · Matrícula ponderada")}
+  <div class="page-body">
+    <div class="kicker">Parte III &middot; O denominador real da receita</div>
+
+    <div class="grid-4">
+      ${kpi("Matrículas", int(brutas), `filtragem FNDE ${ou(p.exercicio, "")}`)}
+      ${kpi("Matrículas-equivalentes", int(ponderada), "após a ponderação do fundo", "up")}
+      ${kpi(
+        "Fator médio da rede",
+        fatorMedio > 0 ? fatorMedio.toLocaleString("pt-BR", { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : "—",
+        "referência legal = 1,000",
+      )}
+      ${kpi("Equivalentes no VAAT", int(p.ponderadaVaat), "ponderação da complementação VAAT")}
+    </div>
+
+    <div class="sec-label" style="margin-top:.16in">Onde o peso da rede está concentrado</div>
+    <table class="tb">
+      <tr><th>Segmento</th><th class="r">Matrículas</th><th class="r">Fator</th><th class="r">Equivalentes</th><th class="r">Peso</th></tr>
+      ${linhas}
+    </table>
+    ${
+      restantes > 0
+        ? `<p class="micro" style="margin-top:.04in">Exibidos os 12 segmentos de maior peso; outros ${int(restantes)}
+           segmentos com matrícula compõem o restante.</p>`
+        : ""
+    }
+
+    ${
+      oportunidades.length
+        ? `<div class="sec-label" style="margin-top:.16in">Pontos de conferência no Censo</div>
+           <div class="grid-${oportunidades.length > 1 ? "2" : "1"}">
+             ${oportunidades
+               .map(
+                 (o) => `<div class="card">
+                   <h3>${esc(o.titulo)}</h3>
+                   <p class="micro"><b>${int(o.matriculas)}</b> matrículas &middot; até
+                   <b>+${int(o.ganhoEquivalentes)}</b> matrículas-equivalentes se a condição for outra.</p>
+                   <p class="micro" style="margin-top:.04in">${esc(o.detalhe)}</p>
+                 </div>`,
+               )
+               .join("")}
+           </div>`
+        : ""
+    }
+
+    <div class="note mt-2">
+      <p style="font-size:7.9pt;line-height:1.4">A receita do FUNDEB é proporcional a
+      <b>matrícula × fator de ponderação</b>, e o fator vai de 1,00 (anos iniciais urbano, a referência do
+      art. 7º, §1º da Lei nº 14.113/2020) a 2,17 (creche integral indígena ou quilombola). Campo acrescenta
+      15% e educação indígena ou quilombola acrescenta 40% sobre o fator da etapa. Os fatores desta página
+      são os efetivamente aplicados pelo FNDE na planilha do exercício &mdash; que em alguns segmentos
+      diverge da resolução da CIF. Jornada, localização e atendimento especializado declarados a menor no
+      Censo rebaixam o fator e se repetem a cada exercício, porque a coleta de um ano define o repasse do
+      seguinte.</p>
+    </div>
+  </div>
+  ${rodape(pagina)}
+</section>`;
+}
+
+function paginaIdeb(i: LevantamentoTemplateInput, pagina: number): string {
   const r = i.relatorio;
   const id = r.identificacao;
   const municipio = `${id.municipioNome} — ${id.uf}`;
@@ -1314,11 +1453,11 @@ function paginaIdeb(i: LevantamentoTemplateInput): string {
     <p class="small">O Censo Escolar não retornou o detalhamento de infraestrutura para esta rede no momento da emissão.</p>`
     }
   </div>
-  ${rodape(8)}
+  ${rodape(pagina)}
 </section>`;
 }
 
-function paginaFiscal(i: LevantamentoTemplateInput): string {
+function paginaFiscal(i: LevantamentoTemplateInput, pagina: number): string {
   const r = i.relatorio;
   const id = r.identificacao;
   const municipio = `${id.municipioNome} — ${id.uf}`;
@@ -1409,11 +1548,11 @@ function paginaFiscal(i: LevantamentoTemplateInput): string {
     <p class="small mt-1">Situação do PAR: ${ou(r.situacaoPAR)}. O acesso credenciado a SIMEC e Habilita é o
     primeiro passo operacional do plano de trabalho.</p>
   </div>
-  ${rodape(9)}
+  ${rodape(pagina)}
 </section>`;
 }
 
-function paginaCenario(i: LevantamentoTemplateInput): string {
+function paginaCenario(i: LevantamentoTemplateInput, pagina: number): string {
   const r = i.relatorio;
   const id = r.identificacao;
   const municipio = `${id.municipioNome} — ${id.uf}`;
@@ -1509,11 +1648,11 @@ function paginaCenario(i: LevantamentoTemplateInput): string {
       </div>
     </div>
   </div>
-  ${rodape(10)}
+  ${rodape(pagina)}
 </section>`;
 }
 
-function paginaCaderno(i: LevantamentoTemplateInput): string {
+function paginaCaderno(i: LevantamentoTemplateInput, pagina: number): string {
   const r = i.relatorio;
   const id = r.identificacao;
   const municipio = `${id.municipioNome} — ${id.uf}`;
@@ -1594,7 +1733,7 @@ function paginaCaderno(i: LevantamentoTemplateInput): string {
       </div>
     </div>
   </div>
-  ${rodape(11, ` &middot; Emitido em ${dataCurta(r.geradoEm)}`)}
+  ${rodape(pagina, ` &middot; Emitido em ${dataCurta(r.geradoEm)}`)}
 </section>`;
 }
 
@@ -1611,11 +1750,12 @@ export function generateLevantamentoHtml(input: LevantamentoTemplateInput): stri
     paginaVaar,
     paginaSerie,
     paginaRede,
+    paginaPonderacao,
     paginaIdeb,
     paginaFiscal,
     paginaCenario,
     paginaCaderno,
-  ].map((fn) => fn(input));
+  ].map((fn, indice) => fn(input, indice + 1));
 
   return `<!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8">

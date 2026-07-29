@@ -423,6 +423,7 @@ docker build -t sync-app . && docker run -p 3000:3000 sync-app
 | `dados/gerar-tse-prefeitos.py` | Dados TSE prefeitos |
 | `dados/gerar-ideb-municipios.py` | Dados IDEB |
 | `dados/gerar-caged-municipios.mjs` | `npm run dados:caged` — snapshot do Novo CAGED (IPEADATA). Regerar mensalmente |
+| `dados/gerar-matriculas-ponderadas.mjs` | `npm run dados:ponderadas` — matrícula ponderada e fatores oficiais do FUNDEB, derivados da planilha do FNDE |
 | `dados/gerar-vaar-municipios.mjs` | `npm run dados:vaar` — status das 5 condicionalidades do VAAR e valores por município (FNDE). Regerar a cada portaria quadrimestral |
 | `pdf/prepare-docx-templates.mjs` | Templates DOCX contratos |
 

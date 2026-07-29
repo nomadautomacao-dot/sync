@@ -21,6 +21,7 @@ import { getSimecObrasRecord } from "@/core/lib/simec-obras";
 import { getValorAlunoAno } from "@/core/lib/fundeb-valor-aluno";
 import { getEquidadeMunicipal } from "@/core/lib/inep-equidade";
 import { getSituacaoVaar } from "@/core/lib/fundeb-vaar";
+import { getPonderacaoMunicipal } from "@/core/lib/fundeb-ponderacao";
 
 interface IbgeMunicipioResponse {
   id: number;
@@ -871,6 +872,11 @@ function buildRelatorioDirigidoBase({
      * município num CSV que já baixamos para `data/fnde/vaar-2026.json`.
      */
     vaar: getSituacaoVaar(ident.codigoIBGE),
+    /**
+     * Matrícula ponderada — o denominador que a receita do fundo realmente
+     * usa. Ver `core/lib/fundeb-ponderacao.ts`.
+     */
+    ponderacao: getPonderacaoMunicipal(ident.codigoIBGE),
     perfilIBGE: ibgeIndicators ? {
       disponivel: true,
       populacaoEstimada: ibgeIndicators.populacaoEstimada,
