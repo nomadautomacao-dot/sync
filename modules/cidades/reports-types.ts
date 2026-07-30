@@ -7,6 +7,7 @@ export const CITY_REPORT_TYPES = [
   "dossie_conformidade",
   "dossie_matricula",
   "dossie_dinheiro",
+  "dossie_aprendizagem",
 ] as const;
 
 export type CityReportType = (typeof CITY_REPORT_TYPES)[number];
@@ -20,6 +21,7 @@ export const CITY_REPORT_TYPE_LABELS: Record<CityReportType, string> = {
   dossie_conformidade: "Dossiê da Conformidade",
   dossie_matricula: "Dossiê da Matrícula Ponderada",
   dossie_dinheiro: "Dossiê do Dinheiro Federal",
+  dossie_aprendizagem: "Dossiê da Aprendizagem",
 };
 
 export interface GeneratedReportArchive {

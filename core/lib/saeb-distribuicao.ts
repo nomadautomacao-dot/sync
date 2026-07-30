@@ -98,6 +98,83 @@ function carregar(): ArquivoSaeb | null {
 
 const SERIES: SerieSaeb[] = ["lp5", "mt5", "lp9", "mt9"];
 
+export interface ReferenciaSerie {
+  /** Quantas redes municipais entraram na comparação desta série. */
+  redes: number;
+  medianaInsuficiente: number;
+  medianaAvancado: number;
+  /** Percentil 99 de avançado — acima dele a distribuição é atípica no país. */
+  p99Avancado: number;
+  /** Vetores ordenados, para posicionar um município na distribuição. */
+  insuficiente: number[];
+  avancado: number[];
+}
+
+let referencia: Partial<Record<SerieSaeb, ReferenciaSerie>> | undefined;
+
+function quantil(ordenado: number[], p: number): number {
+  if (ordenado.length === 0) return 0;
+  return ordenado[Math.min(ordenado.length - 1, Math.floor(p * ordenado.length))];
+}
+
+/**
+ * A distribuição das próprias redes municipais do país, por série.
+ *
+ * Existe por dois motivos. O primeiro é dar régua: "24% no insuficiente" não
+ * significa nada sozinho, e significa muito ao lado da mediana nacional de 18,6%.
+ *
+ * O segundo é defensivo. Há uma cauda de redes com valores implausíveis — 57
+ * municípios declaram mais de 60% dos alunos no nível avançado em Língua
+ * Portuguesa do 5º ano, contra mediana nacional de 20%. Entregar isso a um
+ * prefeito como conquista, sem dizer onde o número cai no país, é o tipo de
+ * afirmação que derruba o documento inteiro quando alguém confere.
+ *
+ * Computada uma vez por processo: são 5.442 municípios × 4 séries.
+ */
+export function getReferenciaNacionalSaeb(): Partial<Record<SerieSaeb, ReferenciaSerie>> {
+  if (referencia !== undefined) return referencia;
+
+  const arquivo = carregar();
+  referencia = {};
+  if (!arquivo?.municipios) return referencia;
+
+  for (const chave of SERIES) {
+    const insuficiente: number[] = [];
+    const avancado: number[] = [];
+
+    for (const registro of Object.values(arquivo.municipios)) {
+      const bruto = registro[chave];
+      if (!bruto || !Array.isArray(bruto.niveis)) continue;
+      const grupos = agruparNiveis(chave, bruto.niveis);
+      insuficiente.push(grupos.insuficiente);
+      avancado.push(grupos.avancado);
+    }
+    if (insuficiente.length === 0) continue;
+
+    insuficiente.sort((a, b) => a - b);
+    avancado.sort((a, b) => a - b);
+
+    referencia[chave] = {
+      redes: insuficiente.length,
+      medianaInsuficiente: quantil(insuficiente, 0.5),
+      medianaAvancado: quantil(avancado, 0.5),
+      p99Avancado: quantil(avancado, 0.99),
+      insuficiente,
+      avancado,
+    };
+  }
+
+  return referencia;
+}
+
+/** Posição de `valor` num vetor ordenado, em percentil de 0 a 100. */
+export function percentilEm(ordenado: number[], valor: number): number | null {
+  if (ordenado.length === 0) return null;
+  let abaixo = 0;
+  while (abaixo < ordenado.length && ordenado[abaixo] < valor) abaixo += 1;
+  return Math.round((abaixo / ordenado.length) * 1000) / 10;
+}
+
 export function getSaebDistribuicao(codigoIBGE: string): SaebDistribuicaoMunicipio | null {
   const arquivo = carregar();
   const digits = codigoIBGE.replace(/\D/g, "");

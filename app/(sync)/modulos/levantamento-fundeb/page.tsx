@@ -11,6 +11,7 @@ import {
   HistoryIcon,
   LoaderIcon,
   ClipboardCheckIcon,
+  GraduationCapIcon,
   LandmarkIcon,
   ScaleIcon,
   SchoolIcon,
@@ -49,7 +50,8 @@ type Documento =
   | "dossie-escolas"
   | "dossie-conformidade"
   | "dossie-matricula"
-  | "dossie-dinheiro";
+  | "dossie-dinheiro"
+  | "dossie-aprendizagem";
 
 /**
  * Os quatro documentos que o módulo produz, nesta ordem de uso.
@@ -223,6 +225,26 @@ const DOCUMENTOS = [
       "Sanções e transferências automáticas",
     ],
   },
+  {
+    id: "dossie-aprendizagem" as const,
+    reportType: "dossie_aprendizagem" as CityReportType,
+    icone: GraduationCapIcon,
+    nome: "Dossiê da Aprendizagem",
+    paginas: 0,
+    variante: "secundario" as const,
+    prefixoArquivo: "Dossie_Aprendizagem",
+    endpoint: "/api/modulos/dossies/aprendizagem",
+    descricao:
+      "A distribuição que a média esconde: as quatro provas do Saeb com o percentual convertido em crianças, a série do IDEB e a alfabetização contra a meta que o município assinou.",
+    conteudo: [
+      "Distribuição das quatro provas",
+      "Percentual convertido em crianças",
+      "Régua contra as redes do país",
+      "IDEB, edição a edição",
+      "Alfabetização contra a meta assinada",
+      "Fluxo escolar e a ponte com o VAAR",
+    ],
+  },
 ];
 
 function pdfBlobFromBase64(base64: string): Blob {
@@ -324,6 +346,21 @@ function Bancada() {
     retry: false,
   });
 
+  const { data: previaAprendizagem } = useQuery<{
+    provas: number;
+    seriesAtipicas: number;
+    paginasEstimadas: number;
+  }>({
+    queryKey: ["dossie-aprendizagem-previa", codigoIbge],
+    queryFn: async () => {
+      const res = await fetch(`/api/modulos/dossies/aprendizagem?codigo_ibge=${codigoIbge}`);
+      if (!res.ok) throw new Error("prévia indisponível");
+      return res.json();
+    },
+    enabled: !!codigoIbge,
+    retry: false,
+  });
+
   /* Chegando pela URL, o nome e a UF só existem depois que o relatório carrega —
      e os dois são obrigatórios no corpo que as rotas de PDF recebem. */
   const municipio: IbgeMunicipio | null =
@@ -387,6 +424,14 @@ function Bancada() {
       const paradas =
         previaDinheiro.obrasParadas > 0 ? ` · ${previaDinheiro.obrasParadas} parada(s)` : "";
       return `${previaDinheiro.obras} obras${paradas} · ${previaDinheiro.conveniosVigentes} convênios · ~${previaDinheiro.paginasEstimadas} pg`;
+    }
+    if (id === "dossie-aprendizagem") {
+      if (!previaAprendizagem) return "tamanho variável";
+      const atipicas =
+        previaAprendizagem.seriesAtipicas > 0
+          ? ` · ${previaAprendizagem.seriesAtipicas} atípica(s)`
+          : "";
+      return `${previaAprendizagem.provas} provas do Saeb${atipicas} · ~${previaAprendizagem.paginasEstimadas} pg`;
     }
     return undefined;
   };

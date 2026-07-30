@@ -174,10 +174,11 @@ Isso está detalhado no dossiê 1, que é o que mais ganha com a regeneração.
    no dia seguinte), e todos os dados já estavam prontos.
 3. ✅ **Matrícula ponderada** — é onde mora o dinheiro.
 4. ✅ **Dinheiro federal** — o segundo orçamento, fora do fundo.
-5. Restam **aprendizagem, demanda, equidade e comparativo**, na ordem que a
-   demanda comercial pedir.
+5. ✅ **Aprendizagem** — a distribuição que a média esconde.
+6. Restam **demanda, equidade e comparativo**, na ordem que a demanda
+   comercial pedir.
 
-### O que a construção dos quatro primeiros ensinou
+### O que a construção dos cinco primeiros ensinou
 
 - **A armadilha do campo de data.** No CAUC, parte dos requisitos repete a
   *data da consulta* no campo de validade. Lido como vencimento, o documento
@@ -205,6 +206,15 @@ Isso está detalhado no dossiê 1, que é o que mais ganha com a regeneração.
   429, quando a chave gratuita estoura o limite por minuto — e a mesma consulta
   responde 200 segundos depois. Sem repetição com espera, um dossiê que pagina
   dezenas de vezes perde seções por sorte de cronômetro.
+- **Régua antes de elogio.** Ibateguara/AL aparece com 96% dos alunos no nível
+  avançado do Saeb — contra mediana nacional de 20%. Sem comparar com a
+  distribuição das próprias redes municipais do país, o dossiê entregaria isso
+  a um prefeito como conquista. Todo indicador de resultado precisa da posição
+  no país ao lado, e do aviso quando a rede cai fora do percentil 99.
+- **Conversão útil exige suposição impressa.** Percentual não move ninguém;
+  "≈ 12.865 crianças" move. Mas o Saeb publica percentual e o Censo publica
+  matrícula por etapa — a conversão supõe distribuição uniforme entre as séries,
+  e isso vai escrito em cada folha onde o número aparece.
 - **Dataset estreito demais some da página.** `autoresEducacao` guardava só os
   três maiores autores de emenda **de educação**, e isso deixava a folha vazia
   em 86% dos municípios. Guardar todos os autores de qualquer função encheu

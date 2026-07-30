@@ -119,3 +119,42 @@ de que o recorte é por município de prova e inclui candidatos de vizinhos.
   proficiência média (no dossiê 1), não a distribuição.
 - **Série histórica da distribuição.** O dataset traz a edição corrente.
 - **Alfabetização por escola.** A avaliação do 2º ano é divulgada por rede.
+
+---
+
+## 7. Como ficou — implementado em 2026-07-30
+
+`core/lib/dossie-aprendizagem.ts` · `-template.ts` · `-pdf.ts` ·
+`core/lib/rendimento-municipal.ts` (novo) ·
+`app/api/modulos/dossies/aprendizagem/` · 22 testes. 8 folhas.
+
+**O que entrou além do previsto na spec:**
+
+- **A régua nacional, por prova.** `saeb-distribuicao.ts` ganhou
+  `getReferenciaNacionalSaeb()`: mediana e percentil 99 de cada série, medidos
+  sobre as próprias 5.397 redes municipais avaliadas. Toda folha de prova mostra
+  a mediana nacional ao lado do percentual do município e a posição dele na
+  distribuição.
+- **O aviso de distribuição atípica.** Ibateguara/AL declara 96,3% dos alunos no
+  nível avançado em LP do 5º ano, contra mediana de 20% — acima do percentil 99.
+  É a mesma rede que aparece com IDEB 9,6 e 100% de aprovação no Dossiê das
+  Escolas. Entregar isso como conquista, sem contexto, derrubaria o documento
+  inteiro na primeira conferência. A prova sai marcada, com a mediana ao lado e
+  o pedido de conferir participação e número de respondentes.
+- **`rendimento-municipal.ts`.** O dataset `inep-rendimento-municipal-2023.json`
+  não tinha lib própria — só `qedu-indicators.ts` o lia de passagem. A lib nova
+  expõe aprovação, reprovação, abandono e distorção por etapa, os componentes do
+  IDEB abertos, e **declara qual recorte de rede usou**: onde não há municipal
+  nem pública, o número descreve o território, não a rede.
+- **A folha do VAAR como portão e régua.** As cinco condicionalidades são o
+  portão (reprovar em uma zera a parcela); o valor é proporcional ao **avanço**
+  em atendimento e aprendizagem. São Paulo tem a Cond. III reprovada — redução
+  das desigualdades de aprendizagem —, que é exatamente a cauda que as barras
+  das folhas anteriores mostram.
+
+**A limitação que não deu para resolver.** A planilha de resultados do Saeb 2023
+tem 113 colunas e **nenhuma contagem de participantes** — só percentuais. O
+Censo publica matrícula por etapa, não por série. A conversão de percentual em
+crianças supõe distribuição uniforme entre as séries da etapa, o campo se chama
+`alunosAproximados`, todo número sai com `≈` e a suposição está impressa em cada
+folha onde ele aparece.
