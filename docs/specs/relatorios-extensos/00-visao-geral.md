@@ -175,10 +175,10 @@ Isso está detalhado no dossiê 1, que é o que mais ganha com a regeneração.
 3. ✅ **Matrícula ponderada** — é onde mora o dinheiro.
 4. ✅ **Dinheiro federal** — o segundo orçamento, fora do fundo.
 5. ✅ **Aprendizagem** — a distribuição que a média esconde.
-6. Restam **demanda, equidade e comparativo**, na ordem que a demanda
-   comercial pedir.
+6. ✅ **Demanda** — a coorte que já nasceu contra a vaga que existe.
+7. Restam **equidade e comparativo**, na ordem que a demanda comercial pedir.
 
-### O que a construção dos cinco primeiros ensinou
+### O que a construção dos seis primeiros ensinou
 
 - **A armadilha do campo de data.** No CAUC, parte dos requisitos repete a
   *data da consulta* no campo de validade. Lido como vencimento, o documento
@@ -215,6 +215,15 @@ Isso está detalhado no dossiê 1, que é o que mais ganha com a regeneração.
   "≈ 12.865 crianças" move. Mas o Saeb publica percentual e o Censo publica
   matrícula por etapa — a conversão supõe distribuição uniforme entre as séries,
   e isso vai escrito em cada folha onde o número aparece.
+- **Números de naturezas diferentes não se somam.** Criança de 2 anos sem
+  creche é demanda não atendida; criança de 7 fora da escola é descumprimento de
+  dever constitucional (EC 59/2009). Em Paulo Afonso a soma dá 5.428 e a leitura
+  correta é 563 — treze por cento do primeiro. Toda folha que junta populações
+  precisa declarar o regime jurídico de cada uma antes de agregar.
+- **Marca de rodapé colada em unidade monetária mente.** `R$ 17,40 miᵈ` se lê
+  como "R$ 17,40 mil" em corpo de impressão — erro de mil vezes no número
+  principal da folha. O `sup` de derivação leva margem, e isso vale para todo
+  template que usa a convenção.
 - **Dataset estreito demais some da página.** `autoresEducacao` guardava só os
   três maiores autores de emenda **de educação**, e isso deixava a folha vazia
   em 86% dos municípios. Guardar todos os autores de qualquer função encheu

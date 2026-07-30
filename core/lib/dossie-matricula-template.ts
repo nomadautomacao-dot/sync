@@ -924,7 +924,9 @@ td.alerta{color:var(--red)}
 .faixa-derivado h3{font-size:9pt;color:#8a5a0d;margin-bottom:.05in}
 .faixa-derivado p{font-size:7.6pt;line-height:1.45;color:#5d4a2c}
 .faixa-derivado .vpe{margin-top:.06in;color:#8a5a0d}
-sup.d{color:var(--gold);font-weight:800;font-size:.7em}
+/* A margem não é estética: colado, "R$ 17,40 miᵈ" se lê como "R$ 17,40 mil" —
+   erro de mil vezes na coluna de dinheiro. */
+sup.d{color:var(--gold);font-weight:800;font-size:.7em;margin-left:.03in}
 
 /* ── conciliação ─────────────────────────────────────────────────────────── */
 .grid{margin-top:.14in;font-size:8pt}

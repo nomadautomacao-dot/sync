@@ -112,3 +112,37 @@ antes disso, é um caso de busca ativa.
   que existe é a coorte já nascida, que é mais confiável que projeção.
 - **Fila de creche.** É dado municipal, não público. Vai para o ofício de
   solicitação de documentos.
+
+---
+
+## 7. Como ficou — implementado em 2026-07-30
+
+`core/lib/dossie-demanda.ts` · `-template.ts` · `-pdf.ts` ·
+`app/api/modulos/dossies/demanda/` · 17 testes. 5 folhas.
+
+**A correção que mudou o documento.** A primeira versão somava "crianças fora da
+escola" nas quatro faixas e chegava a 5.428 em Paulo Afonso. Mas creche **não é
+matrícula obrigatória** — a obrigação começa aos 4 anos (EC 59/2009). Criança de
+2 anos sem vaga é demanda não atendida e fila; criança de 7 fora da escola é
+descumprimento de dever constitucional, que aciona conselho tutelar e Ministério
+Público. Os números corretos são 4.865 e 563, e o dossiê tem uma folha inteira
+dedicada a não somá-los — porque somar é o que a apresentação que ele substitui
+costuma fazer.
+
+**O que entrou além do previsto na spec:**
+
+- **A projeção por ano de chegada.** Além do calendário por coorte, uma tabela
+  por ano: quantas crianças chegam ao 1º ano e quantas estão na idade de
+  pré-escola. A linha da pré só aparece quando **as duas coortes** que a compõem
+  já nasceram — completá-la exigiria projetar nascimento, que é outra disciplina
+  e tem outro erro.
+- **A régua visual da creche.** Cobertura atual contra a meta do PNE em duas
+  barras, na mesma escala.
+- **A variante "meta já alcançada".** Ibateguara tem 54% de cobertura de creche,
+  acima dos 50% do PNE. A conta sai como resultado, não como `R$ 0,00` — mesma
+  correção que o Dossiê da Matrícula Ponderada precisou.
+
+**A ressalva que este dossiê carrega e o da Matrícula não precisa.** Abrir vaga
+de creche **custa**. A receita por matrícula é real e entra no exercício
+seguinte, e não paga a vaga sozinha. A nota de derivação diz isso onde a cifra
+aparece.

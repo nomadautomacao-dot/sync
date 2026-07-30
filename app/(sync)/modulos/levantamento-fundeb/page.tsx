@@ -11,6 +11,7 @@ import {
   HistoryIcon,
   LoaderIcon,
   ClipboardCheckIcon,
+  BabyIcon,
   GraduationCapIcon,
   LandmarkIcon,
   ScaleIcon,
@@ -51,7 +52,8 @@ type Documento =
   | "dossie-conformidade"
   | "dossie-matricula"
   | "dossie-dinheiro"
-  | "dossie-aprendizagem";
+  | "dossie-aprendizagem"
+  | "dossie-demanda";
 
 /**
  * Os quatro documentos que o módulo produz, nesta ordem de uso.
@@ -245,6 +247,26 @@ const DOCUMENTOS = [
       "Fluxo escolar e a ponte com o VAAR",
     ],
   },
+  {
+    id: "dossie-demanda" as const,
+    reportType: "dossie_demanda" as CityReportType,
+    icone: BabyIcon,
+    nome: "Dossiê da Demanda",
+    paginas: 0,
+    variante: "secundario" as const,
+    prefixoArquivo: "Dossie_Demanda",
+    endpoint: "/api/modulos/dossies/demanda",
+    descricao:
+      "A rede de 2030 já nasceu: o calendário das coortes do Registro Civil, a cobertura por faixa com os dois denominadores e a conta da creche contra a meta do PNE.",
+    conteudo: [
+      "Calendário das coortes por ano",
+      "Cobertura: rede municipal e todas",
+      "A conta da creche e a meta do PNE",
+      "Fora da escola × demanda não atendida",
+      "Busca ativa pelo Bolsa Família",
+      "Maternidade adolescente e rural",
+    ],
+  },
 ];
 
 function pdfBlobFromBase64(base64: string): Blob {
@@ -361,6 +383,22 @@ function Bancada() {
     retry: false,
   });
 
+  const { data: previaDemanda } = useQuery<{
+    coortes: number;
+    demandaCrecheNaoAtendida: number | null;
+    coberturaCreche: number | null;
+    paginasEstimadas: number;
+  }>({
+    queryKey: ["dossie-demanda-previa", codigoIbge],
+    queryFn: async () => {
+      const res = await fetch(`/api/modulos/dossies/demanda?codigo_ibge=${codigoIbge}`);
+      if (!res.ok) throw new Error("prévia indisponível");
+      return res.json();
+    },
+    enabled: !!codigoIbge,
+    retry: false,
+  });
+
   /* Chegando pela URL, o nome e a UF só existem depois que o relatório carrega —
      e os dois são obrigatórios no corpo que as rotas de PDF recebem. */
   const municipio: IbgeMunicipio | null =
@@ -432,6 +470,14 @@ function Bancada() {
           ? ` · ${previaAprendizagem.seriesAtipicas} atípica(s)`
           : "";
       return `${previaAprendizagem.provas} provas do Saeb${atipicas} · ~${previaAprendizagem.paginasEstimadas} pg`;
+    }
+    if (id === "dossie-demanda") {
+      if (!previaDemanda) return "tamanho variável";
+      const creche =
+        previaDemanda.coberturaCreche !== null
+          ? ` · creche ${previaDemanda.coberturaCreche.toFixed(1).replace(".", ",")}%`
+          : "";
+      return `${previaDemanda.coortes} coortes${creche} · ~${previaDemanda.paginasEstimadas} pg`;
     }
     return undefined;
   };
