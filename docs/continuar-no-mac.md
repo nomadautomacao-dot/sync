@@ -17,7 +17,7 @@
 git clone <repo> && cd Sync
 npm install
 npx playwright install chromium   # obrigatório: os PDFs são gerados no Chromium
-npm test                          # 379 testes — confirma que a base chegou íntegra
+npm test                          # 387 testes — confirma que a base chegou íntegra
 npm run dev                       # Next em :3100
 ```
 
@@ -80,7 +80,7 @@ lê apenas os JSON de `data/`.
 ### Verificação rápida
 
 ```bash
-npm test              # 379 testes, 39 arquivos — devem passar todos
+npm test              # 387 testes, 39 arquivos — devem passar todos
 npm run dev           # Next em :3100
 ```
 
@@ -107,7 +107,7 @@ não foram introduzidos por este trabalho e não bloqueiam o build do Next.
 
 | Relatório | Rota | Páginas | Contrato de páginas |
 |---|---|---|---|
-| **Raio-X Municipal** | `POST /api/modulos/levantamento-fundeb/raio-x` | **42** | `PAGINAS_ESPERADAS` em `core/lib/municipal-xray-pdf.ts` |
+| **Raio-X Municipal** | `POST /api/modulos/levantamento-fundeb/raio-x` | **43** | `PAGINAS_ESPERADAS` em `core/lib/municipal-xray-pdf.ts` |
 | **Diagnóstico FUNDEB** (Levantamento) | `POST /api/modulos/levantamento-fundeb/pdf?tipo=levantamento` | 10 (+5 anexos) | gerador Python (`kit_padrao_pdf_rocha_prime/`) |
 | **Histórico do Censo Escolar** | `POST /api/modulos/levantamento-fundeb/historico-censo` | **11** | `PAGINAS_ESPERADAS` em `core/lib/censo-historico-pdf.ts` |
 
@@ -227,8 +227,9 @@ Fonte da verdade detalhada: **`docs/roadmaps/2026-07-29-raio-x-dossie-completo.m
   CEIS/CNEP, **CAUC**, **Criança Alfabetizada (ICA)**.
 - **Onda 4**: **#41 ciclo político** (reeleição/sucessão/alternância + as duas
   travas legais do fim de mandato), **#3 densidade/dispersão** (página
-  "Densidade e dispersão") e **#40 perfil do titular da educação** (página
-  "Quem dirige a educação"), ambas de 2026-07-29.
+  "Densidade e dispersão"), **#40 perfil do titular da educação** (página
+  "Quem dirige a educação") e **#48 declaração étnica** (página "Declaração
+  étnica"), todas de 2026-07-29/30.
 - Fora da lista: **Relatório Histórico do Censo** (11 páginas, 3 Censos lado a
   lado, com cor/raça em série).
 
@@ -306,10 +307,10 @@ nova foi conferida visualmente.
 
 ## 7. Próximo passo recomendado
 
-1. Rodar `npm test` no Mac para confirmar que a base chegou íntegra (379 testes).
+1. Rodar `npm test` no Mac para confirmar que a base chegou íntegra (387 testes).
 2. Gerar um Raio-X real (Manaus, `1302603`) e um Histórico do Censo, e ler os
    dois PDFs inteiros — é a única forma de ver o conjunto.
-3. Onda 4: #3, #40 e #41 entregues; **#43 confirmado sem fonte pública** (ver
-   roadmap). O combinado a seguir é o cruzamento **Censo Escolar × Censo
-   Demográfico** para subdeclaração indígena/quilombola, e depois os blocos de
-   saúde (#37, #38, #39, #9).
+3. Onda 4: #3, #40, #41 e #48 entregues; **#43 confirmado sem fonte pública**
+   (ver roadmap). O que resta são os blocos de saúde (#37 vacinação, #38
+   SISVAN, #39 PSE, #9 SINAN), o #35 (FUNAI) e o #47 (consolidar o roteiro de
+   campo com as perguntas que as páginas novas geraram).

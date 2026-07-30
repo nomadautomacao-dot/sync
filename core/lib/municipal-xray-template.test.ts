@@ -188,9 +188,9 @@ describe("páginas de ponderação e vinculações no Raio-X", () => {
     expect(saida).toContain("Declaração ao SIOPE não localizada");
   });
 
-  it("gera as 42 páginas do contrato do renderer, com e sem dados", () => {
+  it("gera as 43 páginas do contrato do renderer, com e sem dados", () => {
     const paginas = (html: string) => html.match(/<section class="page/g)?.length ?? 0;
-    expect(paginas(completo("2930154", "BA"))).toBe(42);
+    expect(paginas(completo("2930154", "BA"))).toBe(43);
     expect(
       paginas(
         generateMunicipalXrayHtml(
@@ -203,7 +203,7 @@ describe("páginas de ponderação e vinculações no Raio-X", () => {
           }),
         ),
       ),
-    ).toBe(42);
+    ).toBe(43);
   });
 
   it("numera as páginas sequencialmente a partir do contador", () => {
@@ -216,7 +216,7 @@ describe("páginas de ponderação e vinculações no Raio-X", () => {
 
     // A capa não tem rodapé numerado; o miolo vai de 2 até o total.
     expect(numeros[0]).toBe(2);
-    expect(numeros[numeros.length - 1]).toBe(42);
+    expect(numeros[numeros.length - 1]).toBe(43);
     for (let i = 1; i < numeros.length; i++) expect(numeros[i]).toBe(numeros[i - 1] + 1);
   });
 });
@@ -1728,5 +1728,152 @@ describe("quem dirige a educação no Raio-X", () => {
 
   it("mostra página de indisponibilidade sem o módulo de educação", () => {
     expect(render({ semBloco: true })).toContain("Perfil do órgão gestor indisponível");
+  });
+});
+
+describe("declaração étnica no Raio-X — os três elos", () => {
+  function escolaRacas(
+    codigo: string,
+    matriculas: number,
+    indigena: number,
+    naoDeclarada = 0,
+  ): EscolaTerritorio {
+    // [ND, branca, preta, parda, amarela, indígena]
+    const branca = matriculas - indigena - naoDeclarada;
+    return {
+      codigo,
+      rural: false,
+      dif: 0,
+      lat: null,
+      lng: null,
+      matriculas,
+      transporte: null,
+      racas: [naoDeclarada, branca, 0, 0, 0, indigena],
+    };
+  }
+
+  function render(opcoes: {
+    /** População indígena 0–14 do Censo 2022. */
+    idadeEscolar?: number;
+    /** Matrículas declaradas com cor/raça indígena no Censo Escolar. */
+    declarados?: number | null;
+    /** Matrículas no segmento indígena do FUNDEB. */
+    noSegmento?: number;
+    naoDeclarada?: number;
+    semEquidade?: boolean;
+  } = {}) {
+    const {
+      idadeEscolar = 15_600,
+      declarados = 900,
+      noSegmento = 142,
+      naoDeclarada = 0,
+      semEquidade = false,
+    } = opcoes;
+
+    const rede =
+      declarados === null
+        ? []
+        : [escolaRacas("1", 10_000, declarados, naoDeclarada)];
+
+    return generateMunicipalXrayHtml(
+      mapMunicipalXrayModel({
+        basePayload: {},
+        currentPayload: {
+          relatorio_dirigido_base: {
+            escolasTerritorio:
+              rede.length > 0
+                ? { ano: 2025, escolas: rede, resumo: resumirTerritorio(rede) }
+                : undefined,
+            equidadeTerritorial: semEquidade
+              ? undefined
+              : {
+                  quilombola: {
+                    populacao: 0,
+                    emIdadeEscolar: 0,
+                    matriculasNosSegmentos: 0,
+                    razaoAtendimento: null,
+                    sinalConferencia: false,
+                  },
+                  indigena: {
+                    populacao: Math.round(idadeEscolar * 2.5),
+                    emIdadeEscolar: idadeEscolar,
+                    matriculasNosSegmentos: noSegmento,
+                    razaoAtendimento: null,
+                    sinalConferencia: true,
+                  },
+                  fatorFaixa: { minimo: 1.4, maximo: 2.17 },
+                },
+          },
+        },
+        baseYear: 2024,
+        currentYear: 2026,
+        generatedAt: new Date("2026-07-29T12:00:00.000Z"),
+      }),
+    );
+  }
+
+  it("localiza o vão entre cor/raça declarada e segmento ponderado", () => {
+    // 900 declarados na cor/raça, 142 no segmento → 758 fora.
+    const saida = render();
+
+    expect(saida).toContain("Declaração étnica");
+    expect(saida).toContain("758 matrículas indígenas declaradas fora do segmento");
+    expect(saida).toContain("a ponderação segue a <b>classificação da escola</b>");
+  });
+
+  /**
+   * O ponto contraintuitivo que o usuário precisa levar para a reunião: o
+   * campo de cor/raça do aluno não move o repasse; a classificação da escola
+   * move. A página tem de dizer isso com todas as letras.
+   */
+  it("explica que declarar cor/raça do aluno não aumenta repasse sozinho", () => {
+    const saida = render();
+
+    expect(saida).toContain("declarar corretamente a cor/raça do aluno não aumenta o repasse por si só");
+    expect(saida).toContain("escola indígena na coleta");
+  });
+
+  it("nunca atribui pertencimento étnico nem estima quem deveria se declarar", () => {
+    const saida = render();
+
+    expect(saida).toContain("Autodeclaração, sempre");
+    expect(saida).toContain("pertencimento étnico não se atribui de fora");
+    expect(saida).not.toMatch(/dever(iam|ia) se declarar indígenas?[^"]/);
+  });
+
+  it("trata população minúscula como ruído censitário, sem achado", () => {
+    const saida = render({ idadeEscolar: 12, declarados: 3, noSegmento: 0 });
+
+    expect(saida).toContain("pequena demais");
+    expect(saida).toContain("Nada a apurar aqui");
+  });
+
+  it("separa as duas causas quando o registro mal alcança a população", () => {
+    // 900 declarados para 15.600 em idade escolar, e o segmento acompanha.
+    const saida = render({ declarados: 900, noSegmento: 880 });
+
+    expect(saida).toContain("só a lista por escola separa");
+    expect(saida).toContain("quantas dessas crianças estão na rede estadual");
+  });
+
+  it("ressalva o cadastro quando a cor/raça em branco é grande", () => {
+    const saida = render({ declarados: 900, naoDeclarada: 3000 });
+
+    expect(saida).toContain("Ressalva de cadastro");
+    expect(saida).toContain("é piso, não retrato");
+  });
+
+  it("deixa o elo do meio em branco sem o Censo Escolar, sem quebrar", () => {
+    const saida = render({ declarados: null });
+
+    expect(saida).toContain("o elo do meio da corrente fica em branco");
+    // O par população × segmento continua impresso.
+    expect(saida).toContain("matrículas no segmento ponderado");
+  });
+
+  it("mostra indisponibilidade sem o Censo 2022", () => {
+    expect(render({ semEquidade: true })).toContain(
+      "Cruzamento de declaração étnica indisponível",
+    );
   });
 });

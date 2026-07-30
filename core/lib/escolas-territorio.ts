@@ -63,6 +63,21 @@ export interface ResumoTerritorio {
   pctTransporte: number | null;
   /** Composição de cor/raça por zona — o recorte que o agregado esconde. */
   corRaca: { urbana: CorRacaZona; rural: CorRacaZona } | null;
+  /**
+   * Contagens absolutas de cor/raça na rede inteira. Existem separadas dos
+   * percentuais por zona porque o cruzamento com a população do Censo
+   * Demográfico precisa do número, não da fatia: derivar o absoluto de um
+   * percentual arredondado a uma casa erra por dezenas de matrículas em rede
+   * grande. Ver `core/lib/municipal-xray-template.ts`, página de declaração
+   * étnica.
+   */
+  corRacaTotais: {
+    /** Matrículas nas escolas que preencheram cor/raça — o denominador. */
+    matriculas: number;
+    indigena: number;
+    negra: number;
+    naoDeclarada: number;
+  } | null;
 }
 
 export interface EscolasTerritorioMunicipio {
@@ -104,6 +119,19 @@ export function resumirTerritorio(escolas: EscolaTerritorio[]): ResumoTerritorio
   const urbana = zona(somaZona.urbana);
   const rural = zona(somaZona.rural);
 
+  // [ND, branca, preta, parda, amarela, indígena] somados nas duas zonas.
+  const geral = somaZona.urbana.map((v, i) => v + somaZona.rural[i]);
+  const totalRacas = geral.reduce((t, x) => t + x, 0);
+  const corRacaTotais =
+    totalRacas > 0
+      ? {
+          matriculas: totalRacas,
+          indigena: geral[5],
+          negra: geral[2] + geral[3],
+          naoDeclarada: geral[0],
+        }
+      : null;
+
   return {
     total: escolas.length,
     comCoordenada: escolas.filter((e) => e.lat !== null && e.lng !== null).length,
@@ -113,6 +141,7 @@ export function resumirTerritorio(escolas: EscolaTerritorio[]): ResumoTerritorio
     pctTransporte:
       matriculasComDado > 0 ? Math.round((alunosTransporte / matriculasComDado) * 1000) / 10 : null,
     corRaca: urbana.matriculas + rural.matriculas > 0 ? { urbana, rural } : null,
+    corRacaTotais,
   };
 }
 

@@ -276,6 +276,14 @@ interface MunicipalXrayModel {
     byDiferenciada: Record<string, number>;
     transportStudents: number;
     transportPct: number | null;
+    /** Cor/raça em números absolutos na rede inteira — o elo do meio entre a
+     * população do Censo Demográfico e o segmento ponderado do FUNDEB. */
+    raceTotals: {
+      enrolled: number;
+      indigenous: number;
+      black: number;
+      undeclared: number;
+    } | null;
     /** Cor/raça por zona — % negra (preta+parda), indígena e não declarada. */
     race: {
       urban: { enrolled: number; blackPct: number | null; indigenousPct: number | null; undeclaredPct: number | null };
@@ -918,6 +926,17 @@ export function mapMunicipalXrayModel(params: {
         byDiferenciada,
         transportStudents: number(resumo.alunosTransporte) ?? 0,
         transportPct: number(resumo.pctTransporte),
+        raceTotals: (() => {
+          const t = asRecord(resumo.corRacaTotais);
+          const enrolled = number(t?.matriculas);
+          if (!t || enrolled === null || enrolled <= 0) return null;
+          return {
+            enrolled,
+            indigenous: number(t.indigena) ?? 0,
+            black: number(t.negra) ?? 0,
+            undeclared: number(t.naoDeclarada) ?? 0,
+          };
+        })(),
         race: (() => {
           const corRaca = asRecord(resumo.corRaca);
           if (!corRaca) return null;
@@ -2804,6 +2823,98 @@ function paginaDensidadeRede(model: MunicipalXrayModel, pagina: number): string 
   }<p class="small mt-1">Fonte: coordenadas declaradas ao Censo Escolar${model.schoolMap?.year ? ` ${model.schoolMap.year}` : ""} (INEP, microdados); área territorial do IBGE; população por situação do domicílio no Censo Demográfico 2022 (IBGE, SIDRA tabela 10211), consultada na emissão. Distâncias em linha reta (grande círculo) — a distância rodoviária é maior, nunca menor.</p></main>${footer(pagina, FONTE)}</section>`;
 }
 
+/**
+ * Declaração étnica — a corrente de três elos entre o povo e a ponderação.
+ *
+ * O Censo Demográfico **mede população**; o Censo Escolar **registra
+ * declaração**; a planilha do FNDE **paga por segmento**. São três coisas
+ * diferentes, e o dinheiro só aparece na terceira:
+ *
+ *   população indígena 0–14 (IBGE)
+ *     → matrícula com cor/raça indígena declarada (Censo Escolar)
+ *       → matrícula no segmento indígena do FUNDEB (ponderação 1,4–2,17)
+ *
+ * Cada seta é uma perda possível, e as duas têm causas distintas. Da primeira
+ * para a segunda: a criança pode não estar na rede municipal (rede estadual,
+ * fora da escola) **ou** a escola pode não ter preenchido a cor/raça. Da
+ * segunda para a terceira: a criança está na rede e está declarada indígena,
+ * mas estuda numa escola que **não é classificada como indígena** — e a
+ * ponderação do fundo segue a classificação da ESCOLA, não a cor/raça do
+ * aluno. Esse segundo vão é o que vira dinheiro, e é invisível em qualquer
+ * página que olhe só duas das três pontas.
+ *
+ * REGRA DURA: pertencimento étnico é **autodeclaração**. Esta página aponta
+ * lacuna de REGISTRO e jamais afirma que alguém "é" indígena ou quilombola,
+ * nem estima quantos "deveriam" se declarar. O que ela faz é mostrar a
+ * distância entre três contagens oficiais e transformar isso em pergunta.
+ */
+function paginaDeclaracaoEtnica(model: MunicipalXrayModel, pagina: number): string {
+  const p = model.peoples;
+  const totais = model.schoolMap?.raceTotals ?? null;
+  const FONTE = "IBGE — Censo 2022 · INEP — Censo Escolar (cor/raça) · FNDE — matrículas ponderadas";
+
+  if (!p) {
+    return `<section class="page content-page">${header("Declaração étnica")}<main class="page-body"><div class="kicker">População, registro e ponderação</div><h2>Cruzamento de declaração étnica indisponível</h2><p class="lede">O Censo 2022 não retornou a população indígena e quilombola deste município na emissão.</p></main>${footer(pagina, FONTE)}</section>`;
+  }
+
+  const ind = p.indigenous;
+  const declarados = totais?.indigenous ?? null;
+
+  // Elo 1 → 2: da população em idade escolar ao registro de cor/raça.
+  const coberturaRegistro =
+    declarados !== null && ind.schoolAge > 0
+      ? Math.round((declarados / ind.schoolAge) * 1000) / 10
+      : null;
+  // Elo 2 → 3: do registro de cor/raça ao segmento que pondera.
+  const conversaoSegmento =
+    declarados !== null && declarados > 0
+      ? Math.round((ind.enrolled / declarados) * 1000) / 10
+      : null;
+
+  // A diferença que vira dinheiro: alunos declarados indígenas na cor/raça que
+  // não estão em escola classificada como indígena.
+  const foraDoSegmento =
+    declarados !== null && declarados > ind.enrolled ? declarados - ind.enrolled : 0;
+
+  const naoDeclaradaPct =
+    totais && totais.enrolled > 0
+      ? Math.round((totais.undeclared / totais.enrolled) * 1000) / 10
+      : null;
+  const cadastroFragil = naoDeclaradaPct !== null && naoDeclaradaPct >= 20;
+
+  let leitura: string;
+  if (declarados === null) {
+    leitura = `Os microdados do Censo Escolar não trouxeram a cor/raça da matrícula deste município, então o elo do meio da corrente fica em branco e o vão não pode ser localizado. O que segue válido é o par população × segmento, na página de território e fator.`;
+  } else if (ind.schoolAge < 30) {
+    leitura = `A população indígena de 0 a 14 anos é pequena demais (${int(ind.schoolAge)}) para sustentar leitura de subdeclaração — abaixo de 30 pessoas o Censo tem margem de erro maior que o próprio número. Nada a apurar aqui.`;
+  } else if (foraDoSegmento > 0 && conversaoSegmento !== null && conversaoSegmento < 90) {
+    leitura = `<b>${int(foraDoSegmento)} matrículas</b> declaradas com cor/raça indígena no Censo Escolar <b>não</b> aparecem no segmento indígena do FUNDEB. A causa provável não é fraude nem erro de cadastro do aluno: a ponderação segue a <b>classificação da escola</b>, não a cor/raça de quem estuda nela. Criança indígena matriculada em escola comum pondera como aluno comum. <b>Verificar:</b> essas matrículas estão concentradas em quais escolas? Alguma delas atende comunidade indígena e poderia estar declarada como escola indígena na coleta?`;
+  } else if (coberturaRegistro !== null && coberturaRegistro < 20) {
+    leitura = `O registro de cor/raça alcança ${pct(coberturaRegistro)} da população indígena de 0 a 14 anos. A distância pode ser as duas coisas ao mesmo tempo — criança fora da rede municipal (rede estadual, ou fora da escola) e cor/raça não preenchida na coleta —, e só a lista por escola separa. <b>Verificar:</b> quantas dessas crianças estão na rede estadual e quantas simplesmente não têm o campo preenchido?`;
+  } else {
+    leitura = `A cadeia população → registro → segmento não mostra vão relevante: das ${int(ind.schoolAge)} pessoas de 0 a 14 anos, ${int(declarados)} aparecem declaradas na cor/raça e ${int(ind.enrolled)} no segmento ponderado. Não há sinal de subdeclaração a apurar.`;
+  }
+
+  return `<section class="page content-page">${header("Declaração étnica")}<main class="page-body"><div class="kicker">População, registro e ponderação — três contagens, dois vãos</div><h2>${
+    foraDoSegmento > 0
+      ? `${int(foraDoSegmento)} matrículas indígenas declaradas fora do segmento que pondera`
+      : "O que o Censo mede e o que a escola registra"
+  }</h2><p class="lede">Três fontes contam a mesma população de formas diferentes, e só a última paga. O Censo Demográfico <b>mede</b> quem vive no território; o Censo Escolar <b>registra</b> a cor/raça de quem está matriculado; a planilha do FNDE <b>pondera</b> por segmento — e o segmento indígena/quilombola vale de ${decimal2.format(p.factorMin)} a ${decimal2.format(p.factorMax)}, os maiores fatores da tabela. A distância entre as três é lacuna de registro, e registro é a única parte que a gestão municipal controla.</p><div class="grid-4 mt-3">${metric(
+    int(ind.schoolAge),
+    "população indígena 0–14 (Censo 2022)",
+  )}${metric(
+    declarados === null ? "N/D" : int(declarados),
+    "matrículas com cor/raça indígena",
+  )}${metric(int(ind.enrolled), "matrículas no segmento ponderado")}${metric(
+    conversaoSegmento === null ? "N/D" : pct(conversaoSegmento),
+    "do registro que chega à ponderação",
+  )}</div><div class="grid-2 mt-3"><div class="card ${foraDoSegmento > 0 ? "warn" : "accent"}"><h3>Onde a corrente se rompe</h3><table><tbody><tr><td>População indígena total</td><td class="num">${int(ind.pop)}</td></tr><tr><td>Em idade escolar (0–14)</td><td class="num"><b>${int(ind.schoolAge)}</b></td></tr><tr><td>Declarados na cor/raça do Censo Escolar</td><td class="num">${declarados === null ? "N/D" : `<b>${int(declarados)}</b>`}</td></tr><tr><td>No segmento indígena do FUNDEB</td><td class="num"><b>${int(ind.enrolled)}</b></td></tr></tbody></table><div class="divider"></div><p class="small">${leitura}</p></div><div class="card"><h3>Por que os três números diferem</h3><p class="small">Não é contradição entre fontes — é o que cada uma pergunta. O <b>Censo Demográfico</b> pergunta à família como ela se identifica. O <b>Censo Escolar</b> pergunta à escola a cor/raça de cada aluno, e o campo pode ficar em branco. O <b>FUNDEB</b> não olha o aluno: pondera pela <b>classificação da escola</b> — indígena, quilombola, campo.</p><p class="small" style="margin-top:.05in">A consequência prática é contraintuitiva e vale dizer na reunião: <b>declarar corretamente a cor/raça do aluno não aumenta o repasse por si só.</b> O que aumenta é a escola que atende comunidade indígena estar declarada como escola indígena na coleta. Os dois registros são obrigatórios, mas só o segundo entra na conta do fundo.</p>${
+    cadastroFragil
+      ? `<div class="divider"></div><p class="small"><b>Ressalva de cadastro:</b> ${pct(naoDeclaradaPct)} das matrículas estão sem cor/raça preenchida. Com essa fatia em branco, o número de declarados é piso, não retrato — e a primeira correção é o preenchimento, antes de qualquer conclusão sobre subdeclaração.</p>`
+      : ""
+  }</div></div><div class="insight mt-3"><b>Autodeclaração, sempre:</b> pertencimento étnico não se atribui de fora. Nada nesta página estima quantas pessoas "deveriam" se declarar indígenas ou quilombolas, e nenhuma ação daqui envolve classificar aluno. O que a página localiza é a distância entre três contagens oficiais — e o encaminhamento legítimo é procedimental: conferir se o <b>campo do aluno</b> foi preenchido na coleta e se a <b>escola que atende a comunidade</b> está com a classificação correta, ouvindo a própria comunidade.</div><p class="small mt-1">Fonte: IBGE, Censo Demográfico 2022 (agregados 8175 e 8176, população indígena por idade) · INEP, microdados do Censo Escolar${model.schoolMap?.year ? ` ${model.schoolMap.year}` : ""} (cor/raça da matrícula, agregada por escola) · FNDE, matrículas ponderadas do exercício (segmentos indígena e quilombola). Nenhum dado nominal é acessado.</p></main>${footer(pagina, FONTE)}</section>`;
+}
+
 function paginaFrequenciaPbf(model: MunicipalXrayModel, pagina: number): string {
   const b = model.pbf;
 
@@ -3322,6 +3433,8 @@ ${paginaProficiencia(model, prox())}
 ${paginaDemografia(model, prox())}
 
 ${paginaTerritorio(model, prox())}
+
+${paginaDeclaracaoEtnica(model, prox())}
 
 ${paginaMapaEscolas(model, prox())}
 
