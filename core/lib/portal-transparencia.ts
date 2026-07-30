@@ -27,16 +27,40 @@ function token(): string | null {
   return value ? value : null;
 }
 
+/**
+ * A API limita requisições por minuto na chave gratuita, e o limite chega
+ * como **400**, não como 429 — a mesma consulta que falha volta a responder
+ * 200 segundos depois. Sem repetição, um dossiê que pagina dezenas de vezes
+ * perde seções inteiras por sorte de cronômetro.
+ */
+const TENTATIVAS = 3;
+const ESPERA_BASE_MS = 1500;
+
+function dormir(ms: number): Promise<void> {
+  return new Promise((resolver) => setTimeout(resolver, ms));
+}
+
 async function fetchPagina(caminho: string, chave: string): Promise<unknown[]> {
-  const resposta = await fetch(`${BASE}/${caminho}`, {
-    headers: { "chave-api-dados": chave, Accept: "application/json" },
-    signal: AbortSignal.timeout(20_000),
-  });
-  if (!resposta.ok) {
-    throw new Error(`Portal da Transparência: HTTP ${resposta.status} em ${caminho}`);
+  let ultimoStatus = 0;
+
+  for (let tentativa = 1; tentativa <= TENTATIVAS; tentativa += 1) {
+    const resposta = await fetch(`${BASE}/${caminho}`, {
+      headers: { "chave-api-dados": chave, Accept: "application/json" },
+      signal: AbortSignal.timeout(20_000),
+    });
+
+    if (resposta.ok) {
+      const corpo = (await resposta.json()) as unknown;
+      return Array.isArray(corpo) ? corpo : [];
+    }
+
+    ultimoStatus = resposta.status;
+    // 404 é ausência de dado, não excesso de chamada: repetir não muda nada.
+    if (resposta.status === 404) return [];
+    if (tentativa < TENTATIVAS) await dormir(ESPERA_BASE_MS * tentativa);
   }
-  const corpo = (await resposta.json()) as unknown;
-  return Array.isArray(corpo) ? corpo : [];
+
+  throw new Error(`Portal da Transparência: HTTP ${ultimoStatus} em ${caminho}`);
 }
 
 async function fetchTodas(
@@ -76,6 +100,14 @@ export interface ConveniosMunicipio {
   educacaoVigentes: number;
   valorEducacaoVigentes: number;
   topVigentes: ConvenioResumo[];
+  /**
+   * Todos os vigentes, do maior valor ao menor. `topVigentes` é o recorte de
+   * cinco que o Raio-X imprime; o dossiê precisa da carteira inteira, e
+   * recortar em cinco lá seria o truncamento silencioso que a regra 6 proíbe.
+   */
+  vigentesLista: ConvenioResumo[];
+  /** Encerrados por conclusão, cancelamento ou fim de vigência. */
+  encerrados: number;
   semLiberacao: number;
 }
 
@@ -125,6 +157,7 @@ export function resumirConvenios(
       !SITUACOES_ENCERRADAS.has(c.situacao.toUpperCase()),
   );
   const educacaoVigentes = vigentes.filter((c) => c.educacao);
+  const ordenados = [...vigentes].sort((a, b) => b.valor - a.valor);
   return {
     total: convenios.length,
     truncado,
@@ -133,7 +166,9 @@ export function resumirConvenios(
     liberadoVigentes: vigentes.reduce((soma, c) => soma + c.valorLiberado, 0),
     educacaoVigentes: educacaoVigentes.length,
     valorEducacaoVigentes: educacaoVigentes.reduce((soma, c) => soma + c.valor, 0),
-    topVigentes: [...vigentes].sort((a, b) => b.valor - a.valor).slice(0, 5),
+    topVigentes: ordenados.slice(0, 5),
+    vigentesLista: ordenados,
+    encerrados: convenios.length - vigentes.length,
     semLiberacao: vigentes.filter((c) => c.valorLiberado === 0).length,
   };
 }
@@ -170,6 +205,10 @@ export interface SancoesMunicipio {
   /** Sanções aplicadas por órgãos do próprio município (prefeitura, secretarias). */
   aplicadasPeloEnte: number;
   exemplosAplicadas: SancaoResumo[];
+  /** A lista inteira das aplicadas. `exemplosAplicadas` é o recorte do Raio-X. */
+  listaAplicadas: SancaoResumo[];
+  /** `true` quando a paginação bateu no teto e há sanção fora da lista. */
+  truncado: boolean;
 }
 
 function normalizar(valor: string): string {
@@ -238,5 +277,7 @@ export async function getSancoesMunicipio(
     enteSancionado,
     aplicadasPeloEnte: aplicadas.length,
     exemplosAplicadas: aplicadas.slice(0, 3),
+    listaAplicadas: aplicadas,
+    truncado: consultas.some((c) => c.truncado),
   };
 }

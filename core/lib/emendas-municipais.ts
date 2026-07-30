@@ -20,20 +20,65 @@ export interface EmendasAno {
   pagoEducacao: number;
 }
 
+/**
+ * Uma fatia das emendas do município — por autor, por função ou por tipo.
+ * Os três cortes têm a mesma forma porque respondem à mesma pergunta com
+ * chaves diferentes: quanto veio, quanto chegou, e quanto disso foi educação.
+ */
+export interface FatiaEmenda {
+  nome: string;
+  quantidade: number;
+  empenhado: number;
+  pago: number;
+  empenhadoEducacao: number;
+}
+
 export interface EmendasMunicipio {
   anos: EmendasAno[];
   /** Top autores de emendas de educação por valor empenhado desde 2020. */
   autoresEducacao: Array<{ nome: string; empenhado: number }>;
+  /**
+   * **Todos** os autores que carimbaram emenda aqui, de qualquer função.
+   *
+   * `autoresEducacao` responde "quem já mandou dinheiro para a educação daqui"
+   * e fica vazio em 86% dos municípios. Esta lista responde "quem manda
+   * dinheiro para cá" — que é a pergunta de campo, porque o parlamentar que
+   * emendou saúde é o mesmo interlocutor, e o fato de ele nunca ter emendado
+   * educação é o próprio argumento da conversa.
+   */
+  autores: FatiaEmenda[];
+  /** Onde o dinheiro de emenda cai: saúde, urbanismo, educação… */
+  funcoes: FatiaEmenda[];
+  /** Individual, de bancada, de comissão, de relator — negociações diferentes. */
+  tipos: FatiaEmenda[];
+  /** Dentro da função educação, para onde foi. Vazio sem emenda de educação. */
+  subfuncoesEducacao: FatiaEmenda[];
+  /** Autores fora do corte de 25. `null` quando todos couberam. */
+  autoresDemais: { quantidade: number; empenhado: number; empenhadoEducacao: number } | null;
   fonte: string;
   geradoEm: string;
 }
+
+/** `[nome, quantidade, empenhado, pago, empenhadoEducacao]` */
+type FatiaBruta = [string, number, number, number, number];
 
 interface Bruto {
   geradoEm: string;
   fonte: string;
   anoMinimo: number;
   anos: number[];
-  municipios: Record<string, { anos: Record<string, number[]>; autoresEducacao?: Array<[string, number]> }>;
+  municipios: Record<
+    string,
+    {
+      anos: Record<string, number[]>;
+      autoresEducacao?: Array<[string, number]>;
+      autores?: FatiaBruta[];
+      funcoes?: FatiaBruta[];
+      tipos?: FatiaBruta[];
+      subfuncoesEducacao?: FatiaBruta[];
+      autoresDemais?: [number, number, number];
+    }
+  >;
 }
 
 const dados = dataset as unknown as Bruto;
@@ -56,9 +101,27 @@ export function getEmendasMunicipio(codigoIBGE: string): EmendasMunicipio | null
     .sort((a, b) => a.ano - b.ano);
   if (!anos.length) return null;
 
+  const fatias = (brutas: FatiaBruta[] | undefined): FatiaEmenda[] =>
+    (brutas ?? []).map(([nome, quantidade, empenhado, pago, empenhadoEducacao]) => ({
+      nome,
+      quantidade,
+      empenhado,
+      pago,
+      empenhadoEducacao,
+    }));
+
+  const demais = registro.autoresDemais;
+
   return {
     anos,
     autoresEducacao: (registro.autoresEducacao ?? []).map(([nome, empenhado]) => ({ nome, empenhado })),
+    autores: fatias(registro.autores),
+    funcoes: fatias(registro.funcoes),
+    tipos: fatias(registro.tipos),
+    subfuncoesEducacao: fatias(registro.subfuncoesEducacao),
+    autoresDemais: demais
+      ? { quantidade: demais[0], empenhado: demais[1], empenhadoEducacao: demais[2] }
+      : null,
     fonte: dados.fonte,
     geradoEm: dados.geradoEm,
   };

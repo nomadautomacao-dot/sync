@@ -482,6 +482,7 @@ export async function getFndePublicEnrichment(params: {
       valorEstimadoRepactuacao: null,
       valorPagoInfraestrutura: null,
       obrasCriticas: [],
+      obras: [],
       paralisadas: 0,
       inacabadas: 0,
       emRetomada: 0,

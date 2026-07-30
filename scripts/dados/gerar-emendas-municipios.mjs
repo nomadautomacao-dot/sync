@@ -15,6 +15,16 @@
  * dinheiro para cá?* — o parlamentar que emenda educação no município é
  * interlocutor natural de qualquer projeto de rede.
  *
+ * ## Por que os autores não são só os de educação
+ *
+ * A primeira versão guardava apenas os três maiores autores de emenda de
+ * **educação**, e isso deixava a página vazia em 86% dos municípios do
+ * dataset: só 353 de 2.576 têm emenda de educação carimbada. Mas quem manda
+ * dinheiro para saúde ou infraestrutura é o mesmo interlocutor — e o fato de a
+ * emenda dele nunca ter ido para educação é, ele próprio, o argumento da
+ * conversa. Agora entram todos os autores, com o recorte de educação como
+ * coluna, mais a repartição por função e por tipo de emenda.
+ *
  * ## Uso
  *
  *     npm run dados:emendas                      # baixa o ZIP (~32MB)
@@ -32,6 +42,8 @@ const DESTINO = join(process.cwd(), "data", "portal-transparencia", "emendas-mun
  *  município é irregular. Sete anos bastam para a leitura de tendência. */
 const ANO_MINIMO = 2020;
 const FUNCAO_EDUCACAO = "12";
+/** Autores guardados por município. O que passar disso vira a linha "demais". */
+const MAX_AUTORES = 25;
 
 function log(mensagem) {
   console.log(`[emendas-municipios] ${mensagem}`);
@@ -147,10 +159,20 @@ async function main() {
     const pago = valorReais(campos[colunas.get("Valor Pago")]);
     const educacao = campos[colunas.get("Código Função")] === FUNCAO_EDUCACAO;
     const autor = campos[colunas.get("Nome do Autor da Emenda")];
+    const funcao = campos[colunas.get("Nome Função")];
+    const subfuncao = campos[colunas.get("Nome Subfunção")];
+    const tipo = campos[colunas.get("Tipo de Emenda")];
 
     let registro = municipios.get(codigo);
     if (!registro) {
-      registro = { anos: {}, autoresEducacao: new Map() };
+      registro = {
+        anos: {},
+        autoresEducacao: new Map(),
+        autores: new Map(),
+        funcoes: new Map(),
+        tipos: new Map(),
+        subfuncoesEducacao: new Map(),
+      };
       municipios.set(codigo, registro);
     }
     // [qtd, empenhado, pago, qtdEducacao, empenhadoEducacao, pagoEducacao]
@@ -158,28 +180,70 @@ async function main() {
     serie[0] += 1;
     serie[1] += empenhado;
     serie[2] += pago;
+
+    // [qtd, empenhado, pago, empenhadoEducacao] — acumuladores genéricos.
+    const acumular = (mapa, chave) => {
+      if (!chave || chave === "Sem informação") return;
+      const linha = mapa.get(chave) ?? [0, 0, 0, 0];
+      linha[0] += 1;
+      linha[1] += empenhado;
+      linha[2] += pago;
+      if (educacao) linha[3] += empenhado;
+      mapa.set(chave, linha);
+    };
+
+    acumular(registro.autores, autor);
+    acumular(registro.funcoes, funcao);
+    acumular(registro.tipos, tipo);
+
     if (educacao) {
       serie[3] += 1;
       serie[4] += empenhado;
       serie[5] += pago;
+      acumular(registro.subfuncoesEducacao, subfuncao);
       if (autor && autor !== "Sem informação") {
         registro.autoresEducacao.set(autor, (registro.autoresEducacao.get(autor) ?? 0) + empenhado);
       }
     }
   });
 
+  const cent = (v) => Math.round(v * 100) / 100;
+  /** Mapa de acumuladores → array ordenado por empenhado, com arredondamento. */
+  const ranquear = (mapa) =>
+    [...mapa.entries()]
+      .sort((a, b) => b[1][1] - a[1][1])
+      .map(([nome, linha]) => [nome, linha[0], cent(linha[1]), cent(linha[2]), cent(linha[3])]);
+
   const saida = {};
   for (const [codigo, registro] of municipios) {
     const anos = {};
     for (const [ano, serie] of Object.entries(registro.anos)) {
-      anos[ano] = serie.map((v) => Math.round(v * 100) / 100);
+      anos[ano] = serie.map(cent);
     }
-    const autores = [...registro.autoresEducacao.entries()]
+    const autoresEducacao = [...registro.autoresEducacao.entries()]
       .filter(([, v]) => v > 0)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 3)
-      .map(([nome, v]) => [nome, Math.round(v * 100) / 100]);
-    saida[codigo] = autores.length ? { anos, autoresEducacao: autores } : { anos };
+      .map(([nome, v]) => [nome, cent(v)]);
+
+    const todosAutores = ranquear(registro.autores);
+    const autores = todosAutores.slice(0, MAX_AUTORES);
+    // O que não coube não some: vira uma linha com quantos e quanto, para a
+    // regra 6 dos dossiês (truncamento é declarado, nunca silencioso).
+    const cauda = todosAutores.slice(MAX_AUTORES);
+
+    saida[codigo] = { anos, autores, funcoes: ranquear(registro.funcoes), tipos: ranquear(registro.tipos) };
+    if (autoresEducacao.length) saida[codigo].autoresEducacao = autoresEducacao;
+    if (registro.subfuncoesEducacao.size) {
+      saida[codigo].subfuncoesEducacao = ranquear(registro.subfuncoesEducacao);
+    }
+    if (cauda.length) {
+      saida[codigo].autoresDemais = [
+        cauda.length,
+        cent(cauda.reduce((t, a) => t + a[2], 0)),
+        cent(cauda.reduce((t, a) => t + a[4], 0)),
+      ];
+    }
   }
 
   mkdirSync(dirname(DESTINO), { recursive: true });

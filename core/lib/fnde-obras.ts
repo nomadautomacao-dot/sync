@@ -51,6 +51,28 @@ export interface ObraCritica {
   saldoBancario: number;
 }
 
+/**
+ * Uma obra do painel, com tudo o que a planilha traz sobre ela — inclusive as
+ * concluídas e as canceladas.
+ *
+ * `obrasCriticas` existe para o Raio-X, que só nomeia o que está parado, e
+ * `obrasPAC2` agrega por tipo para o Levantamento. Nenhum dos dois serve ao
+ * inventário obra a obra: para saber se uma obra parada tem termo gerado e
+ * validado — que é o que diz se a retomada está travada no FNDE ou no
+ * município — é preciso a linha inteira.
+ */
+export interface ObraDetalhada extends ObraCritica {
+  id: string;
+  /** Situação da solicitação de repactuação: DEFERIDO, DILIGÊNCIA, INDEFERIDO… */
+  situacaoSolicitacao: string;
+  situacaoTermo: string;
+  termoGerado: string;
+  termoValidado: string;
+  esfera: string;
+  /** Valor do FNDE a repassar aprovado no novo pacto. */
+  aprovacaoRepasse: number;
+}
+
 interface FndeObrasEnrichment {
   obrasPAC2: ObraPAC2[];
   observacoes: string[];
@@ -61,6 +83,8 @@ interface FndeObrasEnrichment {
   valorPagoInfraestrutura: number | null;
   /** Paralisadas, inacabadas e em retomada, com os valores do painel. */
   obrasCriticas: ObraCritica[];
+  /** Todas as obras do município no painel, do maior ao menor repasse estimado. */
+  obras: ObraDetalhada[];
   paralisadas: number;
   inacabadas: number;
   emRetomada: number;
@@ -530,10 +554,9 @@ export async function getFndeObrasEnrichment(params: { municipio: string; uf: st
       ? "Painel público do FNDE identificou repasse de infraestrutura escolar para o município. O detalhamento operacional no Simec segue dependente de credencial do ente."
       : null;
 
-  const CRITICAS = new Set(["PARALISADA", "INACABADA", "EM RETOMADA"]);
-  const obrasCriticas: ObraCritica[] = municipioRows
-    .filter((row) => CRITICAS.has(normalizeText(row.situacaoAtual)))
+  const obras: ObraDetalhada[] = municipioRows
     .map((row) => ({
+      id: row.id,
       ano: row.anoTermoConvenio,
       tipo: row.tipoObra,
       classificacao: row.classificacao,
@@ -541,8 +564,17 @@ export async function getFndeObrasEnrichment(params: { municipio: string; uf: st
       estimativaRepasse: row.estimativaRepasseFnde,
       execucao: row.execucaoFinanceira,
       saldoBancario: row.saldoBancarioAprovacao,
+      situacaoSolicitacao: row.situacaoSolicitacao,
+      situacaoTermo: row.situacaoTermo,
+      termoGerado: row.termoGerado,
+      termoValidado: row.termoValidado,
+      esfera: row.esfera,
+      aprovacaoRepasse: row.aprovacaoRepasse,
     }))
     .sort((a, b) => b.estimativaRepasse - a.estimativaRepasse);
+
+  const CRITICAS = new Set(["PARALISADA", "INACABADA", "EM RETOMADA"]);
+  const obrasCriticas: ObraCritica[] = obras.filter((obra) => CRITICAS.has(obra.situacao));
 
   return {
     obrasPAC2,
@@ -556,6 +588,7 @@ export async function getFndeObrasEnrichment(params: { municipio: string; uf: st
     valorEstimadoRepactuacao: estimativaRepactuacao > 0 ? estimativaRepactuacao : null,
     valorPagoInfraestrutura: infraestruturaRepasse?.valorPago ?? null,
     obrasCriticas,
+    obras,
     paralisadas,
     inacabadas,
     emRetomada: municipioRows.filter((row) => normalizeText(row.situacaoAtual) === "EM RETOMADA").length,

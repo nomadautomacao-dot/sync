@@ -107,3 +107,44 @@ fornecedores. As duas coisas dizem algo diferente e são confundidas.
 - **Emenda por objeto.** A fonte agrega por ano e função; o objeto individual
   não vem no dataset consolidado.
 - **Histórico de sanções encerradas** — a consulta traz as vigentes.
+
+---
+
+## 6. Como ficou — implementado em 2026-07-30
+
+`core/lib/dossie-dinheiro.ts` · `-template.ts` · `-pdf.ts` ·
+`app/api/modulos/dossies/dinheiro/` · 15 testes. 5 a 11 folhas conforme o
+município.
+
+**Três libs precisaram crescer para o dossiê existir:**
+
+- `fnde-obras.ts` só expunha `obrasCriticas` (paradas) e `obrasPAC2` (agregado
+  por tipo). Agora devolve `obras: ObraDetalhada[]` — **todas**, com esfera,
+  situação da solicitação e os dois campos de termo, que são o que diz se a
+  retomada está travada no FNDE ou no município.
+- `portal-transparencia.ts` guardava só os cinco maiores convênios
+  (`topVigentes`). Agora devolve `vigentesLista` inteira, mais `encerrados` e a
+  lista completa de sanções aplicadas.
+- `gerar-emendas-municipios.mjs` guardava três autores de educação. Agora
+  guarda todos os autores de qualquer função, mais a repartição por função, por
+  tipo de emenda e por subfunção da educação.
+
+**O que o documento traz além da spec:**
+
+- **A trava de cada obra parada, nomeada.** Termo não gerado é fila do FNDE;
+  termo gerado e não validado é assinatura do ente; solicitação indeferida põe
+  a obra fora do pacto. Dizer "está parada" sem dizer de quem é a próxima ação
+  transforma diagnóstico em lamento.
+- **Onde a emenda cai, por função.** Em São Paulo, saúde recebeu R$ 94,5 mi e
+  educação R$ 600 mil — e a subfunção mostra que os R$ 600 mil foram para
+  **ensino superior**, que não é rede municipal.
+- **A taxa de chegada.** Pago ÷ empenhado, por ano, por autor e por função. É a
+  coluna que diz se o recurso chegou, com a ressalva de que empenho vira restos
+  a pagar e atravessa exercícios.
+- **A folha do que exige credencial.** SIMEC, SIGPC, PDDE Interativo,
+  Transferegov e SIGARPWEB — é também a lista do que a consultoria precisa
+  receber do município.
+
+**Duas armadilhas corrigidas na construção:** obra de esfera estadual contada
+como perda municipal, e "ainda a receber" impresso em obra concluída. As duas
+estão registradas na visão geral.

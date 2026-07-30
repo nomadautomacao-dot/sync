@@ -173,9 +173,11 @@ Isso está detalhado no dossiê 1, que é o que mais ganha com a regeneração.
 2. ✅ **Conformidade** — segundo maior valor prático (é o que a secretaria usa
    no dia seguinte), e todos os dados já estavam prontos.
 3. ✅ **Matrícula ponderada** — é onde mora o dinheiro.
-4. Os demais, na ordem que a demanda comercial pedir.
+4. ✅ **Dinheiro federal** — o segundo orçamento, fora do fundo.
+5. Restam **aprendizagem, demanda, equidade e comparativo**, na ordem que a
+   demanda comercial pedir.
 
-### O que a construção dos três primeiros ensinou
+### O que a construção dos quatro primeiros ensinou
 
 - **A armadilha do campo de data.** No CAUC, parte dos requisitos repete a
   *data da consulta* no campo de validade. Lido como vencimento, o documento
@@ -192,3 +194,19 @@ Isso está detalhado no dossiê 1, que é o que mais ganha com a regeneração.
   exceção à regra 3 e monetiza equivalentes pelo valor aluno/ano da UF. Só é
   aceitável porque toda cifra assim leva `ᵈ` e a nota de rodapé, e porque há
   teste que conta as marcas.
+- **Antes de somar, perguntar de quem é.** O painel do Pacto lista obra por
+  **território**, e a esfera do termo é que diz o dono: a maior obra paralisada
+  de Manaus é estadual. Vale para todo dado territorial — presença no município
+  não é propriedade do município.
+- **Subtração só onde ela significa alguma coisa.** "Estimativa − executado"
+  produzia "ainda a receber" em obra concluída anos atrás. Campo derivado
+  precisa de uma condição de aplicabilidade tão explícita quanto a fórmula.
+- **Rate limit chega como 400.** O Portal da Transparência devolve 400, não
+  429, quando a chave gratuita estoura o limite por minuto — e a mesma consulta
+  responde 200 segundos depois. Sem repetição com espera, um dossiê que pagina
+  dezenas de vezes perde seções por sorte de cronômetro.
+- **Dataset estreito demais some da página.** `autoresEducacao` guardava só os
+  três maiores autores de emenda **de educação**, e isso deixava a folha vazia
+  em 86% dos municípios. Guardar todos os autores de qualquer função encheu
+  2.561 de 2.576 — e o fato de o parlamentar nunca ter emendado educação virou
+  o argumento da conversa, em vez de uma lacuna.

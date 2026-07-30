@@ -187,6 +187,7 @@ cliente; as rotas apenas verificam o ID token. Ver seção 3.2.
 | `/api/modulos/dossies/escolas` | GET/POST | Dossiê das Escolas — um bloco por unidade da rede |
 | `/api/modulos/dossies/conformidade` | GET/POST | Dossiê da Conformidade — CAUC, SIOPE, DCA, VAAR, piso |
 | `/api/modulos/dossies/matricula` | GET/POST | Dossiê da Matrícula Ponderada — segmento a segmento |
+| `/api/modulos/dossies/dinheiro` | GET/POST | Dossiê do Dinheiro Federal — obras, emendas, convênios, sanções |
 | `/api/modulos/contrato-fundeb` | POST | Monta contrato a partir do levantamento |
 | `/api/modulos/case-de-sucesso` | GET | Lista de cases |
 | `/api/modulos/case-de-sucesso/[municipio]` | GET | Case de um município |
@@ -510,7 +511,7 @@ No fluxo normal não se usa nenhum dos dois.
 ### O que NÃO está implementado
 - Módulos: Terceirização, Formação, Atas, Tecnologia, RH, Financeiro — existem
   como chaves no `moduleCatalog` (a tela `/modulos` as exibe), sem rota nem tela
-- Testes de ponta a ponta (a suíte é de unidade/integração: 500 testes, Vitest)
+- Testes de ponta a ponta (a suíte é de unidade/integração: 516 testes, Vitest)
 - **Staging separado de produção** — o deploy da `main` vai direto ao ar
 - Monitoramento (Sentry, Axiom)
 

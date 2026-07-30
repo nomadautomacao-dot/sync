@@ -11,6 +11,7 @@ import {
   HistoryIcon,
   LoaderIcon,
   ClipboardCheckIcon,
+  LandmarkIcon,
   ScaleIcon,
   SchoolIcon,
   SendIcon,
@@ -47,7 +48,8 @@ type Documento =
   | "oficio-documentos"
   | "dossie-escolas"
   | "dossie-conformidade"
-  | "dossie-matricula";
+  | "dossie-matricula"
+  | "dossie-dinheiro";
 
 /**
  * Os quatro documentos que o módulo produz, nesta ordem de uso.
@@ -201,6 +203,26 @@ const DOCUMENTOS = [
       "Série da composição e PNAE",
     ],
   },
+  {
+    id: "dossie-dinheiro" as const,
+    reportType: "dossie_dinheiro" as CityReportType,
+    icone: LandmarkIcon,
+    nome: "Dossiê do Dinheiro Federal",
+    paginas: 0,
+    variante: "secundario" as const,
+    prefixoArquivo: "Dossie_Dinheiro_Federal",
+    endpoint: "/api/modulos/dossies/dinheiro",
+    descricao:
+      "O segundo orçamento: obra do FNDE com o que trava cada uma, emenda ano a ano com quanto virou pagamento, convênio a convênio e quem já mandou dinheiro para cá.",
+    conteudo: [
+      "Obra a obra, com a esfera do termo",
+      "O que trava cada retomada",
+      "Emenda: empenhado contra pago",
+      "Quem já mandou dinheiro para cá",
+      "Convênio a convênio, com liberação",
+      "Sanções e transferências automáticas",
+    ],
+  },
 ];
 
 function pdfBlobFromBase64(base64: string): Blob {
@@ -302,8 +324,44 @@ function Bancada() {
     retry: false,
   });
 
-  /* Os três dossiês não têm tamanho fixo, e cada um mede o próprio volume numa
-     grandeza diferente. Sem prévia o card diz "tamanho variável" em vez de
+  /* Chegando pela URL, o nome e a UF só existem depois que o relatório carrega —
+     e os dois são obrigatórios no corpo que as rotas de PDF recebem. */
+  const municipio: IbgeMunicipio | null =
+    escolhidoValido ??
+    (codigoIbge && identificacao?.municipioNome && identificacao.uf
+      ? {
+          codigoIbge,
+          nome: identificacao.municipioNome,
+          uf: identificacao.uf,
+          regiao: identificacao.regiao ?? "",
+        }
+      : null);
+
+  /* O painel do FNDE resolve obra por nome e UF, não por código IBGE — então
+     esta prévia só pode rodar depois que o relatório trouxe a identificação. */
+  const { data: previaDinheiro } = useQuery<{
+    obras: number;
+    obrasParadas: number;
+    conveniosVigentes: number;
+    paginasEstimadas: number;
+  }>({
+    queryKey: ["dossie-dinheiro-previa", codigoIbge],
+    queryFn: async () => {
+      const params = new URLSearchParams({
+        codigo_ibge: municipio!.codigoIbge,
+        nome: municipio!.nome,
+        uf: municipio!.uf,
+      });
+      const res = await fetch(`/api/modulos/dossies/dinheiro?${params}`);
+      if (!res.ok) throw new Error("prévia indisponível");
+      return res.json();
+    },
+    enabled: !!municipio,
+    retry: false,
+  });
+
+  /* Os quatro dossiês não têm tamanho fixo, e cada um mede o próprio volume
+     numa grandeza diferente. Sem prévia o card diz "tamanho variável" em vez de
      mentir um número — falha de prévia não bloqueia a geração. */
   const medidaDoCard = (id: Documento): string | undefined => {
     if (id === "dossie-escolas") {
@@ -324,21 +382,14 @@ function Bancada() {
           : "";
       return `${previaMatricula.segmentos} segmentos${divergencias} · ~${previaMatricula.paginasEstimadas} pg`;
     }
+    if (id === "dossie-dinheiro") {
+      if (!previaDinheiro) return "tamanho variável";
+      const paradas =
+        previaDinheiro.obrasParadas > 0 ? ` · ${previaDinheiro.obrasParadas} parada(s)` : "";
+      return `${previaDinheiro.obras} obras${paradas} · ${previaDinheiro.conveniosVigentes} convênios · ~${previaDinheiro.paginasEstimadas} pg`;
+    }
     return undefined;
   };
-
-  /* Chegando pela URL, o nome e a UF só existem depois que o relatório carrega —
-     e os dois são obrigatórios no corpo que as rotas de PDF recebem. */
-  const municipio: IbgeMunicipio | null =
-    escolhidoValido ??
-    (codigoIbge && identificacao?.municipioNome && identificacao.uf
-      ? {
-          codigoIbge,
-          nome: identificacao.municipioNome,
-          uf: identificacao.uf,
-          regiao: identificacao.regiao ?? "",
-        }
-      : null);
 
   const selecionarMunicipio = (selecionado: IbgeMunicipio) => {
     setEscolhido(selecionado);
