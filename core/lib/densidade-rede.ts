@@ -29,7 +29,22 @@
  * Nada aqui é rótulo do município: distância é geografia, não gestão.
  */
 
-import type { EscolaTerritorio } from "./escolas-territorio";
+/**
+ * O mínimo que a dispersão precisa de uma escola.
+ *
+ * Declarado aqui em vez de importar `EscolaTerritorio` inteiro porque o
+ * modelo do template carrega só o subconjunto geográfico (sem transporte nem
+ * cor/raça) — e exigir o tipo completo obrigaria a inventar campos vazios só
+ * para satisfazer o compilador. `EscolaTerritorio` continua atribuível a este
+ * tipo por estrutura, então o leitor do dataset serve sem conversão.
+ */
+export interface EscolaGeo {
+  codigo: string;
+  lat: number | null;
+  lng: number | null;
+  rural: boolean;
+  matriculas: number | null;
+}
 
 const BASE = "https://servicodados.ibge.gov.br/api/v3/agregados";
 
@@ -104,13 +119,13 @@ export interface DispersaoRede {
  * local e a área territorial do IBGE, e não toca a rede.
  */
 export function analisarDispersao(
-  escolas: EscolaTerritorio[],
+  escolas: EscolaGeo[],
   areaKm2: number | null,
 ): DispersaoRede | null {
   if (escolas.length === 0) return null;
 
   const comCoord = escolas.filter(
-    (e): e is EscolaTerritorio & { lat: number; lng: number } =>
+    (e): e is EscolaGeo & { lat: number; lng: number } =>
       e.lat !== null && e.lng !== null,
   );
 

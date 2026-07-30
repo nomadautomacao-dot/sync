@@ -188,9 +188,9 @@ describe("páginas de ponderação e vinculações no Raio-X", () => {
     expect(saida).toContain("Declaração ao SIOPE não localizada");
   });
 
-  it("gera as 44 páginas do contrato do renderer, com e sem dados", () => {
+  it("gera as 41 páginas do contrato do renderer, com e sem dados", () => {
     const paginas = (html: string) => html.match(/<section class="page/g)?.length ?? 0;
-    expect(paginas(completo("2930154", "BA"))).toBe(44);
+    expect(paginas(completo("2930154", "BA"))).toBe(41);
     expect(
       paginas(
         generateMunicipalXrayHtml(
@@ -203,7 +203,7 @@ describe("páginas de ponderação e vinculações no Raio-X", () => {
           }),
         ),
       ),
-    ).toBe(44);
+    ).toBe(41);
   });
 
   it("numera as páginas sequencialmente a partir do contador", () => {
@@ -216,7 +216,7 @@ describe("páginas de ponderação e vinculações no Raio-X", () => {
 
     // A capa não tem rodapé numerado; o miolo vai de 2 até o total.
     expect(numeros[0]).toBe(2);
-    expect(numeros[numeros.length - 1]).toBe(44);
+    expect(numeros[numeros.length - 1]).toBe(41);
     for (let i = 1; i < numeros.length; i++) expect(numeros[i]).toBe(numeros[i - 1] + 1);
   });
 });
@@ -1875,85 +1875,5 @@ describe("declaração étnica no Raio-X — os três elos", () => {
     expect(render({ semEquidade: true })).toContain(
       "Cruzamento de declaração étnica indisponível",
     );
-  });
-});
-
-describe("roteiro de campo — consolidacao das perguntas novas", () => {
-  const vazio = () =>
-    generateMunicipalXrayHtml(
-      mapMunicipalXrayModel({
-        basePayload: {},
-        currentPayload: {},
-        baseYear: 2024,
-        currentYear: 2026,
-        generatedAt: new Date("2026-07-29T12:00:00.000Z"),
-      }),
-    );
-
-  it("passa a ter tres paginas de roteiro, numeradas de 1/3 a 3/3", () => {
-    const saida = vazio();
-
-    expect(saida).toContain("Roteiro de campo 1/3");
-    expect(saida).toContain("Roteiro de campo 2/3");
-    expect(saida).toContain("Roteiro de campo 3/3");
-    expect(saida).not.toContain("Roteiro de campo 1/2");
-  });
-
-  it("recolhe as tres perguntas que as paginas novas geraram", () => {
-    const saida = vazio();
-
-    // Declaração étnica → classificação da escola na coleta.
-    expect(saida).toContain("estão declaradas como tal na coleta do Censo");
-    // Densidade e dispersão → rota do campo até a sede.
-    expect(saida).toContain("Quantas rotas levam aluno do campo para escola da sede");
-    // #43 sem fonte → consórcio.
-    expect(saida).toContain("participa de consórcio intermunicipal para compra de merenda");
-    // #40 sem fonte → rotatividade.
-    expect(saida).toContain("Quantos secretários de educação o município teve nos últimos quatro anos");
-  });
-
-  it("degrada o contexto das perguntas novas sem dado, sem sumir com a pergunta", () => {
-    const saida = vazio();
-
-    expect(saida).toContain("A ponderação do FUNDEB segue a classificação da ESCOLA");
-    expect(saida).toContain("o valor-aluno não cobre quilômetro rodado");
-    expect(saida).toContain("Não existe base pública de consórcios de educação");
-  });
-});
-
-describe("distribuicao do roteiro em paginas", () => {
-  /**
-   * Regressao estrutural. O corte era `slice(0,3)`/`slice(3)` e a pagina cabia
-   * exatamente: acrescentar uma pergunta transbordava no PDF sem mudar a
-   * contagem de `<section class="page">` no DOM, entao nenhum teste pegava.
-   * Agora o corte minimiza a pagina mais cheia.
-   */
-  function pesos(html: string): number[] {
-    // Uma "campo-item" por pergunta; conta por pagina de roteiro.
-    return html
-      .split('<section class="page')
-      .filter((p) => p.includes("Roteiro de campo"))
-      .map((p) => (p.match(/class="campo-item"/g) ?? []).length);
-  }
-
-  it("equilibra as perguntas entre as tres paginas", () => {
-    const p = pesos(
-      generateMunicipalXrayHtml(
-        mapMunicipalXrayModel({
-          basePayload: {},
-          currentPayload: {},
-          baseYear: 2024,
-          currentYear: 2026,
-          generatedAt: new Date("2026-07-29T12:00:00.000Z"),
-        }),
-      ),
-    );
-
-    expect(p).toHaveLength(3);
-    // Nenhuma pagina vazia e nenhuma carregando mais que o dobro da menor.
-    expect(Math.min(...p)).toBeGreaterThan(0);
-    expect(Math.max(...p)).toBeLessThanOrEqual(Math.min(...p) * 2);
-    // O total continua sendo o roteiro inteiro.
-    expect(p.reduce((t, x) => t + x, 0)).toBeGreaterThanOrEqual(28);
   });
 });

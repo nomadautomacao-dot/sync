@@ -10,6 +10,7 @@ import {
   FileTextIcon,
   HistoryIcon,
   LoaderIcon,
+  SendIcon,
   ZapIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -36,15 +37,18 @@ import { PainelCenso } from "./_components/painel-censo";
 import { PainelProjecao } from "./_components/painel-projecao";
 import type { RespostaLevantamento } from "./_components/tipos";
 
-type Documento = "raio-x" | "levantamento" | "historico-censo";
+type Documento = "raio-x" | "levantamento" | "historico-censo" | "oficio-documentos";
 
 /**
- * Os três documentos que o módulo produz, nesta ordem de uso.
+ * Os quatro documentos que o módulo produz, nesta ordem de uso.
  *
  * O Raio-X é a cidade inteira, o passo que antecede a conversa de fundo — a
  * equipe chega sabendo o município. O Diagnóstico é o aprofundamento no FUNDEB.
  * O Histórico do Censo compara os últimos três Censos Escolares em detalhe.
  * Todos partem da mesma carga de dados: a rota remonta o município no servidor.
+ *
+ * O Ofício é o único **endereçado à prefeitura** — os outros três são análise
+ * interna. Por isso o tom dele é de coleta, nunca de veredito.
  */
 const DOCUMENTOS = [
   {
@@ -52,7 +56,7 @@ const DOCUMENTOS = [
     reportType: "raio_x" as CityReportType,
     icone: ZapIcon,
     nome: "Raio-X Municipal",
-    paginas: 40,
+    paginas: 41,
     variante: "secundario" as const,
     prefixoArquivo: "RaioX_Municipal",
     endpoint: "/api/modulos/levantamento-fundeb/raio-x",
@@ -105,6 +109,25 @@ const DOCUMENTOS = [
       "Docentes e rede física",
       "Infraestrutura em série",
       "Sinais e perguntas de campo",
+    ],
+  },
+  {
+    id: "oficio-documentos" as const,
+    reportType: "oficio_documentos" as CityReportType,
+    icone: SendIcon,
+    nome: "Ofício de solicitação de documentos",
+    paginas: 5,
+    variante: "secundario" as const,
+    prefixoArquivo: "Oficio_Documentos",
+    endpoint: "/api/modulos/levantamento-fundeb/oficio-documentos",
+    descricao:
+      "O único documento endereçado à prefeitura: pede os cinco documentos da rede e traz o questionário do que as bases não alcançam.",
+    conteudo: [
+      "Ofício à Secretaria de Educação",
+      "Os cinco documentos, com caixa",
+      "Onde cada um costuma estar",
+      "Questionário com linha de resposta",
+      "Registro público sob cada pergunta",
     ],
   },
 ];
