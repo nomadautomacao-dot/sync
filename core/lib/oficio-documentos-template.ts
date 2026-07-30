@@ -82,7 +82,7 @@ export interface OficioParams {
 
 export const RESPONSAVEL_PADRAO: ResponsavelOficio = {
   nome: "Adriel Pereira Tavares",
-  cargo: "Responsável Técnico · TI — Rocha Prime Consultorias",
+  cargo: "Responsável Técnico · TI — Global Company Consultorias",
   whatsapp: "(77) 99700-5880",
   email: "rochaprime10@hotmail.com",
 };
@@ -185,9 +185,21 @@ interface SecaoCampo {
   itens: PerguntaCampo[];
 }
 
+/**
+ * As perguntas que sobrevivem ao corte.
+ *
+ * Critério único: a resposta **muda receita do FUNDEB** ou **trava repasse**.
+ * Ficaram de fora as que descrevem a máquina sem mexer no dinheiro — adesão à
+ * UNDIME, acompanhamento jurídico, organograma da secretaria, manutenção
+ * predial, instrumentos urbanísticos, formação continuada, absenteísmo. Não
+ * são irrelevantes; são assunto de outra conversa, e num ofício com prazo de
+ * resposta cada pergunta gasta a paciência de quem responde.
+ *
+ * As seções passaram a se chamar pelo efeito financeiro, não pelo tema
+ * administrativo: quem lê entende em que parte da conta ele está mexendo.
+ */
 export function montarQuestionario(model: MunicipalXrayModel): SecaoCampo[] {
   const g = model.profile?.governancaEducacional;
-  const i = model.profile?.institucional;
   const c = model.profile?.conformidadeEducacional;
 
   /** Registro da MUNIC nas duas pontas; silêncio da fonte não vira afirmação. */
@@ -198,30 +210,21 @@ export function montarQuestionario(model: MunicipalXrayModel): SecaoCampo[] {
 
   return [
     {
-      titulo: "1 · Gestão pedagógica",
+      titulo: "1 · Matrícula e ponderação — o que multiplica o valor-aluno",
       itens: [
         {
           pergunta:
-            "O referencial curricular do município está alinhado à BNCC e ao documento curricular do estado? Qual a data da última revisão?",
+            "O município aderiu à Busca Ativa Escolar? Quem opera a plataforma e quantos alunos foram reconduzidos no último ano?",
+          contexto:
+            "Aluno recuperado vira matrícula no Censo, e o Censo define o FUNDEB do exercício seguinte.",
         },
         {
           pergunta:
-            "Existe programa de formação continuada para professores e coordenadores? Qual a periodicidade e como a eficácia é medida?",
-        },
-        {
-          pergunta:
-            "O município aderiu à Busca Ativa Escolar? Quem opera a plataforma e com que frequência?",
-        },
-        {
-          pergunta: "A educação em tempo integral tem projeto aprovado e em execução?",
+            "A educação em tempo integral tem projeto aprovado e em execução? Em quais escolas e etapas?",
           contexto:
             model.fullTime !== null
-              ? `Censo Escolar: ${int(model.fullTime)} matrículas em tempo integral na rede.`
-              : undefined,
-        },
-        {
-          pergunta:
-            "Há protocolo antirracismo, material didático específico e mapeamento de comunidades para a educação quilombola?",
+              ? `Censo Escolar: ${int(model.fullTime)} matrículas em tempo integral na rede. A etapa integral tem fator de ponderação maior que a parcial.`
+              : "A etapa em tempo integral tem fator de ponderação maior que a parcial.",
         },
         {
           pergunta:
@@ -229,31 +232,36 @@ export function montarQuestionario(model: MunicipalXrayModel): SecaoCampo[] {
           contexto: (() => {
             const p = model.peoples?.indigenous;
             const dec = model.schoolMap?.raceTotals?.indigenous ?? null;
-            if (!p || dec === null) {
-              return "A ponderação do FUNDEB segue a classificação da escola, não a cor/raça do aluno.";
-            }
-            return `Censo Escolar: ${int(dec)} matrículas com cor/raça indígena declarada. Planilha do FNDE: ${int(p.enrolled)} no segmento indígena. A ponderação segue a classificação da escola, não a cor/raça do aluno.`;
+            const regra =
+              "Os segmentos indígena e quilombola ponderam de 1,40 a 2,17 — os maiores da tabela — e a ponderação segue a classificação da escola, não a cor/raça do aluno.";
+            // Município sem nenhuma das duas contagens: imprimir "0 e 0" é
+            // ruído num documento que vai para a prefeitura. Fica só a regra.
+            if (!p || dec === null || (dec === 0 && p.enrolled === 0)) return regra;
+            return `Censo Escolar: ${int(dec)} matrículas com cor/raça indígena declarada. Planilha do FNDE: ${int(p.enrolled)} no segmento indígena. ${regra}`;
           })(),
         },
         {
           pergunta:
-            "Existe núcleo ou sala de recursos multifuncionais para atendimento educacional especializado? Como funciona o encaminhamento?",
+            "Existe sala de recursos multifuncionais para atendimento educacional especializado? Quantos alunos têm AEE registrado no Censo?",
           contexto:
             model.specialEducation !== null
-              ? `Censo Escolar: ${int(model.specialEducation)} matrículas em educação especial na rede.`
-              : undefined,
+              ? `Censo Escolar: ${int(model.specialEducation)} matrículas em educação especial na rede. O AEE registrado gera dupla matrícula na conta do fundo.`
+              : "O AEE registrado no Censo gera dupla matrícula na conta do fundo.",
         },
       ],
     },
     {
-      titulo: "2 · Pessoas e carreira",
+      titulo: "2 · Remuneração — o piso de 70% do fundo",
       itens: [
         {
-          pergunta: "Quantos servidores são efetivos, temporários e comissionados na educação?",
+          pergunta:
+            "Quantos profissionais da educação básica estão em efetivo exercício, e qual a divisão entre efetivos, temporários e comissionados?",
+          contexto:
+            "Ao menos 70% do FUNDEB tem de ir para remuneração de profissionais da educação básica em efetivo exercício — quem entra nessa conta define se o piso é cumprido.",
         },
         {
           pergunta:
-            "O plano de carreira está sendo cumprido? As progressões estão em dia e o piso nacional é pago?",
+            "O plano de carreira está sendo cumprido? As progressões estão em dia e o piso nacional do magistério é pago?",
           contexto: registro(
             g?.planoCarreiraMagisterio,
             `MUNIC ${anoMunic}: plano de carreira do magistério registrado.`,
@@ -262,11 +270,7 @@ export function montarQuestionario(model: MunicipalXrayModel): SecaoCampo[] {
         },
         {
           pergunta:
-            "Qual o índice de absenteísmo, licenças médicas e desvios de função que afetam a regência de classe?",
-        },
-        {
-          pergunta:
-            "A lei do 1/3 de hora-atividade é cumprida? Como o planejamento fora de sala é registrado?",
+            "A lei do 1/3 de hora-atividade é cumprida? Como a jornada fora de sala é registrada na folha?",
           contexto: registro(
             g?.limiteHoraAtividade,
             `MUNIC ${anoMunic}: o plano de carreira prevê expressamente o limite de 2/3 da carga horária em interação com os educandos.`,
@@ -276,14 +280,11 @@ export function montarQuestionario(model: MunicipalXrayModel): SecaoCampo[] {
       ],
     },
     {
-      titulo: "3 · Infraestrutura e logística",
+      titulo: "3 · Transporte e alimentação — despesa que o valor-aluno não cobre",
       itens: [
         {
-          pergunta: "Existe equipe fixa de manutenção escolar para reparos, elétrica e hidráulica?",
-        },
-        {
           pergunta:
-            "Quantas rotas de transporte escolar existem? Qual a divisão entre frota própria e terceirizada, e qual o estado dos veículos?",
+            "Quantas rotas de transporte escolar existem? Qual a divisão entre frota própria e terceirizada?",
           contexto: registro(
             g?.conselhos.transporteEscolar,
             `MUNIC ${anoMunic}: Conselho de Transporte Escolar registrado.`,
@@ -292,101 +293,63 @@ export function montarQuestionario(model: MunicipalXrayModel): SecaoCampo[] {
         },
         {
           pergunta:
-            "Como é feito o acompanhamento das rotas: roteiro de visitas, controle de combustível, cronograma de manutenção?",
-        },
-        {
-          pergunta:
             "Quantas rotas levam aluno do campo para escola da sede, e qual o custo anual delas?",
           contexto: (() => {
             const rurais = model.schoolMap?.ruralCount ?? 0;
             return rurais > 0
-              ? `Censo Escolar: ${int(rurais)} escolas da rede em zona rural.`
-              : undefined;
+              ? `Censo Escolar: ${int(rurais)} escolas da rede em zona rural. O fator do campo é achatado — paga igual para a escola perto e para a distante.`
+              : "O fator de ponderação do campo é achatado: paga igual para a escola perto e para a distante da sede.";
           })(),
         },
         {
           pergunta:
-            "O município participa de consórcio intermunicipal para compra de merenda, transporte escolar ou formação de professores?",
-          contexto:
-            "Não há base pública de consórcios de educação — esta informação só vem da própria rede.",
-        },
-        {
-          pergunta:
-            "As cozinhas escolares têm condições adequadas de armazenamento? O cardápio é aprovado por nutricionista? Qual o percentual de compra da agricultura familiar (mínimo legal de 30%)?",
+            "O cardápio é aprovado por nutricionista e qual o percentual de compra da agricultura familiar?",
           contexto: registro(
             g?.conselhos.alimentacaoEscolar,
-            `MUNIC ${anoMunic}: Conselho de Alimentação Escolar registrado.`,
-            `MUNIC ${anoMunic}: não consta Conselho de Alimentação Escolar — confirmar a situação atual.`,
+            `MUNIC ${anoMunic}: Conselho de Alimentação Escolar registrado. O mínimo legal de compra da agricultura familiar é 30% do PNAE.`,
+            `MUNIC ${anoMunic}: não consta Conselho de Alimentação Escolar — confirmar a situação atual. O mínimo legal de compra da agricultura familiar é 30% do PNAE.`,
           ),
         },
       ],
     },
     {
-      titulo: "4 · Finanças e convênios",
+      titulo: "4 · O que trava repasse",
       itens: [
         {
           pergunta:
-            "Quem executa a prestação de contas do PDDE, PNAE e PNATE? Há pendências em aberto?",
+            "Quem executa a prestação de contas do PDDE, PNAE e PNATE? Há pendência em aberto em algum deles?",
+          contexto: "Prestação de contas pendente suspende o repasse do programa correspondente.",
         },
-        { pergunta: "O SIOPE é alimentado com que frequência e por quem?" },
         {
-          pergunta:
-            "A equipe contábil tem profissionais dedicados à educação? As despesas são apresentadas ao conselho?",
+          pergunta: "O SIOPE é alimentado com que frequência e por quem?",
           contexto:
             c?.mdeAplicado.valor !== null && c?.mdeAplicado.valor !== undefined
-              ? `SIOPE: ${pct(c.mdeAplicado.valor)} aplicados em MDE no exercício declarado.`
-              : undefined,
+              ? `SIOPE: ${pct(c.mdeAplicado.valor)} aplicados em MDE no exercício declarado. A entrega em dia é requisito para a complementação VAAT.`
+              : "A entrega do SIOPE em dia é requisito para a complementação VAAT.",
         },
         {
           pergunta:
-            "Quem faz o acompanhamento jurídico das leis da educação e o encaminhamento à Câmara?",
+            "Quem acompanha o SIMEC e as obras pactuadas com o FNDE? Há obra paralisada com recurso já liberado?",
+          contexto:
+            "Obra paralisada com recurso liberado bloqueia novo termo de compromisso com o FNDE.",
         },
-        { pergunta: "Quem acompanha o SIMEC e as obras pactuadas com o FNDE?" },
-        { pergunta: "O município tem adesão vigente à UNDIME e a anuidade está paga?" },
       ],
     },
     {
-      titulo: "5 · Governança e prazos",
+      titulo: "5 · Coleta e controle social",
       itens: [
         {
           pergunta:
-            "Quem responde pelo Censo Escolar e como o prazo de fechamento é controlado? O Censo define o FUNDEB do ano seguinte.",
+            "Quem responde pelo Censo Escolar e como o prazo de fechamento é controlado?",
           contexto: model.enrollmentYear
-            ? `Última base pública disponível: Censo ${model.enrollmentYear}.`
-            : undefined,
+            ? `Última base pública disponível: Censo ${model.enrollmentYear}. O Censo é a base de cálculo do FUNDEB do ano seguinte — é o documento que mais move receita nesta lista.`
+            : "O Censo é a base de cálculo do FUNDEB do ano seguinte — é o documento que mais move receita nesta lista.",
         },
         {
           pergunta:
-            "O organograma da secretaria define com clareza inspeção escolar, supervisão e recursos humanos?",
-          contexto: g?.estruturaOrgaoGestor.valor
-            ? `MUNIC ${anoMunic}: ${g.estruturaOrgaoGestor.valor}.`
-            : undefined,
-        },
-        {
-          pergunta:
-            "Há quanto tempo o(a) atual secretário(a) assumiu, e quantos titulares a pasta teve nos últimos quatro anos? Qual o quadro técnico que permanece entre uma gestão e outra?",
-          contexto: "A MUNIC não pesquisa tempo de cargo — esta informação só vem da própria rede.",
-        },
-        {
-          pergunta: "Os conselhos têm mandato vigente, se reúnem e registram atas?",
+            "Os conselhos têm mandato vigente, se reúnem e registram atas? Em especial o CACS-FUNDEB e o CAE.",
           contexto: g
             ? `MUNIC ${anoMunic} — CME: ${g.conselhos.educacao.valor === true ? "registrado" : g.conselhos.educacao.valor === false ? "não consta" : "sem informação"} · CAE: ${g.conselhos.alimentacaoEscolar.valor === true ? "registrado" : g.conselhos.alimentacaoEscolar.valor === false ? "não consta" : "sem informação"} · CACS-FUNDEB: ${g.conselhos.acompanhamentoFundeb.valor === true ? "registrado" : g.conselhos.acompanhamentoFundeb.valor === false ? "não consta" : "sem informação"}.`
-            : undefined,
-        },
-        {
-          pergunta:
-            "Qual o percentual de cumprimento das metas do Plano Municipal de Educação? Há monitoramento formal?",
-          contexto: registro(
-            g?.planoMunicipalEducacao,
-            `MUNIC ${anoMunic}: Plano Municipal de Educação registrado.`,
-            `MUNIC ${anoMunic}: não consta PME vigente — confirmar a situação atual.`,
-          ),
-        },
-        {
-          pergunta:
-            "Há instrumentos urbanísticos que condicionem obra escolar (regularização fundiária de terrenos, licenciamento)?",
-          contexto: i
-            ? `MUNIC: ${i.instrumentos.filter((x) => !x.possui).length} dos ${i.instrumentos.length} instrumentos urbanísticos não constam em lei municipal.`
             : undefined,
         },
       ],
@@ -395,37 +358,60 @@ export function montarQuestionario(model: MunicipalXrayModel): SecaoCampo[] {
 }
 
 /** Páginas ocupadas pelo questionário. Ver `distribuirQuestionario`. */
-const PAGINAS_QUESTIONARIO = 3;
+const PAGINAS_QUESTIONARIO = 2;
 
 /**
  * Distribui as seções em páginas equilibrando o número de perguntas.
  *
+ * Devolve **sempre** `PAGINAS_QUESTIONARIO` grupos, porque o contrato de
+ * páginas do PDF é fixo: um empacotamento mais apertado que gerasse um grupo
+ * a menos derrubaria a geração inteira.
+ *
  * Mesmo motivo do roteiro que existia no Raio-X: corte por índice fixo cabia
  * exatamente e transbordava em silêncio ao ganhar pergunta nova — o contrato
- * de páginas conta `<section class="page">` no DOM e não enxerga o
- * transbordo, que só aparece na folha impressa.
+ * conta `<section class="page">` no DOM e não enxerga o transbordo, que só
+ * aparece na folha impressa.
  */
 export function distribuirQuestionario(secoes: SecaoCampo[]): SecaoCampo[][] {
   const n = secoes.length;
   if (n <= PAGINAS_QUESTIONARIO) return secoes.map((s) => [s]);
 
   const custo = secoes.map((s) => s.itens.length);
-  let melhor: number[] | null = null;
+  const cortes: number[] = [];
+  let melhor: number[] = [];
   let melhorMax = Number.POSITIVE_INFINITY;
 
-  for (let a = 1; a < n - 1; a++) {
-    for (let b = a + 1; b < n; b++) {
-      const grupos = [custo.slice(0, a), custo.slice(a, b), custo.slice(b)];
-      const maximo = Math.max(...grupos.map((g) => g.reduce((t, x) => t + x, 0)));
+  // Força bruta sobre os PAGINAS_QUESTIONARIO-1 pontos de corte. Com meia
+  // dúzia de seções o custo é irrelevante, e o resultado é o corte contíguo
+  // que minimiza a página mais cheia.
+  const buscar = (inicio: number) => {
+    if (cortes.length === PAGINAS_QUESTIONARIO - 1) {
+      const limites = [0, ...cortes, n];
+      let maximo = 0;
+      for (let g = 0; g < limites.length - 1; g++) {
+        maximo = Math.max(
+          maximo,
+          custo.slice(limites[g], limites[g + 1]).reduce((t, x) => t + x, 0),
+        );
+      }
       if (maximo < melhorMax) {
         melhorMax = maximo;
-        melhor = [a, b];
+        melhor = [...cortes];
       }
+      return;
     }
-  }
+    for (let i = inicio; i <= n - (PAGINAS_QUESTIONARIO - cortes.length); i++) {
+      cortes.push(i);
+      buscar(i + 1);
+      cortes.pop();
+    }
+  };
+  buscar(1);
 
-  const [a, b] = melhor ?? [1, 2];
-  return [secoes.slice(0, a), secoes.slice(a, b), secoes.slice(b)];
+  const limites = [0, ...melhor, n];
+  return Array.from({ length: limites.length - 1 }, (_, g) =>
+    secoes.slice(limites[g], limites[g + 1]),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -520,7 +506,7 @@ function paginaOficio(
 
   return `<section class="page content-page"><div class="oficio-head"><div class="brandmark">${
     logo ? `<img src="${logo}" alt="" class="brandicon">` : ""
-  }<div><div class="wordmark">Global Sync</div><div class="brandsub">Rocha Prime Consultorias</div></div></div><div class="oficio-id"><b>Ofício nº ${esc(params.numero)}</b><span>${esc(cidade)} · ${esc(dataCurta)}</span></div></div><div class="page-body"><div class="to"><div><div class="to-label">Ao</div><div class="to-name">Secretaria Municipal de Educação de ${esc(cidade)}</div><div class="to-sub">A/C Sr(a). Secretário(a) Municipal de Educação</div></div><div style="text-align:right;min-width:1.5in"><div class="to-label">Código IBGE</div><div class="to-sub" style="color:var(--navy);font-weight:800;font-size:9.6pt">${esc(model.ibgeCode)}</div></div></div><div class="divider"></div><div class="kicker">Solicitação de documentos</div><h2>Documentos da rede municipal<br>para o diagnóstico educacional</h2><p class="lede">A Rocha Prime Consultorias está elaborando o diagnóstico técnico da rede municipal de ensino de ${esc(model.municipality)}. As bases federais — FNDE, INEP, SICONFI e IBGE — já foram consolidadas, mas elas descrevem o município pelo lado de fora. Para que a análise reflita a rede como ela de fato funciona, solicitamos cópia dos cinco documentos abaixo e as respostas do questionário anexo.</p><div class="insight mt-1"><h3>O que a rede recebe de volta</h3><p style="font-size:8.6pt;line-height:1.4">O <span class="strong">Raio-X Municipal</span>: um relatório técnico de finanças, matrículas, IDEB e infraestrutura da rede, com a estimativa de FUNDEB do exercício e a indicação dos pontos em que há receita a recuperar. Entregue sem custo e sem compromisso para o município.</p></div><div class="mt-2"><div class="kicker" style="color:var(--muted)">Os cinco documentos</div>${linhas}</div><div class="divider mt-1"></div><div class="strip"><div><span>Prazo máximo de envio</span><b>${params.prazoDias} dias</b></div><div><span>WhatsApp — envio direto</span><b>${esc(params.responsavel.whatsapp)}</b></div><div><span>Para arquivos pesados</span><b>${esc(params.responsavel.email)}</b></div></div><p class="small mt-1">Cópia digital simples é suficiente: não é necessário autenticar nem imprimir. A página seguinte descreve cada documento, e as últimas trazem um questionário sobre o que as bases públicas não alcançam.</p><div class="sign"><div class="sign-line"><hr><div class="sign-name">${esc(params.responsavel.nome)}</div><div class="small">${esc(params.responsavel.cargo)}</div></div></div></div><div class="page-footer"><span>Global Sync · Rocha Prime Consultorias — Inteligência municipal</span><span>1 / ${totalPaginas}</span></div></section>`;
+  }<div><div class="wordmark">Global Sync</div><div class="brandsub">Global Company Consultorias</div></div></div><div class="oficio-id"><b>Ofício nº ${esc(params.numero)}</b><span>${esc(cidade)} · ${esc(dataCurta)}</span></div></div><div class="page-body"><div class="to"><div><div class="to-label">Ao</div><div class="to-name">Secretaria Municipal de Educação de ${esc(cidade)}</div><div class="to-sub">A/C Sr(a). Secretário(a) Municipal de Educação</div></div><div style="text-align:right;min-width:1.5in"><div class="to-label">Código IBGE</div><div class="to-sub" style="color:var(--navy);font-weight:800;font-size:9.6pt">${esc(model.ibgeCode)}</div></div></div><div class="divider"></div><div class="kicker">Solicitação de documentos</div><h2>Documentos da rede municipal<br>para o diagnóstico educacional</h2><p class="lede">A Global Company Consultorias está elaborando o diagnóstico técnico da rede municipal de ensino de ${esc(model.municipality)}. As bases federais — FNDE, INEP, SICONFI e IBGE — já foram consolidadas, mas elas descrevem o município pelo lado de fora. Para que a análise reflita a rede como ela de fato funciona, solicitamos cópia dos cinco documentos abaixo e as respostas do questionário anexo.</p><div class="insight mt-1"><h3>O que a rede recebe de volta</h3><p style="font-size:8.6pt;line-height:1.4">O <span class="strong">Raio-X Municipal</span>: um relatório técnico de finanças, matrículas, IDEB e infraestrutura da rede, com a estimativa de FUNDEB do exercício e a indicação dos pontos em que há receita a recuperar. Entregue sem custo e sem compromisso para o município.</p></div><div class="mt-2"><div class="kicker" style="color:var(--muted)">Os cinco documentos</div>${linhas}</div><div class="divider mt-1"></div><div class="strip"><div><span>Prazo máximo de envio</span><b>${params.prazoDias} dias</b></div><div><span>WhatsApp — envio direto</span><b>${esc(params.responsavel.whatsapp)}</b></div><div><span>Para arquivos pesados</span><b>${esc(params.responsavel.email)}</b></div></div><p class="small mt-1">Cópia digital simples é suficiente: não é necessário autenticar nem imprimir. A página seguinte descreve cada documento, e as duas últimas trazem um questionário curto sobre o que as bases públicas não alcançam.</p><div class="sign"><div class="sign-line"><hr><div class="sign-name">${esc(params.responsavel.nome)}</div><div class="small">${esc(params.responsavel.cargo)}</div></div></div></div><div class="page-footer"><span>Global Sync · Global Company Consultorias — Inteligência municipal</span><span>1 / ${totalPaginas}</span></div></section>`;
 }
 
 function paginaDetalhamento(
@@ -568,9 +554,9 @@ function paginaQuestionario(
   const abertura =
     indice === 0
       ? `<div class="kicker">Questionário</div><h2>O que as bases públicas não alcançam</h2><p class="lede" style="font-size:9.2pt">As perguntas abaixo completam o diagnóstico. Onde já existe registro público sobre ${esc(model.municipality)}, ele aparece em itálico sob a pergunta — assim fica claro de onde partimos e o que precisa ser confirmado ou atualizado. Responder por escrito ou em conversa por telefone, como for mais prático.</p>`
-      : `<div class="kicker">Questionário · continuação</div><h2>${indice === 1 ? "Rede, pessoas e logística" : "Finanças, governança e prazos"}</h2>`;
+      : `<div class="kicker">Questionário · continuação</div><h2>Custeio, repasse e coleta</h2>`;
 
-  return `<section class="page content-page"><div class="page-header"><span><strong>Ofício nº ${esc(params.numero)}</strong> · ${esc(cidade)}</span><span>Questionário ${indice + 1}/${PAGINAS_QUESTIONARIO}</span></div><div class="page-body">${abertura}<div class="mt-1">${corpo}</div></div><div class="page-footer"><span>Global Sync · Rocha Prime Consultorias — Inteligência municipal</span><span>${numero} / ${totalPaginas}</span></div></section>`;
+  return `<section class="page content-page"><div class="page-header"><span><strong>Ofício nº ${esc(params.numero)}</strong> · ${esc(cidade)}</span><span>Questionário ${indice + 1}/${PAGINAS_QUESTIONARIO}</span></div><div class="page-body">${abertura}<div class="mt-1">${corpo}</div></div><div class="page-footer"><span>Global Sync · Global Company Consultorias — Inteligência municipal</span><span>${numero} / ${totalPaginas}</span></div></section>`;
 }
 
 export function generateOficioDocumentosHtml(

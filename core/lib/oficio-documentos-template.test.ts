@@ -72,14 +72,21 @@ describe("ofício de solicitação de documentos", () => {
     expect(saida).toContain("rochaprime10@hotmail.com");
   });
 
-  it("gera exatamente 5 páginas — 2 de ofício e 3 de questionário", () => {
+  it("gera exatamente 4 páginas — 2 de ofício e 2 de questionário", () => {
     const paginas = render().match(/<section class="page/g)?.length ?? 0;
-    expect(paginas).toBe(5);
+    expect(paginas).toBe(4);
   });
 
-  it("numera o rodapé de 1 a 5", () => {
+  it("numera o rodapé de 1 a 4", () => {
     const saida = render();
-    for (let i = 1; i <= 5; i++) expect(saida).toContain(`<span>${i} / 5</span>`);
+    for (let i = 1; i <= 4; i++) expect(saida).toContain(`<span>${i} / 4</span>`);
+  });
+
+  it("assina como Global Company Consultorias, sem menção a Rocha Prime", () => {
+    const saida = render();
+
+    expect(saida).toContain("Global Company Consultorias");
+    expect(saida).not.toContain("Rocha Prime");
   });
 
   it("embute o logo em base64 — o Chromium do PDF roda sem rede", () => {
@@ -111,11 +118,16 @@ describe("questionário — tom de coleta, não de veredito", () => {
     expect(saida).toContain("o que precisa ser confirmado ou atualizado");
   });
 
-  it("diz que rotatividade e consórcio não têm base pública, sem culpar ninguém", () => {
+  /**
+   * Rotatividade do secretário e consórcio intermunicipal saíram no corte: não
+   * movem receita nem travam repasse. Seguem vivas na página "Quem dirige a
+   * educação" do Raio-X, que é interno.
+   */
+  it("não pergunta o que só interessa ao diagnóstico interno", () => {
     const saida = render();
 
-    expect(saida).toContain("A MUNIC não pesquisa tempo de cargo");
-    expect(saida).toContain("Não há base pública de consórcios de educação");
+    expect(saida).not.toContain("tempo de cargo");
+    expect(saida).not.toContain("consórcio intermunicipal");
   });
 
   it("dá linha de resposta para cada pergunta", () => {
@@ -123,8 +135,35 @@ describe("questionário — tom de coleta, não de veredito", () => {
     const perguntas = (saida.match(/class="q-pergunta"/g) ?? []).length;
     const linhas = (saida.match(/class="q-linha"/g) ?? []).length;
 
-    expect(perguntas).toBeGreaterThanOrEqual(28);
+    expect(perguntas).toBe(15);
     expect(linhas).toBe(perguntas);
+  });
+
+  /**
+   * O usuário cortou as perguntas que "não têm nada com nada". Critério que
+   * sobrou: a resposta muda receita do FUNDEB ou trava repasse. Estas são as
+   * que saíram — se alguma voltar, o ofício engordou sem ganhar valor.
+   */
+  it("não traz de volta as perguntas que não movem dinheiro", () => {
+    const saida = render();
+
+    expect(saida).not.toContain("UNDIME");
+    expect(saida).not.toContain("acompanhamento jurídico");
+    expect(saida).not.toContain("equipe fixa de manutenção");
+    expect(saida).not.toContain("instrumentos urbanísticos");
+    expect(saida).not.toContain("absenteísmo");
+    expect(saida).not.toContain("organograma da secretaria");
+    // "formação continuada" segue aparecendo na descrição do Referencial
+    // Curricular (documento pedido) — o que saiu foi a PERGUNTA sobre ela.
+    expect(saida).not.toContain("Existe programa de formação continuada");
+  });
+
+  it("nomeia as seções pelo efeito financeiro, não pelo tema administrativo", () => {
+    const saida = render();
+
+    expect(saida).toContain("o que multiplica o valor-aluno");
+    expect(saida).toContain("o piso de 70% do fundo");
+    expect(saida).toContain("O que trava repasse");
   });
 
   it("preenche o contexto com o dado do município quando existe", () => {
@@ -142,7 +181,7 @@ describe("questionário — tom de coleta, não de veredito", () => {
   it("omite o contexto quando a fonte não respondeu, mantendo a pergunta", () => {
     const saida = render();
 
-    expect(saida).toContain("Existe núcleo ou sala de recursos multifuncionais");
+    expect(saida).toContain("Existe sala de recursos multifuncionais");
     expect(saida).not.toContain("N/D matrículas em educação especial");
   });
 });
@@ -154,11 +193,11 @@ describe("distribuicao do questionario em paginas", () => {
    * pergunta nova, porque o contrato conta seções no DOM e não folhas
    * impressas.
    */
-  it("equilibra as perguntas entre as três páginas", () => {
+  it("equilibra as perguntas entre as duas páginas", () => {
     const grupos = distribuirQuestionario(montarQuestionario(modelo()));
     const pesos = grupos.map((g) => g.reduce((t, s) => t + s.itens.length, 0));
 
-    expect(pesos).toHaveLength(3);
+    expect(pesos).toHaveLength(2);
     expect(Math.min(...pesos)).toBeGreaterThan(0);
     expect(Math.max(...pesos)).toBeLessThanOrEqual(Math.min(...pesos) * 2);
     expect(pesos.reduce((t, x) => t + x, 0)).toBe(
@@ -171,5 +210,34 @@ describe("distribuicao do questionario em paginas", () => {
     const achatado = distribuirQuestionario(secoes).flat();
 
     expect(achatado.map((s) => s.titulo)).toEqual(secoes.map((s) => s.titulo));
+  });
+});
+
+describe("contexto da declaração étnica", () => {
+  it("omite as contagens quando as duas são zero — 0 e 0 é ruído", () => {
+    const saida = render();
+
+    expect(saida).toContain("Os segmentos indígena e quilombola ponderam de 1,40 a 2,17");
+    expect(saida).not.toContain("0 matrículas com cor/raça indígena declarada");
+  });
+
+  it("imprime as contagens quando o município tem população indígena", () => {
+    const saida = render({
+      relatorio_dirigido_base: {
+        equidadeTerritorial: {
+          quilombola: { populacao: 0, emIdadeEscolar: 0, matriculasNosSegmentos: 0, razaoAtendimento: null, sinalConferencia: false },
+          indigena: { populacao: 71691, emIdadeEscolar: 15647, matriculasNosSegmentos: 142, razaoAtendimento: null, sinalConferencia: true },
+          fatorFaixa: { minimo: 1.4, maximo: 2.17 },
+        },
+        escolasTerritorio: {
+          ano: 2025,
+          escolas: [{ codigo: "1", rural: false, dif: 0, lat: null, lng: null, matriculas: 1000, transporte: null, racas: [0, 900, 0, 0, 0, 100] }],
+          resumo: { total: 1, comCoordenada: 0, rurais: 0, porDiferenciada: {}, alunosTransporte: 0, pctTransporte: null, corRaca: null, corRacaTotais: { matriculas: 1000, indigena: 100, negra: 0, naoDeclarada: 0 } },
+        },
+      },
+    });
+
+    expect(saida).toContain("100 matrículas com cor/raça indígena declarada");
+    expect(saida).toContain("142 no segmento indígena");
   });
 });

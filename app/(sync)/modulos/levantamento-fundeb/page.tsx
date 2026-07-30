@@ -116,7 +116,7 @@ const DOCUMENTOS = [
     reportType: "oficio_documentos" as CityReportType,
     icone: SendIcon,
     nome: "Ofício de solicitação de documentos",
-    paginas: 5,
+    paginas: 4,
     variante: "secundario" as const,
     prefixoArquivo: "Oficio_Documentos",
     endpoint: "/api/modulos/levantamento-fundeb/oficio-documentos",

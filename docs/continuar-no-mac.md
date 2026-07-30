@@ -108,7 +108,7 @@ não foram introduzidos por este trabalho e não bloqueiam o build do Next.
 | Relatório | Rota | Páginas | Contrato de páginas |
 |---|---|---|---|
 | **Raio-X Municipal** | `POST /api/modulos/levantamento-fundeb/raio-x` | **41** | `PAGINAS_ESPERADAS` em `core/lib/municipal-xray-pdf.ts` |
-| **Ofício de documentos** | `POST /api/modulos/levantamento-fundeb/oficio-documentos` | **5** | `PAGINAS_ESPERADAS` em `core/lib/oficio-documentos-pdf.ts` |
+| **Ofício de documentos** | `POST /api/modulos/levantamento-fundeb/oficio-documentos` | **4** | `PAGINAS_ESPERADAS` em `core/lib/oficio-documentos-pdf.ts` |
 | **Diagnóstico FUNDEB** (Levantamento) | `POST /api/modulos/levantamento-fundeb/pdf?tipo=levantamento` | 10 (+5 anexos) | gerador Python (`kit_padrao_pdf_rocha_prime/`) |
 | **Histórico do Censo Escolar** | `POST /api/modulos/levantamento-fundeb/historico-censo` | **11** | `PAGINAS_ESPERADAS` em `core/lib/censo-historico-pdf.ts` |
 
@@ -172,6 +172,14 @@ Foram decididas ao longo das rodadas e valem para qualquer bloco novo:
    o contexto imprime o registro público e para ("a MUNIC 2021 não registra
    CAE — confirmar a situação atual"), nunca o veredito ("sem CAE o PNAE fica
    irregular"). Há teste que falha se um juízo voltar para lá.
+8c. **No ofício, só entra pergunta que move receita ou trava repasse.** Foi o
+   corte de 2026-07-30: de 30 perguntas para 15. Saíram UNDIME, acompanhamento
+   jurídico, organograma, manutenção predial, urbanismo, formação continuada e
+   absenteísmo — descrevem a máquina sem mexer no dinheiro, e num ofício com
+   prazo cada pergunta gasta a paciência de quem responde. As seções passaram
+   a se chamar pelo efeito financeiro ("o piso de 70% do fundo"), não pelo tema
+   administrativo. Rotatividade e consórcio seguem vivos no Raio-X, que é
+   interno. Há teste que falha se as cortadas voltarem.
 9. **Flutter não existe mais.** Foi apagado do repositório em 2026-07-29; se
    precisar consultar uma tela antiga, use o histórico do git. Não recriar.
 10. O hook de design (`impeccable`) está configurado para ignorar

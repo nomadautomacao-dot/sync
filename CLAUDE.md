@@ -183,7 +183,7 @@ cliente; as rotas apenas verificam o ID token. Ver seção 3.2.
 | `/api/modulos/levantamento-fundeb/pdf` | POST | Geração de PDF (Python/ReportLab) |
 | `/api/modulos/levantamento-fundeb/relatorio-dirigido` | POST | Relatório dirigido com IA |
 | `/api/modulos/levantamento-fundeb/raio-x` | POST | Raio-X municipal em PDF (41 páginas) |
-| `/api/modulos/levantamento-fundeb/oficio-documentos` | POST | Ofício à prefeitura + questionário (5 páginas) |
+| `/api/modulos/levantamento-fundeb/oficio-documentos` | POST | Ofício à prefeitura + questionário (4 páginas) |
 | `/api/modulos/contrato-fundeb` | POST | Monta contrato a partir do levantamento |
 | `/api/modulos/case-de-sucesso` | GET | Lista de cases |
 | `/api/modulos/case-de-sucesso/[municipio]` | GET | Case de um município |

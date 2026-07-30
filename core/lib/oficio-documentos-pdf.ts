@@ -14,13 +14,13 @@ export async function generateOficioDocumentosPdf(
     await page.setContent(htmlContent, { waitUntil: "networkidle" });
     await page.evaluate(() => document.fonts?.ready);
 
-    // 1 do ofício + 1 do detalhamento dos documentos + 3 do questionário.
+    // 1 do ofício + 1 do detalhamento dos documentos + 2 do questionário.
     //
     // O contrato conta `<section class="page">` no DOM e NÃO enxerga
     // transbordo: conteúdo que estoura a altura vira folha extra só no PDF
     // impresso. Ao engordar uma página existente, conferir as folhas reais —
     // ver a seção do contrato de páginas em `docs/continuar-no-mac.md`.
-    const PAGINAS_ESPERADAS = 5;
+    const PAGINAS_ESPERADAS = 4;
     const pageCount = await page.locator("section.page").count();
     if (pageCount !== PAGINAS_ESPERADAS) {
       throw new Error(
