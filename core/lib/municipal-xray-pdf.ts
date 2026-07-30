@@ -1,5 +1,7 @@
 import { chromium, type Browser } from "playwright";
 
+import { ajustarParaCaber, assertSemCorte } from "./pdf-corte";
+
 export async function generateMunicipalXrayPdf(
   htmlContent: string,
   municipalitySlug: string,
@@ -33,6 +35,21 @@ export async function generateMunicipalXrayPdf(
     if (pageCount !== PAGINAS_ESPERADAS) {
       throw new Error(`O template do Raio-X gerou ${pageCount} páginas; eram esperadas ${PAGINAS_ESPERADAS}.`);
     }
+
+    // O contrato acima conta seções; o que vem agora verifica se o conteúdo
+    // coube nelas. Com overflow:hidden, corte não muda a contagem nem gera
+    // folha extra — some em silêncio. Ver `pdf-corte.ts`.
+    //
+    // O volume varia por município, então a página que cabe num estoura no
+    // outro: primeiro encolhe o que passou, depois falha se nem no piso coube.
+    const ajustadas = await ajustarParaCaber(page);
+    if (ajustadas.length > 0) {
+      console.info(
+        `[Raio-X] ${ajustadas.length} página(s) ajustadas para caber:`,
+        ajustadas.map((a) => `p${a.pagina} ${Math.round(a.escala * 100)}%`).join(", "),
+      );
+    }
+    await assertSemCorte(page, "Raio-X");
 
     const pdfBytes = await page.pdf({
       format: "Letter",

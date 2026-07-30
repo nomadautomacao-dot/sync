@@ -2071,7 +2071,9 @@ function paginaContextoEscolas(model: MunicipalXrayModel, pagina: number): strin
   const nivel = (n: number | null) => (n === null ? "—" : NIVEIS_ROMANOS[n] ?? String(n));
   const valor = (v: number | null) => (v === null ? "—" : decimal.format(v));
 
-  const LIMITE = 12;
+  // 8 e não 12: com mais linhas a página estourava a altura e o CSS
+  // (overflow:hidden) engolia o pé em silêncio. Ver `pdf-corte.ts`.
+  const LIMITE = 8;
   const visiveis = c.schools.slice(0, LIMITE);
   const linhas = visiveis
     .map(
@@ -2090,7 +2092,7 @@ function paginaContextoEscolas(model: MunicipalXrayModel, pagina: number): strin
 
   const x = c.crossover;
   const blocoCruzamento = x
-    ? `<div class="insight mt-3"><b>Contexto × resultado (${x.evaluated} escolas com INSE e IDEB):</b> ${
+    ? `<div class="insight mt-2"><b>Contexto × resultado (${x.evaluated} escolas com INSE e IDEB):</b> ${
         x.resilient
           ? `<b>${esc(x.resilient.name)}</b> prova que o contexto daqui comporta resultado melhor — INSE ${decimal2.format(x.resilient.inse)} (abaixo da mediana de ${decimal2.format(x.medianInse)}) e IDEB ${decimal.format(x.resilient.ideb)} (acima da mediana de ${decimal.format(x.medianIdeb)}). O que essa escola faz é replicável na própria rede, sem consultoria externa.`
           : `nenhuma escola de contexto mais duro que a mediana supera a mediana de resultado — o desempenho segue o INSE em toda a rede.`
@@ -2099,7 +2101,7 @@ function paginaContextoEscolas(model: MunicipalXrayModel, pagina: number): strin
           ? ` Na outra ponta, <b>${esc(x.alert.name)}</b> tem contexto mais favorável (INSE ${decimal2.format(x.alert.inse)}) e resultado abaixo da mediana (IDEB ${decimal.format(x.alert.ideb)}) — é onde a visita pedagógica rende mais rápido.`
           : ""
       }</div>`
-    : `<div class="note mt-3"><b>Cruzamento contexto × resultado:</b> menos de 5 escolas têm INSE e IDEB simultaneamente nesta rede — as medianas não significariam nada. A leitura fica escola a escola, na tabela acima.</div>`;
+    : `<div class="note mt-2"><b>Cruzamento contexto × resultado:</b> menos de 5 escolas têm INSE e IDEB simultaneamente nesta rede — as medianas não significariam nada. A leitura fica escola a escola, na tabela acima.</div>`;
 
   const blocoAbandono =
     c.worstDropout && c.worstDropout.value > 0
@@ -2203,7 +2205,12 @@ function paginaDemografia(model: MunicipalXrayModel, pagina: number): string {
       { rotulo: "anos finais", valor: atendimentoAf },
     ].find((f) => f.valor !== null && f.valor < 90) ?? null;
 
+  // A tabela mostra as 5 coortes mais recentes: a mais antiga da série já está
+  // na escola e não é "a rede que vem aí". A tendência abaixo segue calculada
+  // sobre a série inteira. Com 6 linhas a página estourava a altura, e o CSS
+  // (overflow:hidden) engolia o pé em silêncio — ver `pdf-corte.ts`.
   const linhas = d.births
+    .slice(-5)
     .map(
       (b) => `<tr><td><b>${b.year}</b></td><td class="num">${int(b.count)}</td><td class="num">pré-escola em <b>${b.preYear}</b></td><td class="num">1º ano em <b>${b.firstGradeYear}</b></td></tr>`,
     )
@@ -2213,10 +2220,10 @@ function paginaDemografia(model: MunicipalXrayModel, pagina: number): string {
   const ultima = d.births[d.births.length - 1];
   const encolhendo = d.trendPct !== null && d.trendPct < -3;
 
-  return `<section class="page content-page">${header("Demografia e demanda futura")}<main class="page-body"><div class="kicker">As coortes que vêm aí</div><h2>A rede de ${ultima ? ultima.firstGradeYear : "2030"} já nasceu — e já dá para contá-la</h2><p class="lede">A matrícula segue o nascimento com atraso fixo. O Registro Civil diz quantas crianças chegam à pré-escola e ao 1º ano em cada ano até ${ultima ? ultima.firstGradeYear : "2030"}; o Censo 2022 diz quantas existem hoje em cada faixa que a rede atende. Nenhuma outra página deste relatório enxerga tão longe.</p><div class="grid-4 mt-3">${metric(int(d.crechePop), "crianças de 0 a 3 anos no município")}${metric(int(d.prePop), "de 4 e 5 anos")}${metric(ultima ? int(ultima.count) : "N/D", `nascidos em ${ultima ? ultima.year : "—"}`)}${metric(
+  return `<section class="page content-page">${header("Demografia e demanda futura")}<main class="page-body"><div class="kicker">As coortes que vêm aí</div><h2>A rede de ${ultima ? ultima.firstGradeYear : "2030"} já nasceu — e já dá para contá-la</h2><p class="lede">A matrícula segue o nascimento com atraso fixo: o Registro Civil diz quantas crianças chegam à pré-escola e ao 1º ano até ${ultima ? ultima.firstGradeYear : "2030"}, e o Censo 2022 diz quantas existem hoje em cada faixa atendida.</p><div class="grid-4 mt-3">${metric(int(d.crechePop), "crianças de 0 a 3 anos no município")}${metric(int(d.prePop), "de 4 e 5 anos")}${metric(ultima ? int(ultima.count) : "N/D", `nascidos em ${ultima ? ultima.year : "—"}`)}${metric(
     d.trendPct === null ? "N/D" : `${d.trendPct > 0 ? "+" : ""}${decimal.format(d.trendPct)}%`,
     primeira && ultima ? `nascimentos ${primeira.year} → ${ultima.year}` : "tendência",
-  )}</div><div class="grid-2 mt-3"><div class="card accent"><h3>Calendário das coortes</h3><table><tbody>${linhas}</tbody></table><p class="micro" style="margin-top:.05in">Registro Civil (IBGE); a coorte entra na pré aos 4 anos e no ensino fundamental aos 6.</p></div><div class="card ${encolhendo ? "warn" : ""}"><h3>Atendimento por faixa — piso municipal e foto completa</h3><table><thead><tr><th>Faixa</th><th class="num">Rede municipal</th><th class="num">Todas as redes</th><th class="num"></th></tr></thead><tbody><tr><td>Creche (0–3)</td><td class="num">${coberturaCreche === null ? "N/D" : `<b>${pct(coberturaCreche)}</b>`}</td><td class="num">${atendimentoCreche === null ? "—" : pct(atendimentoCreche)}</td><td class="num micro">meta PNE: 50%</td></tr><tr><td>Pré-escola (4–5)</td><td class="num">${coberturaPre === null ? "N/D" : `<b>${pct(coberturaPre)}</b>`}</td><td class="num">${atendimentoPre === null ? "—" : pct(atendimentoPre)}</td><td class="num micro">universalização</td></tr><tr><td>Anos iniciais (6–10)</td><td class="num micro">—</td><td class="num">${atendimentoAi === null ? "—" : pct(atendimentoAi)}</td><td class="num micro">universalização</td></tr><tr><td>Anos finais (11–14)</td><td class="num micro">—</td><td class="num">${atendimentoAf === null ? "—" : pct(atendimentoAf)}</td><td class="num micro">universalização</td></tr></tbody></table><div class="divider"></div><p class="small">Piso = matrículas da <b>rede municipal</b> ÷ população da faixa; foto completa = <b>todas as redes</b> (Censo Escolar${d.totalEnrollment ? ` ${d.totalEnrollment.year}` : ""}) ÷ mesma população. ${
+  )}</div><div class="grid-2 mt-2"><div class="card accent"><h3>Calendário das coortes</h3><table><tbody>${linhas}</tbody></table><p class="micro" style="margin-top:.05in">Registro Civil (IBGE); a coorte entra na pré aos 4 anos e no ensino fundamental aos 6.</p></div><div class="card ${encolhendo ? "warn" : ""}"><h3>Atendimento por faixa — piso municipal e foto completa</h3><table><thead><tr><th>Faixa</th><th class="num">Rede municipal</th><th class="num">Todas as redes</th><th class="num"></th></tr></thead><tbody><tr><td>Creche (0–3)</td><td class="num">${coberturaCreche === null ? "N/D" : `<b>${pct(coberturaCreche)}</b>`}</td><td class="num">${atendimentoCreche === null ? "—" : pct(atendimentoCreche)}</td><td class="num micro">meta PNE: 50%</td></tr><tr><td>Pré-escola (4–5)</td><td class="num">${coberturaPre === null ? "N/D" : `<b>${pct(coberturaPre)}</b>`}</td><td class="num">${atendimentoPre === null ? "—" : pct(atendimentoPre)}</td><td class="num micro">universalização</td></tr><tr><td>Anos iniciais (6–10)</td><td class="num micro">—</td><td class="num">${atendimentoAi === null ? "—" : pct(atendimentoAi)}</td><td class="num micro">universalização</td></tr><tr><td>Anos finais (11–14)</td><td class="num micro">—</td><td class="num">${atendimentoAf === null ? "—" : pct(atendimentoAf)}</td><td class="num micro">universalização</td></tr></tbody></table><div class="divider"></div><p class="micro">Piso = matrículas da <b>rede municipal</b> ÷ população da faixa; foto completa = <b>todas as redes</b> (Censo Escolar${d.totalEnrollment ? ` ${d.totalEnrollment.year}` : ""}) ÷ mesma população. ${
     coberturaCreche !== null && coberturaCreche < 50
       ? `Cada criança de 0–3 capturada em creche pública integral pondera <b>1,55</b> no fundo — é a matrícula de maior valor disponível sem mudar o público atendido.`
       : `Manter a cobertura exige repor as coortes que encolhem — a captura é contínua, não conquista.`
@@ -2224,7 +2231,7 @@ function paginaDemografia(model: MunicipalXrayModel, pagina: number): string {
     faixaDescoberta
       ? ` <b>Sinal de busca ativa:</b> o atendimento total de ${faixaDescoberta.rotulo} está em ${pct(faixaDescoberta.valor ?? 0)} — numa faixa de matrícula obrigatória, a diferença é criança fora da escola, em alguma rede.`
       : ""
-  }</p><p class="micro" style="margin-top:.04in">População da faixa é do Censo 2022 e a matrícula é mais recente — leia como ordem de grandeza; acima de 100% indica atração de alunos de municípios vizinhos.</p></div></div><div class="${encolhendo ? "risk" : "insight"} mt-3"><b>${
+  } População da faixa é do Censo 2022 e a matrícula é mais recente — leia como ordem de grandeza; acima de 100% indica atração de alunos de municípios vizinhos.</p></div></div><div class="${encolhendo ? "risk" : "insight"} mt-2"><b>${
     encolhendo
       ? `A base do fundo encolhe em data conhecida:`
       : `Leitura das coortes:`
@@ -2238,7 +2245,7 @@ function paginaDemografia(model: MunicipalXrayModel, pagina: number): string {
       : "Série de nascimentos insuficiente para tendência."
   }</div>${
     d.teenMothers && d.teenMothers.births > 0
-      ? `<div class="${d.teenMothers.sharePct >= 15 ? "risk" : "note"} mt-2"><b>Maternidade adolescente:</b> ${int(d.teenMothers.births)} dos nascimentos de ${d.teenMothers.year}
+      ? `<div class="${d.teenMothers.sharePct >= 15 ? "risk" : "note"} mt-1"><b>Maternidade adolescente:</b> ${int(d.teenMothers.births)} dos nascimentos de ${d.teenMothers.year}
       (${pct(d.teenMothers.sharePct)}) são de mães de até 19 anos — um dos maiores preditores de evasão feminina
       no ensino médio e no EJA. E a leitura dupla importa: cada mãe adolescente é também <b>demanda de creche</b>
       batendo na porta da mesma rede que ela precisaria frequentar — sem vaga de creche, a evasão dela é
@@ -2587,7 +2594,7 @@ function paginaCicloPolitico(model: MunicipalXrayModel, pagina: number): string 
       indeterminado: "N/D",
     }[p.status],
     "última transição",
-  )}${metric(String(anoEleitoral), "próximo pleito municipal")}</div><div class="grid-2 mt-3"><div class="${leitura.classe}"><b>${esc(leitura.titulo)}.</b> ${leitura.texto}</div>${panorama}</div><div class="card warn mt-2"><h3>As duas travas legais do fim de mandato</h3><table><thead><tr><th>Quando</th><th>O que trava</th><th>Base legal</th></tr></thead><tbody><tr><td><b>${anoEleitoral}</b>, três meses antes do pleito</td><td>Transferência voluntária da União e do estado ao município fica <b>vedada</b> (salvo obra em andamento e ações de emergência). Emenda e convênio novos não são assinados nesse intervalo.</td><td>Lei nº 9.504/1997, art. 73, VI, "a"</td></tr><tr><td><b>${ultimoAnoMandato}</b>, últimos 180 dias</td><td>Proibido contrair obrigação de despesa que não possa ser paga no exercício, e aumento de despesa de pessoal no último quadrimestre.</td><td>LRF, art. 42 e art. 21, parágrafo único</td></tr></tbody></table><p class="small mt-1">Consequência prática para a educação: projeto que depende de convênio federal precisa estar <b>assinado e com liberação iniciada antes da janela</b>, e obra contratada no fim do mandato sem caixa vira restos a pagar do sucessor — exatamente o mecanismo que produz as obras paralisadas da página do FNDE.</p></div><div class="note mt-2"><b>Perguntas de campo:</b> quem responde hoje pelo Educacenso e pelo SIOPE, e desde quando está no cargo? A secretaria manteve o sistema de gestão escolar do mandato anterior ou migrou? Existe plano de captação com as datas de ${anoEleitoral} marcadas, ou a expectativa é assinar convênio no meio do ano eleitoral?</div><p class="small mt-1">Fonte: ${esc(fonte)} (dataset local, pleitos de ${p.previous ? `${p.previous.election} e ` : ""}${p.current.election}). Nome de urna e partido conforme a diplomação; eventual mudança de partido no curso do mandato não aparece nesta base.</p></main>${footer(pagina, fonte)}</section>`;
+  )}${metric(String(anoEleitoral), "próximo pleito municipal")}</div><div class="grid-2 mt-3"><div class="${leitura.classe}"><b>${esc(leitura.titulo)}.</b> ${leitura.texto}</div>${panorama}</div><div class="card warn mt-2"><h3>As duas travas legais do fim de mandato</h3><table><thead><tr><th>Quando</th><th>O que trava</th><th>Base legal</th></tr></thead><tbody><tr><td><b>${anoEleitoral}</b>, três meses antes do pleito</td><td>Transferência voluntária da União e do estado ao município fica <b>vedada</b> (salvo obra em andamento e ações de emergência). Emenda e convênio novos não são assinados nesse intervalo.</td><td>Lei nº 9.504/1997, art. 73, VI, "a"</td></tr><tr><td><b>${ultimoAnoMandato}</b>, últimos 180 dias</td><td>Proibido contrair obrigação de despesa que não possa ser paga no exercício, e aumento de despesa de pessoal no último quadrimestre.</td><td>LRF, art. 42 e art. 21, parágrafo único</td></tr></tbody></table><p class="small mt-1">Consequência prática para a educação: projeto que depende de convênio federal precisa estar <b>assinado e com liberação iniciada antes da janela</b>, e obra contratada no fim do mandato sem caixa vira restos a pagar do sucessor — exatamente o mecanismo que produz as obras paralisadas da página do FNDE.</p></div><div class="note mt-1"><b>Perguntas de campo:</b> quem responde hoje pelo Educacenso e pelo SIOPE, e desde quando está no cargo? A secretaria manteve o sistema de gestão escolar do mandato anterior ou migrou? Existe plano de captação com as datas de ${anoEleitoral} marcadas, ou a expectativa é assinar convênio no meio do ano eleitoral?</div><p class="small mt-1">Fonte: ${esc(fonte)} (dataset local, pleitos de ${p.previous ? `${p.previous.election} e ` : ""}${p.current.election}). Nome de urna e partido conforme a diplomação; eventual mudança de partido no curso do mandato não aparece nesta base.</p></main>${footer(pagina, fonte)}</section>`;
 }
 
 /**

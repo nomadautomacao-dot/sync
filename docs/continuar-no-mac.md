@@ -124,16 +124,27 @@ Ao adicionar uma página no template, **subir o número em
 dos rodapés é automática (contador `prox()`), e o teste de sequência falha se
 alguma página não usar o contador. O card da UI também mostra a contagem.
 
-**O contrato não pega transbordo.** Ele conta `<section class="page">` no DOM;
-conteúdo que estoura a altura da página vira folha extra só no PDF impresso.
-Ao engordar uma página existente, confira o PDF de verdade:
+**O contrato não pega conteúdo cortado — e contar folhas do PDF também não.**
+O CSS fixa a folha com `overflow:hidden`, então conteúdo que estoura a altura
+**não** vira folha extra: ele é apagado do PDF, sem erro e sem aviso. Contar
+`/Type /Page` no arquivo gerado é inútil para isso — com `overflow:hidden` o
+total é sempre igual ao número de seções, por construção. (Esta seção já
+ensinou esse comando como se detectasse transbordo; não detecta.)
 
-```bash
-python3 -c "import re; d=open('/tmp/RAIO_X_MANAUS.pdf','rb').read(); print(len(re.findall(rb'/Type\s*/Page[^sC]', d)))"
-```
+A medida certa compara, dentro do navegador, `scrollHeight` contra
+`clientHeight` de cada `.page-body`. Está em **`core/lib/pdf-corte.ts`** e roda
+sozinha nos três geradores, em dois tempos:
 
-Foi assim que o roteiro de campo virou 3 páginas: cabia exatamente em 2, e as
-perguntas novas teriam transbordado em silêncio.
+1. `ajustarParaCaber` encolhe o conteúdo da página que estourou (piso de 88%,
+   passo de 1%), porque **o volume varia por município**: a mesma página cabe
+   em Ibateguara e estoura em Manaus. Ajustar o template para o pior caso
+   desperdiçaria espaço em quase todos os 5.570.
+2. `assertSemCorte` falha a geração se nem no piso coube — aí é conteúdo
+   demais na página, e quem escreve o template precisa dividir o bloco.
+
+Ao acrescentar conteúdo, gere o PDF de um município **grande** (Manaus) e de um
+**pequeno** (Ibateguara): o log imprime quais páginas foram ajustadas e em que
+escala. Escala perto de 88% é sinal de que a página está no limite.
 
 ---
 

@@ -172,7 +172,7 @@ function documentos(anoCenso: number): DocumentoPedido[] {
       tambemChamado:
         "PME, plano decenal de educação, lei do plano municipal; os relatórios costumam ser chamados de relatório bienal de monitoramento ou avaliação das metas.",
       paraQueServe:
-        "O PME é o documento legal que fixa as metas da educação local por dez anos, incluindo a de financiamento. Plano vigente é exigência frequente para adesão a programas e convênios federais (PAR/FNDE) — não afeta o FUNDEB, que é transferência automática, mas afeta a transferência voluntária. Os relatórios de monitoramento mostram o que saiu do papel.",
+        "Fixa por lei as metas da educação local por dez anos, incluindo a de financiamento. Plano vigente é exigência frequente em programas e convênios federais (PAR/FNDE) — não afeta o FUNDEB, que é transferência automática, mas afeta a voluntária. Os relatórios mostram o que saiu do papel.",
       ondeEsta:
         "Secretaria de Educação, Conselho Municipal de Educação, Câmara Municipal ou portal de legislação; os relatórios, no portal da transparência ou no site da secretaria.",
     },
@@ -548,12 +548,12 @@ p+p{margin-top:.09in}
 .sign-line{width:3.1in}
 .sign-line hr{border:none;border-top:1px solid #94a5b0;margin:0 0 .07in}
 .sign-name{color:var(--navy);font-size:9.6pt;font-weight:800}
-.chk{display:grid;grid-template-columns:.3in 1fr;gap:.12in;background:#fff;border:1px solid var(--line);border-radius:7px;padding:.13in .15in}
+.chk{display:grid;grid-template-columns:.26in 1fr;gap:.1in;background:#fff;border:1px solid var(--line);border-radius:7px;padding:.1in .12in}
 .chk-num{font-size:9pt;font-weight:800;color:var(--teal);letter-spacing:.05em;padding-top:.014in}
 .chk h3{margin-bottom:.06in}
-.chk-field{margin-top:.058in}
+.chk-field{margin-top:.045in}
 .chk-field em{display:block;font-style:normal;color:var(--teal);font-size:6.5pt;font-weight:800;letter-spacing:.09em;text-transform:uppercase}
-.chk-field p{margin-top:.015in;font-size:7.9pt;line-height:1.29;color:#33454f}
+.chk-field p{margin-top:.012in;font-size:7.6pt;line-height:1.24;color:#33454f}
 .q-secao{margin-bottom:.15in}
 .q-secao h3{color:var(--navy);font-size:9.6pt;border-bottom:1px solid var(--line);padding-bottom:.045in;margin-bottom:.08in}
 .q-item{padding:.045in 0}
@@ -600,7 +600,7 @@ function paginaDetalhamento(
 
   const cartoes = docs.map(cartao).join("");
 
-  return `<section class="page content-page">${cabecalho}<div class="page-body"><div class="kicker">Como identificar</div><h2>O que é cada documento</h2><p class="lede" style="font-size:9.2pt">Os nomes variam de rede para rede. Abaixo, o que procuramos, por que o documento importa para a análise e o setor onde ele costuma estar arquivado.</p><div class="grid-2 mt-1" style="gap:.11in">${cartoes}</div><div class="note mt-1"><h3 style="color:#584416">Formatos aceitos</h3><p style="font-size:8.4pt;line-height:1.4">PDF, DOCX, XLSX, CSV ou fotografia legível das páginas. Cópia digital simples resolve — sem necessidade de autenticação em cartório ou de via impressa. Se algum arquivo ultrapassar o limite do WhatsApp, envie para <span class="strong" style="color:#584416">${esc(params.responsavel.email)}</span> com o nome do município no assunto. Documentos parciais também ajudam: é melhor receber cinco dos seis no prazo do que os seis depois.</p></div><div class="card mt-1" style="padding:.12in .14in"><h3>Em caso de dúvida</h3><p style="font-size:8.4pt;line-height:1.4">${esc(params.responsavel.nome)} &nbsp;·&nbsp; WhatsApp <span class="strong">${esc(params.responsavel.whatsapp)}</span> &nbsp;·&nbsp; <span class="strong">${esc(params.responsavel.email)}</span>. Podemos orientar por telefone qual arquivo corresponde a cada item, inclusive junto ao setor responsável.</p></div></div><div class="page-footer"><span>Prazo máximo de envio: ${params.prazoDias} dias · Emitido em ${new Intl.DateTimeFormat("pt-BR").format(params.emitidoEm)}</span><span>2 / ${totalPaginas}</span></div></section>`;
+  return `<section class="page content-page">${cabecalho}<div class="page-body"><div class="kicker">Como identificar</div><h2>O que é cada documento</h2><p class="lede" style="font-size:9.2pt">Os nomes variam de rede para rede. Abaixo, o que procuramos, por que o documento importa para a análise e o setor onde ele costuma estar arquivado.</p><div class="grid-2 mt-1" style="gap:.11in">${cartoes}</div><div class="note mt-1"><h3 style="color:#584416">Formatos, prazo e dúvidas</h3><p style="font-size:8.1pt;line-height:1.35">PDF, DOCX, XLSX, CSV ou fotografia legível resolvem — cópia digital simples, sem autenticação em cartório. Documentos parciais também ajudam: é melhor receber cinco dos seis no prazo do que os seis depois. Em caso de dúvida sobre qual arquivo corresponde a cada item, ${esc(params.responsavel.nome)} orienta por telefone, inclusive junto ao setor responsável — WhatsApp <span class="strong" style="color:#584416">${esc(params.responsavel.whatsapp)}</span> ou <span class="strong" style="color:#584416">${esc(params.responsavel.email)}</span>.</p></div></div><div class="page-footer"><span>Prazo máximo de envio: ${params.prazoDias} dias · Emitido em ${new Intl.DateTimeFormat("pt-BR").format(params.emitidoEm)}</span><span>2 / ${totalPaginas}</span></div></section>`;
 }
 
 function paginaQuestionario(
