@@ -1,9 +1,0 @@
-<svg width="520" height="360" viewBox="0 0 520 360" fill="none" xmlns="http://www.w3.org/2000/svg">
-  <g transform="translate(180 24)">
-    <path d="M64 0L122 40V102L64 142V102L92 81L64 64V0Z" fill="#313D79"/>
-    <path d="M64 34L92 54L64 75V34Z" fill="white"/>
-    <path d="M64 142L28 116V80L64 55V90L42 105L64 121V142Z" fill="#313D79"/>
-  </g>
-  <text x="260" y="206" fill="#313D79" font-family="Montserrat, Helvetica, Arial, sans-serif" font-size="42" font-weight="700" text-anchor="middle">Rocha Prime</text>
-  <text x="260" y="234" fill="#8B94B3" font-family="Montserrat, Helvetica, Arial, sans-serif" font-size="14" font-weight="400" letter-spacing="2.6" text-anchor="middle">Serviços Especializados Ltda</text>
-</svg>

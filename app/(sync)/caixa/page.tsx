@@ -4,7 +4,6 @@ export default function CaixadeentradaPage() {
   return (
     <SecaoNaoMigrada
       titulo="Caixa de entrada"
-      fase={6}
       resumo="Eventos de auditoria do grupo, agrupados por dia."
     />
   );

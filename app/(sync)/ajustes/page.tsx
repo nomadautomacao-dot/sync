@@ -2,8 +2,8 @@ import { SecaoNaoMigrada } from "@/core/components/sync-shell/secao-nao-migrada"
 import { DadosLocaisCaged } from "@/core/components/ajustes/dados-locais-caged";
 
 /**
- * A tela de Ajustes ainda é placeholder (fase 6), mas já hospeda as ferramentas
- * de manutenção de dados locais — elas não dependem do resto da migração e
+ * A tela de Ajustes ainda é placeholder, mas já hospeda as ferramentas de
+ * manutenção de dados locais — elas são independentes do resto da tela e
  * precisam de um lugar visível.
  *
  * O bloco de dev só é montado fora de produção. A rota que ele consome também
@@ -16,7 +16,6 @@ export default function AjustesPage() {
   return (
     <SecaoNaoMigrada
       titulo="Ajustes"
-      fase={6}
       resumo="Configuração do workspace, flags de funcionalidade, papéis e auditoria."
     >
       {emDesenvolvimento && <DadosLocaisCaged />}

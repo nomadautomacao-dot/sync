@@ -25,29 +25,29 @@
 
 ### Stack tecnológico
 
-**Backend (BFF):**
+**Aplicação — Next.js, interface e API no mesmo projeto:**
 - Next.js 16 (App Router) + TypeScript — `output: "standalone"`
-- Prisma 6 + PostgreSQL (Supabase) — dual URL (pooler + direct)
-- Firebase Auth (verificação de ID token via `firebase-admin`) — ver seção 3.2
+- React 19 — a interface fica em `app/(auth)/` e `app/(sync)/`
+- Firebase Auth + Firestore + Storage — autenticação e dados
 - Python 3 + ReportLab/Pillow para geração de PDFs FUNDEB
+- Playwright/Chromium para os relatórios em HTML → PDF
 - Zod 4 para validação de schemas
 
-**O Next não tem interface própria.** O único `page.tsx` é o catch-all que
-redireciona para `/flutter-web/`; toda a UI é o app Flutter. O papel do Next é
-servir as rotas de API, gerar documentos (docx/docxtemplater, jsPDF, ReportLab
-via Python) e entregar o build web do Flutter em `public/flutter-web/`.
+**Havia um app Flutter; não há mais.** Ele foi a interface do produto até a
+migração para o React e **foi removido do repositório**. Se precisar consultar
+como uma tela antiga funcionava, o código está no histórico do git (a remoção é
+o último commit que menciona `sync_flutter/`). Não recriar.
 
-**Frontend Mobile (Flutter):**
-- Flutter SDK ^3.10.7, Dart
-- Material Design 3 (em redesign)
-- Plataforma-alvo: Android (smartphones), Linux (dev)
-- Dependências: fl_chart, pdf, printing, http, shared_preferences, lucide_icons_flutter, intl, file_picker, archive, share_plus, url_launcher, flutter_svg, path_provider
-- Assets embarcados: `censo_matriculas.json`, `ideb_historico.json`, branding SVGs
+**Legado em desativação:**
+- Prisma 6 + PostgreSQL (Supabase) — ainda importado por 4 rotas de API
+  (`workspace/settings`, `municipalities/[id]`, `case-de-sucesso` ×2) e pelos
+  `core/lib/*-data-access.ts`. O build do Next depende de `prisma generate`
+  enquanto esses imports existirem. Migrar para o Firestore e então remover.
 
 **Infraestrutura:**
 - Google Cloud Run (us-central1) — 2 vCPU, 2GB RAM, timeout 900s
-- Google Cloud Build (CI/CD via `cloudbuild.yaml`)
-- Docker multi-stage (node:20-alpine + Python)
+- Google Cloud Build — **deploy contínuo: push na `main` → produção** (seção 7)
+- Docker multi-stage (node:22-slim + Python)
 
 ---
 
@@ -55,11 +55,14 @@ via Python) e entregar o build web do Flutter em `public/flutter-web/`.
 
 ```
 Sync/
-├── app/                          # Next.js App Router — só API + redirect
+├── app/                          # Next.js App Router — interface + API
 │   ├── layout.tsx                # Root layout (Inter + JetBrains Mono, AppProviders)
 │   ├── globals.css               # Base tipográfica mínima
-│   ├── [[...path]]/              # Catch-all → redireciona para /flutter-web/
-│   ├── flutter-web/              # Serve o Flutter Web build
+│   ├── (auth)/                   # Login — /entrar
+│   ├── (sync)/                   # A aplicação: painel, cidades, empresas,
+│   │                             #   pessoas, modulos, documentos, caixa,
+│   │                             #   pipeline, ajustes (ver seção 4)
+│   ├── [[...path]]/              # Catch-all → /entrar
 │   └── api/                      # API Routes (BFF) — ver seção 3
 │
 ├── core/                         # Código compartilhado (server-side)
@@ -91,27 +94,22 @@ Sync/
 │   ├── specs/                    # Specs de produto
 │   ├── roadmaps/                 # Roadmaps de automação
 │   ├── analises-fundeb/          # Auditorias e validações de modelo FUNDEB
-│   ├── flutter/                  # Docs do app Flutter
 │   └── superpowers/specs/        # Design docs de refatorações
 │
-├── sync_flutter/                 # App Flutter — a interface do produto
-│   └── lib/src/
-│       ├── core/                 # Models, repositories, services, theme
-│       └── features/             # auth, dashboard, cities, modules, people, shell
-│
+├── functions/                    # Cloud Functions (comissões, lucro)
+├── firestore.rules               # Regras do Firestore + firestore.indexes.json
 ├── CLAUDE.md                     # ← ESTE ARQUIVO
 ├── README.md                     # Setup rápido
 ├── Dockerfile                    # Multi-stage build
-├── cloudbuild.yaml               # Pipeline Cloud Build
+├── cloudbuild.yaml               # Pipeline de deploy contínuo (seção 7)
 ├── cloudrun.env.yaml.example     # Template de variáveis
-├── run-local.sh                  # Inicia Next.js + Flutter Linux juntos
 └── package.json                  # Dependências e scripts npm
 ```
 
 ### O que NÃO fica no repositório
 
-Vale a regra: fica no git só o que o Next importa ou executa, o que o Flutter
-compila, ou o que o build precisa. Documentos de negócio, saídas geradas e
+Vale a regra: fica no git só o que o Next importa ou executa, ou o que o build
+precisa. Documentos de negócio, saídas geradas e
 fontes brutas vivem em `../Sync-Arquivos/`, pasta irmã fora do git.
 
 ```
@@ -207,9 +205,9 @@ cliente; as rotas apenas verificam o ID token. Ver seção 3.2.
 
 ### 3.2 Sistema de autenticação
 
-Firebase Auth (projeto `globalconsultorias`). O Flutter autentica pelo SDK
-(`signInWithEmailAndPassword`) e envia o ID token em `Authorization: Bearer` a
-cada requisição. `getSessionUser()` em `core/lib/auth.ts` verifica o token com o
+Firebase Auth (projeto `globalconsultorias`). O cliente React autentica pelo Web
+SDK (`signInWithEmailAndPassword`) e envia o ID token em `Authorization: Bearer`
+a cada requisição. `getSessionUser()` em `core/lib/auth.ts` verifica o token com o
 Admin SDK (`firebase-admin`) e lê `groupId` e `groupRole` das custom claims —
 sem consultar banco. Devolve `null` em qualquer falha; as rotas tratam como 401.
 
@@ -263,7 +261,7 @@ PostgreSQL via Supabase. Dual connection: `DATABASE_URL` (pooler, porta 6543) + 
 | `Company` | Empresa do grupo → Employee[], enabledModules: String[] |
 | `User` | Usuário do sistema (groupRole: owner/admin/member/viewer) |
 | `Employee` | Vínculo user↔company, @@unique([userId, companyId]) |
-| `Session` | Sessão customizada (Flutter) — token único, expiresAt |
+| `Session` | Sessão customizada legada — token único, expiresAt (hoje a sessão é do Firebase Auth) |
 | `AuditLog` | Log de auditoria — action, userId, metadata (Json) |
 
 **Modelos de colaboração:**
@@ -286,41 +284,50 @@ PostgreSQL via Supabase. Dual connection: `DATABASE_URL` (pooler, porta 6543) + 
 
 ---
 
-## 4. Frontend (Flutter)
+## 4. Frontend (React / App Router)
 
 ### 4.1 Arquitetura
 
-- Estado: `ChangeNotifier`
-- Repositório: `RemoteSyncRepository` (chamadas à API Next.js)
-- Shell responsivo: drawer em mobile, sidebar fixa em desktop
-- Autenticação: Firebase Auth (ID token em Authorization: Bearer)
+- React 19 + App Router. A interface e a API são o mesmo projeto Next.
+- **Dois grupos de rota:** `app/(auth)/` (público) e `app/(sync)/` (autenticado).
+- **Guarda de sessão:** `app/(sync)/layout.tsx` é client component; lê
+  `useAuth()` e manda para `/entrar` quem não tem sessão. Enquanto carrega,
+  mostra esqueleto do shell — nunca conteúdo.
+- **Sessão no browser:** Firebase Web SDK, no IndexedDB. Server Components não
+  a enxergam — por isso o catch-all manda para `/entrar`, não para `/painel`.
+- **Shell:** `core/components/sync-shell/{header,sidebar}.tsx`, sidebar fixa em
+  desktop e gaveta no mobile.
+- **Componentes:** `core/components/ui/` (base), `velora/`, `ajustes/`.
+- **Providers:** `core/providers/{app-providers,auth-provider}.tsx`.
 
 ### 4.2 Telas implementadas
 
-| Tela | Arquivo | Descrição |
+| Rota | Arquivo | Descrição |
 |------|---------|-----------|
-| Dashboard | `dashboard_screen.dart` | Home com KPIs |
-| Empresas | `companies_screen.dart` | CRUD com detalhe e funcionários |
-| Pessoas | `people_screen.dart` | Lista cross-empresa |
-| Cidades | `cities_screen.dart` | Pipeline de municípios |
-| Módulos | `modules_screen.dart` | Catálogo de módulos |
-| Levantamento FUNDEB | `levantamento_fundeb_screen.dart` (83KB) | Diagnóstico completo |
-| Levantamento Lite | `levantamento_fundeb_lite_screen.dart` (29KB) | Infográfico 2 páginas |
-| Case de Sucesso | `case_sucesso_screen.dart` (15KB) | Análise FUNDEB |
-| Contrato FUNDEB | `contrato_capa_capa_screen.dart` (99KB) | Kit 15 anexos |
-| Kit Documental | `kit_documental_screen.dart` (20KB) | Gestão de documentos |
-| Settings | `settings_screen.dart` | Configurações |
-| Login | `auth/` | Email/senha |
+| `/entrar` | `app/(auth)/entrar/page.tsx` | Login email/senha |
+| `/painel` | `app/(sync)/painel/page.tsx` | Home com KPIs |
+| `/cidades` | `app/(sync)/cidades/page.tsx` | Carteira de municípios |
+| `/cidades/[cityId]` | `app/(sync)/cidades/[cityId]/page.tsx` | Ficha da cidade + relatórios arquivados |
+| `/pipeline` | `app/(sync)/pipeline/page.tsx` | Pipeline comercial por estágio |
+| `/empresas` | `app/(sync)/empresas/page.tsx` | CRUD com detalhe e funcionários |
+| `/pessoas` | `app/(sync)/pessoas/page.tsx` | Colaboradores cross-empresa |
+| `/modulos` | `app/(sync)/modulos/page.tsx` | Catálogo de módulos |
+| `/modulos/levantamento-fundeb` | `app/(sync)/modulos/levantamento-fundeb/page.tsx` | Os três relatórios (seção 5) |
+| `/documentos` | `app/(sync)/documentos/page.tsx` | Kit documental |
+| `/caixa` | `app/(sync)/caixa/page.tsx` | Inbox / auditoria |
+| `/ajustes` | `app/(sync)/ajustes/page.tsx` | Configurações do workspace |
 
 ### 4.3 Design System
 
-- Cor primária: `#1B2A4A` (Rocha Prime Navy)
-- Cor accent: `#2F6BFF`
-- Fundo: `#EEF1F6` (scaffold), `#FFFFFF` (cards)
-- Tipografia: Inter (variável), escala 1.125
-- Espaçamento: base 4dp, input height 48dp
-- Corner radius: cards 12dp, buttons 10dp
-- Sem sombras em cards, apenas bordas 1px
+**A fonte de verdade é `DESIGN.md`, na raiz** — tokens de cor, tipografia e
+espaçamento em frontmatter estruturado. Não duplicar valores aqui: ler de lá.
+
+Direção atual: **"Console Soft"** — glassmorphism, neutros lavanda, accent
+quase-preto (`#16181D`), cards glass flutuantes, gradientes pastel no pipeline.
+
+O hook de design (`impeccable`) valida aderência e está configurado para
+**ignorar `core/lib/*-template.ts`** (`.impeccable/config.json`): templates de
+impressão seguem regra de papel, não o design system da web.
 
 ---
 
@@ -338,15 +345,16 @@ PostgreSQL via Supabase. Dual connection: `DATABASE_URL` (pooler, porta 6543) + 
 | **Propostas** | `propostas` | Propostas comerciais padronizadas |
 
 > `modules/` guarda apenas lógica server-side consumida pelas rotas de API.
-> A interface de cada módulo é uma tela em `sync_flutter/lib/src/features/`.
+> A interface de cada módulo é uma página em `app/(sync)/modulos/<nome>/`.
 
 ### Registrar novo módulo
-1. Adicionar a key ao `moduleCatalog` em `core/domain/module.ts` — o Flutter lê
-   esse catálogo via `/api/modules`
+1. Adicionar a key ao `moduleCatalog` em `core/domain/module.ts` — a tela
+   `/modulos` lê esse catálogo via `/api/modules`
 2. Criar as rotas em `app/api/modulos/<nome>/`
 3. Se houver lógica de domínio reaproveitável, criar `modules/<nome>/`
-4. Criar a tela em `sync_flutter/lib/src/features/modules/presentation/`
-5. Migration Prisma se necessário
+4. Criar a página em `app/(sync)/modulos/<nome>/page.tsx`
+5. Se precisar persistir: coleção no Firestore + regra em `firestore.rules`
+   (**não** criar migration Prisma — é legado em desativação)
 
 ---
 
@@ -367,6 +375,30 @@ PostgreSQL via Supabase. Dual connection: `DATABASE_URL` (pooler, porta 6543) + 
 
 ## 7. Deploy
 
+### Modelo de trabalho: uma branch só
+
+O repositório tem **apenas `main`**. Não se cria branch, não se abre PR: é um
+ambiente de um desenvolvedor só. Trabalha-se direto na `main` e **o push é o
+deploy**.
+
+### Deploy contínuo (push na main → produção)
+
+Um trigger do Cloud Build observa a `main` no GitHub. A cada push ele roda o
+`cloudbuild.yaml`, em sequência:
+
+1. **`test`** — `npm ci` + `prisma generate` + `npm test`. **É o gate:** se a
+   suíte falha, o build aborta e a produção continua na revisão anterior.
+2. **`build`** — imagem Docker (`gcr.io/opus-sec/sync-app:$BUILD_ID`).
+3. **`push`** — envia a imagem ao registry.
+4. **`deploy`** — `gcloud run deploy` no serviço `sync-app`. Troca só a imagem;
+   **as variáveis de ambiente já configuradas no serviço são preservadas**.
+
+Consequência prática: **commit quebrado não derruba o ar, mas commit que passa
+nos testes vai direto para os usuários.** Não existe staging.
+
+Acompanhar um deploy: console do Cloud Build, ou `gcloud builds list --limit=5`.
+Reverter: `gcloud run services update-traffic sync-app --to-revisions=<revisão-anterior>=100 --region=us-central1`.
+
 ### Cloud Run
 
 - **Serviço:** `sync-app` | **Projeto GCP:** `opus-sec`
@@ -386,18 +418,22 @@ NODE_ENV: "production"
 ### Comandos
 
 ```bash
-# Deploy completo (Linux)
-./scripts/deploy/deploy-cloudrun-linux.sh
+# Subir para produção — é isto e mais nada
+git push
 
-# Dev local (Next.js + Flutter Linux)
-./run-local.sh
+# Dev local (Next na porta 3100)
+npm run dev
 
-# Build Flutter Web para produção
-npm run build:flutter:web
+# Rodar o gate localmente antes de dar push
+npm test
 
 # Docker local
 docker build -t sync-app . && docker run -p 3000:3000 sync-app
 ```
+
+Os scripts `scripts/deploy/deploy-cloudrun-{linux.sh,.ps1}` continuam no repo
+como **saída de emergência** (deploy manual quando o trigger está fora do ar).
+No fluxo normal não se usa nenhum dos dois.
 
 ---
 
@@ -434,7 +470,13 @@ docker build -t sync-app . && docker run -p 3000:3000 sync-app
 ## 9. Convenções
 
 ### Nomes
-- React: `kebab-case.tsx` | Dart: `snake_case.dart` | Utils: `kebab-case.ts`
+- React: `kebab-case.tsx` | Utils: `kebab-case.ts` | Docs: `kebab-case.md`
+
+### Fluxo de trabalho
+- **Só existe a `main`.** Não criar branch, não abrir PR — é um ambiente de um
+  desenvolvedor só.
+- **Push é deploy.** Rodar `npm test` antes de empurrar; o gate na nuvem repete
+  a suíte e barra o que quebrar (seção 7).
 
 ### Linguagem
 - **Código:** inglês | **Labels/dados:** português | **Docs:** português | **Commits:** inglês (Conventional Commits)
@@ -442,9 +484,9 @@ docker build -t sync-app . && docker run -p 3000:3000 sync-app
 ### Padrões
 - Validação: Zod schemas em `core/domain/`
 - API routes: `getSessionUser()` obrigatório, Zod parse, audit log em writes
-- Hooks: TanStack Query com `staleTime: 5min`
-- Estado: Zustand (UI) + TanStack Query (server data)
-- Imports: `@/core/`, `@/components/`, `@/modules/`, `@/lib/`
+- Estado de servidor: TanStack Query (`staleTime: 5min`). Estado de UI: `useState`
+  local — não há store global no projeto.
+- Imports: `@/core/`, `@/modules/`, `@/data/`
 
 ### RBAC
 - **GroupRole:** `owner > admin > member > viewer`
@@ -453,10 +495,9 @@ docker build -t sync-app . && docker run -p 3000:3000 sync-app
 
 ### O que NÃO está implementado
 - Módulos: Terceirização, Formação, Atas, Tecnologia, RH, Financeiro — existem
-  como chaves no `moduleCatalog` (o Flutter as exibe), sem rota nem tela
-- Testes automatizados (Vitest, Playwright)
-- CI/CD via GitHub Actions (usa Cloud Build manual)
-- Staging separado de produção
+  como chaves no `moduleCatalog` (a tela `/modulos` as exibe), sem rota nem tela
+- Testes de ponta a ponta (a suíte é de unidade/integração: 343 testes, Vitest)
+- **Staging separado de produção** — o deploy da `main` vai direto ao ar
 - Monitoramento (Sentry, Axiom)
 
 <!-- code-review-graph MCP tools -->

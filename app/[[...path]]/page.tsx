@@ -5,9 +5,8 @@ import { redirect } from "next/navigation";
  * app React.
  *
  * Antes este arquivo mandava tudo para o bundle Flutter — o Flutter era o
- * produto e o React era a exceção. Isso se inverteu: o React é o produto, e o
- * Flutter está trancado em `middleware.ts` (segue no repositório apenas como
- * fonte de consulta para portar as telas restantes).
+ * produto e o React era a exceção. Isso se inverteu e se encerrou: o React é o
+ * produto e o Flutter foi removido do repositório.
  *
  * Quem vence este catch-all são os segmentos estáticos, que o App Router sempre
  * prefere a um catch-all opcional:

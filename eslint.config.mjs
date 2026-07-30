@@ -13,8 +13,6 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     // Artefatos gerados — nao sao codigo-fonte deste repo
-    "public/flutter-web/**",
-    "sync_flutter/**",
     "functions/lib/**",
     "graphify-out/**",
     ".code-review-graph/**",

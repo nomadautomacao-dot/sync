@@ -8,7 +8,6 @@ export default defineConfig({
     exclude: [
       "node_modules/**",
       ".next/**",
-      "sync_flutter/**",
       // Worktrees de agentes duplicam os testes da raiz
       ".claude/**",
       // Cloud Functions usam node:test, nao vitest (`npm --prefix functions test`)
