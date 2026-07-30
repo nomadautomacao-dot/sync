@@ -284,8 +284,12 @@ describe("template do Levantamento FUNDEB", () => {
       } as LevantamentoTemplateInput["payload"],
     });
 
+    // A nota de método passou a existir uma vez só, na Parte I: na página 2 ela
+    // aparecia inteira de novo, e a peça gastava mais linha desmentindo o
+    // próprio número de capa do que defendendo-o.
     expect(html).toContain("não têm a mesma natureza");
-    expect(html).toContain("cenário, não apuração");
+    expect(html).toContain("é premissa, não apuração");
+    expect(html.match(/não têm a mesma natureza/g)).toHaveLength(1);
   });
 
   it("omite o ganho em vez de estimá-lo quando falta o dataset", () => {
@@ -330,5 +334,95 @@ describe("template do Levantamento FUNDEB", () => {
     expect(html).toContain("Matrículas-equivalentes");
     expect(html).toContain("Fator médio da rede");
     expect(html).not.toContain("Matrícula ponderada não disponível");
+  });
+});
+
+/**
+ * As duas folhas comerciais que fecham o relatório. Antes dele, o documento era
+ * diagnóstico do começo ao fim: a única menção à consultoria era o quarto item
+ * de uma lista, e a última coisa que o gestor lia era o mapa de fontes.
+ */
+describe("as páginas comerciais do Levantamento", () => {
+  it("descreve as quatro frentes com a janela legal de cada uma", () => {
+    const html = gerar();
+
+    expect(html).toContain("Quatro frentes, quatro janelas");
+    expect(html).toContain("Conferência cadastral do Censo");
+    expect(html).toContain("31/08");
+    expect(html).toContain("Condicionalidades do VAAR");
+    expect(html).toContain("SIOPE bimestral");
+  });
+
+  /**
+   * REGRA DURA: a Global Company é empresa nova e **não executou contrato**.
+   * Nenhuma revisão pode introduzir caso, histórico ou resultado de cliente
+   * enquanto isso não mudar — prometer entrega que não se tem é o mesmo
+   * defeito do antigo KPI "já evidenciado", só que com consequência
+   * contratual.
+   */
+  it("não alega histórico, caso ou resultado de cliente", () => {
+    const html = gerar();
+
+    for (const proibido of [
+      "já recuperamos",
+      "nossos clientes",
+      "case de sucesso",
+      "municípios atendidos",
+      "recuperou R$",
+    ]) {
+      expect(html.toLowerCase()).not.toContain(proibido.toLowerCase());
+    }
+  });
+
+  it("fecha pedindo decisão, com o prazo que o calendário impõe", () => {
+    const html = gerar();
+
+    expect(html).toContain("O que acontece se nada for feito");
+    expect(html).toContain("O custo de não decidir");
+    expect(html).toContain("30 dias da publicação");
+    expect(html).toContain("O próximo passo");
+  });
+
+  it("não fecha condição comercial que não é deste documento", () => {
+    expect(gerar()).toContain("objeto de proposta específica");
+  });
+});
+
+describe("guarda de plausibilidade do RGF", () => {
+  const comPessoal = (percentual: number) =>
+    gerar({
+      payload: {
+        fiscal: {
+          siconfi: {
+            rcl_ajustada: 18_156_984.31,
+            despesa_pessoal_total: 46_095_572.33,
+            percentual_despesa_pessoal: percentual,
+          },
+          situacao_lrf: "Acima do limite maximo",
+        },
+      } as LevantamentoTemplateInput["payload"],
+    });
+
+  /**
+   * Ibateguara/AL 2026 devolveu RCL ajustada de R$ 18,1 mi contra despesa de
+   * pessoal de R$ 46,1 mi — 253,87%. Não existe município a 253% da RCL em
+   * pessoal; existe entrega parcial. Afirmar "acima do limite máximo" com esse
+   * número é pior que omitir: o secretário de finanças reconhece o absurdo na
+   * hora e o relatório inteiro perde a autoridade.
+   */
+  it("não acusa o ente quando a entrega do RGF é impossível", () => {
+    const html = comPessoal(253.87);
+
+    expect(html).toContain("entrega do RGF inconsistente");
+    expect(html).not.toContain("Status LRF: Acima do limite maximo");
+    // E o número não vira custo de não decidir na folha de fechamento.
+    expect(html).not.toContain("da RCL, acima do limite");
+  });
+
+  it("mantém a leitura normal quando a razão é plausível", () => {
+    const html = comPessoal(55.75);
+
+    expect(html).toContain("Status LRF: Acima do limite maximo");
+    expect(html).not.toContain("entrega do RGF inconsistente");
   });
 });

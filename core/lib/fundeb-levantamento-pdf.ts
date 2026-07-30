@@ -1,6 +1,7 @@
 import { chromium, type Browser } from "playwright";
 
 import { LEVANTAMENTO_TOTAL_PAGINAS } from "./fundeb-levantamento-template";
+import { ajustarParaCaber, assertSemCorte } from "./pdf-corte";
 
 /**
  * Renderiza o Levantamento FUNDEB (novo modelo) em PDF.
@@ -33,6 +34,20 @@ export async function generateLevantamentoPdf(
         `O template do Levantamento gerou ${pageCount} páginas; eram esperadas ${LEVANTAMENTO_TOTAL_PAGINAS}.`,
       );
     }
+
+    // O contrato acima conta seções; isto verifica se o conteúdo coube nelas.
+    // Com `overflow:hidden`, corte não muda a contagem nem gera folha extra —
+    // some em silêncio. Ver `pdf-corte.ts`. Faltava aqui: o Levantamento vinha
+    // sem essa verificação, então um bloco que estourasse a folha era apagado
+    // do PDF sem erro e sem aviso.
+    const ajustadas = await ajustarParaCaber(page);
+    if (ajustadas.length > 0) {
+      console.info(
+        `[Levantamento] ${ajustadas.length} página(s) ajustadas para caber:`,
+        ajustadas.map((a) => `p${a.pagina} ${Math.round(a.escala * 100)}%`).join(", "),
+      );
+    }
+    await assertSemCorte(page, "Levantamento");
 
     const pdfBytes = await page.pdf({
       format: "Letter",

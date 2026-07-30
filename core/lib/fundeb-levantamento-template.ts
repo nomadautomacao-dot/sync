@@ -14,7 +14,7 @@ import { DESCRICAO_CONDICIONALIDADE, type Condicionalidade } from "@/core/lib/fu
  * confere antes de devolver o PDF.
  */
 
-export const LEVANTAMENTO_TOTAL_PAGINAS = 15;
+export const LEVANTAMENTO_TOTAL_PAGINAS = 17;
 
 /** Payload do `buildGoviaMunicipioCompleto`, na parte que este template lê. */
 export interface LevantamentoPayload {
@@ -787,6 +787,11 @@ function paginaSumario(i: LevantamentoTemplateInput, pagina: number): string {
   // base nenhuma. Agora o número é apurado sobre o dado do próprio município.
   const ganho = i.payload?.relatorio_dirigido_base?.ganho ?? null;
   const ganhoTotal = ganho?.total ?? 0;
+  // "Sem lacuna" era a leitura crua do dado e a pior manchete possível numa
+  // peça comercial: o gestor lia "não há nada a fazer aqui". O fato é o mesmo
+  // — a rede declara na mediana nacional ou acima —, mas o que ele significa
+  // é outro: a base está limpa, então o ganho vem de crescer a rede, não de
+  // corrigir cadastro. Isso é notícia boa, e precisa ser dita como tal.
   const kpiGanho =
     ganho && ganhoTotal > 0
       ? kpi(
@@ -796,8 +801,8 @@ function paginaSumario(i: LevantamentoTemplateInput, pagina: number): string {
           "up",
         )
       : ganho
-        ? kpi("Ganho apurado", "sem lacuna", "declaração na mediana nacional ou acima")
-        : kpi("Ganho apurado", "—", "matrícula ponderada não disponível");
+        ? kpi("Base cadastral", "íntegra", "declara na mediana nacional ou acima")
+        : kpi("Base cadastral", "—", "matrícula ponderada não disponível");
 
   // As duas frases abaixo eram fixas. "Vetores de trabalho: condicionalidades
   // de desempenho e regularidade informacional para VAAR" saía igual para quem
@@ -844,7 +849,7 @@ function paginaSumario(i: LevantamentoTemplateInput, pagina: number): string {
     <div class="grid-4 mt-2">
       ${kpi(`Receita ${id.exercicio}`, brlCompact(rec.totalReceitas), "base oficial do ano")}
       ${kpi(`Estimativa ${id.exercicio + 1}`, brlCompact(r.projecao.totalProjetado), "cenário otimizado")}
-      ${kpi("Ganho potencial", `+${brlCompact(r.projecao.totalGanho)}`, `+${pct(r.projecao.ganhoPercentual)} — cenário, não apuração`, "up")}
+      ${kpi("Ganho potencial", `+${brlCompact(r.projecao.totalGanho)}`, `+${pct(r.projecao.ganhoPercentual)} sobre o exercício atual`, "up")}
       ${kpiGanho}
     </div>
 
@@ -871,27 +876,7 @@ function paginaSumario(i: LevantamentoTemplateInput, pagina: number): string {
       ${alavanca}</p>
     </div>
 
-    <div class="note mt-1">
-      <p style="font-size:7.8pt;line-height:1.38"><span class="strong" style="color:#584416">Nota de método &mdash; os dois números não têm a mesma natureza:</span>
-      o <b>ganho potencial</b> é cenário: benchmark comercial Global Company${
-        perfil ? ` (${rotuloFaixa(perfil.faixa)}, score ${perfil.score.toFixed(2)})` : ""
-      }, de caráter estimativo, que depende de validação documental nas bases FUNDEB e MEC/FNDE.
-      O <b>ganho apurado</b> é cálculo: ${
-        ganho && ganhoTotal > 0
-          ? `fator de ponderação legal &times; valor aluno/ano da UF (R$ ${brl(ganho.valorPorEquivalente ?? 0)}
-      por matrícula-equivalente) &times; matrícula que <b>o próprio município declarou</b> ao Censo. Mede o que o
-      fundo pagaria a mais se essa declaração alcançasse a <b>mediana nacional</b> das redes municipais &mdash;
-      não o teto teórico. <b>Não é valor perdido comprovado</b>, é o que está em jogo na conferência cadastral,
-      e a Parte III abre parcela por parcela.`
-          : ganho
-            ? `a mesma conta, mas aqui sem lacuna a monetizar &mdash; a rede já declara na mediana nacional ou acima
-      nos dois pontos verificáveis (jornada da creche e cobertura de AEE). É resultado bom, não falta de dado.`
-            : `depende da planilha de matrículas ponderadas do FNDE, que não trouxe este município. Sem ela o
-      relatório prefere omitir o número a estimá-lo.`
-      }</p>
-    </div>
-
-    <div class="sec-label" style="margin-top:.22in">Como este relatório está organizado</div>
+    <div class="sec-label" style="margin-top:.2in">Como este relatório está organizado</div>
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:.1in">
       ${[
         ["I", "Receita e projeção", `composição ${id.exercicio} e cenário ${id.exercicio + 1}`],
@@ -906,6 +891,8 @@ function paginaSumario(i: LevantamentoTemplateInput, pagina: number): string {
         )
         .join("")}
     </div>
+    <p class="micro" style="margin-top:.08in">Depois da Parte V: <b>como a Global Company atua</b> em cada frente, com a
+    janela legal de cada uma, e <b>a decisão e o prazo</b> &mdash; a data que o calendário do Censo impõe a este exercício.</p>
   </div>
   ${rodape(pagina)}
 </section>`;
@@ -1072,9 +1059,21 @@ function paginaProjecao(i: LevantamentoTemplateInput, pagina: number): string {
       histórico e do benchmark comercial${
         perfil ? ` (${rotuloFaixa(perfil.faixa)}, score ${perfil.score.toFixed(2)})` : ""
       } &mdash; é premissa, não apuração, e <b>não substitui a validação nas bases oficiais</b>.
-      À direita, uma <b>apuração</b>: fator de ponderação legal &times; valor aluno/ano da UF &times; matrícula
-      que o próprio município declarou. Cada parcela dela aparece nomeada na Parte III, com o artigo de lei
-      e o que precisa ser conferido antes de tratá-la como recuperável.</p>
+      À direita, uma <b>apuração</b>: ${
+        ganho && ganhoTotal > 0
+          ? `fator de ponderação legal &times; valor aluno/ano da UF (R$ ${brl(ganho.valorPorEquivalente ?? 0)}
+      por matrícula-equivalente) &times; matrícula que o próprio município declarou ao Censo. Mede o que o fundo
+      pagaria a mais se essa declaração alcançasse a <b>mediana nacional</b> das redes municipais &mdash; não o
+      teto teórico. <b>Não é valor perdido comprovado</b>: é o que está em jogo na conferência cadastral, e a
+      Parte III abre parcela por parcela, com o artigo de lei de cada uma.`
+          : ganho
+            ? `a mesma conta, mas aqui sem lacuna a monetizar &mdash; a rede já declara na <b>mediana nacional</b>
+      ou acima nos dois pontos verificáveis (jornada da creche e cobertura de AEE). É resultado bom, não falta de
+      dado, e significa que o ganho vem de crescer a rede, não de corrigir cadastro. <b>Não é valor perdido
+      comprovado</b> em lugar nenhum deste relatório.`
+            : `depende da planilha de matrículas ponderadas do FNDE, que não trouxe este município. Sem ela o
+      relatório <b>prefere omitir o número a estimá-lo</b>.`
+      }</p>
     </div>
 
     ${
@@ -1734,7 +1733,24 @@ function paginaFiscal(i: LevantamentoTemplateInput, pagina: number): string {
   const rcl = num(siconfi?.rcl_ajustada) || num(siconfi?.rcl);
   const pessoal = num(siconfi?.despesa_pessoal_total) || num(fiscal?.despesa_pessoal);
   const percentual = num(siconfi?.percentual_despesa_pessoal);
-  const temPercentual = percentual > 0;
+  /**
+   * Guarda de plausibilidade sobre o valor do próprio RGF.
+   *
+   * O comentário acima diz que o percentual da entrega é a autoridade legal, e
+   * é — mas só quando a entrega fecha. Ibateguara/AL 2026 devolveu RCL ajustada
+   * de R$ 18,1 mi contra despesa de pessoal de R$ 46,1 mi: **253,87%**. Não
+   * existe município a 253% da RCL em pessoal; existe entrega parcial ou
+   * digitada errada, quase sempre RCL de um período contra folha de doze meses.
+   *
+   * Afirmar "acima do limite máximo" com esse número é pior que omitir: o
+   * secretário de finanças reconhece o absurdo na hora e o relatório inteiro
+   * perde a autoridade. Acima de 100% o dado é tratado como inconsistente e o
+   * documento diz isso, em vez de acusar o ente.
+   */
+  const LIMITE_PLAUSIVEL = 100;
+  const percentualConfiavel = percentual > 0 && percentual <= LIMITE_PLAUSIVEL;
+  const temPercentual = percentualConfiavel;
+  const entregaInconsistente = percentual > LIMITE_PLAUSIVEL;
   // Fallback nos valores da LRF para o Executivo municipal, usados só quando a
   // entrega não traz os limites.
   const limiteMaximo = num(siconfi?.limite_maximo_pessoal) || 54;
@@ -1753,11 +1769,13 @@ function paginaFiscal(i: LevantamentoTemplateInput, pagina: number): string {
     <div class="kicker">Parte IV &middot; Saúde fiscal e situação operacional</div>
 
     ${
-      situacao
-        ? `<div class="status ${acima ? "bad" : "good"}"><span class="dot"></span> Status LRF: ${esc(situacao)}${
-            temPercentual ? ` (${pct(percentual, 2)} da RCL ajustada)` : ""
-          }</div>`
-        : `<div class="status good"><span class="dot"></span> Status LRF: sem pendência registrada nas bases consultadas</div>`
+      entregaInconsistente
+        ? `<div class="status"><span class="dot"></span> Status LRF: entrega do RGF inconsistente nesta emissão &mdash; razão apurada de ${pct(percentual, 2)} da RCL</div>`
+        : situacao
+          ? `<div class="status ${acima ? "bad" : "good"}"><span class="dot"></span> Status LRF: ${esc(situacao)}${
+              temPercentual ? ` (${pct(percentual, 2)} da RCL ajustada)` : ""
+            }</div>`
+          : `<div class="status good"><span class="dot"></span> Status LRF: sem pendência registrada nas bases consultadas</div>`
     }
 
     <div class="grid-2 mt-1">
@@ -1767,7 +1785,11 @@ function paginaFiscal(i: LevantamentoTemplateInput, pagina: number): string {
           <tr><td>Receita Corrente Líquida ajustada</td><td class="r">${rcl > 0 ? `R$ ${brl(rcl)}` : "—"}</td></tr>
           <tr><td>Despesa com pessoal <span class="micro">(12 meses)</span></td><td class="r">${pessoal > 0 ? `R$ ${brl(pessoal)}` : "—"}</td></tr>
           <tr><td>% pessoal / RCL ajustada</td><td class="r">${
-            temPercentual ? `<b style="color:var(--${acima ? "red" : "good"})">${pct(percentual, 2)}</b>` : "—"
+            temPercentual
+              ? `<b style="color:var(--${acima ? "red" : "good"})">${pct(percentual, 2)}</b>`
+              : entregaInconsistente
+                ? `<span class="micro">${pct(percentual, 2)} &mdash; entrega inconsistente</span>`
+                : "—"
           }</td></tr>
           <tr><td>Limite máximo &middot; prudencial</td><td class="r">${pct(limiteMaximo, 2)} &middot; ${pct(limitePrudencial, 2)}</td></tr>
           <tr><td>Espaço fiscal até o limite</td><td class="r">${
@@ -2327,6 +2349,275 @@ function paginaCenario(i: LevantamentoTemplateInput, pagina: number): string {
 </section>`;
 }
 
+/**
+ * Como a Global Company atua — o método, amarrado ao calendário legal.
+ *
+ * ## Por que esta página existe
+ *
+ * O relatório inteiro era diagnóstico. A única menção à consultoria era o
+ * quarto item de uma lista na penúltima folha, e o gestor terminava a leitura
+ * sem saber o que a empresa faz, quando faz, nem por que o prazo importa.
+ *
+ * ## O que ela pode e o que não pode afirmar
+ *
+ * A Global Company é empresa nova e **ainda não executou contrato**. Então
+ * aqui não há caso, não há "já recuperamos", não há número de cliente — e não
+ * pode haver, em nenhuma revisão futura, enquanto isso não mudar. Toda a
+ * credibilidade desta página vem de duas coisas que são verdadeiras hoje: o
+ * domínio da norma (cada frente cita o artigo e a janela que a governa) e o
+ * próprio relatório, cujo mapa de fontes no caderno técnico mostra de onde
+ * saiu cada número.
+ *
+ * Prometer resultado que não se tem é o mesmo defeito do antigo KPI "já
+ * evidenciado" que foi retirado da página 2 — em prosa, e mais caro, porque
+ * aqui vira expectativa contratual.
+ */
+function paginaMetodo(i: LevantamentoTemplateInput, pagina: number): string {
+  const r = i.relatorio;
+  const id = r.identificacao;
+  const municipio = `${id.municipioNome} — ${id.uf}`;
+  const responsavel = r.parametros?.responsavelTecnico ?? "Adriel Tavares";
+  const rec = r.receitas;
+  const vaarZerado = rec.complementacaoVAAR <= 0;
+  const rede = redeMunicipal(i);
+  const v = i.payload?.relatorio_dirigido_base?.vaar ?? null;
+  const reprovadas = (v?.reprovadas ?? []) as string[];
+
+  // As quatro frentes não são catálogo de serviço: são as quatro portas por
+  // onde a receita deste fundo entra ou deixa de entrar, cada uma com a janela
+  // que a lei fixa. A coluna "neste município" é o que muda de um relatório
+  // para outro — sem ela a página seria um folheto.
+  const frentes: Array<[string, string, string, string]> = [
+    [
+      "Conferência cadastral do Censo",
+      "coleta de maio a 31/07 · retificação em 30 dias após a publicação preliminar",
+      "Escola a escola: classificação de localização (campo, indígena, quilombola), jornada declarada (integral × parcial), AEE registrado como turma e matrícula em duplicidade com outra rede.",
+      `O fator vai de 1,00 a 2,17 e a coleta de um ano define o repasse do seguinte. A rede municipal tem ${int(rede.escolas)} escolas e fator médio ${(i.payload?.relatorio_dirigido_base?.ponderacao?.fatorMedio ?? 0).toFixed(3).replace(".", ",")}.`,
+    ],
+    [
+      "Habilitação ao VAAT",
+      "dados no Siconfi e no SIOPE até 31/08 (art. 13, §4º)",
+      "Acompanhamento da DCA no Siconfi, do Anexo 8 no SIOPE e dos cinco itens de educação do extrato do CAUC, antes do corte — não depois da recusa.",
+      `Condição única e fiscal: inabilitado não tem o VAAT apurado e perde 100% da parcela. A situação atual é "${esc(ou(r.perfilComercial?.habilitacaoVaat, "não informada"))}".`,
+    ],
+    [
+      "Condicionalidades do VAAR",
+      "aferição anual, recomeça do zero a cada exercício",
+      "Diagnóstico item a item das cinco condicionalidades do art. 14, §1º e plano de correção para cada uma que reprova, com a evidência que o FNDE exige.",
+      vaarZerado && reprovadas.length
+        ? `Reprovar em uma zera a parcela inteira. Aqui a reprovação é ${reprovadas.length === 1 ? "na condicionalidade" : "nas condicionalidades"} <b>${reprovadas.join(", ")}</b>, e a habilitação depende de corrigir só isso.`
+        : vaarZerado
+          ? "Reprovar em uma zera a parcela inteira, e o município não captura a complementação de resultado neste exercício."
+          : "A habilitação não se acumula: é reavaliada todo ano, e manter é rotina anual, não conquista definitiva.",
+    ],
+    [
+      "Vinculações, piso e prestação de contas",
+      "SIOPE bimestral, até 30 dias do fechamento do bimestre",
+      "Acompanhamento dos 70% do fundo em remuneração, dos 25% de MDE, do piso do magistério e da tempestividade que sustenta a habilitação do ciclo seguinte.",
+      "Descumprimento aqui não bloqueia o FUNDEB — bloqueia convênio e reprova conta no tribunal, com imputação de débito.",
+    ],
+  ];
+
+  const linhas = frentes
+    .map(
+      ([titulo, janela, oque, porque], n) => `<tr>
+      <td style="width:.3in"><b style="color:var(--teal)">${n + 1}</b></td>
+      <td><b style="color:var(--navy)">${titulo}</b><div class="micro" style="margin-top:.02in">${janela}</div></td>
+      <td style="font-size:7.5pt;line-height:1.32">${oque}</td>
+      <td style="font-size:7.5pt;line-height:1.32;color:#33454f">${porque}</td>
+    </tr>`,
+    )
+    .join("");
+
+  return `<section class="page content-page">
+  ${cabecalho(municipio, "Como a Global Company atua")}
+  <div class="page-body">
+    <div class="kicker">Método</div>
+    <h2>Quatro frentes, quatro janelas &mdash;<br>e nenhuma delas espera</h2>
+
+    <p class="lede">A receita do FUNDEB não se corrige em reunião: ela se corrige dentro de prazos que a lei fixa e
+    que passam em silêncio. Cada frente abaixo tem a janela em que ainda tem efeito, o que é feito nela e por que
+    ela vale dinheiro <b>neste município</b>.</p>
+
+    <table class="mt-2">
+      <thead><tr><th style="width:.3in"></th><th style="width:1.7in">Frente e janela legal</th><th>O que é feito</th><th style="width:2.1in">Por que vale, aqui</th></tr></thead>
+      <tbody>${linhas}</tbody>
+    </table>
+
+    <div class="grid-2 mt-2">
+      <div class="card">
+        <h3>Por que este relatório já é a amostra do trabalho</h3>
+        <p style="font-size:8pt;line-height:1.45;color:#33454f">Cada número deste documento tem fonte, ano e órgão
+        nomeados, e o caderno técnico ao final lista todas as bases consultadas na emissão &mdash; FNDE, INEP,
+        SICONFI, IBGE e os sistemas MEC/FNDE. Nada aqui foi digitado à mão nem estimado onde a fonte não respondeu:
+        onde falta dado, o relatório diz que falta.</p>
+        <p style="font-size:8pt;line-height:1.45;color:#33454f;margin-top:.06in">É o mesmo rigor que a conferência
+        cadastral exige. A diferença é que, na conferência, o erro encontrado vira receita no exercício seguinte.</p>
+      </div>
+      <div class="card">
+        <h3>O que a prefeitura precisa disponibilizar</h3>
+        <p style="font-size:8pt;line-height:1.45;color:#33454f">
+        &bull; Acesso credenciado ao <b>SIMEC</b> e ao <b>Habilita</b> &mdash; sem credencial do ente, o acompanhamento
+        operacional detalhado não existe para ninguém.<br>
+        &bull; Base do <b>Educacenso</b> do exercício e o espelho da coleta anterior.<br>
+        &bull; Atos normativos locais de EJA, tempo integral e parcerias que impactam o Censo.<br>
+        &bull; Um interlocutor único na secretaria, com o diretor de cada escola alcançável na janela de retificação.</p>
+        <p class="micro" style="margin-top:.06in">A lista completa vai no ofício de solicitação de documentos que
+        acompanha este levantamento.</p>
+      </div>
+    </div>
+
+    <div class="insight mt-2">
+      <h3>Responsável técnico</h3>
+      <p style="font-size:8.4pt;line-height:1.42"><b>${esc(responsavel)}</b> responde tecnicamente por este
+      levantamento e pelo acompanhamento das quatro frentes. A leitura de cada indicador desta peça &mdash; e a
+      escolha do que não afirmar onde a base não sustenta &mdash; é dele.</p>
+    </div>
+  </div>
+  ${rodape(pagina)}
+</section>`;
+}
+
+/**
+ * A decisão e o prazo — o fecho comercial.
+ *
+ * O relatório terminava no mapa de fontes: a última coisa que o gestor lia era
+ * uma tabela de rastreabilidade. Ela é boa prova, mas é anexo, e anexo não
+ * pede decisão nenhuma.
+ *
+ * O custo de não decidir é montado só com o que este município já perde ou já
+ * arrisca segundo as fontes — nada de cenário. O prazo também não é retórico:
+ * o Censo de um exercício define o repasse do seguinte, e a janela de
+ * retificação é de 30 dias após a publicação preliminar (art. 8º, §5º da Lei
+ * nº 14.113/2020, com a redação da Lei nº 14.276/2021). Passada a janela, o
+ * §7º fecha a porta: fica vedada a alteração dos dados.
+ */
+function paginaDecisao(i: LevantamentoTemplateInput, pagina: number): string {
+  const r = i.relatorio;
+  const id = r.identificacao;
+  const municipio = `${id.municipioNome} — ${id.uf}`;
+  const responsavel = r.parametros?.responsavelTecnico ?? "Adriel Tavares";
+  const rec = r.receitas;
+
+  const v = i.payload?.relatorio_dirigido_base?.vaar ?? null;
+  const reprovadas = (v?.reprovadas ?? []) as string[];
+  const vaarZerado = rec.complementacaoVAAR <= 0;
+  const medianaUf = num(v?.referencia?.medianaUf);
+
+  const t = i.payload?.relatorio_dirigido_base?.vaat ?? null;
+  const distancia = num(t?.distanciaPercentual);
+  const recebeVaat = num(t?.complementacao) > 0;
+
+  // Mesma fonte da Parte IV: o percentual e o limite vêm calculados na própria
+  // entrega RGF e são a autoridade legal — recalcular aqui já produziu 158%
+  // para um município que está em 52%.
+  const siconfi = i.payload?.fiscal?.siconfi;
+  const pessoal = num(siconfi?.percentual_despesa_pessoal);
+  const limite = num(siconfi?.limite_maximo_pessoal) || 54;
+  // Mesma guarda da Parte IV: razão acima de 100% é entrega quebrada do RGF,
+  // não município estourado. Não vira "custo de não decidir".
+  const fiscalConfiavel = pessoal > 0 && pessoal <= 100;
+
+  // Só entra o que a fonte já sustenta hoje. Nenhuma linha aqui projeta.
+  const custos: string[] = [];
+  if (vaarZerado) {
+    custos.push(
+      `O <b>VAAR continua em R$ 0</b> no exercício seguinte se ${
+        reprovadas.length
+          ? `${reprovadas.length === 1 ? "a condicionalidade" : "as condicionalidades"} <b>${reprovadas.join(", ")}</b> não ${reprovadas.length === 1 ? "for atacada" : "forem atacadas"}`
+          : "as condicionalidades não forem atacadas"
+      }. A aferição é anual e recomeça do zero &mdash; não decidir é decidir por mais um ciclo zerado${
+        medianaUf > 0 ? `, enquanto a mediana dos habilitados do estado fica em <b>R$ ${brl(medianaUf)}</b>` : ""
+      }.`,
+    );
+  }
+  if (recebeVaat && distancia > 0 && distancia < 15) {
+    custos.push(
+      `O <b>VAAT está a ${pct(distancia)} do mínimo</b>. Como o cálculo usa a arrecadação do penúltimo exercício,
+      a saída da faixa é visível com dois anos de antecedência &mdash; e chega sem aviso para quem não olha.`,
+    );
+  }
+  if (fiscalConfiavel && limite > 0 && pessoal > limite) {
+    custos.push(
+      `A despesa de pessoal está em <b>${pct(pessoal)}</b> da RCL, acima do limite de ${pct(limite)}. Receita nova
+      do fundo é a via que financia a folha da educação <b>dentro da própria vinculação</b>, sem pressionar a RCL.`,
+    );
+  }
+  custos.push(
+    `A coleta do Censo de ${id.exercicio} define o repasse de ${id.exercicio + 1}. Erro de classificação, jornada
+    ou AEE não corrigido na janela de retificação <b>não volta</b>: o art. 8º, §7º veda a alteração dos dados
+    depois de publicada a coleta, e recálculo posterior é exceção, não rotina de gestão.`,
+  );
+
+  const listaCustos = custos
+    .map((c) => `<li style="margin-bottom:.055in">${c}</li>`)
+    .join("");
+
+  return `<section class="page content-page">
+  ${cabecalho(municipio, "A decisão e o prazo")}
+  <div class="page-body">
+    <div class="kicker">Decisão</div>
+    <h2>O que acontece se nada for feito &mdash;<br>e até quando ainda dá</h2>
+
+    <p class="lede">Tudo o que está abaixo já é verdade nas bases oficiais consultadas nesta emissão. Nenhuma linha
+    desta página projeta cenário: são consequências datadas de manter o quadro atual.</p>
+
+    <div class="card mt-2">
+      <h3>O custo de não decidir</h3>
+      <ul style="font-size:8.2pt;line-height:1.45;color:#33454f;margin-top:.06in;padding-left:.16in">${listaCustos}</ul>
+    </div>
+
+    <div class="grid-2 mt-2">
+      <div class="card">
+        <h3>O calendário que impõe a data</h3>
+        <table style="margin-top:.04in">
+          <tbody>
+            <tr><td>Data de referência do Censo</td><td class="num">última quarta-feira de maio</td></tr>
+            <tr><td>Coleta e digitação no Educacenso</td><td class="num">maio a 31 de julho</td></tr>
+            <tr><td>Publicação preliminar no DOU</td><td class="num">agosto</td></tr>
+            <tr><td><b>Retificação &mdash; a janela que fecha</b></td><td class="num"><b>30 dias da publicação</b></td></tr>
+            <tr><td>Siconfi e SIOPE para habilitar ao VAAT</td><td class="num"><b>31 de agosto</b></td></tr>
+            <tr><td>Envio ao FNDE para cálculo dos coeficientes</td><td class="num">dezembro</td></tr>
+          </tbody>
+        </table>
+        <p class="micro" style="margin-top:.06in">Para agir dentro da coleta de ${id.exercicio}, a mobilização das
+        escolas precisa começar <b>antes de maio</b> &mdash; conferir ${int(redeMunicipal(i).escolas)} unidades da rede municipal
+        não cabe em trinta dias de retificação.</p>
+      </div>
+      <div class="card">
+        <h3>O próximo passo</h3>
+        <p style="font-size:8.2pt;line-height:1.45;color:#33454f">
+        <b style="color:var(--teal)">1.</b> Reunião técnica com a secretaria de educação e a contabilidade, sobre
+        este documento &mdash; uma hora, presencial ou remota.<br>
+        <b style="color:var(--teal)">2.</b> Entrega do <b>ofício de solicitação de documentos</b> que acompanha este
+        levantamento, com a lista do que precisa ser disponibilizado.<br>
+        <b style="color:var(--teal)">3.</b> Diagnóstico credenciado no SIMEC e no Habilita, que é o que separa a
+        leitura pública desta peça do detalhe operacional do ente.<br>
+        <b style="color:var(--teal)">4.</b> Plano por frente, com a janela legal de cada uma e responsável nomeado
+        dos dois lados.</p>
+        <div class="divider" style="margin:.08in 0"></div>
+        <p class="micro">O escopo e as condições comerciais são objeto de proposta específica, que acompanha este
+        levantamento quando solicitada.</p>
+      </div>
+    </div>
+
+    <div class="insight mt-2">
+      <p style="font-size:8.6pt;line-height:1.45">Este levantamento foi produzido com base pública, sem nenhum
+      acesso ao ambiente da prefeitura. É o que dá para enxergar de fora. <b>O que ele mostra sobre
+      ${esc(id.municipioNome)} já é específico o bastante para pautar uma reunião</b> &mdash; e o que ele não
+      alcança está nomeado no caderno técnico, item a item, em vez de estimado.</p>
+    </div>
+
+    <div style="margin-top:.28in">
+      <div style="border-top:1px solid #c9d4da;width:2.6in"></div>
+      <p style="margin-top:.05in;font-size:9pt"><b>${esc(responsavel)}</b></p>
+      <p class="micro">Responsável Técnico &middot; Global Company Consultorias</p>
+    </div>
+  </div>
+  ${rodape(pagina)}
+</section>`;
+}
+
 function paginaCaderno(i: LevantamentoTemplateInput, pagina: number): string {
   const r = i.relatorio;
   const id = r.identificacao;
@@ -2433,6 +2724,8 @@ export function generateLevantamentoHtml(input: LevantamentoTemplateInput): stri
     paginaProgramas,
     paginaGovernanca,
     paginaCenario,
+    paginaMetodo,
+    paginaDecisao,
     paginaCaderno,
   ].map((fn, indice) => fn(input, indice + 1));
 
