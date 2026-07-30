@@ -25,9 +25,9 @@ export async function generateMunicipalXrayPdf(
     // + 8 do Perfil Municipal (saneamento, saúde, emprego, assistência,
     // capacidade institucional, governança educacional, quem dirige a
     // educação, conformidade legal)
-    // + 2 do roteiro de campo.
+    // + 3 do roteiro de campo (as perguntas que os blocos novos geraram).
     // + 1 de ciclo político (calendário que fecha as transferências).
-    const PAGINAS_ESPERADAS = 43;
+    const PAGINAS_ESPERADAS = 44;
     const pageCount = await page.locator("section.page").count();
     if (pageCount !== PAGINAS_ESPERADAS) {
       throw new Error(`O template do Raio-X gerou ${pageCount} páginas; eram esperadas ${PAGINAS_ESPERADAS}.`);

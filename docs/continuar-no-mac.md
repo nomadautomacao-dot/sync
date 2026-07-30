@@ -17,7 +17,7 @@
 git clone <repo> && cd Sync
 npm install
 npx playwright install chromium   # obrigatório: os PDFs são gerados no Chromium
-npm test                          # 387 testes — confirma que a base chegou íntegra
+npm test                          # 391 testes — confirma que a base chegou íntegra
 npm run dev                       # Next em :3100
 ```
 
@@ -80,7 +80,7 @@ lê apenas os JSON de `data/`.
 ### Verificação rápida
 
 ```bash
-npm test              # 387 testes, 39 arquivos — devem passar todos
+npm test              # 391 testes, 39 arquivos — devem passar todos
 npm run dev           # Next em :3100
 ```
 
@@ -107,7 +107,7 @@ não foram introduzidos por este trabalho e não bloqueiam o build do Next.
 
 | Relatório | Rota | Páginas | Contrato de páginas |
 |---|---|---|---|
-| **Raio-X Municipal** | `POST /api/modulos/levantamento-fundeb/raio-x` | **43** | `PAGINAS_ESPERADAS` em `core/lib/municipal-xray-pdf.ts` |
+| **Raio-X Municipal** | `POST /api/modulos/levantamento-fundeb/raio-x` | **44** | `PAGINAS_ESPERADAS` em `core/lib/municipal-xray-pdf.ts` |
 | **Diagnóstico FUNDEB** (Levantamento) | `POST /api/modulos/levantamento-fundeb/pdf?tipo=levantamento` | 10 (+5 anexos) | gerador Python (`kit_padrao_pdf_rocha_prime/`) |
 | **Histórico do Censo Escolar** | `POST /api/modulos/levantamento-fundeb/historico-censo` | **11** | `PAGINAS_ESPERADAS` em `core/lib/censo-historico-pdf.ts` |
 
@@ -122,6 +122,17 @@ Ao adicionar uma página no template, **subir o número em
 `municipal-xray-pdf.ts` (ou `censo-historico-pdf.ts`) e no teste**. A numeração
 dos rodapés é automática (contador `prox()`), e o teste de sequência falha se
 alguma página não usar o contador. O card da UI também mostra a contagem.
+
+**O contrato não pega transbordo.** Ele conta `<section class="page">` no DOM;
+conteúdo que estoura a altura da página vira folha extra só no PDF impresso.
+Ao engordar uma página existente, confira o PDF de verdade:
+
+```bash
+python3 -c "import re; d=open('/tmp/RAIO_X_MANAUS.pdf','rb').read(); print(len(re.findall(rb'/Type\s*/Page[^sC]', d)))"
+```
+
+Foi assim que o roteiro de campo virou 3 páginas: cabia exatamente em 2, e as
+perguntas novas teriam transbordado em silêncio.
 
 ---
 
@@ -307,10 +318,11 @@ nova foi conferida visualmente.
 
 ## 7. Próximo passo recomendado
 
-1. Rodar `npm test` no Mac para confirmar que a base chegou íntegra (387 testes).
+1. Rodar `npm test` no Mac para confirmar que a base chegou íntegra (391 testes).
 2. Gerar um Raio-X real (Manaus, `1302603`) e um Histórico do Censo, e ler os
    dois PDFs inteiros — é a única forma de ver o conjunto.
-3. Onda 4: #3, #40, #41 e #48 entregues; **#43 confirmado sem fonte pública**
-   (ver roadmap). O que resta são os blocos de saúde (#37 vacinação, #38
-   SISVAN, #39 PSE, #9 SINAN), o #35 (FUNAI) e o #47 (consolidar o roteiro de
-   campo com as perguntas que as páginas novas geraram).
+3. Onda 4: #3, #40, #41, #47 e #48 entregues; **#43 confirmado sem fonte
+   pública** (ver roadmap). O que resta são os blocos de saúde (#37 vacinação,
+   #38 SISVAN, #39 PSE, #9 SINAN), o #35 (FUNAI), o #42 (TCE, semi-manual) e o
+   #46 (radar de imprensa). O #45 (parecer por IA) segue adiado por decisão
+   sua.

@@ -3147,6 +3147,21 @@ function montarRoteiroCampo(model: MunicipalXrayModel): SecaoCampo[] {
           pergunta: "Há protocolo antirracismo, material didático específico e mapeamento de comunidades para a educação quilombola?",
         },
         {
+          pergunta:
+            "As escolas que atendem comunidade indígena ou quilombola estão declaradas como tal na coleta do Censo? Quem confere isso antes de fechar?",
+          contexto: (() => {
+            const p = model.peoples?.indigenous;
+            const dec = model.schoolMap?.raceTotals?.indigenous ?? null;
+            if (!p || dec === null) {
+              return "A ponderação do FUNDEB segue a classificação da ESCOLA, não a cor/raça do aluno — corrigir o campo do aluno não move o repasse sozinho.";
+            }
+            const fora = dec > p.enrolled ? dec - p.enrolled : 0;
+            return fora > 0
+              ? `${int(dec)} matrículas com cor/raça indígena declarada e ${int(p.enrolled)} no segmento ponderado: ${int(fora)} não chegam à ponderação. A ponderação segue a classificação da ESCOLA, não a cor/raça do aluno.`
+              : `${int(dec)} matrículas com cor/raça indígena declarada, ${int(p.enrolled)} no segmento ponderado — sem vão relevante. Confirmar mesmo assim antes do fechamento da coleta.`;
+          })(),
+        },
+        {
           pergunta: "Existe núcleo ou sala de recursos multifuncionais para atendimento educacional especializado? Como funciona o encaminhamento?",
           contexto: model.specialEducation !== null
             ? `${int(model.specialEducation)} matrículas em educação especial na rede — perguntar quantas têm AEE efetivo.`
@@ -3199,6 +3214,29 @@ function montarRoteiroCampo(model: MunicipalXrayModel): SecaoCampo[] {
           pergunta: "Como é feito o acompanhamento das rotas: roteiro de visitas, controle de combustível, cronograma de manutenção?",
         },
         {
+          pergunta:
+            "Quantas rotas levam aluno do campo para escola da sede, e qual o custo anual delas? O custo declarado no SIOPE bate com essa geografia?",
+          contexto: (() => {
+            const d = model.schoolMap ? analisarDispersao(model.schoolMap.schools, model.area) : null;
+            if (!d || d.mediaRuralKm === null || !d.maisDistante) {
+              return "Rota longa com custo baixo costuma significar terceirização mal medida — o valor-aluno não cobre quilômetro rodado.";
+            }
+            return `A escola rural média está a ${decimal.format(d.mediaRuralKm)} km do núcleo urbano e a mais afastada a ${decimal.format(d.maisDistante.km)} km (linha reta; a rodoviária é maior). O valor-aluno não cobre quilômetro rodado.`;
+          })(),
+        },
+        {
+          pergunta:
+            "O município participa de consórcio intermunicipal para compra de merenda, transporte escolar ou formação de professores?",
+          contexto: (() => {
+            const rurais = model.schoolMap?.ruralCount ?? 0;
+            const base =
+              "Não existe base pública de consórcios de educação (conferido no SIDRA e no cadastro de entes do SICONFI) — só a visita responde.";
+            return rurais > 0
+              ? `${base} Consórcio muda escala de compra e é caminho conhecido para baratear rota longa — esta rede tem ${int(rurais)} escolas rurais.`
+              : base;
+          })(),
+        },
+        {
           pergunta: "As cozinhas escolares têm condições adequadas de armazenamento? O cardápio é aprovado por nutricionista? Qual o percentual de compra da agricultura familiar (mínimo legal de 30%)?",
           contexto: seSim(
             g?.conselhos.alimentacaoEscolar,
@@ -3245,6 +3283,22 @@ function montarRoteiroCampo(model: MunicipalXrayModel): SecaoCampo[] {
         },
         {
           pergunta: "O organograma da secretaria define com clareza inspeção escolar, supervisão e recursos humanos?",
+          contexto: g?.estruturaOrgaoGestor.valor
+            ? `A MUNIC registra: ${g.estruturaOrgaoGestor.valor}. Confirmar quem tem ordenação de despesa e quem assina convênio.`
+            : undefined,
+        },
+        {
+          pergunta:
+            "Quantos secretários de educação o município teve nos últimos quatro anos, e há quanto tempo o atual assumiu? Quem é o quadro técnico que permanece entre uma troca e outra?",
+          contexto: (() => {
+            const f = g?.titularAreaFormacao.valor;
+            const base =
+              "Rotatividade alta é o maior preditor de projeto interrompido, e não existe base pública dela — a MUNIC não pergunta tempo de cargo.";
+            if (!f) return base;
+            return f === "Outra"
+              ? `${base} A MUNIC ${g?.titularAreaFormacao.ano ?? 2021} classifica a formação do titular como "Outra", sem dizer qual.`
+              : `${base} A MUNIC ${g?.titularAreaFormacao.ano ?? 2021} registra formação em ${f} — confirmar se ainda é a mesma pessoa.`;
+          })(),
         },
         {
           pergunta: "Os conselhos têm mandato vigente, se reúnem e registram atas?",
@@ -3282,13 +3336,53 @@ function renderSecaoCampo(secao: SecaoCampo): string {
   return `<div class="campo-secao"><h3>${esc(secao.titulo)}</h3>${itens}</div>`;
 }
 
-function paginaRoteiro(model: MunicipalXrayModel, pagina: number, metade: 0 | 1): string {
+/** Quantas páginas o roteiro ocupa. Ver `distribuirRoteiro`. */
+const PAGINAS_ROTEIRO = 3;
+
+/**
+ * Distribui as seções em páginas equilibrando o número de perguntas.
+ *
+ * Antes o corte era por índice fixo (`slice(0,3)` / `slice(3)`), e a página
+ * cabia exatamente — acrescentar uma pergunta transbordava em silêncio, porque
+ * o teste de contrato conta `<section class="page">` no DOM e o transbordo só
+ * aparece no PDF impresso. Aqui as seções seguem contíguas e na ordem, mas os
+ * dois pontos de corte são escolhidos por força bruta para minimizar a página
+ * mais cheia. São 5 ou 6 seções: o custo é irrelevante e o roteiro passa a
+ * absorver perguntas novas sem reequilíbrio manual.
+ */
+function distribuirRoteiro(secoes: SecaoCampo[]): SecaoCampo[][] {
+  const n = secoes.length;
+  if (n <= PAGINAS_ROTEIRO) return secoes.map((s) => [s]);
+
+  const custo = secoes.map((s) => s.itens.length);
+  let melhor: number[] | null = null;
+  let melhorMax = Number.POSITIVE_INFINITY;
+
+  for (let a = 1; a < n - 1; a++) {
+    for (let b = a + 1; b < n; b++) {
+      const grupos = [custo.slice(0, a), custo.slice(a, b), custo.slice(b)];
+      const maximo = Math.max(...grupos.map((g) => g.reduce((t, x) => t + x, 0)));
+      if (maximo < melhorMax) {
+        melhorMax = maximo;
+        melhor = [a, b];
+      }
+    }
+  }
+
+  const [a, b] = melhor ?? [1, 2];
+  return [secoes.slice(0, a), secoes.slice(a, b), secoes.slice(b)];
+}
+
+function paginaRoteiro(model: MunicipalXrayModel, pagina: number, metade: 0 | 1 | 2): string {
   const secoes = montarRoteiroCampo(model);
-  const corte = metade === 0 ? secoes.slice(0, 3) : secoes.slice(3);
-  const abertura = metade === 0
-    ? `<div class="kicker">Roteiro de visita</div><h2>O que nenhuma base pública responde</h2><p class="lede">Os pontos abaixo exigem entrevista e requisição de documento. As bases oficiais já foram consultadas: onde havia dado, ele aparece como contexto para tornar a pergunta específica. Existência registrada em cadastro não é funcionamento verificado.</p>`
-    : `<div class="kicker">Roteiro de visita · continuação</div><h2>Finanças, governança e prazos</h2><p class="lede">Os itens desta página têm peso legal. Prestação de contas irregular bloqueia repasse, e conselho sem mandato vigente invalida a fiscalização exigida por lei.</p>`;
-  return `<section class="page content-page">${header(`Roteiro de campo ${metade + 1}/2`)}<main class="page-body">${abertura}<div class="mt-3">${corte.map(renderSecaoCampo).join("")}</div></main>${footer(pagina, "Roteiro gerado a partir das lacunas das bases públicas")}</section>`;
+  const corte = distribuirRoteiro(secoes)[metade] ?? [];
+  const abertura =
+    metade === 0
+      ? `<div class="kicker">Roteiro de visita</div><h2>O que nenhuma base pública responde</h2><p class="lede">Os pontos abaixo exigem entrevista e requisição de documento. As bases oficiais já foram consultadas: onde havia dado, ele aparece como contexto para tornar a pergunta específica. Existência registrada em cadastro não é funcionamento verificado.</p>`
+      : metade === 1
+        ? `<div class="kicker">Roteiro de visita · continuação</div><h2>Pessoas, rede e o custo de alcançá-la</h2><p class="lede">Distância, rota e quem opera a máquina. As perguntas desta página carregam o número que o dossiê apurou — a resposta que interessa é a que explica a diferença entre o número e a operação real.</p>`
+        : `<div class="kicker">Roteiro de visita · continuação</div><h2>Finanças, governança e prazos</h2><p class="lede">Os itens desta página têm peso legal. Prestação de contas irregular bloqueia repasse, e conselho sem mandato vigente invalida a fiscalização exigida por lei.</p>`;
+  return `<section class="page content-page">${header(`Roteiro de campo ${metade + 1}/${PAGINAS_ROTEIRO}`)}<main class="page-body">${abertura}<div class="mt-3">${corte.map(renderSecaoCampo).join("")}</div></main>${footer(pagina, "Roteiro gerado a partir das lacunas das bases públicas")}</section>`;
 }
 
 function coverTerritory(model: MunicipalXrayModel) {
@@ -3473,6 +3567,8 @@ ${paginaConformidade(model, prox())}
 ${paginaRoteiro(model, prox(), 0)}
 
 ${paginaRoteiro(model, prox(), 1)}
+
+${paginaRoteiro(model, prox(), 2)}
 
 <section class="page content-page">${header("Plano de ação")}<main class="page-body"><div class="kicker">Próximo ciclo</div><h2>Cinco movimentos para converter recurso em entrega</h2><p class="lede">As prioridades são geradas a partir dos sinais encontrados no município e devem ser validadas com a equipe local.</p><table class="mt-3"><thead><tr><th>#</th><th>Prioridade</th><th>Por quê</th><th>Horizonte</th></tr></thead><tbody>${priorities.map((item,index)=>`<tr><td>${index+1}</td><td><b>${esc(item.title)}</b></td><td>${esc(item.reason)}</td><td>${esc(item.horizon)}</td></tr>`).join("")}</tbody></table><div class="grid-2 mt-3"><div class="card accent"><h3>Ritual de acompanhamento</h3><ul><li>Painel mensal com responsáveis.</li><li>Evidência documental por ação.</li><li>Revisão trimestral de metas.</li><li>Comunicação executiva em uma página.</li></ul></div><div class="card"><h3>Critério de sucesso</h3><p>Cada real adicional deve estar conectado a uma entrega verificável e a um indicador de acesso, qualidade, eficiência ou equidade.</p></div></div></main>${footer(prox(),"Síntese técnica gerada pelo Sync")}</section>
 
