@@ -188,9 +188,9 @@ describe("páginas de ponderação e vinculações no Raio-X", () => {
     expect(saida).toContain("Declaração ao SIOPE não localizada");
   });
 
-  it("gera as 41 páginas do contrato do renderer, com e sem dados", () => {
+  it("gera as 42 páginas do contrato do renderer, com e sem dados", () => {
     const paginas = (html: string) => html.match(/<section class="page/g)?.length ?? 0;
-    expect(paginas(completo("2930154", "BA"))).toBe(41);
+    expect(paginas(completo("2930154", "BA"))).toBe(42);
     expect(
       paginas(
         generateMunicipalXrayHtml(
@@ -203,7 +203,7 @@ describe("páginas de ponderação e vinculações no Raio-X", () => {
           }),
         ),
       ),
-    ).toBe(41);
+    ).toBe(42);
   });
 
   it("numera as páginas sequencialmente a partir do contador", () => {
@@ -216,7 +216,7 @@ describe("páginas de ponderação e vinculações no Raio-X", () => {
 
     // A capa não tem rodapé numerado; o miolo vai de 2 até o total.
     expect(numeros[0]).toBe(2);
-    expect(numeros[numeros.length - 1]).toBe(41);
+    expect(numeros[numeros.length - 1]).toBe(42);
     for (let i = 1; i < numeros.length; i++) expect(numeros[i]).toBe(numeros[i - 1] + 1);
   });
 });
@@ -578,7 +578,7 @@ describe("mapa das escolas no Raio-X", () => {
   it("nomeia as escolas ribeirinhas e transforma a embarcação em pergunta de campo", () => {
     const saida = comMapa("1302603");
     expect(saida).toContain("comunidade ribeirinha");
-    expect(saida).toContain("o transporte dessas escolas é por embarcação?");
+    expect(saida).toContain("O transporte dessas escolas é por embarcação?");
     expect(saida).toContain("alunos em transporte público");
   });
 
@@ -1509,7 +1509,7 @@ describe("densidade e dispersão da rede no Raio-X", () => {
   });
 
   it("declara a distância em linha reta como piso, não como distância rodoviária", () => {
-    expect(render()).toContain("a distância rodoviária é maior, nunca menor");
+    expect(render()).toContain("a rodoviária é maior, nunca menor");
   });
 
   it("faz a pergunta de campo quando a matrícula rural fica abaixo da população rural", () => {
@@ -1518,14 +1518,14 @@ describe("densidade e dispersão da rede no Raio-X", () => {
     const saida = render({ pctRural: 45 });
 
     expect(saida).toContain("transportada para a escola urbana");
-    expect(saida).toContain("quantas rotas levam aluno do campo para escola da sede");
+    expect(saida).toContain("quantas rotas levam aluno do campo à sede");
   });
 
   it("aponta rede mais rural que o município quando a matrícula excede a população", () => {
     const saida = render({ pctRural: 5 });
 
     expect(saida).toContain("a rede é mais rural que o município");
-    expect(saida).toContain("localização declarada corretamente na coleta");
+    expect(saida).toContain("está declarada corretamente na coleta");
   });
 
   it("reconhece proporção equilibrada sem inventar achado", () => {
@@ -1875,5 +1875,98 @@ describe("declaração étnica no Raio-X — os três elos", () => {
     expect(render({ semEquidade: true })).toContain(
       "Cruzamento de declaração étnica indisponível",
     );
+  });
+});
+
+describe("estado nutricional no Raio-X", () => {
+  function render(nut: Record<string, unknown> | null = {
+    ano: 2024,
+    municipio: { total: 688, magrezaPct: 7, eutrofiaPct: 67.7, excessoPesoPct: 25.3, sobrepeso: 91, obesidade: 53, obesidadeGrave: 30 },
+    estado: { excessoPesoPct: 29.3 },
+    brasil: { excessoPesoPct: 29.8 },
+  }, matriculas?: number) {
+    return generateMunicipalXrayHtml(
+      mapMunicipalXrayModel({
+        basePayload: {},
+        currentPayload: {
+          relatorio_dirigido_base: {
+            ...(nut ? { estadoNutricional: nut } : {}),
+            ...(matriculas
+              ? { historico: { anos: [{ ano: 2026, anoBaseCenso: 2025, totalMatriculasMunicipais: matriculas }] } }
+              : {}),
+          },
+        },
+        baseYear: 2024,
+        currentYear: 2026,
+        generatedAt: new Date("2026-07-30T12:00:00.000Z"),
+      }),
+    );
+  }
+
+  it("soma as três faixas do excesso, que a fonte separa", () => {
+    const saida = render();
+
+    expect(saida).toContain("Estado nutricional");
+    expect(saida).toContain("25,3% das crianças acompanhadas estão acima do peso");
+    expect(saida).toContain("Obesidade grave");
+    // 91 + 53 + 30
+    expect(saida).toContain("174");
+  });
+
+  it("compara com estado e Brasil usando a régua que a fonte devolve", () => {
+    const saida = render();
+
+    expect(saida).toContain("abaixo do estado");
+    expect(saida).toContain("29,8%");
+  });
+
+  it("aponta quando o município está acima do próprio estado", () => {
+    const saida = render({
+      ano: 2024,
+      municipio: { total: 99190, magrezaPct: 3.9, eutrofiaPct: 70.1, excessoPesoPct: 26, sobrepeso: 1, obesidade: 1, obesidadeGrave: 1 },
+      estado: { excessoPesoPct: 22.3 },
+      brasil: { excessoPesoPct: 29.8 },
+    });
+
+    expect(saida).toContain("acima do estado");
+    expect(saida).toContain("composição do cardápio");
+  });
+
+  /**
+   * A honestidade que sustenta a página: o denominador do SISVAN é quem passou
+   * pela atenção primária, não a rede escolar. Sem isso, o número viraria um
+   * retrato que ele não é.
+   */
+  it("declara a cobertura e não confunde amostra com retrato", () => {
+    const saida = render(undefined, 2000);
+
+    expect(saida).toContain("crianças acompanhadas pela atenção primária");
+    // 688 de 2.000 matrículas = 34,4%
+    expect(saida).toContain("34,4%");
+  });
+
+  it("avisa quando a cobertura é baixa demais para representar a rede", () => {
+    const saida = render(undefined, 5000);
+
+    // 688 de 5.000 = 13,8%
+    expect(saida).toContain("leia como amostra, não como retrato");
+  });
+
+  it("cruza as duas carências quando elas convivem", () => {
+    const saida = render({
+      ano: 2024,
+      municipio: { total: 500, magrezaPct: 8.2, eutrofiaPct: 60, excessoPesoPct: 31.8, sobrepeso: 100, obesidade: 40, obesidadeGrave: 19 },
+      estado: { excessoPesoPct: 29 },
+      brasil: { excessoPesoPct: 29.8 },
+    });
+
+    expect(saida).toContain("as duas carências convivendo");
+  });
+
+  it("degrada explicando que ausência não é ausência do problema", () => {
+    const saida = render(null);
+
+    expect(saida).toContain("Estado nutricional indisponível");
+    expect(saida).toContain("cobertura baixa da atenção primária, não ausência do problema");
   });
 });

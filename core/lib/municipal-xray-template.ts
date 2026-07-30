@@ -302,6 +302,22 @@ export interface MunicipalXrayModel {
     ruralPct: number;
   } | null;
   /**
+   * Estado nutricional das crianças de 5 a 10 anos (SISVAN) — o resultado
+   * medido da política de merenda. Ver `core/lib/sisvan-nutricional.ts`.
+   */
+  nutrition: {
+    year: number;
+    followed: number;
+    thinPct: number | null;
+    healthyPct: number | null;
+    excessPct: number | null;
+    overweight: number;
+    obese: number;
+    severelyObese: number;
+    statePct: number | null;
+    countryPct: number | null;
+  } | null;
+  /**
    * Abstenção no ENEM (município de prova × UF) — termômetro de custo de
    * oportunidade. Ver `core/lib/enem-abstencao.ts`.
    */
@@ -966,6 +982,24 @@ export function mapMunicipalXrayModel(params: {
         rural,
         total: number(bruto.total) ?? urbana + rural,
         ruralPct: pct,
+      };
+    })(),
+    nutrition: (() => {
+      const bruto = asRecord(at(currentPayload, "relatorio_dirigido_base.estadoNutricional"));
+      const mun = asRecord(bruto?.municipio);
+      const total = number(mun?.total);
+      if (!bruto || !mun || total === null || total <= 0) return null;
+      return {
+        year: number(bruto.ano) ?? 0,
+        followed: total,
+        thinPct: number(mun.magrezaPct),
+        healthyPct: number(mun.eutrofiaPct),
+        excessPct: number(mun.excessoPesoPct),
+        overweight: number(mun.sobrepeso) ?? 0,
+        obese: number(mun.obesidade) ?? 0,
+        severelyObese: number(mun.obesidadeGrave) ?? 0,
+        statePct: number(asRecord(bruto.estado)?.excessoPesoPct),
+        countryPct: number(asRecord(bruto.brasil)?.excessoPesoPct),
       };
     })(),
     enem: (() => {
@@ -2437,14 +2471,14 @@ function paginaMapaEscolas(model: MunicipalXrayModel, pagina: number): string {
     .join("");
   const ribeirinhas = m.byDiferenciada["8"] ?? 0;
 
-  return `<section class="page content-page">${header("Mapa das escolas")}<main class="page-body"><div class="kicker">A rede sobre o território</div><h2>Onde a rede está — e o que custa alcançá-la</h2><p class="lede">Cada ponto é uma escola municipal ativa, plotada pela coordenada declarada ao Censo ${m.year}. Dispersão é custo de oferta — transporte, merenda, manutenção — e a localização diferenciada declarada é exatamente o que a ponderação do FUNDEB paga a mais.</p><div class="grid-4 mt-3">${metric(int(m.total), "escolas municipais ativas")}${metric(int(m.ruralCount), "em zona rural")}${metric(int(difTotal), "em localização diferenciada")}${metric(
+  return `<section class="page content-page">${header("Mapa das escolas")}<main class="page-body"><div class="kicker">A rede sobre o território</div><h2>Onde a rede está — e o que custa alcançá-la</h2><p class="lede">Cada ponto é uma escola municipal ativa, plotada pela coordenada declarada ao Censo ${m.year}. Dispersão é custo de oferta, e a localização diferenciada declarada é o que a ponderação do FUNDEB paga a mais.</p><div class="grid-4 mt-3">${metric(int(m.total), "escolas municipais ativas")}${metric(int(m.ruralCount), "em zona rural")}${metric(int(difTotal), "em localização diferenciada")}${metric(
     `${int(m.transportStudents)}${m.transportPct !== null ? ` (${pct(m.transportPct)})` : ""}`,
     "alunos em transporte público",
   )}</div><div class="grid-2 mt-3"><div class="card accent">${
     mapa || `<div class="empty">Malha territorial indisponível na emissão — as contagens ao lado seguem válidas.</div>`
   }<p class="micro" style="margin-top:.05in">${int(m.withCoords)} de ${int(m.total)} escolas com coordenada declarada no Censo; contorno IBGE.</p></div><div class="card"><h3>Localização declarada — o que pondera</h3><table><tbody><tr><td>Escolas urbanas</td><td class="num">${int(m.total - m.ruralCount)}</td></tr><tr><td>Escolas rurais (campo, +15% no fator)</td><td class="num"><b>${int(m.ruralCount)}</b></td></tr>${linhasDif}</tbody></table><div class="divider"></div><p class="small">Indígena e quilombola ponderam de 1,4 a 2,17 — os maiores fatores da planilha. A condição vale quando <b>declarada na coleta</b>: escola em território sem a marcação perde a diferença todo exercício.</p></div></div>${
     ribeirinhas > 0
-      ? `<div class="insight mt-3"><b>Territórios de rio:</b> ${ribeirinhas === 1 ? "1 escola declarada" : `${int(ribeirinhas)} escolas declaradas`} em comunidade ribeirinha. O Censo não publica mais o tipo de veículo do transporte — a pergunta de campo é direta: <b>o transporte dessas escolas é por embarcação?</b> Cheia e vazante mudam rota, calendário e frequência — e frequência é Censo, e Censo é FUNDEB. Conferir PNATE (embarcação tem valor per capita maior) e calendário escolar adaptado ao regime do rio.</div>`
+      ? `<div class="insight mt-3"><b>Territórios de rio:</b> ${ribeirinhas === 1 ? "1 escola declarada" : `${int(ribeirinhas)} escolas declaradas`} em comunidade ribeirinha. <b>O transporte dessas escolas é por embarcação?</b> Cheia e vazante mudam rota, calendário e frequência — e frequência é Censo, e Censo é FUNDEB. Conferir PNATE (embarcação tem per capita maior) e calendário adaptado ao regime do rio.</div>`
       : `<div class="note mt-3"><b>Transporte:</b> ${int(m.transportStudents)} alunos da rede usam transporte público${m.transportPct !== null ? ` (${pct(m.transportPct)} das matrículas)` : ""}. Rota, frota própria × terceirizada e estado dos veículos não estão em base pública — seguem no roteiro de campo.</div>`
   }${
     m.race && m.race.rural.enrolled > 0 && m.race.urban.enrolled > 0
@@ -2454,13 +2488,13 @@ function paginaMapaEscolas(model: MunicipalXrayModel, pagina: number): string {
           m.race.rural.indigenousPct !== null && m.race.rural.indigenousPct >= 1
             ? `; a indígena chega a ${pct(m.race.rural.indigenousPct)} na zona rural`
             : ""
-        }. A Condicionalidade III do VAAR mede desigualdade <b>racial</b> de aprendizagem: se a rede rural é mais negra e tem pior resultado, o mesmo mapa desta página é o mapa da condicionalidade.${
+        }. A Condicionalidade III do VAAR mede desigualdade <b>racial</b> de aprendizagem: se a rede rural é mais negra e vai pior, este mapa é o mapa da condicionalidade.${
           m.race.urban.undeclaredPct !== null && m.race.urban.undeclaredPct >= 15
             ? ` <b>${pct(m.race.urban.undeclaredPct)} sem declaração de cor/raça na zona urbana</b> — campo em branco na coleta suja exatamente o indicador que o VAAR observa.`
             : ""
         }</div>`
       : ""
-  }<p class="small mt-1">Fonte: INEP — microdados do Censo Escolar ${m.year} (Tabela de Escola e de Matrícula, rede municipal ativa); contorno IBGE — Malhas Territoriais. Transporte público = alunos declarados como usuários, todas as etapas.</p></main>${footer(pagina, `INEP — Censo Escolar ${m.year} × IBGE — malhas`)}</section>`;
+  }<p class="micro mt-1">Fonte: INEP — microdados do Censo Escolar ${m.year} (Tabela de Escola e de Matrícula, rede municipal ativa); contorno IBGE — Malhas Territoriais. Transporte público = alunos declarados como usuários, todas as etapas.</p></main>${footer(pagina, `INEP — Censo Escolar ${m.year} × IBGE — malhas`)}</section>`;
 }
 
 /**
@@ -2800,18 +2834,18 @@ function paginaDensidadeRede(model: MunicipalXrayModel, pagina: number): string 
   if (lacuna === null || razao === null) {
     leitura = `Sem uma das duas pontas (população por situação do domicílio ou matrícula por zona), o cruzamento não se sustenta e não é feito aqui.`;
   } else if (lacuna <= -LIMIAR_PP && razao <= RAZAO_BAIXA) {
-    leitura = `A matrícula rural (${pct(d.matriculasRuraisPct)}) está ${magnitude(false)} (${pct(pop!.ruralPct)}). Duas explicações possíveis, e só o campo separa: a criança do campo é <b>transportada para a escola urbana</b> — despesa de rota que o valor-aluno não cobre — ou está matriculada na <b>rede estadual</b>. <b>Pergunta de campo:</b> quantas rotas levam aluno do campo para escola da sede, e qual o custo anual delas?`;
+    leitura = `A matrícula rural (${pct(d.matriculasRuraisPct)}) está ${magnitude(false)} (${pct(pop!.ruralPct)}). Só o campo separa as duas causas: a criança do campo é <b>transportada para a escola urbana</b> — rota que o valor-aluno não cobre — ou está na <b>rede estadual</b>. <b>Perguntar:</b> quantas rotas levam aluno do campo à sede, e a que custo anual?`;
   } else if (lacuna >= LIMIAR_PP && razao >= RAZAO_ALTA) {
-    leitura = `A matrícula rural (${pct(d.matriculasRuraisPct)}) é ${magnitude(true)} (${pct(pop!.ruralPct)}) — a rede é mais rural que o município. Isso é custo unitário alto por definição (turma menor, rota longa, escola pequena) e, ao mesmo tempo, é exatamente onde o fator de ponderação do campo rende. <b>Pergunta de campo:</b> todas essas escolas estão com a localização declarada corretamente na coleta?`;
+    leitura = `A matrícula rural (${pct(d.matriculasRuraisPct)}) é ${magnitude(true)} (${pct(pop!.ruralPct)}) — a rede é mais rural que o município. Custo unitário alto por definição (turma menor, rota longa) e, ao mesmo tempo, é onde o fator do campo rende. <b>Perguntar:</b> a localização de todas essas escolas está declarada corretamente na coleta?`;
   } else {
-    leitura = `A matrícula rural (${pct(d.matriculasRuraisPct)}) acompanha a população rural (${pct(pop!.ruralPct)}) — diferença de ${decimal.format(Math.abs(lacuna))} pontos. A rede está distribuída na proporção do território, sem sinal de concentração forçada nem de esvaziamento do campo.`;
+    leitura = `A matrícula rural (${pct(d.matriculasRuraisPct)}) acompanha a população rural (${pct(pop!.ruralPct)}) — ${decimal.format(Math.abs(lacuna))} pontos de diferença. A rede segue a proporção do território, sem concentração forçada nem esvaziamento do campo.`;
   }
 
   const linhaMaisDistante = d.maisDistante
     ? `<tr><td>Escola mais afastada do núcleo${nomeMaisDistante ? ` — ${esc(nomeMaisDistante)}` : ""}</td><td class="num"><b>${decimal.format(d.maisDistante.km)} km</b>${d.maisDistante.matriculas !== null ? ` · ${int(d.maisDistante.matriculas)} alunos` : ""}</td></tr>`
     : "";
 
-  return `<section class="page content-page">${header("Densidade e dispersão")}<main class="page-body"><div class="kicker">O custo geográfico de ofertar</div><h2>${d.envergaduraKm !== null ? `A rede se estende por ${decimal.format(d.envergaduraKm)} km de ponta a ponta` : "O alcance territorial da rede"}</h2><p class="lede">Dispersão é a despesa que não aparece no valor-aluno. O FUNDEB paga por matrícula ponderada, não por quilômetro rodado — e o fator do campo (+15%) é achatado: vale o mesmo para a escola a 6 km da sede e para a que está a ${d.maisDistante ? decimal.format(d.maisDistante.km) : "dezenas de"} km. As medidas abaixo saem das coordenadas que cada escola declarou ao Censo ${model.schoolMap?.year ?? ""}.</p><div class="grid-4 mt-3">${metric(
+  return `<section class="page content-page">${header("Densidade e dispersão")}<main class="page-body"><div class="kicker">O custo geográfico de ofertar</div><h2>${d.envergaduraKm !== null ? `A rede se estende por ${decimal.format(d.envergaduraKm)} km de ponta a ponta` : "O alcance territorial da rede"}</h2><p class="lede">Dispersão é a despesa que não aparece no valor-aluno. O FUNDEB paga por matrícula ponderada, não por quilômetro rodado — e o fator do campo (+15%) é achatado: vale o mesmo para a escola a 6 km da sede e para a que está a ${d.maisDistante ? decimal.format(d.maisDistante.km) : "dezenas de"} km.</p><div class="grid-4 mt-3">${metric(
     d.porCemKm2 === null ? "N/D" : decimal.format(d.porCemKm2),
     "escolas por 100 km²",
   )}${metric(
@@ -2823,11 +2857,11 @@ function paginaDensidadeRede(model: MunicipalXrayModel, pagina: number): string 
   )}${metric(
     pop === null ? "N/D" : pct(pop.ruralPct),
     `população rural${pop ? ` · Censo ${pop.year}` : ""}`,
-  )}</div><div class="grid-2 mt-3"><div class="card accent"><h3>O alcance da rede</h3><table><tbody><tr><td>Área territorial</td><td class="num">${model.area === null ? "N/D" : `${integer.format(model.area)} km²`}</td></tr><tr><td>Escolas municipais</td><td class="num"><b>${int(d.total)}</b></td></tr><tr><td>Com coordenada declarada</td><td class="num">${int(d.comCoordenada)}${semCoordenada > 0 ? ` <span class="micro">(${int(semCoordenada)} sem)</span>` : ""}</td></tr>${linhaMaisDistante}</tbody></table><div class="divider"></div><p class="small">O <b>núcleo</b> é a média das coordenadas das escolas urbanas — proxy da sede, de onde saem as rotas de transporte e a supervisão pedagógica. ${semCoordenada > 0 ? `As ${int(semCoordenada)} escolas sem coordenada não entram nas distâncias, mas contam nos totais e nos percentuais.` : "Todas as escolas da rede têm coordenada declarada."}</p></div><div class="card"><h3>Território × rede × matrícula</h3><table><tbody><tr><td>População em área rural</td><td class="num">${pop === null ? "N/D" : `<b>${pct(pop.ruralPct)}</b>`}</td></tr><tr><td>Escolas em zona rural</td><td class="num"><b>${pct(d.escolasRuraisPct)}</b></td></tr><tr><td>Matrículas em escolas rurais</td><td class="num">${d.matriculasRuraisPct === null ? "N/D" : `<b>${pct(d.matriculasRuraisPct)}</b>`}</td></tr></tbody></table><div class="divider"></div><p class="small">${leitura}</p><p class="micro" style="margin-top:.05in">Os denominadores diferem de propósito: a fatia da população é sobre <b>todos os residentes</b> (Censo 2022) e a da matrícula é sobre a <b>rede municipal</b> (Censo Escolar). A comparação vale como sinal de direção, não como identidade contábil.</p></div></div>${
+  )}</div><div class="grid-2 mt-3"><div class="card accent"><h3>O alcance da rede</h3><table><tbody><tr><td>Área territorial</td><td class="num">${model.area === null ? "N/D" : `${integer.format(model.area)} km²`}</td></tr><tr><td>Escolas municipais</td><td class="num"><b>${int(d.total)}</b></td></tr><tr><td>Com coordenada declarada</td><td class="num">${int(d.comCoordenada)}${semCoordenada > 0 ? ` <span class="micro">(${int(semCoordenada)} sem)</span>` : ""}</td></tr>${linhaMaisDistante}</tbody></table><div class="divider"></div><p class="small">O <b>núcleo</b> é a média das coordenadas das escolas urbanas — proxy da sede, de onde saem as rotas de transporte e a supervisão pedagógica. ${semCoordenada > 0 ? `As ${int(semCoordenada)} escolas sem coordenada não entram nas distâncias, mas contam nos totais e nos percentuais.` : "Todas as escolas da rede têm coordenada declarada."}</p></div><div class="card"><h3>Território × rede × matrícula</h3><table><tbody><tr><td>População em área rural</td><td class="num">${pop === null ? "N/D" : `<b>${pct(pop.ruralPct)}</b>`}</td></tr><tr><td>Escolas em zona rural</td><td class="num"><b>${pct(d.escolasRuraisPct)}</b></td></tr><tr><td>Matrículas em escolas rurais</td><td class="num">${d.matriculasRuraisPct === null ? "N/D" : `<b>${pct(d.matriculasRuraisPct)}</b>`}</td></tr></tbody></table><div class="divider"></div><p class="small">${leitura}</p></div></div>${
     d.mediaRuralKm !== null && d.maisDistante
-      ? `<div class="insight mt-3"><b>O que a distância custa:</b> a escola rural média está a ${decimal.format(d.mediaRuralKm)} km do núcleo urbano, e a mais afastada a ${decimal.format(d.maisDistante.km)} km. Cada quilômetro é ida e volta, todo dia letivo, para aluno e para servidor — e é também tempo de resposta da manutenção, da merenda e da reposição de professor faltante. <b>Conferir:</b> o custo do transporte escolar declarado no SIOPE bate com essa geografia? Rota longa com custo baixo costuma significar terceirização mal medida ou aluno em pé.</div>`
+      ? `<div class="insight mt-3"><b>O que a distância custa:</b> a escola rural média está a ${decimal.format(d.mediaRuralKm)} km do núcleo, e a mais afastada a ${decimal.format(d.maisDistante.km)} km — ida e volta, todo dia letivo, para aluno e para servidor, e também tempo de resposta da manutenção e da merenda. <b>Conferir:</b> o custo do transporte declarado no SIOPE bate com essa geografia? Rota longa com custo baixo costuma ser terceirização mal medida ou aluno em pé.</div>`
       : `<div class="note mt-3"><b>Leitura limitada:</b> sem escolas rurais georreferenciadas, a distância ao núcleo não foi calculada. As contagens e percentuais acima seguem válidos.</div>`
-  }<p class="small mt-1">Fonte: coordenadas declaradas ao Censo Escolar${model.schoolMap?.year ? ` ${model.schoolMap.year}` : ""} (INEP, microdados); área territorial do IBGE; população por situação do domicílio no Censo Demográfico 2022 (IBGE, SIDRA tabela 10211), consultada na emissão. Distâncias em linha reta (grande círculo) — a distância rodoviária é maior, nunca menor.</p></main>${footer(pagina, FONTE)}</section>`;
+  }<p class="micro mt-1">Fonte: coordenadas declaradas ao Censo Escolar${model.schoolMap?.year ? ` ${model.schoolMap.year}` : ""} (INEP, microdados); área territorial do IBGE; população por situação do domicílio no Censo Demográfico 2022 (IBGE, SIDRA tabela 10211), consultada na emissão. Distâncias em linha reta — a rodoviária é maior, nunca menor. Os denominadores diferem de propósito: a fatia da população é sobre todos os residentes, a da matrícula é sobre a rede municipal — a comparação vale como direção, não como identidade contábil.</p></main>${footer(pagina, FONTE)}</section>`;
 }
 
 /**
@@ -2920,6 +2954,78 @@ function paginaDeclaracaoEtnica(model: MunicipalXrayModel, pagina: number): stri
       ? `<div class="divider"></div><p class="small"><b>Ressalva de cadastro:</b> ${pct(naoDeclaradaPct)} das matrículas estão sem cor/raça preenchida. Com essa fatia em branco, o número de declarados é piso, não retrato — e a primeira correção é o preenchimento, antes de qualquer conclusão sobre subdeclaração.</p>`
       : ""
   }</div></div><div class="insight mt-3"><b>Autodeclaração, sempre:</b> pertencimento étnico não se atribui de fora. Nada nesta página estima quantas pessoas "deveriam" se declarar indígenas ou quilombolas, e nenhuma ação daqui envolve classificar aluno. O que a página localiza é a distância entre três contagens oficiais — e o encaminhamento legítimo é procedimental: conferir se o <b>campo do aluno</b> foi preenchido na coleta e se a <b>escola que atende a comunidade</b> está com a classificação correta, ouvindo a própria comunidade.</div><p class="small mt-1">Fonte: IBGE, Censo Demográfico 2022 (agregados 8175 e 8176, população indígena por idade) · INEP, microdados do Censo Escolar${model.schoolMap?.year ? ` ${model.schoolMap.year}` : ""} (cor/raça da matrícula, agregada por escola) · FNDE, matrículas ponderadas do exercício (segmentos indígena e quilombola). Nenhum dado nominal é acessado.</p></main>${footer(pagina, FONTE)}</section>`;
+}
+
+/**
+ * Estado nutricional — o resultado medido da merenda.
+ *
+ * A merenda é política da secretaria de educação e tem regra dura no PNAE
+ * (cardápio com nutricionista, mínimo de 30% da agricultura familiar). O que
+ * quase nunca chega à reunião é o **resultado**: ele existe, medido criança a
+ * criança pela atenção primária e agregado no SISVAN.
+ *
+ * Os dois lados apontam para intervenções opostas — magreza é insegurança
+ * alimentar, excesso de peso é ultraprocessado. Rede com um quarto das
+ * crianças acima do peso não tem problema de quantidade de comida: tem de
+ * composição do cardápio, que é decisão de licitação e não de verba.
+ *
+ * Ressalva obrigatória: o denominador do SISVAN **não é a rede escolar**, são
+ * as crianças que passaram pela atenção primária com peso e altura
+ * registrados. Por isso a página compara o total acompanhado com a matrícula
+ * e diz a cobertura em voz alta, em vez de tratar a amostra como retrato.
+ */
+function paginaNutricional(model: MunicipalXrayModel, pagina: number): string {
+  const n = model.nutrition;
+  const FONTE = "Ministério da Saúde — SISVAN (IMC × idade, 5 a 10 anos)";
+
+  if (!n) {
+    return `<section class="page content-page">${header("Estado nutricional")}<main class="page-body"><div class="kicker">O resultado medido da merenda</div><h2>Estado nutricional indisponível</h2><p class="lede">O SISVAN não retornou acompanhamento nutricional de crianças de 5 a 10 anos para este município no período consultado. A ausência costuma significar cobertura baixa da atenção primária, não ausência do problema.</p></main>${footer(pagina, FONTE)}</section>`;
+  }
+
+  // A cobertura é o que separa amostra de retrato. Sem matrícula não dá para
+  // calcular, e aí a página diz isso em vez de fingir representatividade.
+  const matriculas = model.enrollments;
+  const cobertura =
+    matriculas !== null && matriculas > 0
+      ? Math.round((n.followed / matriculas) * 1000) / 10
+      : null;
+  const amostraFina = cobertura !== null && cobertura < 30;
+
+  const acimaDoEstado =
+    n.excessPct !== null && n.statePct !== null && n.excessPct > n.statePct + 1;
+  const abaixoDoEstado =
+    n.excessPct !== null && n.statePct !== null && n.excessPct < n.statePct - 1;
+
+  const leitura = (() => {
+    if (n.excessPct === null) return "";
+    if (acimaDoEstado) {
+      return `O excesso de peso aqui (${pct(n.excessPct)}) está <b>acima do estado</b> (${pct(n.statePct)}). Numa faixa etária que faz pelo menos uma refeição diária na escola, isso é pergunta direta sobre a composição do cardápio.`;
+    }
+    if (abaixoDoEstado) {
+      return `O excesso de peso aqui (${pct(n.excessPct)}) está <b>abaixo do estado</b> (${pct(n.statePct)}) — mas o patamar nacional é ${pct(n.countryPct)}, e nenhum município do país está confortável nesse indicador.`;
+    }
+    return `O excesso de peso acompanha o estado (${pct(n.excessPct)} contra ${pct(n.statePct)}) — o padrão é regional, não uma característica desta rede.`;
+  })();
+
+  return `<section class="page content-page">${header("Estado nutricional")}<main class="page-body"><div class="kicker">O resultado medido da merenda</div><h2>${
+    n.excessPct !== null && n.excessPct >= 20
+      ? `${pct(n.excessPct)} das crianças acompanhadas estão acima do peso`
+      : "O que a merenda produz, medido criança a criança"
+  }</h2><p class="lede">A merenda é política da secretaria de educação, e este é o único lugar onde o resultado dela aparece medido. A atenção primária pesa e mede cada criança que atende, e o SISVAN agrega por município. Os dois lados pedem intervenções opostas: magreza é insegurança alimentar; excesso de peso é ultraprocessado. Dados de ${n.year}, crianças de 5 a 10 anos.</p><div class="grid-4 mt-3">${metric(
+    int(n.followed),
+    "crianças acompanhadas",
+  )}${metric(pct(n.thinPct), "magreza")}${metric(pct(n.healthyPct), "eutrofia (peso adequado)")}${metric(
+    pct(n.excessPct),
+    "excesso de peso",
+  )}</div><div class="grid-2 mt-2"><div class="card ${n.excessPct !== null && n.excessPct >= 25 ? "warn" : "accent"}"><h3>As três faixas do excesso</h3><table><tbody><tr><td>Sobrepeso</td><td class="num"><b>${int(n.overweight)}</b></td></tr><tr><td>Obesidade</td><td class="num"><b>${int(n.obese)}</b></td></tr><tr><td>Obesidade grave</td><td class="num"><b>${int(n.severelyObese)}</b></td></tr><tr><td>Total acima do peso</td><td class="num"><b>${int(n.overweight + n.obese + n.severelyObese)}</b></td></tr></tbody></table><div class="divider"></div><p class="small">São três colunas separadas na fonte, e ninguém as soma na hora da reunião — é somando que o tamanho aparece.</p></div><div class="card"><h3>Régua: município, estado e país</h3><table><tbody><tr><td>Excesso de peso no município</td><td class="num"><b>${pct(n.excessPct)}</b></td></tr><tr><td>No estado</td><td class="num">${pct(n.statePct)}</td></tr><tr><td>No Brasil</td><td class="num">${pct(n.countryPct)}</td></tr></tbody></table><div class="divider"></div><p class="small">${leitura}</p></div></div><div class="insight mt-2"><b>A ligação com o PNAE:</b> excesso de peso não se resolve com mais comida, e sim com outra comida — o mínimo legal de 30% da agricultura familiar e a aprovação do cardápio por nutricionista são exatamente as duas alavancas que a secretaria controla. <b>Conferir na visita:</b> qual o percentual efetivo de compra da agricultura familiar, e o cardápio atual passou por nutricionista?${
+    n.thinPct !== null && n.thinPct >= 5
+      ? ` Atenção ao outro lado: ${pct(n.thinPct)} de magreza numa rede com ${pct(n.excessPct)} de excesso significa <b>as duas carências convivendo</b>, e elas não se resolvem com a mesma medida.`
+      : ""
+  }</div><div class="${amostraFina ? "note" : "note"} mt-2"><b>O que este número é, e o que não é:</b> o denominador do SISVAN são as <b>crianças acompanhadas pela atenção primária</b> — as ${int(n.followed)} que tiveram peso e altura registrados —, não a rede escolar inteira.${
+    cobertura !== null
+      ? ` Equivale a ${pct(cobertura)} das ${int(matriculas)} matrículas municipais.${amostraFina ? " Cobertura abaixo de 30%: leia como amostra, não como retrato da rede." : ""}`
+      : ""
+  } Ampliar a cobertura é conversa com a secretaria de saúde, e é o que torna o indicador utilizável no ano seguinte.</div><p class="small mt-1">Fonte: Ministério da Saúde, SISVAN — relatório público de estado nutricional (IMC por idade, ciclo de vida criança, 5 a 10 anos), competência ${n.year}, consultado na emissão. Percentuais recalculados sobre o total acompanhado para que município, estado e Brasil saiam na mesma régua de arredondamento.</p></main>${footer(pagina, FONTE)}</section>`;
 }
 
 function paginaFrequenciaPbf(model: MunicipalXrayModel, pagina: number): string {
@@ -3186,7 +3292,7 @@ h2{max-width:7.05in}
 .territory-fallback{width:92%;height:92%;filter:none}
 .territory-fallback>path:not(.territory-pin),.territory-fallback>circle{fill:none;stroke:#9cbcb7;stroke-width:5}
 .territory-fallback .territory-pin{fill:var(--teal);stroke:var(--navy);stroke-width:5;fill-rule:evenodd}
-.map-escolas{width:4.55in;height:4.55in;display:block;margin:0 auto}.map-escolas .map-shape{fill:var(--wash);stroke:var(--navy);stroke-width:4;vector-effect:non-scaling-stroke;fill-rule:evenodd}.map-escolas .dot-urbana{fill:var(--teal);opacity:.85}.map-escolas .dot-rural{fill:var(--gold);opacity:.9}.map-escolas .dot-dif{fill:var(--red)}.map-legend{display:flex;gap:.16in;justify-content:center;font-size:7.2pt;color:var(--muted);margin-top:.06in}.map-legend i{display:inline-block;width:.09in;height:.09in;border-radius:50%;margin-right:.04in;vertical-align:-1px}.map-legend .li-urbana{background:var(--teal)}.map-legend .li-rural{background:var(--gold)}.map-legend .li-dif{background:var(--red)}
+.map-escolas{width:4.15in;height:4.15in;display:block;margin:0 auto}.map-escolas .map-shape{fill:var(--wash);stroke:var(--navy);stroke-width:4;vector-effect:non-scaling-stroke;fill-rule:evenodd}.map-escolas .dot-urbana{fill:var(--teal);opacity:.85}.map-escolas .dot-rural{fill:var(--gold);opacity:.9}.map-escolas .dot-dif{fill:var(--red)}.map-legend{display:flex;gap:.16in;justify-content:center;font-size:7.2pt;color:var(--muted);margin-top:.06in}.map-legend i{display:inline-block;width:.09in;height:.09in;border-radius:50%;margin-right:.04in;vertical-align:-1px}.map-legend .li-urbana{background:var(--teal)}.map-legend .li-rural{background:var(--gold)}.map-legend .li-dif{background:var(--red)}
 .cover-map-caption{padding:.13in .03in .02in;display:flex;justify-content:space-between;gap:.12in;color:var(--muted);font-size:6.7pt;text-transform:uppercase;letter-spacing:.06em}
 .cover-map-caption b{color:var(--navy)}
 .cover-bottom{padding:.27in var(--page-x) .3in;background:var(--navy);color:#fff}
@@ -3245,6 +3351,8 @@ ${paginaDeclaracaoEtnica(model, prox())}
 ${paginaMapaEscolas(model, prox())}
 
 ${paginaDensidadeRede(model, prox())}
+
+${paginaNutricional(model, prox())}
 
 ${paginaFrequenciaPbf(model, prox())}
 

@@ -23,14 +23,15 @@ export async function generateMunicipalXrayPdf(
     // contexto por escola, alfabetização, distribuição de proficiência,
     // demografia e demanda futura, território e fator, declaração étnica,
     // mapa das escolas,
-    // densidade e dispersão, frequência do PBF, contexto de segurança)
+    // densidade e dispersão, estado nutricional, frequência do PBF,
+    // contexto de segurança)
     // + 8 do Perfil Municipal (saneamento, saúde, emprego, assistência,
     // capacidade institucional, governança educacional, quem dirige a
     // educação, conformidade legal)
     // + 1 de ciclo político (calendário que fecha as transferências).
     // O roteiro de campo saiu daqui: virou o Ofício de solicitação de
     // documentos, que é endereçado à prefeitura (`oficio-documentos-pdf.ts`).
-    const PAGINAS_ESPERADAS = 41;
+    const PAGINAS_ESPERADAS = 42;
     const pageCount = await page.locator("section.page").count();
     if (pageCount !== PAGINAS_ESPERADAS) {
       throw new Error(`O template do Raio-X gerou ${pageCount} páginas; eram esperadas ${PAGINAS_ESPERADAS}.`);
