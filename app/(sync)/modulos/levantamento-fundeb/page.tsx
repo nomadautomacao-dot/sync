@@ -12,6 +12,7 @@ import {
   LoaderIcon,
   ClipboardCheckIcon,
   BabyIcon,
+  GlobeIcon,
   GraduationCapIcon,
   LandmarkIcon,
   ScaleIcon,
@@ -53,7 +54,8 @@ type Documento =
   | "dossie-matricula"
   | "dossie-dinheiro"
   | "dossie-aprendizagem"
-  | "dossie-demanda";
+  | "dossie-demanda"
+  | "dossie-equidade";
 
 /**
  * Os quatro documentos que o módulo produz, nesta ordem de uso.
@@ -267,6 +269,26 @@ const DOCUMENTOS = [
       "Maternidade adolescente e rural",
     ],
   },
+  {
+    id: "dossie-equidade" as const,
+    reportType: "dossie_equidade" as CityReportType,
+    icone: GlobeIcon,
+    nome: "Dossiê da Equidade e dos Territórios",
+    paginas: 0,
+    variante: "secundario" as const,
+    prefixoArquivo: "Dossie_Equidade",
+    endpoint: "/api/modulos/dossies/equidade",
+    descricao:
+      "Três contagens da mesma criança — Censo Demográfico, Censo Escolar e Portaria do FUNDEB — e a distância entre elas, que é a Condicionalidade III e o fator de ponderação ao mesmo tempo.",
+    conteudo: [
+      "Série de cor/raça, ano a ano",
+      "Mudança de cadastro sinalizada",
+      "A corrente de três elos por povo",
+      "Territórios declarados e seus fatores",
+      "Cor/raça por zona urbana e rural",
+      "A ponte com a Condicionalidade III",
+    ],
+  },
 ];
 
 function pdfBlobFromBase64(base64: string): Blob {
@@ -399,6 +421,22 @@ function Bancada() {
     retry: false,
   });
 
+  const { data: previaEquidade } = useQuery<{
+    correntes: number;
+    povosComSinal: number;
+    mudouCadastro: boolean;
+    paginasEstimadas: number;
+  }>({
+    queryKey: ["dossie-equidade-previa", codigoIbge],
+    queryFn: async () => {
+      const res = await fetch(`/api/modulos/dossies/equidade?codigo_ibge=${codigoIbge}`);
+      if (!res.ok) throw new Error("prévia indisponível");
+      return res.json();
+    },
+    enabled: !!codigoIbge,
+    retry: false,
+  });
+
   /* Chegando pela URL, o nome e a UF só existem depois que o relatório carrega —
      e os dois são obrigatórios no corpo que as rotas de PDF recebem. */
   const municipio: IbgeMunicipio | null =
@@ -478,6 +516,13 @@ function Bancada() {
           ? ` · creche ${previaDemanda.coberturaCreche.toFixed(1).replace(".", ",")}%`
           : "";
       return `${previaDemanda.coortes} coortes${creche} · ~${previaDemanda.paginasEstimadas} pg`;
+    }
+    if (id === "dossie-equidade") {
+      if (!previaEquidade) return "tamanho variável";
+      const sinal =
+        previaEquidade.povosComSinal > 0 ? ` · ${previaEquidade.povosComSinal} a conferir` : "";
+      const cadastro = previaEquidade.mudouCadastro ? " · cadastro mudou" : "";
+      return `${previaEquidade.correntes} povo(s)${sinal}${cadastro} · ~${previaEquidade.paginasEstimadas} pg`;
     }
     return undefined;
   };

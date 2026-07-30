@@ -141,3 +141,36 @@ assentamento declaradas ao Censo.
 - **População quilombola por comunidade.** O Censo agrega por município.
 - **Território indígena georreferenciado** — depende da FUNAI (item #35 do
   roadmap do Raio-X, ainda pendente).
+
+---
+
+## 7. Como ficou — implementado em 2026-07-30
+
+`core/lib/dossie-equidade.ts` · `-template.ts` · `-pdf.ts` ·
+`app/api/modulos/dossies/equidade/` · 17 testes. 4 a 7 folhas conforme o
+município.
+
+**O detector de mudança de cadastro é o achado da construção.** A spec pedia
+"ler a série como qualidade de cadastro antes de composição"; o que faltava era
+um critério. Ele existe agora: variação da não declaração acima de 5 pontos
+entre dois anos consecutivos marca o ano e imprime a ressalva. Serra do Ramalho
+sai de 42,1% para 8,0% em dois anos, e a matrícula preta ou parda "sobe" de
+51,9% para 83,1% — nenhuma rede fica 31 pontos mais negra em dois anos. Sem a
+marca, o documento afirmaria isso.
+
+**A corrente com o elo vazio.** O campo de cor/raça do Censo Escolar tem seis
+categorias e nenhuma é quilombola. O elo do meio sai como travessão, com um
+parágrafo explicando por quê — e o vão só é monetizado onde há os três elos, que
+na prática é o povo indígena. Manaus: 15.647 crianças indígenas de 0 a 14 no
+Censo, 1.088 matrículas declaradas no Censo Escolar, **142** no segmento
+ponderado.
+
+**O piso de relevância.** O Censo devolve populações de uma ou duas pessoas —
+Paulo Afonso tem população quilombola igual a **1**. Povo abaixo de 30 crianças
+em idade escolar só ganha folha se já houver matrícula no segmento; abaixo
+disso a folha diria "1 pessoa, 0 matrículas" e ensinaria o leitor a pular a
+seção.
+
+**A monetização é conservadora por construção:** usa o **menor** fator do povo
+(1,40), não o teto de 2,17, e monetiza só o **acréscimo** sobre a referência
+1,00 — a matrícula já pondera hoje, só que como urbana.

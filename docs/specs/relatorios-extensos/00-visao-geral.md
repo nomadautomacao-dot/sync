@@ -176,9 +176,10 @@ Isso está detalhado no dossiê 1, que é o que mais ganha com a regeneração.
 4. ✅ **Dinheiro federal** — o segundo orçamento, fora do fundo.
 5. ✅ **Aprendizagem** — a distribuição que a média esconde.
 6. ✅ **Demanda** — a coorte que já nasceu contra a vaga que existe.
-7. Restam **equidade e comparativo**, na ordem que a demanda comercial pedir.
+7. ✅ **Equidade e territórios** — três contagens da mesma criança.
+8. Resta o **comparativo**, o município contra os pares.
 
-### O que a construção dos seis primeiros ensinou
+### O que a construção dos sete primeiros ensinou
 
 - **A armadilha do campo de data.** No CAUC, parte dos requisitos repete a
   *data da consulta* no campo de validade. Lido como vencimento, o documento
@@ -224,6 +225,19 @@ Isso está detalhado no dossiê 1, que é o que mais ganha com a regeneração.
   como "R$ 17,40 mil" em corpo de impressão — erro de mil vezes no número
   principal da folha. O `sup` de derivação leva margem, e isso vale para todo
   template que usa a convenção.
+- **Série histórica mede o formulário antes de medir a população.** Serra do
+  Ramalho sai de 42,1% de cor/raça não declarada em 2023 para 8,0% em 2025, e a
+  matrícula preta ou parda "sobe" de 51,9% para 83,1%. Nenhuma rede fica 31
+  pontos mais negra em dois anos: a secretaria preencheu o campo. Toda série
+  categórica precisa de um detector de mudança de cadastro antes de virar
+  tendência.
+- **Lacuna dita é melhor que lacuna preenchida.** O campo de cor/raça do Censo
+  Escolar não tem categoria quilombola. O elo do meio da corrente sai como
+  travessão, com a razão escrita — estimá-lo transformaria pergunta de campo em
+  afirmação sem fonte.
+- **População de uma pessoa não merece uma folha.** O Censo devolve populações
+  de 1 ou 2 habitantes; Paulo Afonso tem população quilombola igual a 1. Piso de
+  relevância antes de dedicar seção, ou o documento ensina o leitor a pular.
 - **Dataset estreito demais some da página.** `autoresEducacao` guardava só os
   três maiores autores de emenda **de educação**, e isso deixava a folha vazia
   em 86% dos municípios. Guardar todos os autores de qualquer função encheu
