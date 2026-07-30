@@ -245,3 +245,70 @@ describe("contexto da declaração étnica", () => {
     expect(saida).toContain("142 no segmento indígena");
   });
 });
+
+describe("perguntas que já trazem a resposta que temos", () => {
+  /**
+   * Regra 3 do projeto levada ao ofício: onde a base pública já responde parte
+   * da pergunta, o número entra embutido e o que sobra é o que só a rede sabe.
+   * Vira conferência, não interrogatório.
+   */
+  it("diz quantas escolas já estão declaradas indígenas ou quilombolas", () => {
+    const saida = render({
+      relatorio_dirigido_base: {
+        escolasTerritorio: {
+          ano: 2025,
+          escolas: [{ codigo: "1", rural: true, dif: 2, lat: null, lng: null, matriculas: 100, transporte: null, racas: null }],
+          resumo: { total: 1, comCoordenada: 0, rurais: 1, porDiferenciada: { "2": 3, "3": 1 }, alunosTransporte: 0, pctTransporte: null, corRaca: null, corRacaTotais: null },
+        },
+      },
+    });
+
+    expect(saida).toContain("O Censo já registra 3 escolas em terra indígena e 1 em território quilombola");
+  });
+
+  it("afirma a ausência quando nenhuma escola é declarada", () => {
+    expect(render()).toContain("não registra nenhuma escola desta rede declarada");
+  });
+
+  it("traz do SIOPE o percentual abaixo do piso, em vez de só perguntar", () => {
+    const saida = render({
+      relatorio_dirigido_base: {
+        remuneracao: { ano: 2024, piso: 4867, magisterio: 200, medianaMagisterio: 4200, razaoMedianaPiso: 0.86, abaixoDoPisoPct: 62.5, abaixoDoPiso: 125, confiavel: true },
+      },
+    });
+
+    expect(saida).toContain("62,5% do magistério declarado abaixo do piso");
+  });
+
+  it("ressalva amostra pequena em vez de omitir o dado", () => {
+    const saida = render({
+      relatorio_dirigido_base: {
+        remuneracao: { ano: 2024, piso: 4867, magisterio: 5, medianaMagisterio: 4200, razaoMedianaPiso: 0.86, abaixoDoPisoPct: 40, abaixoDoPiso: 2, confiavel: false },
+      },
+    });
+
+    expect(saida).toContain("amostra pequena — confirmar");
+  });
+
+  it("conta as obras paralisadas e o valor parado", () => {
+    const saida = render({
+      relatorio_dirigido_base: {
+        obrasFnde: {
+          totalObras: 4,
+          paralisadas: 1,
+          valorParadoEstimado: 2_000_000,
+          obrasCriticas: [{ ano: 2014, tipo: "Creche", classificacao: "Tipo B", situacao: "PARALISADA", estimativaRepasse: 2_000_000, execucao: 30 }],
+        },
+      },
+    });
+
+    expect(saida).toMatch(/SIMEC: 1 obra paralisada/);
+  });
+
+  it("cai só na regra quando não há obra parada", () => {
+    const saida = render();
+
+    expect(saida).toContain("bloqueia novo termo de compromisso com o FNDE");
+    expect(saida).not.toContain("SIMEC:");
+  });
+});

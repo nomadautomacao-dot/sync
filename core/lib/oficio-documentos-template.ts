@@ -58,6 +58,18 @@ function pct(value: number | null) {
   return value === null ? "N/D" : `${decimal.format(value)}%`;
 }
 
+const brl = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+  maximumFractionDigits: 0,
+});
+
+function compactMoney(value: number | null) {
+  if (value === null) return "N/D";
+  if (Math.abs(value) >= 1_000_000) return `R$ ${decimal.format(value / 1_000_000)} mi`;
+  return brl.format(value);
+}
+
 // ---------------------------------------------------------------------------
 // Parâmetros do ofício
 // ---------------------------------------------------------------------------
@@ -234,10 +246,27 @@ export function montarQuestionario(model: MunicipalXrayModel): SecaoCampo[] {
             const dec = model.schoolMap?.raceTotals?.indigenous ?? null;
             const regra =
               "Os segmentos indígena e quilombola ponderam de 1,40 a 2,17 — os maiores da tabela — e a ponderação segue a classificação da escola, não a cor/raça do aluno.";
-            // Município sem nenhuma das duas contagens: imprimir "0 e 0" é
-            // ruído num documento que vai para a prefeitura. Fica só a regra.
-            if (!p || dec === null || (dec === 0 && p.enrolled === 0)) return regra;
-            return `Censo Escolar: ${int(dec)} matrículas com cor/raça indígena declarada. Planilha do FNDE: ${int(p.enrolled)} no segmento indígena. ${regra}`;
+            // O que JÁ sabemos responder sozinhos: quantas escolas estão
+            // declaradas hoje. Transforma a pergunta aberta em conferência.
+            const porDif = model.schoolMap?.byDiferenciada ?? {};
+            const indigenas = porDif["2"] ?? 0;
+            const quilombolas = porDif["3"] ?? 0;
+            const jaDeclaradas =
+              indigenas + quilombolas > 0
+                ? `O Censo já registra ${[
+                    indigenas > 0 ? `${int(indigenas)} escola${indigenas > 1 ? "s" : ""} em terra indígena` : null,
+                    quilombolas > 0 ? `${int(quilombolas)} em território quilombola` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" e ")} nesta rede.`
+                : "O Censo não registra nenhuma escola desta rede declarada em terra indígena ou território quilombola.";
+
+            // Município sem nenhuma das duas contagens de matrícula: imprimir
+            // "0 e 0" é ruído num documento que vai para a prefeitura.
+            if (!p || dec === null || (dec === 0 && p.enrolled === 0)) {
+              return `${jaDeclaradas} ${regra}`;
+            }
+            return `${jaDeclaradas} Censo Escolar: ${int(dec)} matrículas com cor/raça indígena declarada; planilha do FNDE: ${int(p.enrolled)} no segmento indígena. ${regra}`;
           })(),
         },
         {
@@ -262,11 +291,21 @@ export function montarQuestionario(model: MunicipalXrayModel): SecaoCampo[] {
         {
           pergunta:
             "O plano de carreira está sendo cumprido? As progressões estão em dia e o piso nacional do magistério é pago?",
-          contexto: registro(
-            g?.planoCarreiraMagisterio,
-            `MUNIC ${anoMunic}: plano de carreira do magistério registrado.`,
-            `MUNIC ${anoMunic}: não consta plano de carreira do magistério — confirmar a situação atual.`,
-          ),
+          contexto: (() => {
+            const munic = registro(
+              g?.planoCarreiraMagisterio,
+              `MUNIC ${anoMunic}: plano de carreira do magistério registrado.`,
+              `MUNIC ${anoMunic}: não consta plano de carreira do magistério — confirmar a situação atual.`,
+            );
+            // A parte do piso o SIOPE já responde: entra como número, não como
+            // pergunta. A amostra pequena vira ressalva em vez de sumir.
+            const p = model.teacherPay;
+            const siope =
+              p && p.belowPct !== null && p.floor !== null
+                ? `SIOPE ${p.year ?? ""}: ${pct(p.belowPct)} do magistério declarado abaixo do piso de ${compactMoney(p.floor)}${p.reliable ? "" : " (amostra pequena — confirmar)"}.`
+                : null;
+            return [munic, siope].filter(Boolean).join(" ") || undefined;
+          })(),
         },
         {
           pergunta:
@@ -329,9 +368,16 @@ export function montarQuestionario(model: MunicipalXrayModel): SecaoCampo[] {
         },
         {
           pergunta:
-            "Quem acompanha o SIMEC e as obras pactuadas com o FNDE? Há obra paralisada com recurso já liberado?",
-          contexto:
-            "Obra paralisada com recurso liberado bloqueia novo termo de compromisso com o FNDE.",
+            "Quem acompanha o SIMEC e as obras pactuadas com o FNDE, e o que trava as que estão paradas?",
+          contexto: (() => {
+            const regra =
+              "Obra paralisada com recurso liberado bloqueia novo termo de compromisso com o FNDE.";
+            // Quantas e quanto o SIMEC já responde — a pergunta que sobra é o
+            // porquê, e quem cuida.
+            const w = model.stalledWorks;
+            if (!w || w.stalled === 0) return regra;
+            return `SIMEC: ${int(w.stalled)} obra${w.stalled > 1 ? "s" : ""} paralisada${w.stalled > 1 ? "s" : ""} nesta rede${w.stalledValue > 0 ? `, ${compactMoney(w.stalledValue)} em repasse estimado` : ""}. ${regra}`;
+          })(),
         },
       ],
     },
