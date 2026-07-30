@@ -2411,3 +2411,76 @@ describe("aldeias da FUNAI na declaração étnica", () => {
     expect(saida).toMatch(/e mais \d+ no cadastro/);
   });
 });
+
+/**
+ * Cobertura vacinal (#37) e violência notificada (#9) na folha de contexto de
+ * segurança. Os dois são indicadores de saúde num relatório de FUNDEB, e cada
+ * um tem uma trava de leitura que os testes abaixo protegem.
+ */
+describe("saúde da criança em idade escolar no Raio-X", () => {
+  function render(codigoIbge: string) {
+    return generateMunicipalXrayHtml(
+      mapMunicipalXrayModel({
+        basePayload: {},
+        currentPayload: {
+          dados_basicos: { codigo_ibge: codigoIbge, nome: "X", uf: "BA" },
+          relatorio_dirigido_base: {
+            violencia: { serie: [{ ano: 2023, taxa: 30, obitos: 40 }], ultimo: { ano: 2023, taxa: 30, obitos: 40 } },
+          },
+        },
+        baseYear: 2024,
+        currentYear: 2026,
+        generatedAt: new Date("2026-07-30T12:00:00.000Z"),
+      }),
+    );
+  }
+
+  it("liga a cobertura vacinal ao Programa Saúde na Escola", () => {
+    const saida = render("2703007"); // Ibateguara: 6 de 6 abaixo da mediana
+
+    expect(saida).toContain("Cobertura vacinal (2022)");
+    expect(saida).toContain("6 das 6 coberturas");
+    expect(saida).toContain("Programa Saúde na Escola");
+    expect(saida).toContain("Régua: mediana nacional");
+  });
+
+  /** Cobertura acima de 100% não pode virar elogio na folha. */
+  it("nega excelência a cobertura acima de 100%", () => {
+    const saida = render("2930758"); // Serra do Ramalho: as seis acima de 100
+
+    expect(saida).toContain("passam de 100%");
+    expect(saida).toContain("não é excelência");
+    expect(saida).not.toContain("coberturas</b> estão abaixo da mediana nacional");
+  });
+
+  /**
+   * A trava que mais importa. Zero notificação é ausência de registro, não
+   * ausência de violência — e o texto tem de dizer isso antes de qualquer
+   * outra coisa.
+   */
+  it("lê silêncio de notificação como ausência de registro", () => {
+    const saida = render("2703007");
+
+    expect(saida).toContain("Nenhuma notificação de violência contra criança");
+    expect(saida).toContain("quase nunca significa ausência de violência");
+    expect(saida).toContain("significa ausência de registro");
+    expect(saida).toContain("notificante obrigatória");
+  });
+
+  it("nega que notificar mais signifique mais violência", () => {
+    const saida = render("3550308"); // São Paulo: milhares de notificações
+
+    expect(saida).toContain("Notificação, não ocorrência");
+    expect(saida).toContain("Número maior não significa mais violência");
+    expect(saida).not.toContain("Nenhuma notificação de violência contra criança");
+  });
+
+  /** Indicador sensível nunca vira ranking nem rótulo. */
+  it("não transforma nenhum dos dois em comparação entre municípios", () => {
+    for (const codigo of ["2703007", "3550308", "2924009"]) {
+      const saida = render(codigo);
+      expect(saida).not.toMatch(/pior município|ranking|o mais violento|posição no ranking/i);
+      expect(saida).toContain("nunca rótulo do município");
+    }
+  });
+});

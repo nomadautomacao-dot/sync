@@ -40,6 +40,8 @@
     "dados:remuneracao": "node --max-old-space-size=8192 scripts/dados/gerar-remuneracao-docente.mjs",
     "dados:siope": "node scripts/dados/gerar-siope-indicadores.mjs",
     "dados:terras-indigenas": "node scripts/dados/gerar-terras-indigenas.mjs",
+    "dados:vacinacao": "node scripts/dados/gerar-cobertura-vacinal.mjs",
+    "dados:violencia-infantil": "node scripts/dados/gerar-violencia-infantil.mjs",
     "dados:ponderadas": "node --max-old-space-size=6144 scripts/dados/gerar-matriculas-ponderadas.mjs"
   },
   "prisma": {

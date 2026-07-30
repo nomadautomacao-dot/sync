@@ -6,6 +6,7 @@ import { ROTULOS_STATUS } from "./municipal-profile/types";
 import { levantarAchados, varreduraLimpa, TIERS } from "./municipal-xray-achados";
 import { analisarDispersao } from "./densidade-rede";
 import { getTerrasIndigenas } from "./terras-indigenas";
+import { getCoberturaVacinal, getViolenciaInfantil } from "./saude-escolar";
 import { projectToBoundary, type MunicipalBoundaryMap } from "./ibge-municipal-boundary";
 
 type JsonRecord = Record<string, unknown>;
@@ -394,6 +395,27 @@ export interface MunicipalXrayModel {
    * EC nº 114/2021 amarrou a esse dinheiro. Roadmap #27.
    * Ver `core/lib/precatorio-fundef.ts`.
    */
+  /**
+   * Cobertura vacinal infantil (PNI) e violência notificada contra criança de
+   * 5 a 14 anos (SINAN). Roadmap #37 e #9. Ver `core/lib/saude-escolar.ts`.
+   */
+  childHealth: {
+    vaccination: {
+      year: number;
+      shots: Array<{ label: string; value: number; median: number | null; unreadable: boolean; belowMedian: boolean }>;
+      belowMedian: number;
+      unreadable: number;
+    } | null;
+    violence: {
+      ageRange: string;
+      series: Array<{ year: number; count: number }>;
+      latest: { year: number; count: number } | null;
+      total: number;
+      totalSilence: boolean;
+      reportingCities: number;
+      citiesInCountry: number;
+    } | null;
+  } | null;
   /**
    * Aldeias registradas pela FUNAI e a distância delas até a rede. Roadmap #35.
    * Ver `core/lib/terras-indigenas.ts`.
@@ -1079,6 +1101,39 @@ export function mapMunicipalXrayModel(params: {
         severelyObese: number(mun.obesidadeGrave) ?? 0,
         statePct: number(asRecord(bruto.estado)?.excessoPesoPct),
         countryPct: number(asRecord(bruto.brasil)?.excessoPesoPct),
+      };
+    })(),
+    childHealth: (() => {
+      const ibge = text(at(currentPayload, "dados_basicos.codigo_ibge"), "");
+      const vac = getCoberturaVacinal(ibge);
+      const vio = getViolenciaInfantil(ibge);
+      if (!vac && !vio) return null;
+      return {
+        vaccination: vac
+          ? {
+              year: vac.ano,
+              shots: vac.vacinas.map((v) => ({
+                label: v.rotulo,
+                value: v.valor,
+                median: v.medianaNacional,
+                unreadable: v.semLeitura,
+                belowMedian: v.abaixoDaMediana,
+              })),
+              belowMedian: vac.abaixoDaMediana,
+              unreadable: vac.semLeitura,
+            }
+          : null,
+        violence: vio
+          ? {
+              ageRange: vio.faixaEtaria,
+              series: vio.serie.map((x) => ({ year: x.ano, count: x.notificacoes })),
+              latest: vio.ultimo ? { year: vio.ultimo.ano, count: vio.ultimo.notificacoes } : null,
+              total: vio.total,
+              totalSilence: vio.silencioTotal,
+              reportingCities: vio.municipiosNotificantes,
+              citiesInCountry: vio.municipiosNoPais,
+            }
+          : null,
       };
     })(),
     indigenousLands: (() => {
@@ -3448,6 +3503,81 @@ function paginaDeclaracaoEtnica(model: MunicipalXrayModel, pagina: number): stri
 }
 
 /**
+ * Cobertura vacinal — o termômetro de capilaridade da atenção primária.
+ *
+ * Mora na folha de contexto de segurança, e não na do SISVAN, por uma razão
+ * prosaica: a folha do SISVAN não tinha 33px sobrando, e trocar conteúdo que
+ * já estava lá por conteúdo novo seria pior. Aqui o encaixe também é bom — a
+ * folha trata do que cerca a criança, e cobertura vacinal mede se a atenção
+ * primária alcança o território. É ela que executa o Programa Saúde na Escola:
+ * onde não alcança para vacinar, dificilmente alcança a escola.
+ *
+ * Duas travas de honestidade: a régua é a **mediana nacional do próprio
+ * dataset**, não uma meta do PNI que este código não leu na fonte; e cobertura
+ * acima de 100% sai como "sem leitura", nunca como excelência — o numerador é
+ * dose aplicada e o denominador é população estimada.
+ */
+function blocoVacinacao(model: MunicipalXrayModel): string {
+  const v = model.childHealth?.vaccination;
+  if (!v || v.shots.length === 0) return "";
+
+  // A folha do SISVAN já estava no limite: a lista completa com a mediana
+  // repetida a cada vacina custava 46px e transbordava em todos os municípios
+  // de teste. A mediana é dita uma vez, e a lista mostra as quatro primeiras.
+  const MOSTRADAS = 4;
+  const linhas = v.shots
+    .slice(0, MOSTRADAS)
+    .map((s) => {
+      const marca = s.unreadable
+        ? `<span class="neutral">${esc(pct(s.value))}</span>`
+        : s.belowMedian
+          ? `<b class="warn-text">${esc(pct(s.value))}</b>`
+          : `<b class="good">${esc(pct(s.value))}</b>`;
+      return `${esc(s.label)} ${marca}`;
+    })
+    .join(" · ");
+
+  const leitura =
+    v.belowMedian === 0 && v.unreadable === v.shots.length
+      ? `Todas as ${v.shots.length} coberturas passam de 100%, o que <b>não é excelência</b>: o numerador é dose aplicada e o denominador é população estimada. Sem leitura de déficit aqui.`
+      : v.belowMedian >= Math.ceil(v.shots.length / 2)
+        ? `<b>${v.belowMedian} das ${v.shots.length} coberturas</b> estão abaixo da mediana nacional. É a mesma equipe que executa o Programa Saúde na Escola: onde ela não alcança a criança para vacinar, dificilmente alcança a escola. <b>Verificar:</b> há adesão ao PSE vigente, e quais escolas foram pactuadas?`
+        : `${v.belowMedian === 0 ? "Nenhuma cobertura" : `${v.belowMedian} de ${v.shots.length}`} abaixo da mediana nacional — a atenção primária alcança a criança neste território.`;
+
+  // mt-1 e não mt-2: os 8px de diferença são exatamente o que separava esta
+  // folha de transbordar nos municípios de teste.
+  return `<div class="${v.belowMedian >= Math.ceil(v.shots.length / 2) ? "note" : "insight"} mt-1"><b>Cobertura vacinal (${v.year}):</b> ${leitura}<span class="micro" style="display:block;margin-top:.05in">${linhas}${v.shots.length > MOSTRADAS ? ` · e mais ${int(v.shots.length - MOSTRADAS)}` : ""}. Régua: mediana nacional de ${v.year} (PNI/DATASUS, série pública encerrada nesse ano).</span></div>`;
+}
+
+/**
+ * Violência notificada contra criança de 5 a 14 anos — SINAN.
+ *
+ * A regra vem antes do número, e é o motivo de este bloco existir de forma tão
+ * contida: **é contagem de notificação, não de ocorrência.** Notificar mais
+ * pode ser vigilância melhor. Notificar zero quase nunca é ausência de
+ * violência — é ausência de registro.
+ *
+ * Por isso o bloco não compara municípios, não calcula taxa por 100 mil e não
+ * chama número alto de coisa ruim. Ele responde a uma pergunta só, que é sobre
+ * **fluxo** e não sobre crianças: a rede de proteção registra? A Lei nº
+ * 13.431/2017 e o ECA (art. 245) obrigam o profissional de educação a notificar
+ * suspeita de violência, e é por essa porta que a escola entra na conversa.
+ */
+function blocoNotificacaoViolencia(model: MunicipalXrayModel): string {
+  const n = model.childHealth?.violence;
+  if (!n || n.series.length === 0) return "";
+
+  const serie = n.series.map((x) => `${x.year}: ${int(x.count)}`).join(" · ");
+  const silenciosos = n.citiesInCountry - n.reportingCities;
+
+  const leitura = n.totalSilence
+    ? `<b>Nenhuma notificação de violência contra criança de ${esc(n.ageRange)} foi registrada neste município</b> em ${n.series.length} ${n.series.length === 1 ? "exercício" : "exercícios"}. Isso quase nunca significa ausência de violência — significa ausência de registro, e este município está entre os ${int(silenciosos)} do país sem notificação no último exercício. <b>A escola é notificante obrigatória</b> (Lei nº 13.431/2017 e ECA, art. 245): a pergunta de campo é se a rede tem fluxo definido e se os profissionais sabem acioná-lo.`
+    : `A rede de proteção registrou notificações de violência contra criança de ${esc(n.ageRange)} nos últimos exercícios. <b>Número maior não significa mais violência</b> — costuma significar vigilância melhor, com escola e conselho tutelar acionando o fluxo. O que este bloco sustenta é que o fluxo existe; o que ele não mede é se a escola participa dele.`;
+
+  return `<div class="${n.totalSilence ? "note" : "insight"} mt-2"><b>Notificação, não ocorrência:</b> ${leitura}<span class="micro" style="display:block;margin-top:.05in">${serie} notificações (${esc(n.ageRange)}, município de notificação) · ${int(n.reportingCities)} municípios do país notificaram no último exercício. Fonte: SINAN/SVSA — a ressalva de indicador sensível do rodapé desta folha vale aqui também.</span></div>`;
+}
+
+/**
  * Estado nutricional — o resultado medido da merenda.
  *
  * A merenda é política da secretaria de educação e tem regra dura no PNAE
@@ -3580,7 +3710,7 @@ function paginaViolencia(model: MunicipalXrayModel, pagina: number): string {
     nd > 0
       ? `<b>Cruzamento com as páginas anteriores:</b> ${nd === 1 ? "1 escola ficou" : `${int(nd)} escolas ficaram`} sem resultado no Saeb por participação abaixo de 80% — em território conflagrado, dia de prova é dia de risco. Vale sobrepor a lista dessas escolas ao mapa da violência local antes de tratar a participação como desinteresse.`
       : `Nenhuma escola da rede teve resultado retido por participação no Saeb — se a violência pesa, ainda não é no dia da prova.`
-  }</p></div></div><div class="insight mt-3"><b>Perguntas de campo que este dado gera:</b> as rotas escolares atravessam áreas de risco e há horário alternativo? A oferta noturna de EJA tem transporte e segurança de acesso — ou o turno da noite é a razão da evasão? Há protocolo com a rede de proteção para aluno ameaçado (transferência emergencial sem perda de matrícula)? A faixa de 15 a 29 anos${v.youthSharePct !== null ? ` — ${pct(v.youthSharePct)} das vítimas —` : ""} é o público do EJA e do médio: permanência na escola é a política de proteção mais barata que o município opera.</div><p class="small mt-1">Fonte: Atlas da Violência (IPEA/FBSP), base SIM/DataSUS, via IPEADATA — série municipal encerrada em ${v.latest.year}. Indicador sensível: use como contexto de planejamento, não como comparação pública entre municípios.</p></main>${footer(pagina, `Atlas da Violência — IPEA/FBSP, até ${v.latest.year}`)}</section>`;
+  }</p></div></div><div class="insight mt-3"><b>Perguntas de campo que este dado gera:</b> as rotas escolares atravessam áreas de risco e há horário alternativo? A oferta noturna de EJA tem transporte e segurança de acesso — ou o turno da noite é a razão da evasão? Há protocolo com a rede de proteção para aluno ameaçado (transferência emergencial sem perda de matrícula)? A faixa de 15 a 29 anos${v.youthSharePct !== null ? ` — ${pct(v.youthSharePct)} das vítimas —` : ""} é o público do EJA e do médio: permanência na escola é a política de proteção mais barata que o município opera.</div>${blocoVacinacao(model)}${blocoNotificacaoViolencia(model)}<p class="small mt-1">Fonte: Atlas da Violência (IPEA/FBSP), base SIM/DataSUS, via IPEADATA — série municipal encerrada em ${v.latest.year}. Indicador sensível: use como contexto de planejamento, não como comparação pública entre municípios.</p></main>${footer(pagina, `Atlas da Violência — IPEA/FBSP, até ${v.latest.year}`)}</section>`;
 }
 
 /**

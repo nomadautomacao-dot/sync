@@ -481,6 +481,8 @@ No fluxo normal não se usa nenhum dos dois.
 | `dados/gerar-remuneracao-docente.mjs` | `npm run dados:remuneracao` — remuneração do magistério e adimplência ao piso (SIOPE). Agrega na coleta; não persiste dado pessoal |
 | `dados/gerar-siope-indicadores.mjs` | `npm run dados:siope` — vinculações da educação por município (SIOPE, API OData sem captcha) |
 | `dados/gerar-terras-indigenas.mjs` | `npm run dados:terras-indigenas` — aldeias e terras indígenas por município (FUNAI, WFS aberto). A FUNAI atualiza mensalmente |
+| `dados/gerar-cobertura-vacinal.mjs` | `npm run dados:vacinacao` — cobertura vacinal infantil por município (PNI/DATASUS, TabNet). Série pública encerrada em 2022 |
+| `dados/gerar-violencia-infantil.mjs` | `npm run dados:violencia-infantil` — notificações de violência contra criança de 5 a 14 anos (SINAN). Notificação ≠ ocorrência |
 | `dados/gerar-matriculas-ponderadas.mjs` | `npm run dados:ponderadas` — matrícula ponderada e fatores oficiais do FUNDEB, derivados da planilha do FNDE |
 | `dados/gerar-vaar-municipios.mjs` | `npm run dados:vaar` — status das 5 condicionalidades do VAAR e valores por município (FNDE). Regerar a cada portaria quadrimestral |
 | `pdf/prepare-docx-templates.mjs` | Templates DOCX contratos |
