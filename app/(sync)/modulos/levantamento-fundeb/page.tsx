@@ -11,6 +11,7 @@ import {
   HistoryIcon,
   LoaderIcon,
   ClipboardCheckIcon,
+  ScaleIcon,
   SchoolIcon,
   SendIcon,
   ZapIcon,
@@ -45,7 +46,8 @@ type Documento =
   | "historico-censo"
   | "oficio-documentos"
   | "dossie-escolas"
-  | "dossie-conformidade";
+  | "dossie-conformidade"
+  | "dossie-matricula";
 
 /**
  * Os quatro documentos que o módulo produz, nesta ordem de uso.
@@ -179,6 +181,26 @@ const DOCUMENTOS = [
       "Piso do magistério",
     ],
   },
+  {
+    id: "dossie-matricula" as const,
+    reportType: "dossie_matricula" as CityReportType,
+    icone: ScaleIcon,
+    nome: "Dossiê da Matrícula Ponderada",
+    paginas: 0,
+    variante: "secundario" as const,
+    prefixoArquivo: "Dossie_Matricula_Ponderada",
+    endpoint: "/api/modulos/dossies/matricula",
+    descricao:
+      "De onde vem cada real do fundo: todos os segmentos com matrícula × fator, cinco cortes do mesmo total e a conciliação com o Censo que o município preencheu.",
+    conteudo: [
+      "Todos os segmentos, com a conta aberta",
+      "Os dois fatores — VAAF e VAAT",
+      "Cinco cortes do mesmo total",
+      "Conciliação Censo × Portaria",
+      "Censo contra Portaria, indicador a indicador",
+      "Série da composição e PNAE",
+    ],
+  },
 ];
 
 function pdfBlobFromBase64(base64: string): Blob {
@@ -236,10 +258,9 @@ function Bancada() {
   const relatorio = resposta?.relatorio;
   const identificacao = relatorio?.identificacao;
 
-  /* O Dossiê das Escolas não tem tamanho fixo: 20 blocos em Ibateguara, 508 em
+  /* Nenhum dos dossiês tem tamanho fixo — 20 blocos em Ibateguara, 508 em
      Manaus. Disparar um PDF de 130 folhas sem avisar é hostil, então a prévia
-     vem antes e o card anuncia o volume real. Falha aqui não bloqueia nada — o
-     card só perde a medida. */
+     vem antes e o card anuncia o volume real. */
   const { data: previaConformidade } = useQuery<{
     requisitos: number;
     pendentes: number;
@@ -265,6 +286,46 @@ function Bancada() {
     enabled: !!codigoIbge,
     retry: false,
   });
+
+  const { data: previaMatricula } = useQuery<{
+    segmentos: number;
+    divergencias: number;
+    paginasEstimadas: number;
+  }>({
+    queryKey: ["dossie-matricula-previa", codigoIbge],
+    queryFn: async () => {
+      const res = await fetch(`/api/modulos/dossies/matricula?codigo_ibge=${codigoIbge}`);
+      if (!res.ok) throw new Error("prévia indisponível");
+      return res.json();
+    },
+    enabled: !!codigoIbge,
+    retry: false,
+  });
+
+  /* Os três dossiês não têm tamanho fixo, e cada um mede o próprio volume numa
+     grandeza diferente. Sem prévia o card diz "tamanho variável" em vez de
+     mentir um número — falha de prévia não bloqueia a geração. */
+  const medidaDoCard = (id: Documento): string | undefined => {
+    if (id === "dossie-escolas") {
+      return previaDossie
+        ? `${previaDossie.escolas} escolas · ~${previaDossie.paginasEstimadas} pg`
+        : "tamanho variável";
+    }
+    if (id === "dossie-conformidade") {
+      return previaConformidade
+        ? `${previaConformidade.requisitos} requisitos · ~${previaConformidade.paginasEstimadas} pg`
+        : "tamanho variável";
+    }
+    if (id === "dossie-matricula") {
+      if (!previaMatricula) return "tamanho variável";
+      const divergencias =
+        previaMatricula.divergencias > 0
+          ? ` · ${previaMatricula.divergencias} a conferir`
+          : "";
+      return `${previaMatricula.segmentos} segmentos${divergencias} · ~${previaMatricula.paginasEstimadas} pg`;
+    }
+    return undefined;
+  };
 
   /* Chegando pela URL, o nome e a UF só existem depois que o relatório carrega —
      e os dois são obrigatórios no corpo que as rotas de PDF recebem. */
@@ -550,17 +611,7 @@ function Bancada() {
                 icone={documento.icone}
                 nome={documento.nome}
                 paginas={documento.paginas}
-                medida={
-                  documento.id === "dossie-escolas"
-                    ? previaDossie
-                      ? `${previaDossie.escolas} escolas · ~${previaDossie.paginasEstimadas} pg`
-                      : "tamanho variável"
-                    : documento.id === "dossie-conformidade"
-                      ? previaConformidade
-                        ? `${previaConformidade.requisitos} requisitos · ~${previaConformidade.paginasEstimadas} pg`
-                        : "tamanho variável"
-                      : undefined
-                }
+                medida={medidaDoCard(documento.id)}
                 descricao={documento.descricao}
                 conteudo={documento.conteudo}
                 variante={documento.variante}

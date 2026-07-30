@@ -29,10 +29,23 @@ export interface SegmentoPonderado {
   nome: string;
   matriculas: number;
   fatorVaaf: number | null;
+  /**
+   * O fator do **outro** denominador. A Portaria publica duas tabelas de
+   * ponderação: a do VAAF, que rateia o fundo de origem estadual, e a do VAAT,
+   * que rateia a complementação da União — e elas não são iguais. Creche
+   * integral pública urbana vale 1,55 no VAAF e 1,90 no VAAT; anos iniciais
+   * valem 1,00 nos dois. A diferença é deliberada: o VAAT sobrepesa a educação
+   * infantil, que é onde a União quis induzir oferta.
+   */
+  fatorVaat: number | null;
   /** Matrículas × fator: a contribuição do segmento para o total ponderado. */
   equivalentes: number;
+  /** Matrículas × `fatorVaat`. */
+  equivalentesVaat: number;
   /** Participação do segmento no total ponderado da rede, em %. */
   participacao: number;
+  /** Participação no total ponderado do VAAT, em %. */
+  participacaoVaat: number;
 }
 
 export interface OportunidadePonderacao {
@@ -265,6 +278,31 @@ function derivarOportunidades(
   return oportunidades;
 }
 
+export interface SegmentoCatalogo {
+  nome: string;
+  fatorVaaf: number | null;
+  fatorVaat: number | null;
+}
+
+/**
+ * Os 82 segmentos da Portaria, com ou sem matrícula em qualquer município.
+ *
+ * Serve para o inverso da leitura usual: em vez de listar o que a rede declara,
+ * mostrar o que ela **não** declara. Segmento vazio quase sempre é oferta que
+ * não existe — mas nem sempre, e a diferença vale dinheiro.
+ */
+export function getCatalogoSegmentos(): SegmentoCatalogo[] {
+  const arquivo = carregar();
+  if (!arquivo) return [];
+  const vaaf = arquivo.fatores?.vaaf ?? [];
+  const vaat = arquivo.fatores?.vaat ?? [];
+  return (arquivo.segmentos ?? []).map((nome, i) => ({
+    nome,
+    fatorVaaf: vaaf[i] ?? null,
+    fatorVaat: vaat[i] ?? null,
+  }));
+}
+
 export function getPonderacaoMunicipal(codigoIBGE: string): PonderacaoMunicipal | null {
   const arquivo = carregar();
   const digits = codigoIBGE.replace(/\D/g, "");
@@ -273,18 +311,25 @@ export function getPonderacaoMunicipal(codigoIBGE: string): PonderacaoMunicipal 
 
   const nomes = arquivo.segmentos ?? [];
   const fatoresVaaf = arquivo.fatores?.vaaf ?? [];
+  const fatoresVaat = arquivo.fatores?.vaat ?? [];
   const ponderadaVaaf = registro.vaaf ?? 0;
+  const ponderadaVaat = registro.vaat ?? 0;
 
   const segmentos: SegmentoPonderado[] = (registro.seg ?? [])
     .map(([indice, matriculas]) => {
       const fator = fatoresVaaf[indice] ?? null;
+      const fatorVaat = fatoresVaat[indice] ?? null;
       const equivalentes = matriculas * (fator ?? 1);
+      const equivalentesVaat = matriculas * (fatorVaat ?? fator ?? 1);
       return {
         nome: nomes[indice] ?? `Segmento ${indice}`,
         matriculas,
         fatorVaaf: fator,
+        fatorVaat,
         equivalentes,
+        equivalentesVaat,
         participacao: ponderadaVaaf > 0 ? (equivalentes / ponderadaVaaf) * 100 : 0,
+        participacaoVaat: ponderadaVaat > 0 ? (equivalentesVaat / ponderadaVaat) * 100 : 0,
       };
     })
     .sort((a, b) => b.equivalentes - a.equivalentes);

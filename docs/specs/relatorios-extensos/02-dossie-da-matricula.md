@@ -113,3 +113,44 @@ Duas chaves hoje: `creche-integral` e `aee`.
   `fundeb-ganho-apurado`, para a UF. Multiplicar segmento a segmento produz
   número que a portaria não publica — só entra com rótulo de derivação
   explícito, ou não entra.
+
+---
+
+## 6. Como ficou — implementado em 2026-07-30
+
+`core/lib/dossie-matricula.ts` · `-template.ts` · `-pdf.ts` ·
+`app/api/modulos/dossies/matricula/` · 19 testes. 13 a 15 folhas conforme o
+município.
+
+**O que entrou além do previsto na spec:**
+
+- **Os dois fatores em toda tabela.** `fundeb-ponderacao.ts` guardava só o VAAF
+  por segmento e descartava a tabela do VAAT, que existia no dataset. Agora
+  `SegmentoPonderado` traz `fatorVaat`, `equivalentesVaat` e `participacaoVaat`,
+  e a folha do VAAF × VAAT lista os segmentos desta rede ordenados pela
+  distância entre as duas réguas.
+- **Cinco cortes, não um.** Etapa, jornada, localização, rede e modalidade —
+  cada um repartindo exatamente o mesmo total, com `% bruta` ao lado de
+  `% ponderada`. A distância entre as duas colunas é o efeito do fator, e é a
+  leitura que o corte por etapa sozinho não dá.
+- **A conciliação fecha na unidade.** Bloco a bloco contra o Censo da rede
+  municipal: creche, pré-escola e o conjunto fundamental/médio/EJA batem exato
+  em Paulo Afonso, Ibateguara e Manaus. É a folha que torna a receita rastreável
+  até a declaração que a própria secretaria fez.
+- **Censo contra Portaria, indicador a indicador.** Tempo integral das três
+  etapas e as quatro condições de território. Manaus tem 431 matrículas de
+  fundamental integral no Censo que a Portaria não pondera como integral.
+- **Série de composição.** Quatro anos do Censo nas grandezas que o fator
+  remunera, com as duas linhas de participação em destaque.
+- **Anexo com a Portaria inteira.** Os 82 segmentos e os dois fatores, marcados
+  os que o município declara. Segmento vazio é informação.
+
+**Duas armadilhas que a construção revelou:**
+
+1. **Zero não é achado.** Rede acima da mediana nacional gerava bloco com
+   `R$ 0,00` — Paulo Afonso, no AEE. Agora há variante `acima da mediana`, com
+   o resultado registrado em vez de forçado.
+2. **`fecha` precisa olhar bloco a bloco.** São Paulo tem 2.620 matrículas de
+   ensino médio municipal que a Portaria não pondera; no total isso cabe na
+   tolerância de 0,5%, e a folha declarava conciliação fechada tendo uma linha
+   marcada como divergente. `fecha` agora exige as duas condições.

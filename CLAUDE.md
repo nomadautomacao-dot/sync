@@ -184,6 +184,9 @@ cliente; as rotas apenas verificam o ID token. Ver seção 3.2.
 | `/api/modulos/levantamento-fundeb/relatorio-dirigido` | POST | Relatório dirigido com IA |
 | `/api/modulos/levantamento-fundeb/raio-x` | POST | Raio-X municipal em PDF (41 páginas) |
 | `/api/modulos/levantamento-fundeb/oficio-documentos` | POST | Ofício à prefeitura + questionário (4 páginas) |
+| `/api/modulos/dossies/escolas` | GET/POST | Dossiê das Escolas — um bloco por unidade da rede |
+| `/api/modulos/dossies/conformidade` | GET/POST | Dossiê da Conformidade — CAUC, SIOPE, DCA, VAAR, piso |
+| `/api/modulos/dossies/matricula` | GET/POST | Dossiê da Matrícula Ponderada — segmento a segmento |
 | `/api/modulos/contrato-fundeb` | POST | Monta contrato a partir do levantamento |
 | `/api/modulos/case-de-sucesso` | GET | Lista de cases |
 | `/api/modulos/case-de-sucesso/[municipio]` | GET | Case de um município |
@@ -194,6 +197,16 @@ cliente; as rotas apenas verificam o ID token. Ver seção 3.2.
 | `/api/modulos/contrato-fundeb/gerar-kit` | POST | Kit documental parcial |
 | `/api/modulos/contrato-fundeb/gerar-kit-completo` | POST | Kit completo (15 anexos) |
 | `/api/modulos/contrato-fundeb/gerar-proposta` | POST | Proposta comercial |
+
+> **As rotas `dossies/*` são de outra família.** Nos demais PDFs a contagem de
+> folhas é contrato (`PAGINAS_ESPERADAS`) e o conteúdo é cortado por
+> `overflow:hidden` — `pdf-corte.ts` existe para isso. Nos dossiês o volume é
+> função do município, a paginação é por fluxo (`section.flow`,
+> `break-inside:avoid`, cabeçalho por `@page`) e o contrato é de **completude**:
+> o gerador confere que o número de blocos impressos bate com o número de linhas
+> da fonte. `pdf-corte.ts` não roda neles. O `GET` de cada rota é a prévia que a
+> tela usa para anunciar o tamanho antes de disparar a geração.
+> Especificações em `docs/specs/relatorios-extensos/`.
 
 **Outros:**
 | Rota | Método | Descrição |
@@ -497,7 +510,7 @@ No fluxo normal não se usa nenhum dos dois.
 ### O que NÃO está implementado
 - Módulos: Terceirização, Formação, Atas, Tecnologia, RH, Financeiro — existem
   como chaves no `moduleCatalog` (a tela `/modulos` as exibe), sem rota nem tela
-- Testes de ponta a ponta (a suíte é de unidade/integração: 343 testes, Vitest)
+- Testes de ponta a ponta (a suíte é de unidade/integração: 500 testes, Vitest)
 - **Staging separado de produção** — o deploy da `main` vai direto ao ar
 - Monitoramento (Sentry, Axiom)
 

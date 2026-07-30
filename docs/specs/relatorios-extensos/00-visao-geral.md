@@ -154,21 +154,41 @@ pré-escola pura fica sem nome no dossiê.
 `scripts/dados/gerar-escolas-territorio.mjs <microdados.zip>`. O script já lê o
 zip do INEP; é questão de ampliar a lista de colunas guardadas.
 
-**O que trava hoje:** `DADOS_BRUTOS_DIR` no `.env.local` ainda aponta para o
-caminho da máquina Windows (`/home/AdrielT87/...`), então o zip dos microdados
-não está acessível neste Mac. Baixar de
+**O que trava hoje:** `DADOS_BRUTOS_DIR` já aponta para o Mac
+(`~/Desktop/Sync-Arquivos/dados-brutos`), mas o zip dos microdados não está lá.
+Baixar de
 `https://download.inep.gov.br/microdados/microdados_censo_escolar_<ano>.zip`
-(~2 GB) resolve.
+(~2 GB) resolve. **Não é dependência de execução:** os dossiês leem os JSONs
+derivados em `data/`, que estão versionados e vão na imagem — o zip é
+necessário uma vez, offline, só para regerar.
 
 Isso está detalhado no dossiê 1, que é o que mais ganha com a regeneração.
 
 ---
 
-## 6. Ordem de construção sugerida
+## 6. Ordem de construção
 
-1. **Dossiê das Escolas** — maior valor percebido, e é o que valida a
-   arquitetura de paginação por fluxo, que os outros vão herdar.
-2. **Conformidade** — segundo maior valor prático (é o que a secretaria usa no
-   dia seguinte), e todos os dados já estão prontos.
-3. **Matrícula ponderada** — é onde mora o dinheiro; curto de construir.
+1. ✅ **Dossiê das Escolas** — maior valor percebido, e é o que validou a
+   arquitetura de paginação por fluxo, que os outros herdaram.
+2. ✅ **Conformidade** — segundo maior valor prático (é o que a secretaria usa
+   no dia seguinte), e todos os dados já estavam prontos.
+3. ✅ **Matrícula ponderada** — é onde mora o dinheiro.
 4. Os demais, na ordem que a demanda comercial pedir.
+
+### O que a construção dos três primeiros ensinou
+
+- **A armadilha do campo de data.** No CAUC, parte dos requisitos repete a
+  *data da consulta* no campo de validade. Lido como vencimento, o documento
+  anunciava doze vencimentos para hoje em qualquer município, todo dia. Antes
+  de tratar campo de data como prazo, conferir se ele varia entre municípios.
+- **Zero não é achado.** Rede que já está acima da mediana nacional não pode
+  render um bloco com `R$ 0,00` — precisa de variante própria que registre o
+  resultado. Uma linha assim contamina a leitura do documento inteiro.
+- **Conciliação vale mais que volume.** A folha que prova que o número do FNDE
+  é o número que a própria secretaria declarou no Censo (fecha na unidade em
+  Paulo Afonso, Ibateguara e Manaus) é a que mais converte — porque torna todo
+  o resto rastreável.
+- **Cifra derivada precisa de marca visual.** O Dossiê da Matrícula abre uma
+  exceção à regra 3 e monetiza equivalentes pelo valor aluno/ano da UF. Só é
+  aceitável porque toda cifra assim leva `ᵈ` e a nota de rodapé, e porque há
+  teste que conta as marcas.
