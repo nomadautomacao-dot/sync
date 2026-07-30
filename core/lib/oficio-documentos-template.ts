@@ -84,7 +84,7 @@ export const RESPONSAVEL_PADRAO: ResponsavelOficio = {
   nome: "Adriel Pereira Tavares",
   cargo: "Responsável Técnico · TI — Global Company Consultorias",
   whatsapp: "(77) 99700-5880",
-  email: "rochaprime10@hotmail.com",
+  email: "globalconsultorias@icloud.com",
 };
 
 /**

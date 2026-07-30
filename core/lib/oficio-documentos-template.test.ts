@@ -69,7 +69,7 @@ describe("ofício de solicitação de documentos", () => {
 
     expect(saida).toContain("Adriel Pereira Tavares");
     expect(saida).toContain("(77) 99700-5880");
-    expect(saida).toContain("rochaprime10@hotmail.com");
+    expect(saida).toContain("globalconsultorias@icloud.com");
   });
 
   it("gera exatamente 4 páginas — 2 de ofício e 2 de questionário", () => {
@@ -82,11 +82,15 @@ describe("ofício de solicitação de documentos", () => {
     for (let i = 1; i <= 4; i++) expect(saida).toContain(`<span>${i} / 4</span>`);
   });
 
-  it("assina como Global Company Consultorias, sem menção a Rocha Prime", () => {
+  it("assina como Global Company Consultorias, sem resquício da marca antiga", () => {
     const saida = render();
 
     expect(saida).toContain("Global Company Consultorias");
-    expect(saida).not.toContain("Rocha Prime");
+    expect(saida).toContain("globalconsultorias@icloud.com");
+    // Varre marca E e-mail: assinar "Global Company" e dar contato
+    // "rochaprime" deixaria o ofício incoerente como peça formal.
+    expect(saida.toLowerCase()).not.toContain("rocha prime");
+    expect(saida.toLowerCase()).not.toContain("rochaprime");
   });
 
   it("embute o logo em base64 — o Chromium do PDF roda sem rede", () => {
