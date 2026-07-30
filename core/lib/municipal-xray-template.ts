@@ -1847,7 +1847,7 @@ function paginaComplementacoes(model: MunicipalXrayModel, pagina: number): strin
           : model.siope
             ? "A declaração ao SIOPE consta no exercício de referência — os dois lados do corte estão cobertos até aqui."
             : "Não foi possível ler a situação da declaração ao SIOPE nesta emissão; conferir diretamente no sistema."
-      }</p><p class="micro" style="margin-top:.05in">Prazos: DCA até 30/4 (LRF, art. 51, §1º, I); dados no Siconfi e no SIOPE até 31/8 para habilitação ao VAAT do exercício seguinte (Lei nº 14.113/2020, art. 13, §4º). Datas de transmissão lidas do extrato de entregas do Tesouro na geração deste relatório.</p></div></div>`
+      }</p><p class="micro" style="margin-top:.05in">Prazos: DCA até 30/4 (LRF, art. 51, §1º, I); Siconfi e SIOPE até 31/8 para habilitar ao VAAT do exercício seguinte (Lei nº 14.113/2020, art. 13, §4º). Datas lidas do extrato de entregas do Tesouro na emissão.</p></div></div>`
     : "";
 
   const statusVaar = !v
@@ -1864,7 +1864,7 @@ function paginaComplementacoes(model: MunicipalXrayModel, pagina: number): strin
   const statusVaat = t ? t.status : "Sem dado nas bases consultadas";
 
   const cardPendencia = v?.pendency
-    ? `<div class="card warn mt-3"><h3>O motivo oficial, nas palavras do FNDE</h3><p>&ldquo;${esc(v.pendency)}&rdquo;</p><div class="divider"></div><p class="small">Texto publicado pelo FNDE na lista de habilitação do VAAR${v.year ? ` ${v.year}` : ""}. Os incisos citados são as condicionalidades do art. 14, §1º da Lei nº 14.113/2020: I — gestão escolar por mérito; II — 80% dos estudantes no Saeb; III — redução das desigualdades de aprendizagem; IV — ICMS educacional (avaliado no estado); V — referencial curricular alinhado à BNCC. <b>Nenhum inciso é fiscal.</b></p></div>`
+    ? `<div class="card warn mt-3"><h3>O motivo oficial, nas palavras do FNDE</h3><p>&ldquo;${esc(v.pendency)}&rdquo;</p><div class="divider"></div><p class="small">Texto publicado pelo FNDE na lista de habilitação do VAAR${v.year ? ` ${v.year}` : ""}. Os incisos são as condicionalidades do art. 14, §1º: I — gestão escolar por mérito; II — 80% no Saeb; III — redução das desigualdades de aprendizagem; IV — ICMS educacional (aferido no estado); V — currículo alinhado à BNCC. <b>Nenhum é fiscal.</b></p></div>`
     : "";
 
   const numerosVaat = t && t.minimum !== null && t.minimum > 0
@@ -1874,9 +1874,9 @@ function paginaComplementacoes(model: MunicipalXrayModel, pagina: number): strin
       )}</div><p class="small mt-1">O cálculo usa a arrecadação do <b>penúltimo exercício</b> (art. 15, II)${t.revenueBaseYear ? ` — a base atual é ${t.revenueBaseYear}` : ""}, então a saída da faixa é previsível com dois anos de antecedência.</p>`
     : "";
 
-  return `<section class="page content-page">${header("Complementações da União")}<main class="page-body"><div class="kicker">FUNDEB · onde a receita se perde</div><h2>Cada complementação se perde por um motivo diferente</h2><p class="lede">VAAF é fórmula: quem está abaixo do mínimo recebe, sem hipótese de perda por pendência. VAAT se perde por <b>habilitação fiscal</b>. VAAR se perde por <b>condicionalidade de resultado</b>. Diagnosticar a parcela errada é corrigir o que não está quebrado — e deixar quebrado o que trava.</p><div class="grid-3 mt-3"><div class="card accent"><h3>VAAF</h3><p class="small">Equalização por fórmula dentro da UF. Todo ente abaixo do VAAF-MIN recebe automaticamente (art. 21). <b>Não existe perda por pendência</b> — o valor só muda com matrícula ponderada e arrecadação.</p></div><div class="card ${vaatInabilitado ? "bad" : "accent"}"><h3>VAAT</h3><div class="metric-value" style="font-size:11pt">${esc(statusVaat)}</div><p class="small">Condição única e <b>fiscal</b> (art. 13, §4º): dados contábeis no Siconfi e no SIOPE até <b>31 de agosto</b>. Inabilitado não tem o VAAT apurado: perde <b>100%</b> da complementação do exercício.${
+  return `<section class="page content-page">${header("Complementações da União")}<main class="page-body"><div class="kicker">FUNDEB · onde a receita se perde</div><h2>Cada complementação se perde por um motivo diferente</h2><p class="lede">VAAF é fórmula e não se perde. VAAT se perde por <b>habilitação fiscal</b>. VAAR se perde por <b>condicionalidade de resultado</b>. Diagnosticar a parcela errada é corrigir o que não está quebrado — e deixar quebrado o que trava.</p><div class="grid-3 mt-3"><div class="card accent"><h3>VAAF</h3><p class="small">Equalização por fórmula dentro da UF. Todo ente abaixo do VAAF-MIN recebe automaticamente (art. 21). <b>Não existe perda por pendência</b> — o valor só muda com matrícula ponderada e arrecadação.</p></div><div class="card ${vaatInabilitado ? "bad" : "accent"}"><h3>VAAT</h3><div class="metric-value" style="font-size:11pt">${esc(statusVaat)}</div><p class="small">Condição única e <b>fiscal</b> (art. 13, §4º): dados no Siconfi e no SIOPE até <b>31 de agosto</b>. Inabilitado perde <b>100%</b> da complementação do exercício.${
     t?.pendency ? ` <b>Pendência registrada:</b> <i>${esc(t.pendency)}</i>.` : ""
-  }</p></div><div class="card ${v && !v.qualified ? "bad" : "accent"}"><h3>VAAR</h3><div class="metric-value" style="font-size:11pt">${esc(statusVaar)}</div><p class="small">Cinco condicionalidades de resultado (art. 14, §1º), aferidas todo ano. Reprovar em <b>uma</b> zera a parcela inteira. Rateio proporcional à evolução dos indicadores.</p></div></div>${cardPendencia}<div class="insight mt-3"><b>&ldquo;Perdemos o VAAR por questão fiscal&rdquo; — essa frase mistura duas parcelas.</b> Pendência fiscal nunca derruba o VAAR: as causas possíveis são só as cinco condicionalidades acima${v?.pendency ? ", e a deste município está impressa ao lado, nas palavras do FNDE" : ""}. O que uma pendência fiscal derruba é (1) a <b>habilitação VAAT</b> do exercício seguinte, (2) <b>convênios e transferências voluntárias</b>, via CAUC, e (3) a aprovação das <b>contas</b> no tribunal. O repasse do FUNDEB em si é automático — art. 21 — e não é bloqueado por pendência administrativa.</div>${numerosVaat}${blocoPontualidade}</main>${footer(pagina, "FNDE e Tesouro Nacional — habilitação VAAR/VAAT e extrato de entregas")}</section>`;
+  }</p></div><div class="card ${v && !v.qualified ? "bad" : "accent"}"><h3>VAAR</h3><div class="metric-value" style="font-size:11pt">${esc(statusVaar)}</div><p class="small">Cinco condicionalidades de resultado (art. 14, §1º), aferidas todo ano. Reprovar em <b>uma</b> zera a parcela inteira. Rateio proporcional à evolução dos indicadores.</p></div></div>${cardPendencia}<div class="insight mt-3"><b>&ldquo;Perdemos o VAAR por questão fiscal&rdquo; — essa frase mistura duas parcelas.</b> Pendência fiscal nunca derruba o VAAR: as causas são só as cinco condicionalidades acima${v?.pendency ? ", e a deste município está impressa ao lado" : ""}. O que ela derruba é a <b>habilitação VAAT</b> do exercício seguinte, os <b>convênios</b> via CAUC e a aprovação das <b>contas</b> no tribunal. O repasse do FUNDEB em si é automático (art. 21).</div>${numerosVaat}${blocoPontualidade}</main>${footer(pagina, "FNDE e Tesouro Nacional — habilitação VAAR/VAAT e extrato de entregas")}</section>`;
 }
 
 /**
@@ -2036,7 +2036,9 @@ function paginaEscolas(model: MunicipalXrayModel, pagina: number): string {
   }
 
   const nota = (valor: number | null) => (valor === null ? "—" : decimal.format(valor));
-  const LIMITE = 14;
+  // 12 e não 14: com 14 linhas a página estoura nas redes que também disparam
+  // o bloco de participação e o de amplitude — os dois maiores da folha.
+  const LIMITE = 12;
   const visiveis = s.list.slice(0, LIMITE);
   const restantes = s.total - visiveis.length;
 
@@ -2254,7 +2256,7 @@ function paginaDemografia(model: MunicipalXrayModel, pagina: number): string {
   const ultima = d.births[d.births.length - 1];
   const encolhendo = d.trendPct !== null && d.trendPct < -3;
 
-  return `<section class="page content-page">${header("Demografia e demanda futura")}<main class="page-body"><div class="kicker">As coortes que vêm aí</div><h2>A rede de ${ultima ? ultima.firstGradeYear : "2030"} já nasceu — e já dá para contá-la</h2><p class="lede">A matrícula segue o nascimento com atraso fixo: o Registro Civil diz quantas crianças chegam à pré-escola e ao 1º ano até ${ultima ? ultima.firstGradeYear : "2030"}, e o Censo 2022 diz quantas existem hoje em cada faixa atendida.</p><div class="grid-4 mt-3">${metric(int(d.crechePop), "crianças de 0 a 3 anos no município")}${metric(int(d.prePop), "de 4 e 5 anos")}${metric(ultima ? int(ultima.count) : "N/D", `nascidos em ${ultima ? ultima.year : "—"}`)}${metric(
+  return `<section class="page content-page">${header("Demografia e demanda futura")}<main class="page-body"><div class="kicker">As coortes que vêm aí</div><h2>A rede de ${ultima ? ultima.firstGradeYear : "2030"} já nasceu — e já dá para contá-la</h2><p class="lede">A matrícula segue o nascimento com atraso fixo: o Registro Civil diz quantas crianças chegam à pré e ao 1º ano até ${ultima ? ultima.firstGradeYear : "2030"}; o Censo 2022 diz quantas existem hoje em cada faixa.</p><div class="grid-4 mt-3">${metric(int(d.crechePop), "crianças de 0 a 3 anos no município")}${metric(int(d.prePop), "de 4 e 5 anos")}${metric(ultima ? int(ultima.count) : "N/D", `nascidos em ${ultima ? ultima.year : "—"}`)}${metric(
     d.trendPct === null ? "N/D" : `${d.trendPct > 0 ? "+" : ""}${decimal.format(d.trendPct)}%`,
     primeira && ultima ? `nascimentos ${primeira.year} → ${ultima.year}` : "tendência",
   )}</div><div class="grid-2 mt-2"><div class="card accent"><h3>Calendário das coortes</h3><table><tbody>${linhas}</tbody></table><p class="micro" style="margin-top:.05in">Registro Civil (IBGE); a coorte entra na pré aos 4 anos e no ensino fundamental aos 6.</p></div><div class="card ${encolhendo ? "warn" : ""}"><h3>Atendimento por faixa — piso municipal e foto completa</h3><table><thead><tr><th>Faixa</th><th class="num">Rede municipal</th><th class="num">Todas as redes</th><th class="num"></th></tr></thead><tbody><tr><td>Creche (0–3)</td><td class="num">${coberturaCreche === null ? "N/D" : `<b>${pct(coberturaCreche)}</b>`}</td><td class="num">${atendimentoCreche === null ? "—" : pct(atendimentoCreche)}</td><td class="num micro">meta PNE: 50%</td></tr><tr><td>Pré-escola (4–5)</td><td class="num">${coberturaPre === null ? "N/D" : `<b>${pct(coberturaPre)}</b>`}</td><td class="num">${atendimentoPre === null ? "—" : pct(atendimentoPre)}</td><td class="num micro">universalização</td></tr><tr><td>Anos iniciais (6–10)</td><td class="num micro">—</td><td class="num">${atendimentoAi === null ? "—" : pct(atendimentoAi)}</td><td class="num micro">universalização</td></tr><tr><td>Anos finais (11–14)</td><td class="num micro">—</td><td class="num">${atendimentoAf === null ? "—" : pct(atendimentoAf)}</td><td class="num micro">universalização</td></tr></tbody></table><div class="divider"></div><p class="micro">Piso = matrículas da <b>rede municipal</b> ÷ população da faixa; foto completa = <b>todas as redes</b> (Censo Escolar${d.totalEnrollment ? ` ${d.totalEnrollment.year}` : ""}) ÷ mesma população. ${
@@ -2265,7 +2267,7 @@ function paginaDemografia(model: MunicipalXrayModel, pagina: number): string {
     faixaDescoberta
       ? ` <b>Sinal de busca ativa:</b> o atendimento total de ${faixaDescoberta.rotulo} está em ${pct(faixaDescoberta.valor ?? 0)} — numa faixa de matrícula obrigatória, a diferença é criança fora da escola, em alguma rede.`
       : ""
-  } População da faixa é do Censo 2022 e a matrícula é mais recente — leia como ordem de grandeza; acima de 100% indica atração de alunos de municípios vizinhos.</p></div></div><div class="${encolhendo ? "risk" : "insight"} mt-2"><b>${
+  } A população é do Censo 2022 e a matrícula é mais recente — ordem de grandeza; acima de 100% é atração de alunos de municípios vizinhos.</p></div></div><div class="${encolhendo ? "risk" : "insight"} mt-2"><b>${
     encolhendo
       ? `A base do fundo encolhe em data conhecida:`
       : `Leitura das coortes:`
@@ -2281,12 +2283,11 @@ function paginaDemografia(model: MunicipalXrayModel, pagina: number): string {
     d.teenMothers && d.teenMothers.births > 0
       ? `<div class="${d.teenMothers.sharePct >= 15 ? "risk" : "note"} mt-1"><b>Maternidade adolescente:</b> ${int(d.teenMothers.births)} dos nascimentos de ${d.teenMothers.year}
       (${pct(d.teenMothers.sharePct)}) são de mães de até 19 anos — um dos maiores preditores de evasão feminina
-      no ensino médio e no EJA. E a leitura dupla importa: cada mãe adolescente é também <b>demanda de creche</b>
-      batendo na porta da mesma rede que ela precisaria frequentar — sem vaga de creche, a evasão dela é
-      quase certa. Oferta noturna, contraturno e prioridade de vaga para mães estudantes são a resposta de
-      rede, nunca a cobrança individual.</div>`
+      no ensino médio e no EJA. Cada mãe adolescente é também <b>demanda de creche</b> batendo na porta da
+      mesma rede que ela precisaria frequentar — sem vaga, a evasão dela é quase certa. Oferta noturna,
+      contraturno e prioridade de vaga são resposta de rede, nunca cobrança individual.</div>`
       : ""
-  }<p class="small mt-1">Fontes: IBGE, Censo Demográfico 2022 (agregado 9514) e Estatísticas do Registro Civil (agregado 2612, incluindo idade da mãe), consultadas na geração deste relatório. Nascimentos por local de residência da mãe.</p></main>${footer(pagina, "IBGE — Censo 2022 e Registro Civil")}</section>`;
+  }<p class="micro mt-1">Fontes: IBGE, Censo Demográfico 2022 (agregado 9514) e Estatísticas do Registro Civil (agregado 2612, incluindo idade da mãe), consultadas na emissão. Nascimentos por local de residência da mãe.</p></main>${footer(pagina, "IBGE — Censo 2022 e Registro Civil")}</section>`;
 }
 
 /**
@@ -2476,13 +2477,13 @@ function paginaMapaEscolas(model: MunicipalXrayModel, pagina: number): string {
     "alunos em transporte público",
   )}</div><div class="grid-2 mt-3"><div class="card accent">${
     mapa || `<div class="empty">Malha territorial indisponível na emissão — as contagens ao lado seguem válidas.</div>`
-  }<p class="micro" style="margin-top:.05in">${int(m.withCoords)} de ${int(m.total)} escolas com coordenada declarada no Censo; contorno IBGE.</p></div><div class="card"><h3>Localização declarada — o que pondera</h3><table><tbody><tr><td>Escolas urbanas</td><td class="num">${int(m.total - m.ruralCount)}</td></tr><tr><td>Escolas rurais (campo, +15% no fator)</td><td class="num"><b>${int(m.ruralCount)}</b></td></tr>${linhasDif}</tbody></table><div class="divider"></div><p class="small">Indígena e quilombola ponderam de 1,4 a 2,17 — os maiores fatores da planilha. A condição vale quando <b>declarada na coleta</b>: escola em território sem a marcação perde a diferença todo exercício.</p></div></div>${
+  }<p class="micro" style="margin-top:.05in">${int(m.withCoords)} de ${int(m.total)} escolas com coordenada declarada no Censo; contorno IBGE.</p></div><div class="card"><h3>Localização declarada — o que pondera</h3><table><tbody><tr><td>Escolas urbanas</td><td class="num">${int(m.total - m.ruralCount)}</td></tr><tr><td>Escolas rurais (campo, +15% no fator)</td><td class="num"><b>${int(m.ruralCount)}</b></td></tr>${linhasDif}</tbody></table><div class="divider"></div><p class="small">Indígena e quilombola ponderam de 1,4 a 2,17 — os maiores fatores da planilha, e valem quando <b>declarados na coleta</b>: escola em território sem a marcação perde a diferença todo exercício.</p></div></div>${
     ribeirinhas > 0
       ? `<div class="insight mt-3"><b>Territórios de rio:</b> ${ribeirinhas === 1 ? "1 escola declarada" : `${int(ribeirinhas)} escolas declaradas`} em comunidade ribeirinha. <b>O transporte dessas escolas é por embarcação?</b> Cheia e vazante mudam rota, calendário e frequência — e frequência é Censo, e Censo é FUNDEB. Conferir PNATE (embarcação tem per capita maior) e calendário adaptado ao regime do rio.</div>`
       : `<div class="note mt-3"><b>Transporte:</b> ${int(m.transportStudents)} alunos da rede usam transporte público${m.transportPct !== null ? ` (${pct(m.transportPct)} das matrículas)` : ""}. Rota, frota própria × terceirizada e estado dos veículos não estão em base pública — seguem no roteiro de campo.</div>`
   }${
     m.race && m.race.rural.enrolled > 0 && m.race.urban.enrolled > 0
-      ? `<div class="note mt-2"><b>Cor/raça por zona (o que o agregado esconde):</b> a matrícula negra (preta + parda) é ${
+      ? `<div class="note mt-2"><b>Cor/raça por zona:</b> a matrícula negra (preta + parda) é ${
           m.race.urban.blackPct !== null ? pct(m.race.urban.blackPct) : "N/D"
         } na zona urbana e <b>${m.race.rural.blackPct !== null ? pct(m.race.rural.blackPct) : "N/D"}</b> na rural${
           m.race.rural.indigenousPct !== null && m.race.rural.indigenousPct >= 1
@@ -2490,7 +2491,7 @@ function paginaMapaEscolas(model: MunicipalXrayModel, pagina: number): string {
             : ""
         }. A Condicionalidade III do VAAR mede desigualdade <b>racial</b> de aprendizagem: se a rede rural é mais negra e vai pior, este mapa é o mapa da condicionalidade.${
           m.race.urban.undeclaredPct !== null && m.race.urban.undeclaredPct >= 15
-            ? ` <b>${pct(m.race.urban.undeclaredPct)} sem declaração de cor/raça na zona urbana</b> — campo em branco na coleta suja exatamente o indicador que o VAAR observa.`
+            ? ` <b>${pct(m.race.urban.undeclaredPct)} sem declaração na zona urbana</b> — campo em branco suja o indicador que o VAAR observa.`
             : ""
         }</div>`
       : ""
@@ -3292,7 +3293,7 @@ h2{max-width:7.05in}
 .territory-fallback{width:92%;height:92%;filter:none}
 .territory-fallback>path:not(.territory-pin),.territory-fallback>circle{fill:none;stroke:#9cbcb7;stroke-width:5}
 .territory-fallback .territory-pin{fill:var(--teal);stroke:var(--navy);stroke-width:5;fill-rule:evenodd}
-.map-escolas{width:4.15in;height:4.15in;display:block;margin:0 auto}.map-escolas .map-shape{fill:var(--wash);stroke:var(--navy);stroke-width:4;vector-effect:non-scaling-stroke;fill-rule:evenodd}.map-escolas .dot-urbana{fill:var(--teal);opacity:.85}.map-escolas .dot-rural{fill:var(--gold);opacity:.9}.map-escolas .dot-dif{fill:var(--red)}.map-legend{display:flex;gap:.16in;justify-content:center;font-size:7.2pt;color:var(--muted);margin-top:.06in}.map-legend i{display:inline-block;width:.09in;height:.09in;border-radius:50%;margin-right:.04in;vertical-align:-1px}.map-legend .li-urbana{background:var(--teal)}.map-legend .li-rural{background:var(--gold)}.map-legend .li-dif{background:var(--red)}
+.map-escolas{width:3.55in;height:3.55in;display:block;margin:0 auto}.map-escolas .map-shape{fill:var(--wash);stroke:var(--navy);stroke-width:4;vector-effect:non-scaling-stroke;fill-rule:evenodd}.map-escolas .dot-urbana{fill:var(--teal);opacity:.85}.map-escolas .dot-rural{fill:var(--gold);opacity:.9}.map-escolas .dot-dif{fill:var(--red)}.map-legend{display:flex;gap:.16in;justify-content:center;font-size:7.2pt;color:var(--muted);margin-top:.06in}.map-legend i{display:inline-block;width:.09in;height:.09in;border-radius:50%;margin-right:.04in;vertical-align:-1px}.map-legend .li-urbana{background:var(--teal)}.map-legend .li-rural{background:var(--gold)}.map-legend .li-dif{background:var(--red)}
 .cover-map-caption{padding:.13in .03in .02in;display:flex;justify-content:space-between;gap:.12in;color:var(--muted);font-size:6.7pt;text-transform:uppercase;letter-spacing:.06em}
 .cover-map-caption b{color:var(--navy)}
 .cover-bottom{padding:.27in var(--page-x) .3in;background:var(--navy);color:#fff}

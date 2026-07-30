@@ -116,7 +116,7 @@ describe("página das complementações — por que cada uma se perde", () => {
 
     expect(saida).toContain("O motivo oficial, nas palavras do FNDE");
     expect(saida).toContain("Não cumprimento do disposto no art. 14, § 1º, II e III");
-    expect(saida).toContain("Nenhum inciso é fiscal");
+    expect(saida).toContain("Nenhum é fiscal");
   });
 
   it("desfaz a confusão entre VAAR e VAAT", () => {
@@ -1151,7 +1151,7 @@ describe("demografia e demanda futura no Raio-X", () => {
 
     expect(saida).toContain("Maternidade adolescente");
     expect(saida).toContain("demanda de creche");
-    expect(saida).toContain("nunca a cobrança individual");
+    expect(saida).toContain("nunca cobrança individual");
   });
 });
 
