@@ -6,6 +6,12 @@ interface DocumentoCardProps {
   icone: React.ElementType;
   nome: string;
   paginas: number;
+  /**
+   * Substitui o "N pg" do canto quando o tamanho não é fixo. Os dossiês
+   * extensos têm volume em função do município — 20 escolas em Ibateguara,
+   * 508 em Manaus —, e anunciar um número fixo ali seria mentira.
+   */
+  medida?: string;
   descricao: string;
   /** O que o documento cobre — some no mobile, onde o card já é longo. */
   conteudo: string[];
@@ -24,6 +30,7 @@ export function DocumentoCard({
   icone: Icone,
   nome,
   paginas,
+  medida,
   descricao,
   conteudo,
   variante,
@@ -42,7 +49,7 @@ export function DocumentoCard({
 
         <h2 className="flex-1 text-[14.5px] font-bold tracking-[-0.3px] text-[#16181D]">{nome}</h2>
 
-        <span className="shrink-0 font-mono text-[10.5px] text-[#A2A6B2]">{paginas} pg</span>
+        <span className="shrink-0 font-mono text-[10.5px] text-[#A2A6B2]">{medida ?? `${paginas} pg`}</span>
       </div>
 
       <p className="mt-[10px] text-[12px] leading-relaxed text-[#767A86]">{descricao}</p>

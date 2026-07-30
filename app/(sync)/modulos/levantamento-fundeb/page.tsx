@@ -10,6 +10,7 @@ import {
   FileTextIcon,
   HistoryIcon,
   LoaderIcon,
+  SchoolIcon,
   SendIcon,
   ZapIcon,
 } from "lucide-react";
@@ -37,7 +38,12 @@ import { PainelCenso } from "./_components/painel-censo";
 import { PainelProjecao } from "./_components/painel-projecao";
 import type { RespostaLevantamento } from "./_components/tipos";
 
-type Documento = "raio-x" | "levantamento" | "historico-censo" | "oficio-documentos";
+type Documento =
+  | "raio-x"
+  | "levantamento"
+  | "historico-censo"
+  | "oficio-documentos"
+  | "dossie-escolas";
 
 /**
  * Os quatro documentos que o módulo produz, nesta ordem de uso.
@@ -130,6 +136,27 @@ const DOCUMENTOS = [
       "Registro público sob cada pergunta",
     ],
   },
+  {
+    id: "dossie-escolas" as const,
+    reportType: "dossie_escolas" as CityReportType,
+    icone: SchoolIcon,
+    nome: "Dossiê das Escolas",
+    // O tamanho é função do município; a medida real vem da prévia da rota.
+    paginas: 0,
+    variante: "secundario" as const,
+    prefixoArquivo: "Dossie_Escolas",
+    endpoint: "/api/modulos/dossies/escolas",
+    descricao:
+      "A rede inteira, unidade por unidade: território, matrícula, resultado e contexto de cada escola na mesma linha.",
+    conteudo: [
+      "Um bloco por escola",
+      "IDEB e Saeb por etapa",
+      "INSE e complexidade de gestão",
+      "Distorção, abandono e docentes",
+      "Cor/raça e transporte",
+      "Índice remissivo",
+    ],
+  },
 ];
 
 function pdfBlobFromBase64(base64: string): Blob {
@@ -186,6 +213,21 @@ function Bancada() {
 
   const relatorio = resposta?.relatorio;
   const identificacao = relatorio?.identificacao;
+
+  /* O Dossiê das Escolas não tem tamanho fixo: 20 blocos em Ibateguara, 508 em
+     Manaus. Disparar um PDF de 130 folhas sem avisar é hostil, então a prévia
+     vem antes e o card anuncia o volume real. Falha aqui não bloqueia nada — o
+     card só perde a medida. */
+  const { data: previaDossie } = useQuery<{ escolas: number; paginasEstimadas: number }>({
+    queryKey: ["dossie-escolas-previa", codigoIbge],
+    queryFn: async () => {
+      const res = await fetch(`/api/modulos/dossies/escolas?codigo_ibge=${codigoIbge}`);
+      if (!res.ok) throw new Error("prévia indisponível");
+      return res.json();
+    },
+    enabled: !!codigoIbge,
+    retry: false,
+  });
 
   /* Chegando pela URL, o nome e a UF só existem depois que o relatório carrega —
      e os dois são obrigatórios no corpo que as rotas de PDF recebem. */
@@ -471,6 +513,13 @@ function Bancada() {
                 icone={documento.icone}
                 nome={documento.nome}
                 paginas={documento.paginas}
+                medida={
+                  documento.id === "dossie-escolas"
+                    ? previaDossie
+                      ? `${previaDossie.escolas} escolas · ~${previaDossie.paginasEstimadas} pg`
+                      : "tamanho variável"
+                    : undefined
+                }
                 descricao={documento.descricao}
                 conteudo={documento.conteudo}
                 variante={documento.variante}
