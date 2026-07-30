@@ -137,7 +137,7 @@ Nenhum dossiê depende de fonte nova.
 | Demografia | `demografia-educacional.ts` | **por coorte** |
 | Gêmeos estatísticos | `municipios-gemeos.ts` | **por indicador** |
 
-### A única limitação real, e ela é acionável
+### A limitação que sobrou, medida
 
 O dataset por escola (`escolas-territorio.json`) foi gerado guardando **oito
 colunas** dos microdados do Censo: código, rural, localização diferenciada,
@@ -146,21 +146,23 @@ escola — infraestrutura item a item (`IN_AGUA_POTAVEL`, `IN_INTERNET`,
 `IN_BIBLIOTECA`, `IN_QUADRA_ESPORTES`, `IN_LABORATORIO_*`, `IN_BANHEIRO_PNE`…),
 etapas ofertadas, docentes, salas, e o nome da entidade.
 
-Hoje o **nome** da escola só chega pelo cruzamento com `ideb-escolas.json`, que
-cobre apenas as escolas que aparecem na divulgação do IDEB. Escola de creche ou
-pré-escola pura fica sem nome no dossiê.
+**O nome não é o problema que já foi.** Ele chega por `indicadores-escolas.json`,
+que cobre muito mais que a divulgação do IDEB — medido em 30/07/2026 sobre cinco
+redes (2.311 escolas), a lacuna é de **6,4%**, concentrada em São Paulo (8,0%).
+Paulo Afonso e Ibateguara não têm nenhuma escola sem nome. A escola sem nome sai
+identificada pelo código, com a razão dita no bloco.
 
-**O que resolve:** regerar `escolas-territorio.json` com mais colunas, via
-`scripts/dados/gerar-escolas-territorio.mjs <microdados.zip>`. O script já lê o
-zip do INEP; é questão de ampliar a lista de colunas guardadas.
+**O que ainda falta é a infraestrutura por escola.** Hoje ela só existe agregada
+por município, no Censo municipal — não dá para dizer *quais* escolas estão sem
+água, sem esgoto ou sem quadra, que é a pergunta que vira obra.
 
-**O que trava hoje:** `DADOS_BRUTOS_DIR` já aponta para o Mac
-(`~/Desktop/Sync-Arquivos/dados-brutos`), mas o zip dos microdados não está lá.
-Baixar de
-`https://download.inep.gov.br/microdados/microdados_censo_escolar_<ano>.zip`
-(~2 GB) resolve. **Não é dependência de execução:** os dossiês leem os JSONs
-derivados em `data/`, que estão versionados e vão na imagem — o zip é
-necessário uma vez, offline, só para regerar.
+**O que trava:** o INEP moveu os microdados de `/microdados/` para
+`/dados_abertos/`, e **o zip de 2025 não está publicado em nenhum dos dois** —
+em 30/07/2026 só 2023 (32 MB) e 2024 (34 MB) respondem. Regerar a partir de 2024
+rebaixaria o dataset em um ano, o que é pior que a lacuna. O arquivo de 2025 que
+gerou o dataset atual veio de download manual; regerar com mais colunas depende
+de ter esse zip em mãos de novo. O script já aceita o caminho local como
+argumento e agora explica isso quando o download falha.
 
 Isso está detalhado no dossiê 1, que é o que mais ganha com a regeneração.
 

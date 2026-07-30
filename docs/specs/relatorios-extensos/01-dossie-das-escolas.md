@@ -175,7 +175,7 @@ Colunas a acrescentar, em ordem de valor:
 
 | Coluna | Ganho |
 |---|---|
-| `NO_ENTIDADE` | resolve o problema do nome para toda a rede |
+| `NO_ENTIDADE` | fecha os 6,4% de escolas sem nome (medido em 30/07/2026) |
 | `IN_AGUA_POTAVEL`, `IN_ESGOTO_REDE_PUBLICA` | condição sanitária por escola |
 | `IN_INTERNET`, `IN_BANDA_LARGA` | conectividade por escola |
 | `IN_BIBLIOTECA`, `IN_QUADRA_ESPORTES`, `IN_LABORATORIO_*` | espaço pedagógico |
@@ -184,11 +184,27 @@ Colunas a acrescentar, em ordem de valor:
 | `QT_DOC_BAS` | docentes por escola → razão aluno/docente por unidade |
 | `IN_MANT_ESCOLA_PRIVADA_*` / etapas ofertadas | perfil de oferta |
 
-**Bloqueio atual:** `DADOS_BRUTOS_DIR` no `.env.local` aponta para
-`/home/AdrielT87/...`, caminho da máquina Windows. Neste Mac o zip não está
-acessível. Baixar de
-`https://download.inep.gov.br/microdados/microdados_censo_escolar_2025.zip`
-(~2 GB) e ajustar a variável resolve.
+**Bloqueio atual, conferido em 30/07/2026:** o INEP moveu os microdados de
+`/microdados/` para `/dados_abertos/`, e **o zip de 2025 não está publicado em
+nenhum dos dois** — só 2023 (32 MB) e 2024 (34 MB) respondem. Regerar a partir
+de 2024 rebaixaria o dataset em um ano, o que é pior que a lacuna que resolveria.
+O arquivo de 2025 que gerou o dataset atual veio de download manual.
+
+O caminho, quando o zip de 2025 aparecer (ou for reencontrado):
+
+```bash
+node scripts/dados/gerar-escolas-territorio.mjs <microdados_censo_escolar_2025.zip>
+```
+
+O script já aceita o caminho local como argumento e explica isso quando o
+download falha. `DADOS_BRUTOS_DIR` já aponta para o Mac.
+
+**O que a lacuna custa hoje.** O nome já não é o problema que esta seção
+descrevia: ele chega por `indicadores-escolas.json`, e a falta é de 6,4% das
+escolas — nenhuma em Paulo Afonso ou Ibateguara, 8,0% em São Paulo. O que
+realmente falta é **infraestrutura por escola**: hoje ela só existe agregada por
+município, então o dossiê diz quantas escolas da rede estão sem água, mas não
+*quais* — e é a segunda pergunta que vira obra.
 
 > Esta é a **única** dependência de dado bruto de todos os oito dossiês. Os
 > outros sete rodam com o que já está no repositório.

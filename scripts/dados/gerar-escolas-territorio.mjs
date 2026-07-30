@@ -28,8 +28,22 @@ import { dirname, join } from "node:path";
 import { createInflateRaw } from "node:zlib";
 import { StringDecoder } from "node:string_decoder";
 
-const ANO = 2025;
-const URL = `https://download.inep.gov.br/microdados/microdados_censo_escolar_${ANO}.zip`;
+/**
+ * Ano do Censo. O dataset versionado é 2025 — passe outro por `ANO_CENSO=`
+ * apenas para regerar de propósito, porque baixar um ano mais antigo por cima
+ * do arquivo atual **rebaixa** o dado sem avisar ninguém.
+ */
+const ANO = Number(process.env.ANO_CENSO) || 2025;
+
+/**
+ * O INEP moveu os microdados de `/microdados/` para `/dados_abertos/` — o
+ * caminho antigo devolve 404 para todos os anos. E o zip de 2025 ainda não
+ * está publicado em nenhum dos dois: em 30/07/2026 só 2023 (32 MB) e 2024
+ * (34 MB) respondem. O arquivo de 2025 que gerou o dataset atual veio de
+ * download manual, e é por isso que passar o zip local continua sendo o
+ * caminho principal deste script.
+ */
+const URL = `https://download.inep.gov.br/dados_abertos/microdados_censo_escolar_${ANO}.zip`;
 const DESTINO = join(process.cwd(), "data", "inep", "escolas-territorio.json");
 
 function log(mensagem) {
@@ -101,6 +115,12 @@ async function main() {
   } else {
     log(`baixando ${URL}…`);
     const resposta = await fetch(URL, { signal: AbortSignal.timeout(900_000), headers: { "User-Agent": "Mozilla/5.0" } });
+    if (resposta.status === 404) {
+      throw new Error(
+        `o INEP não publica o Censo ${ANO} em ${URL}. Em 30/07/2026 só 2023 e 2024 respondem. ` +
+          `Baixe o zip manualmente e rode: node scripts/dados/gerar-escolas-territorio.mjs <arquivo.zip>`,
+      );
+    }
     if (!resposta.ok) throw new Error(`HTTP ${resposta.status}`);
     zip = Buffer.from(await resposta.arrayBuffer());
   }

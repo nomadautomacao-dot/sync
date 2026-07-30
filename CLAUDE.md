@@ -515,7 +515,7 @@ No fluxo normal não se usa nenhum dos dois.
 ### O que NÃO está implementado
 - Módulos: Terceirização, Formação, Atas, Tecnologia, RH, Financeiro — existem
   como chaves no `moduleCatalog` (a tela `/modulos` as exibe), sem rota nem tela
-- Testes de ponta a ponta (a suíte é de unidade/integração: 594 testes, Vitest)
+- Testes de ponta a ponta (a suíte é de unidade/integração: 602 testes, Vitest)
 - **Staging separado de produção** — o deploy da `main` vai direto ao ar
 - Monitoramento (Sentry, Axiom)
 
