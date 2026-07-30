@@ -10,6 +10,7 @@ import {
   FileTextIcon,
   HistoryIcon,
   LoaderIcon,
+  ClipboardCheckIcon,
   SchoolIcon,
   SendIcon,
   ZapIcon,
@@ -43,7 +44,8 @@ type Documento =
   | "levantamento"
   | "historico-censo"
   | "oficio-documentos"
-  | "dossie-escolas";
+  | "dossie-escolas"
+  | "dossie-conformidade";
 
 /**
  * Os quatro documentos que o módulo produz, nesta ordem de uso.
@@ -157,6 +159,26 @@ const DOCUMENTOS = [
       "Índice remissivo",
     ],
   },
+  {
+    id: "dossie-conformidade" as const,
+    reportType: "dossie_conformidade" as CityReportType,
+    icone: ClipboardCheckIcon,
+    nome: "Dossiê da Conformidade",
+    paginas: 0,
+    variante: "secundario" as const,
+    prefixoArquivo: "Dossie_Conformidade",
+    endpoint: "/api/modulos/dossies/conformidade",
+    descricao:
+      "Todo requisito do CAUC com a data em que vence, toda vinculação do SIOPE com a folga, e o que cada pendência trava — e o que ela não trava.",
+    conteudo: [
+      "Agenda por data de vencimento",
+      "Requisito a requisito",
+      "SIOPE com folga e parâmetro",
+      "Pontualidade das DCAs",
+      "As cinco condicionalidades",
+      "Piso do magistério",
+    ],
+  },
 ];
 
 function pdfBlobFromBase64(base64: string): Blob {
@@ -218,6 +240,21 @@ function Bancada() {
      Manaus. Disparar um PDF de 130 folhas sem avisar é hostil, então a prévia
      vem antes e o card anuncia o volume real. Falha aqui não bloqueia nada — o
      card só perde a medida. */
+  const { data: previaConformidade } = useQuery<{
+    requisitos: number;
+    pendentes: number;
+    paginasEstimadas: number;
+  }>({
+    queryKey: ["dossie-conformidade-previa", codigoIbge],
+    queryFn: async () => {
+      const res = await fetch(`/api/modulos/dossies/conformidade?codigo_ibge=${codigoIbge}`);
+      if (!res.ok) throw new Error("prévia indisponível");
+      return res.json();
+    },
+    enabled: !!codigoIbge,
+    retry: false,
+  });
+
   const { data: previaDossie } = useQuery<{ escolas: number; paginasEstimadas: number }>({
     queryKey: ["dossie-escolas-previa", codigoIbge],
     queryFn: async () => {
@@ -518,7 +555,11 @@ function Bancada() {
                     ? previaDossie
                       ? `${previaDossie.escolas} escolas · ~${previaDossie.paginasEstimadas} pg`
                       : "tamanho variável"
-                    : undefined
+                    : documento.id === "dossie-conformidade"
+                      ? previaConformidade
+                        ? `${previaConformidade.requisitos} requisitos · ~${previaConformidade.paginasEstimadas} pg`
+                        : "tamanho variável"
+                      : undefined
                 }
                 descricao={documento.descricao}
                 conteudo={documento.conteudo}

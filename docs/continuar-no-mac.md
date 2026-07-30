@@ -17,7 +17,7 @@
 git clone <repo> && cd Sync
 npm install
 npx playwright install chromium   # obrigatório: os PDFs são gerados no Chromium
-npm test                          # 475 testes — confirma que a base chegou íntegra
+npm test                          # 482 testes — confirma que a base chegou íntegra
 npm run dev                       # Next em :3100
 ```
 
@@ -80,7 +80,7 @@ lê apenas os JSON de `data/`.
 ### Verificação rápida
 
 ```bash
-npm test              # 475 testes, 41 arquivos — devem passar todos
+npm test              # 482 testes, 41 arquivos — devem passar todos
 npm run dev           # Next em :3100
 ```
 
@@ -112,6 +112,7 @@ não foram introduzidos por este trabalho e não bloqueiam o build do Next.
 | **Diagnóstico FUNDEB** (Levantamento) | `POST /api/modulos/levantamento-fundeb/pdf?tipo=levantamento` | **17** | `LEVANTAMENTO_TOTAL_PAGINAS` em `core/lib/fundeb-levantamento-template.ts` |
 | **Histórico do Censo Escolar** | `POST /api/modulos/levantamento-fundeb/historico-censo` | **11** | `PAGINAS_ESPERADAS` em `core/lib/censo-historico-pdf.ts` |
 | **Dossiê das Escolas** | `POST /api/modulos/dossies/escolas` | **variável** (9 a 130+) | contrato de **completude**: blocos impressos = escolas da rede |
+| **Dossiê da Conformidade** | `POST /api/modulos/dossies/conformidade` | **variável** (~9) | completude: linhas impressas ≥ requisitos do extrato |
 
 Todos aparecem como cards em
 `app/(sync)/modulos/levantamento-fundeb/page.tsx`, baixam o PDF **e** arquivam o
@@ -357,7 +358,7 @@ nova foi conferida visualmente.
 
 ## 7. Próximo passo recomendado
 
-1. Rodar `npm test` no Mac para confirmar que a base chegou íntegra (475 testes).
+1. Rodar `npm test` no Mac para confirmar que a base chegou íntegra (482 testes).
 2. Gerar um Raio-X real (Manaus, `1302603`) e um Histórico do Censo, e ler os
    dois PDFs inteiros — é a única forma de ver o conjunto.
 3. Onda 4: #3, #40, #41, #47 e #48 entregues; **#43 confirmado sem fonte
