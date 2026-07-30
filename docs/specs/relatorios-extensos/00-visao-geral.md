@@ -177,9 +177,12 @@ Isso está detalhado no dossiê 1, que é o que mais ganha com a regeneração.
 5. ✅ **Aprendizagem** — a distribuição que a média esconde.
 6. ✅ **Demanda** — a coorte que já nasceu contra a vaga que existe.
 7. ✅ **Equidade e territórios** — três contagens da mesma criança.
-8. Resta o **comparativo**, o município contra os pares.
+8. ✅ **Comparativo** — quanto, comparado a quem.
 
-### O que a construção dos sete primeiros ensinou
+**Os oito estão no ar.** Todos emitem individualmente pela tela de relatórios,
+com prévia de volume antes da geração, e arquivam o JSON na ficha da cidade.
+
+### O que a construção dos oito ensinou
 
 - **A armadilha do campo de data.** No CAUC, parte dos requisitos repete a
   *data da consulta* no campo de validade. Lido como vencimento, o documento
@@ -238,6 +241,13 @@ Isso está detalhado no dossiê 1, que é o que mais ganha com a regeneração.
 - **População de uma pessoa não merece uma folha.** O Censo devolve populações
   de 1 ou 2 habitantes; Paulo Afonso tem população quilombola igual a 1. Piso de
   relevância antes de dedicar seção, ou o documento ensina o leitor a pular.
+- **Cor precisa seguir o sentido, não o valor.** Percentil 90 em abandono é
+  péssimo; percentil 90 em IDEB é ótimo; percentil 90 em investimento por aluno
+  não é nem um nem outro. Todo painel comparativo orienta a escala antes de
+  colorir, e indicador sem lado melhor sai em cinza.
+- **Comparação não é conformidade.** Estar acima da mediana dos pares não
+  significa cumprir a lei — a mediana pode ser ilegal. Onde existe piso legal
+  (MDE, remuneração, aplicação do FUNDEB), ele aparece junto e prevalece.
 - **Dataset estreito demais some da página.** `autoresEducacao` guardava só os
   três maiores autores de emenda **de educação**, e isso deixava a folha vazia
   em 86% dos municípios. Guardar todos os autores de qualquer função encheu

@@ -12,6 +12,7 @@ import {
   LoaderIcon,
   ClipboardCheckIcon,
   BabyIcon,
+  BarChart3Icon,
   GlobeIcon,
   GraduationCapIcon,
   LandmarkIcon,
@@ -55,7 +56,8 @@ type Documento =
   | "dossie-dinheiro"
   | "dossie-aprendizagem"
   | "dossie-demanda"
-  | "dossie-equidade";
+  | "dossie-equidade"
+  | "dossie-comparativo";
 
 /**
  * Os quatro documentos que o módulo produz, nesta ordem de uso.
@@ -289,6 +291,26 @@ const DOCUMENTOS = [
       "A ponte com a Condicionalidade III",
     ],
   },
+  {
+    id: "dossie-comparativo" as const,
+    reportType: "dossie_comparativo" as CityReportType,
+    icone: BarChart3Icon,
+    nome: "Dossiê Comparativo",
+    paginas: 0,
+    variante: "secundario" as const,
+    prefixoArquivo: "Dossie_Comparativo",
+    endpoint: "/api/modulos/dossies/comparativo",
+    descricao:
+      "Quanto, comparado a quem: cada indicador contra a mediana dos municípios de rede do mesmo tamanho, a mediana da UF e o percentil na coorte.",
+    conteudo: [
+      "O painel de percentis numa folha",
+      "Três réguas por indicador",
+      "As maiores distâncias, desenvolvidas",
+      "Parâmetro legal onde ele prevalece",
+      "A coorte: comparado com quem",
+      "Distância traduzida em matrículas",
+    ],
+  },
 ];
 
 function pdfBlobFromBase64(base64: string): Blob {
@@ -437,6 +459,22 @@ function Bancada() {
     retry: false,
   });
 
+  const { data: previaComparativo } = useQuery<{
+    indicadores: number;
+    piores: number;
+    posicaoMedia: number | null;
+    paginasEstimadas: number;
+  }>({
+    queryKey: ["dossie-comparativo-previa", codigoIbge],
+    queryFn: async () => {
+      const res = await fetch(`/api/modulos/dossies/comparativo?codigo_ibge=${codigoIbge}`);
+      if (!res.ok) throw new Error("prévia indisponível");
+      return res.json();
+    },
+    enabled: !!codigoIbge,
+    retry: false,
+  });
+
   /* Chegando pela URL, o nome e a UF só existem depois que o relatório carrega —
      e os dois são obrigatórios no corpo que as rotas de PDF recebem. */
   const municipio: IbgeMunicipio | null =
@@ -523,6 +561,12 @@ function Bancada() {
         previaEquidade.povosComSinal > 0 ? ` · ${previaEquidade.povosComSinal} a conferir` : "";
       const cadastro = previaEquidade.mudouCadastro ? " · cadastro mudou" : "";
       return `${previaEquidade.correntes} povo(s)${sinal}${cadastro} · ~${previaEquidade.paginasEstimadas} pg`;
+    }
+    if (id === "dossie-comparativo") {
+      if (!previaComparativo) return "tamanho variável";
+      const posicao =
+        previaComparativo.posicaoMedia !== null ? ` · posição p${previaComparativo.posicaoMedia}` : "";
+      return `${previaComparativo.indicadores} indicadores · ${previaComparativo.piores} abaixo${posicao} · ~${previaComparativo.paginasEstimadas} pg`;
     }
     return undefined;
   };

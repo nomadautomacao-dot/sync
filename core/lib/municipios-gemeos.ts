@@ -26,10 +26,16 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { agruparNiveis } from "./saeb-distribuicao";
+
 const ARQUIVO_PONDERADAS = join("data", "fnde", "matriculas-ponderadas-2026.json");
 const ARQUIVO_VAAR = join("data", "fnde", "vaar-2026.json");
 const ARQUIVO_SIOPE = join("data", "fnde", "siope-indicadores.json");
 const ARQUIVO_REMUNERACAO = join("data", "fnde", "remuneracao-docente.json");
+const ARQUIVO_RENDIMENTO = join("data", "inep-rendimento-municipal-2023.json");
+const ARQUIVO_SAEB = join("data", "inep", "saeb-distribuicao.json");
+const ARQUIVO_ALFABETIZACAO = join("data", "inep", "alfabetizacao-municipios.json");
+const ARQUIVO_EQUIDADE = join("data", "inep-equidade-municipal.json");
 
 /** Tamanho-alvo de cada coorte. */
 const COORTE_PORTE = 80;
@@ -53,6 +59,7 @@ export interface IndicadorGemeos {
   sentido: SentidoGemeos;
   /** Quantos semelhantes têm o dado — percentil sobre coorte rala não vale. */
   comparaveis: number;
+  grupo: GrupoIndicador;
 }
 
 export interface MunicipiosGemeos {
@@ -74,22 +81,46 @@ interface MetricasMunicipio {
   vaarHabilitado: boolean | null;
 }
 
+/**
+ * Grupo temático do indicador — organiza o painel e nada mais.
+ *
+ * Existe porque quinze réguas numa folha só viram parede: o gestor lê "onde eu
+ * estou pior" por assunto, não por ordem de dataset.
+ */
+export type GrupoIndicador = "fundo" | "resultado" | "financiamento" | "cadastro";
+
 interface DefinicaoIndicador {
   chave: string;
   rotulo: string;
   unidade: "percentual" | "reais" | "fator";
   sentido: SentidoGemeos;
+  grupo: GrupoIndicador;
 }
 
+export const ROTULO_GRUPO_INDICADOR: Record<GrupoIndicador, string> = {
+  fundo: "Composição do fundo",
+  resultado: "Resultado e fluxo",
+  financiamento: "Financiamento e pessoal",
+  cadastro: "Qualidade do cadastro",
+};
+
 const INDICADORES: DefinicaoIndicador[] = [
-  { chave: "fatorMedio", rotulo: "Fator médio de ponderação da rede", unidade: "fator", sentido: "maior-melhor" },
-  { chave: "crecheIntegral", rotulo: "Creche pública em tempo integral", unidade: "percentual", sentido: "maior-melhor" },
-  { chave: "coberturaAee", rotulo: "Cobertura de AEE na educação especial", unidade: "percentual", sentido: "maior-melhor" },
-  { chave: "mde", rotulo: "Aplicação em MDE", unidade: "percentual", sentido: "maior-melhor" },
-  { chave: "remuneracao70", rotulo: "FUNDEB em remuneração dos profissionais", unidade: "percentual", sentido: "maior-melhor" },
-  { chave: "naoAplicado", rotulo: "FUNDEB não aplicado no exercício", unidade: "percentual", sentido: "menor-melhor" },
-  { chave: "investimentoPorAluno", rotulo: "Investimento por aluno", unidade: "reais", sentido: "neutro" },
-  { chave: "medianaMagisterio", rotulo: "Mediana salarial do magistério (40h)", unidade: "reais", sentido: "neutro" },
+  { chave: "fatorMedio", rotulo: "Fator médio de ponderação da rede", unidade: "fator", sentido: "maior-melhor", grupo: "fundo" },
+  { chave: "crecheIntegral", rotulo: "Creche pública em tempo integral", unidade: "percentual", sentido: "maior-melhor", grupo: "fundo" },
+  { chave: "coberturaAee", rotulo: "Cobertura de AEE na educação especial", unidade: "percentual", sentido: "maior-melhor", grupo: "fundo" },
+  { chave: "idebAnosIniciais", rotulo: "IDEB dos anos iniciais", unidade: "fator", sentido: "maior-melhor", grupo: "resultado" },
+  { chave: "idebAnosFinais", rotulo: "IDEB dos anos finais", unidade: "fator", sentido: "maior-melhor", grupo: "resultado" },
+  { chave: "distorcaoFundamental", rotulo: "Distorção idade-série no fundamental", unidade: "percentual", sentido: "menor-melhor", grupo: "resultado" },
+  { chave: "abandonoFundamental", rotulo: "Abandono no fundamental", unidade: "percentual", sentido: "menor-melhor", grupo: "resultado" },
+  { chave: "insuficienteLp5", rotulo: "Nível insuficiente em Português do 5º ano", unidade: "percentual", sentido: "menor-melhor", grupo: "resultado" },
+  { chave: "insuficienteMt5", rotulo: "Nível insuficiente em Matemática do 5º ano", unidade: "percentual", sentido: "menor-melhor", grupo: "resultado" },
+  { chave: "alfabetizacao", rotulo: "Alfabetizados ao fim do 2º ano", unidade: "percentual", sentido: "maior-melhor", grupo: "resultado" },
+  { chave: "mde", rotulo: "Aplicação em MDE", unidade: "percentual", sentido: "maior-melhor", grupo: "financiamento" },
+  { chave: "remuneracao70", rotulo: "FUNDEB em remuneração dos profissionais", unidade: "percentual", sentido: "maior-melhor", grupo: "financiamento" },
+  { chave: "naoAplicado", rotulo: "FUNDEB não aplicado no exercício", unidade: "percentual", sentido: "menor-melhor", grupo: "financiamento" },
+  { chave: "investimentoPorAluno", rotulo: "Investimento por aluno", unidade: "reais", sentido: "neutro", grupo: "financiamento" },
+  { chave: "medianaMagisterio", rotulo: "Mediana salarial do magistério (40h)", unidade: "reais", sentido: "neutro", grupo: "financiamento" },
+  { chave: "naoDeclarada", rotulo: "Cor/raça não declarada na matrícula", unidade: "percentual", sentido: "menor-melhor", grupo: "cadastro" },
 ];
 
 let tabela: MetricasMunicipio[] | null | undefined;
@@ -128,6 +159,37 @@ function construirTabela(): MetricasMunicipio[] | null {
   const remuneracao = lerJson(ARQUIVO_REMUNERACAO) as {
     municipios?: Record<string, { confiavel?: boolean; medianaMagisterio?: number | null }>;
   } | null;
+
+  // Os quatro datasets de resultado e cadastro. Todos locais e completos para o
+  // país: a coorte inteira precisa da mesma apuração, senão o percentil compara
+  // municípios que têm o dado com municípios que não têm.
+  const rendimento = lerJson(ARQUIVO_RENDIMENTO) as {
+    municipios?: Record<
+      string,
+      {
+        anosIniciais?: Record<string, { idebObservado?: number }>;
+        anosFinais?: Record<string, { idebObservado?: number }>;
+        distorcao?: Record<string, { fundamentalTotal?: number }>;
+        rendimento?: Record<string, { abandono?: { total?: number } }>;
+      }
+    >;
+  } | null;
+
+  const saeb = lerJson(ARQUIVO_SAEB) as {
+    municipios?: Record<string, Record<string, { niveis?: number[] }>>;
+  } | null;
+
+  const alfabetizacao = lerJson(ARQUIVO_ALFABETIZACAO) as {
+    municipios?: Record<string, { resultados?: Record<string, number> }>;
+  } | null;
+
+  const equidade = lerJson(ARQUIVO_EQUIDADE) as {
+    municipios?: Record<string, { municipal?: { total?: number; naoDeclarada?: number } }>;
+  } | null;
+
+  /** Precedência de rede do dataset de rendimento: municipal > pública > total. */
+  const doRecorte = <T,>(bloco: Record<string, T> | undefined): T | undefined =>
+    bloco?.municipal ?? bloco?.publica ?? bloco?.total;
 
   // Índices de segmento por padrão de nome — o mesmo recorte usado em
   // `fundeb-ponderacao.ts`, para que o percentil compare a mesma conta.
@@ -193,6 +255,45 @@ function construirTabela(): MetricasMunicipio[] | null {
     const salario = remuneracao?.municipios?.[codigo.slice(0, 6)];
     if (salario && salario.confiavel !== false && typeof salario.medianaMagisterio === "number") {
       valores.set("medianaMagisterio", salario.medianaMagisterio);
+    }
+
+    const rend = rendimento?.municipios?.[codigo];
+    if (rend) {
+      const ai = doRecorte(rend.anosIniciais)?.idebObservado;
+      const af = doRecorte(rend.anosFinais)?.idebObservado;
+      const tdi = doRecorte(rend.distorcao)?.fundamentalTotal;
+      const abandono = doRecorte(rend.rendimento)?.abandono?.total;
+      if (typeof ai === "number") valores.set("idebAnosIniciais", ai);
+      if (typeof af === "number") valores.set("idebAnosFinais", af);
+      if (typeof tdi === "number") valores.set("distorcaoFundamental", tdi);
+      if (typeof abandono === "number") valores.set("abandonoFundamental", abandono);
+    }
+
+    const provas = saeb?.municipios?.[codigo];
+    for (const [chave, serie] of [
+      ["insuficienteLp5", "lp5"],
+      ["insuficienteMt5", "mt5"],
+    ] as const) {
+      const niveis = provas?.[serie]?.niveis;
+      if (Array.isArray(niveis)) {
+        valores.set(chave, agruparNiveis(serie, niveis).insuficiente);
+      }
+    }
+
+    // Último ano publicado do Indicador Criança Alfabetizada.
+    const resultados = alfabetizacao?.municipios?.[codigo]?.resultados;
+    if (resultados) {
+      const anos = Object.keys(resultados)
+        .map(Number)
+        .filter(Number.isFinite)
+        .sort((a, b) => b - a);
+      const ultimo = anos.length > 0 ? resultados[String(anos[0])] : undefined;
+      if (typeof ultimo === "number") valores.set("alfabetizacao", ultimo);
+    }
+
+    const cadastro = equidade?.municipios?.[codigo]?.municipal;
+    if (cadastro && typeof cadastro.total === "number" && cadastro.total > 0) {
+      valores.set("naoDeclarada", ((cadastro.naoDeclarada ?? 0) / cadastro.total) * 100);
     }
 
     linhas.push({
@@ -274,6 +375,7 @@ export function getMunicipiosGemeos(codigoIBGE: string): MunicipiosGemeos | null
       percentil: Math.round((abaixoOuIgual / daCoorte.length) * 100),
       sentido: definicao.sentido,
       comparaveis: daCoorte.length,
+      grupo: definicao.grupo,
     });
   }
 

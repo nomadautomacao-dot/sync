@@ -100,3 +100,34 @@ maior impacto na reunião.
   não a lista de pares. Nomear "o município X vai melhor que você" é
   desnecessário e cria atrito comercial.
 - **Série histórica de percentil.** A coorte é recalculada na emissão.
+
+---
+
+## 7. Como ficou — implementado em 2026-07-30
+
+`core/lib/dossie-comparativo.ts` · `-template.ts` · `-pdf.ts` ·
+`app/api/modulos/dossies/comparativo/` · 22 testes. 8 folhas.
+
+**A lib precisou dobrar de tamanho antes.** `municipios-gemeos.ts` tinha oito
+indicadores e **nenhum** era o do exemplo da própria spec — distorção
+idade-série. Agora são dezesseis, todos de dataset local e completo para o país,
+porque a coorte inteira precisa da mesma apuração: IDEB das duas etapas,
+distorção, abandono, nível insuficiente em LP e MT do 5º ano, alfabetização e
+cor/raça não declarada entraram junto com os oito originais. Os indicadores
+ganharam `grupo` temático — dezesseis réguas numa folha só viram parede.
+
+**A regra que impede o painel de inverter.** A cor segue o `sentido`, não o
+valor: as réguas usam `posicaoOrientada`, em que 100 é sempre o melhor lado, e
+indicador neutro sai em cinza com a marca no percentil cru. Investimento por
+aluno alto pode ser oferta cara e necessária ou ineficiência — a régua diz onde
+a rede está, não se isso é bom.
+
+**O achado que só a comparação produz.** Serra do Ramalho está no percentil 82
+em aplicação de MDE e no 72 em remuneração dos profissionais — e no percentil 10
+no IDEB dos anos finais, 94 em nível insuficiente de Português e 11 em
+alfabetização. Gasta certo e não entrega. Nenhum dos outros sete dossiês diz
+isso, porque nenhum deles compara.
+
+**As duas travas de honestidade:** percentil não é publicado abaixo de 20 pares
+(coorte rala é ruído com cara de estatística), e onde existe parâmetro legal ele
+fecha o bloco do indicador — cumprir a lei não é competir com o vizinho.
