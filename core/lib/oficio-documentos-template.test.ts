@@ -50,10 +50,11 @@ describe("ofício de solicitação de documentos", () => {
     expect(saida).toContain("<b>5 dias</b>");
   });
 
-  it("lista os cinco documentos e detalha cada um", () => {
+  it("lista os seis documentos e detalha cada um", () => {
     const saida = render();
 
     expect(saida).toContain("Portaria de Matrículas 2026");
+    expect(saida).toContain("Plano Municipal de Educação");
     expect(saida).toContain("Lei de Sistema / Rede de Ensino");
     expect(saida).toContain("Referencial Curricular do Município");
     expect(saida).toContain("Diretrizes de Ensino");
@@ -139,7 +140,7 @@ describe("questionário — tom de coleta, não de veredito", () => {
     const perguntas = (saida.match(/class="q-pergunta"/g) ?? []).length;
     const linhas = (saida.match(/class="q-linha"/g) ?? []).length;
 
-    expect(perguntas).toBe(15);
+    expect(perguntas).toBe(17);
     expect(linhas).toBe(perguntas);
   });
 
@@ -310,5 +311,56 @@ describe("perguntas que já trazem a resposta que temos", () => {
 
     expect(saida).toContain("bloqueia novo termo de compromisso com o FNDE");
     expect(saida).not.toContain("SIMEC:");
+  });
+});
+
+describe("Plano Municipal de Educação", () => {
+  /**
+   * O PME ficou de fora da primeira versão — inclusive da lista de documentos,
+   * sendo o plano decenal com força de lei. Entrou como sexto documento e como
+   * duas perguntas: execução das metas + a meta de financiamento ligada ao
+   * PPA/LOA.
+   */
+  it("pede o PME e os relatórios de monitoramento como documento", () => {
+    const saida = render();
+
+    expect(saida).toContain("Plano Municipal de Educação e dos relatórios de monitoramento");
+    expect(saida).toContain("relatório bienal de monitoramento");
+    expect(saida).toContain("Os seis documentos");
+  });
+
+  it("pergunta pelo status das metas e por onde os relatórios estão publicados", () => {
+    const saida = render();
+
+    expect(saida).toContain("status de execução das metas do PME vigente");
+    expect(saida).toContain("onde estão publicados os relatórios de monitoramento");
+  });
+
+  it("liga a meta de financiamento ao PPA e à LOA", () => {
+    const saida = render();
+
+    expect(saida).toContain("quais dotações do PPA e da LOA");
+    expect(saida).toContain("sem dotação carimbada no PPA e na LOA");
+  });
+
+  /**
+   * Precisão que importa: PME não condiciona FUNDEB, que é transferência
+   * constitucional automática. Condiciona transferência voluntária. Dizer
+   * "bloqueia repasses federais" sem qualificar seria afirmação sem fonte.
+   */
+  it("não afirma que o PME trava o FUNDEB", () => {
+    const saida = render();
+
+    expect(saida).toContain("não afeta o FUNDEB, que é transferência automática");
+    expect(saida).toContain("programas e convênios federais (PAR/FNDE)");
+  });
+
+  it("mantém a pergunta quando a MUNIC não respondeu, sem inventar registro", () => {
+    const saida = render();
+
+    expect(saida).toContain("status de execução das metas do PME vigente");
+    // Sem perfil, o contexto fica só com a regra — nenhum "MUNIC: ..." falso.
+    expect(saida).toContain("Plano vigente e monitorado é exigência frequente");
+    expect(saida).not.toContain("MUNIC 2021: Plano Municipal de Educação registrado");
   });
 });

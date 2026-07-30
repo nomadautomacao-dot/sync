@@ -16,7 +16,7 @@
  * prefeitura não recebe, e vinham escritas para o consultor ler.
  *
  * Aqui elas viram **questionário com linha de resposta**, na mesma peça que
- * pede os cinco documentos. A prefeitura recebe um documento só, e quem
+ * pede os documentos. A prefeitura recebe um documento só, e quem
  * responde vê o que já sabemos ao lado de cada pergunta.
  *
  * ## Regra de tom
@@ -114,7 +114,7 @@ function logoDataUri(): string | null {
 }
 
 // ---------------------------------------------------------------------------
-// Os cinco documentos
+// Os seis documentos
 // ---------------------------------------------------------------------------
 
 interface DocumentoPedido {
@@ -164,6 +164,17 @@ function documentos(anoCenso: number): DocumentoPedido[] {
       paraQueServe:
         "Descrevem como a rede trata jornada, avaliação, progressão e formação. É onde aparecem as lacunas normativas que travam projetos.",
       ondeEsta: "Coordenação pedagógica ou Conselho Municipal de Educação.",
+    },
+    {
+      nome: "Cópia do Plano Municipal de Educação e dos relatórios de monitoramento",
+      resumo:
+        "A lei do PME vigente e os relatórios periódicos de monitoramento das metas.",
+      tambemChamado:
+        "PME, plano decenal de educação, lei do plano municipal; os relatórios costumam ser chamados de relatório bienal de monitoramento ou avaliação das metas.",
+      paraQueServe:
+        "O PME é o documento legal que fixa as metas da educação local por dez anos, incluindo a de financiamento. Plano vigente é exigência frequente para adesão a programas e convênios federais (PAR/FNDE) — não afeta o FUNDEB, que é transferência automática, mas afeta a transferência voluntária. Os relatórios de monitoramento mostram o que saiu do papel.",
+      ondeEsta:
+        "Secretaria de Educação, Conselho Municipal de Educação, Câmara Municipal ou portal de legislação; os relatórios, no portal da transparência ou no site da secretaria.",
     },
     {
       nome: `Cópia da base ou relatório do Censo Escolar ${anoCenso}`,
@@ -368,6 +379,26 @@ export function montarQuestionario(model: MunicipalXrayModel): SecaoCampo[] {
         },
         {
           pergunta:
+            "Qual o status de execução das metas do PME vigente, e onde estão publicados os relatórios de monitoramento?",
+          contexto: (() => {
+            const munic = registro(
+              g?.planoMunicipalEducacao,
+              `MUNIC ${anoMunic}: Plano Municipal de Educação registrado.`,
+              `MUNIC ${anoMunic}: não consta PME vigente — confirmar a situação atual.`,
+            );
+            const regra =
+              "Plano vigente e monitorado é exigência frequente para adesão a programas e convênios federais (PAR/FNDE).";
+            return [munic, regra].filter(Boolean).join(" ");
+          })(),
+        },
+        {
+          pergunta:
+            "Como está o cumprimento da meta de financiamento do PME, e quais dotações do PPA e da LOA foram criadas para as metas do plano?",
+          contexto:
+            "É a meta que liga o plano ao orçamento: sem dotação carimbada no PPA e na LOA, a meta não tem como sair do papel — e é o primeiro ponto que o Tribunal de Contas cobra na avaliação do plano.",
+        },
+        {
+          pergunta:
             "Quem acompanha o SIMEC e as obras pactuadas com o FNDE, e o que trava as que estão paradas?",
           contexto: (() => {
             const regra =
@@ -552,7 +583,7 @@ function paginaOficio(
 
   return `<section class="page content-page"><div class="oficio-head"><div class="brandmark">${
     logo ? `<img src="${logo}" alt="" class="brandicon">` : ""
-  }<div><div class="wordmark">Global Sync</div><div class="brandsub">Global Company Consultorias</div></div></div><div class="oficio-id"><b>Ofício nº ${esc(params.numero)}</b><span>${esc(cidade)} · ${esc(dataCurta)}</span></div></div><div class="page-body"><div class="to"><div><div class="to-label">Ao</div><div class="to-name">Secretaria Municipal de Educação de ${esc(cidade)}</div><div class="to-sub">A/C Sr(a). Secretário(a) Municipal de Educação</div></div><div style="text-align:right;min-width:1.5in"><div class="to-label">Código IBGE</div><div class="to-sub" style="color:var(--navy);font-weight:800;font-size:9.6pt">${esc(model.ibgeCode)}</div></div></div><div class="divider"></div><div class="kicker">Solicitação de documentos</div><h2>Documentos da rede municipal<br>para o diagnóstico educacional</h2><p class="lede">A Global Company Consultorias está elaborando o diagnóstico técnico da rede municipal de ensino de ${esc(model.municipality)}. As bases federais — FNDE, INEP, SICONFI e IBGE — já foram consolidadas, mas elas descrevem o município pelo lado de fora. Para que a análise reflita a rede como ela de fato funciona, solicitamos cópia dos cinco documentos abaixo e as respostas do questionário anexo.</p><div class="insight mt-1"><h3>O que a rede recebe de volta</h3><p style="font-size:8.6pt;line-height:1.4">O <span class="strong">Raio-X Municipal</span>: um relatório técnico de finanças, matrículas, IDEB e infraestrutura da rede, com a estimativa de FUNDEB do exercício e a indicação dos pontos em que há receita a recuperar. Entregue sem custo e sem compromisso para o município.</p></div><div class="mt-2"><div class="kicker" style="color:var(--muted)">Os cinco documentos</div>${linhas}</div><div class="divider mt-1"></div><div class="strip"><div><span>Prazo máximo de envio</span><b>${params.prazoDias} dias</b></div><div><span>WhatsApp — envio direto</span><b>${esc(params.responsavel.whatsapp)}</b></div><div><span>Para arquivos pesados</span><b>${esc(params.responsavel.email)}</b></div></div><p class="small mt-1">Cópia digital simples é suficiente: não é necessário autenticar nem imprimir. A página seguinte descreve cada documento, e as duas últimas trazem um questionário curto sobre o que as bases públicas não alcançam.</p><div class="sign"><div class="sign-line"><hr><div class="sign-name">${esc(params.responsavel.nome)}</div><div class="small">${esc(params.responsavel.cargo)}</div></div></div></div><div class="page-footer"><span>Global Sync · Global Company Consultorias — Inteligência municipal</span><span>1 / ${totalPaginas}</span></div></section>`;
+  }<div><div class="wordmark">Global Sync</div><div class="brandsub">Global Company Consultorias</div></div></div><div class="oficio-id"><b>Ofício nº ${esc(params.numero)}</b><span>${esc(cidade)} · ${esc(dataCurta)}</span></div></div><div class="page-body"><div class="to"><div><div class="to-label">Ao</div><div class="to-name">Secretaria Municipal de Educação de ${esc(cidade)}</div><div class="to-sub">A/C Sr(a). Secretário(a) Municipal de Educação</div></div><div style="text-align:right;min-width:1.5in"><div class="to-label">Código IBGE</div><div class="to-sub" style="color:var(--navy);font-weight:800;font-size:9.6pt">${esc(model.ibgeCode)}</div></div></div><div class="divider"></div><div class="kicker">Solicitação de documentos</div><h2>Documentos da rede municipal<br>para o diagnóstico educacional</h2><p class="lede">A Global Company Consultorias está elaborando o diagnóstico técnico da rede municipal de ensino de ${esc(model.municipality)}. As bases federais — FNDE, INEP, SICONFI e IBGE — já foram consolidadas, mas elas descrevem o município pelo lado de fora. Para que a análise reflita a rede como ela de fato funciona, solicitamos cópia dos seis documentos abaixo e as respostas do questionário anexo.</p><div class="insight mt-1"><h3>O que a rede recebe de volta</h3><p style="font-size:8.6pt;line-height:1.4">O <span class="strong">Raio-X Municipal</span>: um relatório técnico de finanças, matrículas, IDEB e infraestrutura da rede, com a estimativa de FUNDEB do exercício e a indicação dos pontos em que há receita a recuperar. Entregue sem custo e sem compromisso para o município.</p></div><div class="mt-2"><div class="kicker" style="color:var(--muted)">Os seis documentos</div>${linhas}</div><div class="divider mt-1"></div><div class="strip"><div><span>Prazo máximo de envio</span><b>${params.prazoDias} dias</b></div><div><span>WhatsApp — envio direto</span><b>${esc(params.responsavel.whatsapp)}</b></div><div><span>Para arquivos pesados</span><b>${esc(params.responsavel.email)}</b></div></div><p class="small mt-1">Cópia digital simples é suficiente: não é necessário autenticar nem imprimir. A página seguinte descreve cada documento, e as duas últimas trazem um questionário curto sobre o que as bases públicas não alcançam.</p><div class="sign"><div class="sign-line"><hr><div class="sign-name">${esc(params.responsavel.nome)}</div><div class="small">${esc(params.responsavel.cargo)}</div></div></div></div><div class="page-footer"><span>Global Sync · Global Company Consultorias — Inteligência municipal</span><span>1 / ${totalPaginas}</span></div></section>`;
 }
 
 function paginaDetalhamento(
@@ -567,10 +598,9 @@ function paginaDetalhamento(
   const cartao = (d: DocumentoPedido, idx: number) =>
     `<div class="chk"><div class="chk-num">${String(idx + 1).padStart(2, "0")}</div><div><h3>${esc(d.nome.replace(/^Cópia d[aeo]s? /, ""))}</h3><div class="chk-field"><em>Também chamado de</em><p>${esc(d.tambemChamado)}</p></div><div class="chk-field"><em>Para que serve na análise</em><p>${esc(d.paraQueServe)}</p></div><div class="chk-field"><em>Onde costuma estar</em><p>${esc(d.ondeEsta)}</p></div></div></div>`;
 
-  const quatro = docs.slice(0, 4).map(cartao).join("");
-  const quinto = docs[4];
+  const cartoes = docs.map(cartao).join("");
 
-  return `<section class="page content-page">${cabecalho}<div class="page-body"><div class="kicker">Como identificar</div><h2>O que é cada documento</h2><p class="lede" style="font-size:9.2pt">Os nomes variam de rede para rede. Abaixo, o que procuramos, por que o documento importa para a análise e o setor onde ele costuma estar arquivado.</p><div class="grid-2 mt-1" style="gap:.13in">${quatro}</div><div class="chk mt-1" style="grid-template-columns:.34in 1fr"><div class="chk-num">05</div><div><h3>${esc(quinto.nome.replace(/^Cópia d[aeo]s? /, ""))}</h3><div class="grid-2" style="gap:.2in"><div><div class="chk-field"><em>Também chamado de</em><p>${esc(quinto.tambemChamado)}</p></div><div class="chk-field"><em>Onde costuma estar</em><p>${esc(quinto.ondeEsta)}</p></div></div><div><div class="chk-field"><em>Para que serve na análise</em><p>${esc(quinto.paraQueServe)}</p></div></div></div></div></div><div class="note mt-1"><h3 style="color:#584416">Formatos aceitos</h3><p style="font-size:8.4pt;line-height:1.4">PDF, DOCX, XLSX, CSV ou fotografia legível das páginas. Cópia digital simples resolve — sem necessidade de autenticação em cartório ou de via impressa. Se algum arquivo ultrapassar o limite do WhatsApp, envie para <span class="strong" style="color:#584416">${esc(params.responsavel.email)}</span> com o nome do município no assunto. Documentos parciais também ajudam: é melhor receber quatro dos cinco no prazo do que os cinco depois.</p></div><div class="card mt-1" style="padding:.12in .14in"><h3>Em caso de dúvida</h3><p style="font-size:8.4pt;line-height:1.4">${esc(params.responsavel.nome)} &nbsp;·&nbsp; WhatsApp <span class="strong">${esc(params.responsavel.whatsapp)}</span> &nbsp;·&nbsp; <span class="strong">${esc(params.responsavel.email)}</span>. Podemos orientar por telefone qual arquivo corresponde a cada item, inclusive junto ao setor responsável.</p></div></div><div class="page-footer"><span>Prazo máximo de envio: ${params.prazoDias} dias · Emitido em ${new Intl.DateTimeFormat("pt-BR").format(params.emitidoEm)}</span><span>2 / ${totalPaginas}</span></div></section>`;
+  return `<section class="page content-page">${cabecalho}<div class="page-body"><div class="kicker">Como identificar</div><h2>O que é cada documento</h2><p class="lede" style="font-size:9.2pt">Os nomes variam de rede para rede. Abaixo, o que procuramos, por que o documento importa para a análise e o setor onde ele costuma estar arquivado.</p><div class="grid-2 mt-1" style="gap:.11in">${cartoes}</div><div class="note mt-1"><h3 style="color:#584416">Formatos aceitos</h3><p style="font-size:8.4pt;line-height:1.4">PDF, DOCX, XLSX, CSV ou fotografia legível das páginas. Cópia digital simples resolve — sem necessidade de autenticação em cartório ou de via impressa. Se algum arquivo ultrapassar o limite do WhatsApp, envie para <span class="strong" style="color:#584416">${esc(params.responsavel.email)}</span> com o nome do município no assunto. Documentos parciais também ajudam: é melhor receber cinco dos seis no prazo do que os seis depois.</p></div><div class="card mt-1" style="padding:.12in .14in"><h3>Em caso de dúvida</h3><p style="font-size:8.4pt;line-height:1.4">${esc(params.responsavel.nome)} &nbsp;·&nbsp; WhatsApp <span class="strong">${esc(params.responsavel.whatsapp)}</span> &nbsp;·&nbsp; <span class="strong">${esc(params.responsavel.email)}</span>. Podemos orientar por telefone qual arquivo corresponde a cada item, inclusive junto ao setor responsável.</p></div></div><div class="page-footer"><span>Prazo máximo de envio: ${params.prazoDias} dias · Emitido em ${new Intl.DateTimeFormat("pt-BR").format(params.emitidoEm)}</span><span>2 / ${totalPaginas}</span></div></section>`;
 }
 
 function paginaQuestionario(
