@@ -17,7 +17,7 @@
 git clone <repo> && cd Sync
 npm install
 npx playwright install chromium   # obrigatório: os PDFs são gerados no Chromium
-npm test                          # 464 testes — confirma que a base chegou íntegra
+npm test                          # 466 testes — confirma que a base chegou íntegra
 npm run dev                       # Next em :3100
 ```
 
@@ -80,7 +80,7 @@ lê apenas os JSON de `data/`.
 ### Verificação rápida
 
 ```bash
-npm test              # 464 testes, 41 arquivos — devem passar todos
+npm test              # 466 testes, 41 arquivos — devem passar todos
 npm run dev           # Next em :3100
 ```
 
@@ -356,7 +356,7 @@ nova foi conferida visualmente.
 
 ## 7. Próximo passo recomendado
 
-1. Rodar `npm test` no Mac para confirmar que a base chegou íntegra (464 testes).
+1. Rodar `npm test` no Mac para confirmar que a base chegou íntegra (466 testes).
 2. Gerar um Raio-X real (Manaus, `1302603`) e um Histórico do Censo, e ler os
    dois PDFs inteiros — é a única forma de ver o conjunto.
 3. Onda 4: #3, #40, #41, #47 e #48 entregues; **#43 confirmado sem fonte

@@ -426,3 +426,31 @@ describe("guarda de plausibilidade do RGF", () => {
     expect(html).not.toContain("entrega do RGF inconsistente");
   });
 });
+
+describe("o destaque de ganho na capa", () => {
+  it("põe o potencial de incremento como bloco dominante, no teal da marca", () => {
+    const r = relatorioMinimo();
+    r.projecao.totalGanho = 96_387_711.91;
+    r.projecao.ganhoPercentual = 75;
+    const html = generateLevantamentoHtml({ relatorio: r });
+
+    expect(html).toContain("Potencial de incremento");
+    expect(html).toContain("cover-hero");
+    // `brlCompact` usa espaço inquebrável — casar com espaço comum passaria
+    // batido e o teste nunca veria o número mudar.
+    expect(html).toContain(`+R$\u00a096,39\u00a0mi`);
+  });
+
+  /**
+   * O fixture mínimo tem projeção zerada, e era exatamente o caso que fazia a
+   * capa abrir com "+R$ 0,00 mi" como cereja — pior que não ter cereja. Sem
+   * ganho apurado, a âncora passa a ser a receita do exercício e o texto diz
+   * por que o outro número não está ali.
+   */
+  it("não abre com zero quando a projeção não foi apurada", () => {
+    const html = gerar();
+
+    expect(html).not.toContain(`+R$\u00a00,00`);
+    expect(html).toContain("A projeção do próximo ciclo não foi apurada");
+  });
+});

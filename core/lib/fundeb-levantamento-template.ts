@@ -698,10 +698,22 @@ p+p{margin-top:.08in}
 .cover-muni{margin-top:.42in}
 .cover-muni em{display:block;font-style:normal;color:var(--muted);font-size:7.4pt;font-weight:800;letter-spacing:.13em;text-transform:uppercase}
 .cover-muni b{display:block;color:var(--navy);font-size:19pt;letter-spacing:-.02em;margin-top:.05in}
-.cover-kpis{display:grid;grid-template-columns:1fr 1fr;gap:.14in;margin-top:.34in;max-width:5.4in}
-.ckpi{background:#f7fafa;border:1px solid var(--line);border-left:.04in solid var(--teal);border-radius:7px;padding:.12in .14in}
+/* O ganho é a cereja da capa: o único número em teal da marca, no maior corpo
+   do documento. Os dois KPIs de apoio caíram para meio-tom de propósito —
+   hierarquia se faz tirando peso do resto, não só somando ao destaque. */
+.cover-hero{margin-top:.36in;max-width:5.75in;position:relative;border-radius:12px;padding:.24in .3in .26in;
+  background:linear-gradient(135deg,rgba(39,166,154,.11) 0%,rgba(39,166,154,.03) 62%,rgba(255,255,255,0) 100%);
+  border:1px solid rgba(39,166,154,.28);border-left:.055in solid var(--teal)}
+.cover-hero em{display:block;font-style:normal;color:#1d7d72;font-size:7.2pt;font-weight:800;letter-spacing:.15em;text-transform:uppercase}
+.cover-hero .val{display:flex;align-items:baseline;gap:.14in;margin-top:.09in}
+.cover-hero .val b{color:var(--teal);font-size:44pt;font-weight:700;letter-spacing:-.035em;line-height:.92}
+.cover-hero .val i{font-style:normal;background:var(--teal);color:#fff;font-size:9pt;font-weight:800;
+  letter-spacing:.01em;border-radius:999px;padding:.045in .13in;white-space:nowrap}
+.cover-hero p{margin-top:.11in;color:#44545f;font-size:8.4pt;line-height:1.42;max-width:4.6in}
+.cover-kpis{display:grid;grid-template-columns:1fr 1fr;gap:.14in;margin-top:.2in;max-width:5.75in}
+.ckpi{background:#f8fafb;border:1px solid var(--line);border-left:.03in solid #cfe3e0;border-radius:7px;padding:.1in .13in}
 .ckpi em{display:block;font-style:normal;color:var(--muted);font-size:6.6pt;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
-.ckpi b{display:block;color:var(--navy);font-size:15pt;letter-spacing:-.02em;margin-top:.04in;line-height:1}
+.ckpi b{display:block;color:var(--navy);font-size:13pt;letter-spacing:-.02em;margin-top:.04in;line-height:1}
 .ckpi span{display:block;color:var(--muted);font-size:6.8pt;margin-top:.03in}
 .cover-bot{padding:0 .7in .5in;display:flex;justify-content:space-between;align-items:end;position:relative;z-index:1;color:var(--muted);font-size:7.6pt;line-height:1.4}
 .cover-bot b{display:block;color:var(--navy);font-size:8.4pt}
@@ -716,6 +728,11 @@ function paginaCapa(i: LevantamentoTemplateInput, pagina: number): string {
   const municipio = `${id.municipioNome} — ${id.uf}`;
   const exercicio = id.exercicio;
   const responsavel = r.parametros?.responsavelTecnico ?? "Adriel Tavares";
+
+  // "+R$ 0,00 mi" como cereja da capa é pior que não ter cereja: o município
+  // sem projeção apurada recebe a receita do exercício como âncora, e o texto
+  // diz por que o outro número não está ali.
+  const temGanho = r.projecao.totalGanho > 0;
 
   const marca = logoDataUri
     ? `<img src="${logoDataUri}" alt="" style="width:.42in;height:.42in;border-radius:8px">`
@@ -744,10 +761,29 @@ function paginaCapa(i: LevantamentoTemplateInput, pagina: number): string {
       <b>${esc(municipio)}</b>
     </div>
 
+    ${
+      temGanho
+        ? `<div class="cover-hero">
+      <em>Potencial de incremento &middot; exercício ${exercicio + 1}</em>
+      <div class="val">
+        <b>+${brlCompact(r.projecao.totalGanho)}</b>
+        <i>+${pct(r.projecao.ganhoPercentual)} sobre ${exercicio}</i>
+      </div>
+      <p>Cenário otimizado sobre a receita atual, o histórico do município e as complementações da
+      União. A metodologia está aberta na Parte I.</p>
+    </div>
+
     <div class="cover-kpis">
       <div class="ckpi"><em>Receita FUNDEB ${exercicio}</em><b>${brlCompact(r.receitas.totalReceitas)}</b><span>base oficial do exercício</span></div>
-      <div class="ckpi"><em>Estimativa ${exercicio + 1} &middot; cenário otimizado</em><b>${brlCompact(r.projecao.totalProjetado)}</b><span>condicionada à validação documental</span></div>
-    </div>
+      <div class="ckpi"><em>Estimativa ${exercicio + 1}</em><b>${brlCompact(r.projecao.totalProjetado)}</b><span>receita total no cenário</span></div>
+    </div>`
+        : `<div class="cover-hero">
+      <em>Receita FUNDEB &middot; exercício ${exercicio}</em>
+      <div class="val"><b>${brlCompact(r.receitas.totalReceitas)}</b></div>
+      <p>A projeção do próximo ciclo não foi apurada nesta emissão. O relatório traz a composição
+      da receita, a série histórica e os pontos de conferência, sem estimar o que a base não sustenta.</p>
+    </div>`
+    }
   </div>
 
   <div class="cover-bot">
@@ -849,7 +885,11 @@ function paginaSumario(i: LevantamentoTemplateInput, pagina: number): string {
     <div class="grid-4 mt-2">
       ${kpi(`Receita ${id.exercicio}`, brlCompact(rec.totalReceitas), "base oficial do ano")}
       ${kpi(`Estimativa ${id.exercicio + 1}`, brlCompact(r.projecao.totalProjetado), "cenário otimizado")}
-      ${kpi("Ganho potencial", `+${brlCompact(r.projecao.totalGanho)}`, `+${pct(r.projecao.ganhoPercentual)} sobre o exercício atual`, "up")}
+      ${
+        r.projecao.totalGanho > 0
+          ? kpi("Ganho potencial", `+${brlCompact(r.projecao.totalGanho)}`, `+${pct(r.projecao.ganhoPercentual)} sobre o exercício atual`, "up")
+          : kpi("Ganho potencial", "—", "projeção não apurada nesta emissão")
+      }
       ${kpiGanho}
     </div>
 
@@ -1045,7 +1085,7 @@ function paginaProjecao(i: LevantamentoTemplateInput, pagina: number): string {
     </div>
 
     <div class="grid-2 mt-2">
-      <div class="kpi hero"><em>Receita total projetada &middot; cenário otimizado</em><b>${brlCompact(p.totalProjetado)}</b><span>potencial de incremento: +${brlCompact(p.totalGanho)} (+${pct(p.ganhoPercentual)})</span></div>
+      <div class="kpi hero"><em>Receita total projetada &middot; cenário otimizado</em><b>${brlCompact(p.totalProjetado)}</b><span>${p.totalGanho > 0 ? `potencial de incremento: +${brlCompact(p.totalGanho)} (+${pct(p.ganhoPercentual)})` : "sem incremento apurado sobre o exercício atual"}</span></div>
       ${
         ganhoTotal > 0
           ? `<div class="kpi up"><em>Ganho apurado &middot; lacunas de declaração</em><b>+${brlCompact(ganhoTotal)}</b><span>fatores do FUNDEB sobre a matrícula declarada pelo município</span></div>`
