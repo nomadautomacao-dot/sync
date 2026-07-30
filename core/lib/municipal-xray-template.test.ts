@@ -188,9 +188,9 @@ describe("páginas de ponderação e vinculações no Raio-X", () => {
     expect(saida).toContain("Declaração ao SIOPE não localizada");
   });
 
-  it("gera as 42 páginas do contrato do renderer, com e sem dados", () => {
+  it("gera as 40 páginas do contrato do renderer, com e sem dados", () => {
     const paginas = (html: string) => html.match(/<section class="page/g)?.length ?? 0;
-    expect(paginas(completo("2930154", "BA"))).toBe(42);
+    expect(paginas(completo("2930154", "BA"))).toBe(40);
     expect(
       paginas(
         generateMunicipalXrayHtml(
@@ -203,7 +203,7 @@ describe("páginas de ponderação e vinculações no Raio-X", () => {
           }),
         ),
       ),
-    ).toBe(42);
+    ).toBe(40);
   });
 
   it("numera as páginas sequencialmente a partir do contador", () => {
@@ -216,7 +216,7 @@ describe("páginas de ponderação e vinculações no Raio-X", () => {
 
     // A capa não tem rodapé numerado; o miolo vai de 2 até o total.
     expect(numeros[0]).toBe(2);
-    expect(numeros[numeros.length - 1]).toBe(42);
+    expect(numeros[numeros.length - 1]).toBe(40);
     for (let i = 1; i < numeros.length; i++) expect(numeros[i]).toBe(numeros[i - 1] + 1);
   });
 });
@@ -271,7 +271,7 @@ describe("gêmeos estatísticos no Raio-X", () => {
   });
 });
 
-describe("pontualidade fiscal na página das complementações", () => {
+describe("pontualidade fiscal na página dos requisitos fiscais", () => {
   function comPontualidade(risco: "alto" | "medio" | "baixo", extras: Record<string, unknown> = {}) {
     return generateMunicipalXrayHtml(
       mapMunicipalXrayModel({
@@ -1968,5 +1968,150 @@ describe("estado nutricional no Raio-X", () => {
 
     expect(saida).toContain("Estado nutricional indisponível");
     expect(saida).toContain("cobertura baixa da atenção primária, não ausência do problema");
+  });
+});
+
+/**
+ * A fusão de "Rede de ensino" com "Aprendizagem". As duas folhas da geração
+ * antiga entregavam, juntas, pouco mais de uma página de conteúdo: tabela que
+ * repetia as próprias métricas, cards de conselho genérico e um bloco de
+ * equidade que a declaração étnica e o mapa das escolas passaram a cobrir com
+ * dado melhor. Os testes abaixo guardam o que ficou — e o que não pode voltar.
+ */
+describe("porte da rede e resultado agregado no Raio-X", () => {
+  function render(ideb: Record<string, unknown> = {}) {
+    return generateMunicipalXrayHtml(
+      mapMunicipalXrayModel({
+        basePayload: {},
+        currentPayload: {
+          relatorio_dirigido_base: {
+            historico: {
+              anos: [
+                { anoBaseCenso: 2025, totalMatriculasMunicipais: 4200, totalEscolas: 31, tempoIntegral: 610, educacaoEspecial: 190, eja: 140 },
+              ],
+            },
+          },
+          relatorio_fundeb: {
+            idebAnosIniciais: [{ ano: 2023, idebVerificado: 4.1, metaProjetada: 5.3, ...ideb }],
+            idebAnosFinais: [{ ano: 2023, idebVerificado: 3.8, metaProjetada: 4.6, ...ideb }],
+          },
+        },
+        baseYear: 2024,
+        currentYear: 2026,
+        generatedAt: new Date("2026-07-29T12:00:00.000Z"),
+      }),
+    );
+  }
+
+  it("chama as duas etapas quando as duas estão abaixo da régua", () => {
+    expect(render()).toContain("As duas etapas estão abaixo da régua");
+  });
+
+  it("liga o tempo integral e a educação especial à ponderação, não só ao atendimento", () => {
+    const saida = render();
+
+    expect(saida).toContain("em tempo integral");
+    expect(saida).toContain("fator de ponderação");
+  });
+
+  /**
+   * A série existia no payload e não aparecia em lugar nenhum do dossiê: o
+   * mapeador guardava só a última edição. Trajetória distingue rede que subiu
+   * de rede que caiu para o mesmo lugar — e é o que a Cond. I do VAAR mede.
+   */
+  it("imprime a trajetória do IDEB e a variação entre a primeira e a última edição", () => {
+    const saida = generateMunicipalXrayHtml(
+      mapMunicipalXrayModel({
+        basePayload: {},
+        currentPayload: {
+          relatorio_fundeb: {
+            idebAnosIniciais: [
+              { ano: 2019, idebVerificado: 5.9 },
+              { ano: 2021, idebVerificado: 5.5 },
+              { ano: 2023, idebVerificado: 6.2, metaProjetada: 6.0, metaOrigem: "nacional" },
+            ],
+            idebAnosFinais: [
+              { ano: 2021, idebVerificado: 4.8 },
+              { ano: 2023, idebVerificado: 5.2, metaProjetada: 5.5, metaOrigem: "nacional" },
+            ],
+          },
+        },
+        baseYear: 2024,
+        currentYear: 2026,
+        generatedAt: new Date("2026-07-29T12:00:00.000Z"),
+      }),
+    );
+
+    expect(saida).toContain("A trajetória, edição a edição");
+    // Queda de 2019 para 2021 que o número isolado de 2023 esconde.
+    expect(saida).toContain("5,5");
+    expect(saida).toContain("<b>Anos iniciais:</b> +0,3 de 2019 a 2023.");
+    // A etapa sem edição em 2019 vira travessão, não some a coluna.
+    expect(saida).toContain("Condicionalidade I do VAAR</b> mede evolução, não nível");
+  });
+
+  it("omite a trajetória quando só existe uma edição — uma foto não é série", () => {
+    const saida = generateMunicipalXrayHtml(
+      mapMunicipalXrayModel({
+        basePayload: {},
+        currentPayload: {
+          relatorio_fundeb: { idebAnosIniciais: [{ ano: 2023, idebVerificado: 6.2 }] },
+        },
+        baseYear: 2024,
+        currentYear: 2026,
+        generatedAt: new Date("2026-07-29T12:00:00.000Z"),
+      }),
+    );
+
+    expect(saida).not.toContain("A trajetória, edição a edição");
+  });
+
+  it("avisa que o IDEB sobe com aprovação sem aprendizagem", () => {
+    expect(render()).toContain("rede que aprova todo mundo sobe o índice sem aprender mais");
+  });
+
+  /**
+   * O motivo da fusão. Se algum destes textos voltar, voltou junto a folha
+   * pela metade — eram conselho genérico, sem um número do município dentro.
+   */
+  it("não traz de volta os cards de conselho genérico das folhas antigas", () => {
+    const saida = render();
+
+    expect(saida).not.toContain("Perguntas para auditoria");
+    expect(saida).not.toContain("Agenda de resultado");
+    expect(saida).not.toContain("Controles essenciais");
+    expect(saida).not.toContain("Espaço fiscal precisa ser protegido");
+  });
+});
+
+describe("pontualidade fiscal sobrevive à falta do CAUC", () => {
+  /**
+   * O bloco mudou de página (saiu das complementações, que estouravam a folha
+   * em todo município de porte médio para cima) e passou a morar na dos
+   * requisitos fiscais. Mas ele vem do extrato de entregas do Tesouro, não do
+   * CAUC — então não pode sumir quando o extrato do CAUC não responde.
+   */
+  it("imprime o risco VAAT mesmo sem extrato do CAUC na emissão", () => {
+    const saida = generateMunicipalXrayHtml(
+      mapMunicipalXrayModel({
+        basePayload: {},
+        currentPayload: {
+          relatorio_dirigido_base: {
+            pontualidadeFiscal: {
+              risco: "alto",
+              dca: [{ exercicio: 2025, entregueEm: "2026-09-10T12:00:00Z", diasAlemDoPrazo: 133, estourouCorteVaat: true }],
+              rreoEntregues: 3,
+              rgfEntregues: 1,
+            },
+          },
+        },
+        baseYear: 2024,
+        currentYear: 2026,
+        generatedAt: new Date("2026-07-29T12:00:00.000Z"),
+      }),
+    );
+
+    expect(saida).toContain("Extrato do CAUC indisponível nesta emissão");
+    expect(saida).toContain("Risco de perder o VAAT — lado Siconfi: ALTO");
   });
 });

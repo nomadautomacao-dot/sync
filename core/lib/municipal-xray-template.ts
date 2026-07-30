@@ -50,6 +50,12 @@ export interface MunicipalXrayModel {
    * compromisso que o INEP não publicou.
    */
   idebTargetIsNational: boolean;
+  /**
+   * A série do IDEB da rede, mais antiga primeiro. O número isolado do último
+   * ano não distingue rede que subiu de rede que caiu para o mesmo lugar — e é
+   * a trajetória que a Condicionalidade I do VAAR observa.
+   */
+  idebSeries: Array<{ year: number; initial: number | null; final: number | null }>;
   /** Ano de referência do PIB per capita, como o IBGE devolve (texto). */
   pibYear: string;
   /**
@@ -565,6 +571,35 @@ function latestEnrollmentYear(payload: unknown) {
     .sort((a, b) => (number(b.anoBaseCenso) ?? number(b.ano) ?? 0) - (number(a.anoBaseCenso) ?? number(a.ano) ?? 0))[0] ?? null;
 }
 
+/**
+ * Casa as duas séries do IDEB (anos iniciais e finais) por ano.
+ *
+ * As edições não coincidem sempre — uma etapa pode ter resultado num ano em
+ * que a outra não teve —, então a união dos anos é a chave, e a etapa que
+ * faltou entra como `null` em vez de sumir a linha inteira.
+ */
+function serieIdeb(payload: unknown) {
+  const ler = (caminho: string) =>
+    new Map(
+      array(at(payload, caminho))
+        .map(asRecord)
+        .filter((row): row is JsonRecord => row !== null && number(row.ano) !== null)
+        .map((row) => [number(row.ano) as number, number(row.idebVerificado)] as const),
+    );
+
+  const iniciais = ler("relatorio_fundeb.idebAnosIniciais");
+  const finais = ler("relatorio_fundeb.idebAnosFinais");
+  const anos = [...new Set([...iniciais.keys(), ...finais.keys()])].sort((a, b) => a - b);
+
+  return anos
+    .map((year) => ({
+      year,
+      initial: iniciais.get(year) ?? null,
+      final: finais.get(year) ?? null,
+    }))
+    .filter((linha) => linha.initial !== null || linha.final !== null);
+}
+
 function latestIdeb(rows: unknown) {
   return array(rows)
     .map(asRecord)
@@ -646,6 +681,7 @@ export function mapMunicipalXrayModel(params: {
     idebYear: number(latestInitial?.ano) ?? number(latestFinal?.ano),
     idebTargetIsNational:
       latestInitial?.metaOrigem === "nacional" || latestFinal?.metaOrigem === "nacional",
+    idebSeries: serieIdeb(currentPayload),
     pibYear: text(at(currentPayload, "relatorio_dirigido_base.perfilIBGE.pibAnoReferencia"), ""),
     vaar: (() => {
       const bruto = asRecord(at(currentPayload, "relatorio_dirigido_base.vaar"));
@@ -1495,40 +1531,132 @@ function vaarBlock(model: MunicipalXrayModel): string {
   return `<div class="grid-2 mt-3"><div class="insight"><b>VAAR${ano}: ${esc(compactMoney(v.amount))} recebidos.</b> O município está habilitado nas cinco condicionalidades e é beneficiário do rateio.${v.stateMedian !== null ? ` A mediana dos habilitados do estado é ${esc(compactMoney(v.stateMedian))}.` : ""} O art. 26 exclui o VAAR da base dos 70%, o que o torna o recurso do fundo com aplicação mais livre.</div><div class="risk"><b>Risco:</b> a habilitação <b>não se acumula</b> — é reavaliada a cada exercício, e perder uma única condicionalidade zera a parcela inteira no ano seguinte. Manter é uma rotina anual, não uma conquista definitiva.</div></div>`;
 }
 
-function equityBlock(model: MunicipalXrayModel): string {
-  const eq = model.equity;
-  if (!eq) return "";
+/**
+ * Porte da rede e o resultado agregado — a foto que o gestor já conhece.
+ *
+ * Nasceu da fusão de duas folhas da geração antiga do template ("Rede de
+ * ensino" e "Aprendizagem"), que juntas ocupavam duas páginas para entregar
+ * pouco mais de uma. Saíram no caminho: a tabela que repetia as próprias
+ * métricas da folha, os cards de conselho genérico ("perguntas para
+ * auditoria", "agenda de resultado") e o bloco de equidade — este último
+ * porque a declaração étnica e a composição por cor/raça por zona ganharam
+ * páginas próprias, com dado melhor.
+ *
+ * O que sobra tem uma função clara: é o número que o prefeito reconhece. O
+ * IDEB municipal contra a meta é a única linha do dossiê que ele já viu em
+ * jornal — e é a âncora para as páginas que a desmontam escola a escola.
+ */
+function paginaRedeEResultado(model: MunicipalXrayModel, pagina: number): string {
+  const abaixoAi =
+    model.idebInitial !== null &&
+    model.idebInitialTarget !== null &&
+    model.idebInitial < model.idebInitialTarget;
+  const abaixoAf =
+    model.idebFinal !== null &&
+    model.idebFinalTarget !== null &&
+    model.idebFinal < model.idebFinalTarget;
 
-  const condicoes: Array<[string, number]> = [
-    ["no campo", eq.ruralSchools],
-    ["em terra indígena", eq.indigenousSchools],
-    ["quilombolas", eq.quilomboSchools],
-    ["em assentamento", eq.settlementSchools],
-  ];
-  const presentes = condicoes.filter(([, valor]) => valor > 0);
+  const rotuloMeta = model.idebTargetIsNational ? "referência nacional" : "meta";
+  const titulo =
+    abaixoAi && abaixoAf
+      ? "As duas etapas estão abaixo da régua"
+      : abaixoAi || abaixoAf
+        ? `${abaixoAi ? "Os anos iniciais estão" : "Os anos finais estão"} abaixo da régua`
+        : "A rede está na régua — e a régua é o piso, não a ambição";
 
-  return `<div class="grid-2 mt-3"><div class="card accent"><h3>Equidade da rede${
-    eq.censusYear ? ` · Censo ${eq.censusYear}` : ""
-  }</h3><div class="grid-2">${metric(
-    eq.blackShare === null ? "N/D" : pct(eq.blackShare),
-    "matrícula negra (preta + parda)",
-  )}${metric(
-    eq.undeclaredShare === null ? "N/D" : pct(eq.undeclaredShare),
-    "cor/raça não declarada",
-  )}</div><div class="divider"></div><p>${
-    eq.fragileRegistry
-      ? "A não declaração passa de um terço da rede: a distribuição por cor/raça descreve o preenchimento do Censo, não a composição dos alunos. Corrigir o cadastro é pré-requisito para qualquer leitura de equidade."
-      : "A composição por cor/raça é a base da leitura de equidade que as condicionalidades do VAAR passaram a cobrar — o fundo premia redução de desigualdade entre grupos, não só média."
-  }</p></div><div class="card warn"><h3>Condições que pesam na ponderação</h3>${
-    presentes.length
-      ? `<ul>${presentes
-          .map(
-            ([rotulo, valor]) =>
-              `<li>Escolas municipais ${esc(rotulo)}: <b>${esc(int(valor))}</b>.</li>`,
-          )
-          .join("")}</ul>`
-      : "<p>Nenhuma escola municipal declarada em campo, terra indígena, quilombo ou assentamento.</p>"
-  }<p>A portaria do FUNDEB pondera essas matrículas acima da urbana comum. Condição não declarada no Censo é receita não recebida no ano seguinte.</p></div></div>`;
+  // A trajetória, não a foto: o número isolado não distingue rede que subiu
+  // de rede que caiu para o mesmo lugar — e é a evolução que a Cond. I do VAAR
+  // observa. Com uma edição só não há trajetória, e o bloco não aparece.
+  const s = model.idebSeries;
+  const variacao = (pegar: (l: (typeof s)[number]) => number | null) => {
+    const comDado = s.filter((l) => pegar(l) !== null);
+    if (comDado.length < 2) return null;
+    const primeiro = comDado[0];
+    const ultimo = comDado[comDado.length - 1];
+    return {
+      delta: Math.round(((pegar(ultimo) as number) - (pegar(primeiro) as number)) * 100) / 100,
+      de: primeiro.year,
+      ate: ultimo.year,
+    };
+  };
+  const varAi = variacao((l) => l.initial);
+  const varAf = variacao((l) => l.final);
+
+  const frase = (rotulo: string, v: ReturnType<typeof variacao>) =>
+    v === null
+      ? ""
+      : `<b>${rotulo}:</b> ${
+          v.delta === 0
+            ? "parado"
+            : `${v.delta > 0 ? "+" : "−"}${decimal.format(Math.abs(v.delta))}`
+        } de ${v.de} a ${v.ate}.`;
+
+  const serie =
+    s.length < 2
+      ? ""
+      : `<div class="card mt-3"><h3>A trajetória, edição a edição</h3><table><thead><tr><th>Edição</th>${s
+          .map((l) => `<th class="num">${l.year}</th>`)
+          .join("")}</tr></thead><tbody><tr><td>Anos iniciais</td>${s
+          .map((l) => `<td class="num">${l.initial === null ? "—" : decimal.format(l.initial)}</td>`)
+          .join("")}</tr><tr><td>Anos finais</td>${s
+          .map((l) => `<td class="num">${l.final === null ? "—" : decimal.format(l.final)}</td>`)
+          .join("")}</tr></tbody></table><p class="small" style="margin-top:.06in">${frase(
+          "Anos iniciais",
+          varAi,
+        )} ${frase("Anos finais", varAf)} A <b>Condicionalidade I do VAAR</b> mede evolução, não nível: rede que parte de baixo e sobe é premiada, rede que estaciona no alto não é.</p></div>`;
+
+  const cardIdeb = (
+    titulo: string,
+    observado: number | null,
+    meta: number | null,
+    leitura: string,
+  ) =>
+    `<div class="card ${statusClass(observado, meta)}"><h3>${titulo}</h3><div class="grid-2">${metric(
+      observado === null ? "N/D" : decimal.format(observado),
+      "IDEB observado",
+    )}${metric(meta === null ? "N/D" : decimal.format(meta), rotuloMeta)}</div><div class="divider"></div><p class="small">${leitura}</p></div>`;
+
+  return `<section class="page content-page">${header("Porte e resultado")}<main class="page-body"><div class="kicker">A rede em números e o índice que a mede</div><h2>${titulo}</h2><p class="lede">O porte da rede sai do Censo Escolar${
+    model.enrollmentYear ? ` ${esc(model.enrollmentYear)}` : ""
+  } — matrícula não é projetada para ${model.currentYear} enquanto o INEP não publica a base. O IDEB${
+    model.idebYear ? ` ${model.idebYear}` : ""
+  } é a linha de resultado agregada; as páginas seguintes a desmontam escola a escola, que é onde a decisão acontece.</p><div class="grid-4 mt-3">${metric(
+    int(model.enrollments),
+    "matrículas municipais",
+  )}${metric(int(model.schools), "escolas")}${metric(int(model.fullTime), "em tempo integral")}${metric(
+    int(model.specialEducation),
+    "em educação especial",
+  )}</div><div class="grid-2 mt-3">${cardIdeb(
+    "Anos iniciais",
+    model.idebInitial,
+    model.idebInitialTarget,
+    abaixoAi
+      ? "A recomposição precisa ser priorizada por habilidade e por escola — a média da rede não diz onde intervir."
+      : "Manter o resultado e olhar a distância entre a melhor e a pior escola, que a média esconde.",
+  )}${cardIdeb(
+    "Anos finais",
+    model.idebFinal,
+    model.idebFinalTarget,
+    abaixoAf
+      ? "Transição e fluxo pedem intervenção focalizada e monitoramento curto — abandono aqui vira distorção adiante."
+      : "Preservar a trajetória e monitorar abandono, aprovação e proficiência por escola.",
+  )}</div><div class="${abaixoAi || abaixoAf ? "insight" : "note"} mt-3"><b>Como esta página conversa com as próximas:</b> o IDEB combina fluxo e proficiência num número só, então rede que aprova todo mundo sobe o índice sem aprender mais. ${
+    model.idebTargetIsNational
+      ? "E a régua ao lado é a <b>referência nacional</b>, não um compromisso deste município: o INEP projetou metas por rede só até 2021."
+      : "A régua ao lado é a meta que o INEP projetou para esta rede."
+  } Matrícula em tempo integral e em educação especial não são só atendimento — são <b>fator de ponderação</b> no FUNDEB, e aparecem de novo na página da matrícula ponderada.${
+    model.eja !== null && model.eja > 0
+      ? ` A rede também mantém ${int(model.eja)} matrículas de EJA, que ponderam abaixo da urbana comum.`
+      : ""
+  }</div>${serie}<p class="micro mt-1">Fontes: INEP — Censo Escolar${
+    model.enrollmentYear ? ` ${esc(model.enrollmentYear)}` : ""
+  } (porte da rede) e divulgação do IDEB${
+    model.idebSeries.length > 1
+      ? `, edições de ${model.idebSeries[0].year} a ${model.idebSeries[model.idebSeries.length - 1].year}`
+      : model.idebYear
+        ? ` ${model.idebYear}`
+        : ""
+  }, para a rede municipal.</p></main>${footer(pagina, "INEP — Censo Escolar e IDEB")}</section>`;
 }
 
 function header(section: string) {
@@ -1809,21 +1937,28 @@ function paginaConformidade(model: MunicipalXrayModel, pagina: number): string {
  * quebrado e deixa quebrado o que trava — e esta página existe para desfazer a
  * confusão na frente do gestor, com o texto oficial do FNDE impresso.
  */
-function paginaComplementacoes(model: MunicipalXrayModel, pagina: number): string {
-  const v = model.vaar;
-  const t = model.vaat;
+/**
+ * Pontualidade fiscal — a previsão, não a autópsia.
+ *
+ * As datas reais das últimas DCAs contra os dois prazos que importam (30/4 da
+ * LRF e o corte de 31/8 do VAAT), cruzadas com o lado SIOPE
+ * (`model.siope.stale`). É a resposta a "vamos perder o VAAT?".
+ *
+ * Mora na página do CAUC, não na das complementações: as duas falam de
+ * requisito fiscal que trava repasse, e a das complementações não tinha altura
+ * para as duas coisas — estourava a folha em todo município de porte médio
+ * para cima.
+ */
+function blocoPontualidadeFiscal(model: MunicipalXrayModel): string {
   const f = model.fiscalTimeliness;
+  if (!f) return "";
 
-  // A previsão, não a autópsia: as datas reais das últimas DCAs contra os dois
-  // prazos que importam (30/4 da LRF e o corte de 31/8 do VAAT), cruzadas com
-  // o lado SIOPE (`model.siope.stale`). É a resposta a "vamos perder o VAAT?".
   const dataCurta = (iso: string | null) =>
     iso ? new Intl.DateTimeFormat("pt-BR").format(new Date(iso)) : "não entregue";
   const rotuloRisco = { alto: "ALTO", medio: "MÉDIO", baixo: "BAIXO" } as const;
   const siopeAtrasado = model.siope?.stale === true;
 
-  const blocoPontualidade = f
-    ? `<div class="grid-2 mt-3"><div class="card ${f.risk === "alto" ? "bad" : f.risk === "medio" ? "warn" : "accent"}"><h3>Risco de perder o VAAT — lado Siconfi: ${rotuloRisco[f.risk]}</h3><table><tbody>${f.dca
+  return `<div class="grid-2 mt-3"><div class="card ${f.risk === "alto" ? "bad" : f.risk === "medio" ? "warn" : "accent"}"><h3>Risco de perder o VAAT — lado Siconfi: ${rotuloRisco[f.risk]}</h3><table><tbody>${f.dca
         .map(
           (d) => `<tr><td>DCA ${d.year}</td><td class="num">${esc(dataCurta(d.deliveredAt))}</td><td class="num">${
             d.missedVaatCutoff === true
@@ -1847,8 +1982,12 @@ function paginaComplementacoes(model: MunicipalXrayModel, pagina: number): strin
           : model.siope
             ? "A declaração ao SIOPE consta no exercício de referência — os dois lados do corte estão cobertos até aqui."
             : "Não foi possível ler a situação da declaração ao SIOPE nesta emissão; conferir diretamente no sistema."
-      }</p><p class="micro" style="margin-top:.05in">Prazos: DCA até 30/4 (LRF, art. 51, §1º, I); Siconfi e SIOPE até 31/8 para habilitar ao VAAT do exercício seguinte (Lei nº 14.113/2020, art. 13, §4º). Datas lidas do extrato de entregas do Tesouro na emissão.</p></div></div>`
-    : "";
+      }</p><p class="micro" style="margin-top:.05in">Prazos: DCA até 30/4 (LRF, art. 51, §1º, I); Siconfi e SIOPE até 31/8 para habilitar ao VAAT do exercício seguinte (Lei nº 14.113/2020, art. 13, §4º). Datas lidas do extrato de entregas do Tesouro na emissão.</p></div></div>`;
+}
+
+function paginaComplementacoes(model: MunicipalXrayModel, pagina: number): string {
+  const v = model.vaar;
+  const t = model.vaat;
 
   const statusVaar = !v
     ? "Sem dado nas bases consultadas"
@@ -1876,7 +2015,7 @@ function paginaComplementacoes(model: MunicipalXrayModel, pagina: number): strin
 
   return `<section class="page content-page">${header("Complementações da União")}<main class="page-body"><div class="kicker">FUNDEB · onde a receita se perde</div><h2>Cada complementação se perde por um motivo diferente</h2><p class="lede">VAAF é fórmula e não se perde. VAAT se perde por <b>habilitação fiscal</b>. VAAR se perde por <b>condicionalidade de resultado</b>. Diagnosticar a parcela errada é corrigir o que não está quebrado — e deixar quebrado o que trava.</p><div class="grid-3 mt-3"><div class="card accent"><h3>VAAF</h3><p class="small">Equalização por fórmula dentro da UF. Todo ente abaixo do VAAF-MIN recebe automaticamente (art. 21). <b>Não existe perda por pendência</b> — o valor só muda com matrícula ponderada e arrecadação.</p></div><div class="card ${vaatInabilitado ? "bad" : "accent"}"><h3>VAAT</h3><div class="metric-value" style="font-size:11pt">${esc(statusVaat)}</div><p class="small">Condição única e <b>fiscal</b> (art. 13, §4º): dados no Siconfi e no SIOPE até <b>31 de agosto</b>. Inabilitado perde <b>100%</b> da complementação do exercício.${
     t?.pendency ? ` <b>Pendência registrada:</b> <i>${esc(t.pendency)}</i>.` : ""
-  }</p></div><div class="card ${v && !v.qualified ? "bad" : "accent"}"><h3>VAAR</h3><div class="metric-value" style="font-size:11pt">${esc(statusVaar)}</div><p class="small">Cinco condicionalidades de resultado (art. 14, §1º), aferidas todo ano. Reprovar em <b>uma</b> zera a parcela inteira. Rateio proporcional à evolução dos indicadores.</p></div></div>${cardPendencia}<div class="insight mt-3"><b>&ldquo;Perdemos o VAAR por questão fiscal&rdquo; — essa frase mistura duas parcelas.</b> Pendência fiscal nunca derruba o VAAR: as causas são só as cinco condicionalidades acima${v?.pendency ? ", e a deste município está impressa ao lado" : ""}. O que ela derruba é a <b>habilitação VAAT</b> do exercício seguinte, os <b>convênios</b> via CAUC e a aprovação das <b>contas</b> no tribunal. O repasse do FUNDEB em si é automático (art. 21).</div>${numerosVaat}${blocoPontualidade}</main>${footer(pagina, "FNDE e Tesouro Nacional — habilitação VAAR/VAAT e extrato de entregas")}</section>`;
+  }</p></div><div class="card ${v && !v.qualified ? "bad" : "accent"}"><h3>VAAR</h3><div class="metric-value" style="font-size:11pt">${esc(statusVaar)}</div><p class="small">Cinco condicionalidades de resultado (art. 14, §1º), aferidas todo ano. Reprovar em <b>uma</b> zera a parcela inteira. Rateio proporcional à evolução dos indicadores.</p></div></div>${cardPendencia}<div class="insight mt-3"><b>&ldquo;Perdemos o VAAR por questão fiscal&rdquo; — essa frase mistura duas parcelas.</b> Pendência fiscal nunca derruba o VAAR: as causas são só as cinco condicionalidades acima${v?.pendency ? ", e a deste município está impressa ao lado" : ""}. O que ela derruba é a <b>habilitação VAAT</b> do exercício seguinte, os <b>convênios</b> via CAUC e a aprovação das <b>contas</b> no tribunal. O repasse do FUNDEB em si é automático (art. 21).</div>${numerosVaat}</main>${footer(pagina, "FNDE e Tesouro Nacional — habilitação VAAR/VAAT")}</section>`;
 }
 
 /**
@@ -2015,7 +2154,7 @@ function paginaGemeos(model: MunicipalXrayModel, pagina: number): string {
     pior && notaPior !== null && notaPior <= 30
       ? `<div class="note mt-3"><b>Onde a distância é maior:</b> em <b>${esc(pior.label.toLowerCase())}</b> o município está atrás de ${100 - notaPior}% dos iguais (${esc(fmtValor(pior.value, pior.unit))} contra mediana de ${esc(fmtValor(pior.cohortMedian, pior.unit))}). É o indicador em que o mesmo porte de rede, em outro lugar, entrega mais — o primeiro candidato a plano de ação.</div>`
       : ""
-  }<p class="small mt-1">Fontes: matrículas ponderadas do FNDE, habilitação VAAR, indicadores SIOPE e remuneração do magistério — os mesmos datasets das demais páginas, apurados igualmente para toda a coorte. Percentis calculados apenas quando ao menos 20 semelhantes têm o dado.</p></main>${footer(pagina, "Datasets FNDE/SIOPE — coorte nacional por porte de rede")}</section>`;
+  }<p class="micro mt-1">Fontes: matrículas ponderadas do FNDE, habilitação VAAR, indicadores SIOPE e remuneração do magistério — os mesmos datasets das demais páginas, apurados igualmente para toda a coorte. Percentis calculados apenas quando ao menos 20 semelhantes têm o dado.</p></main>${footer(pagina, "Datasets FNDE/SIOPE — coorte nacional por porte de rede")}</section>`;
 }
 
 /**
@@ -2038,7 +2177,7 @@ function paginaEscolas(model: MunicipalXrayModel, pagina: number): string {
   const nota = (valor: number | null) => (valor === null ? "—" : decimal.format(valor));
   // 12 e não 14: com 14 linhas a página estoura nas redes que também disparam
   // o bloco de participação e o de amplitude — os dois maiores da folha.
-  const LIMITE = 12;
+  const LIMITE = 11;
   const visiveis = s.list.slice(0, LIMITE);
   const restantes = s.total - visiveis.length;
 
@@ -2629,7 +2768,7 @@ function paginaCicloPolitico(model: MunicipalXrayModel, pagina: number): string 
       indeterminado: "N/D",
     }[p.status],
     "última transição",
-  )}${metric(String(anoEleitoral), "próximo pleito municipal")}</div><div class="grid-2 mt-3"><div class="${leitura.classe}"><b>${esc(leitura.titulo)}.</b> ${leitura.texto}</div>${panorama}</div><div class="card warn mt-2"><h3>As duas travas legais do fim de mandato</h3><table><thead><tr><th>Quando</th><th>O que trava</th><th>Base legal</th></tr></thead><tbody><tr><td><b>${anoEleitoral}</b>, três meses antes do pleito</td><td>Transferência voluntária da União e do estado ao município fica <b>vedada</b> (salvo obra em andamento e ações de emergência). Emenda e convênio novos não são assinados nesse intervalo.</td><td>Lei nº 9.504/1997, art. 73, VI, "a"</td></tr><tr><td><b>${ultimoAnoMandato}</b>, últimos 180 dias</td><td>Proibido contrair obrigação de despesa que não possa ser paga no exercício, e aumento de despesa de pessoal no último quadrimestre.</td><td>LRF, art. 42 e art. 21, parágrafo único</td></tr></tbody></table><p class="small mt-1">Consequência prática para a educação: projeto que depende de convênio federal precisa estar <b>assinado e com liberação iniciada antes da janela</b>, e obra contratada no fim do mandato sem caixa vira restos a pagar do sucessor — exatamente o mecanismo que produz as obras paralisadas da página do FNDE.</p></div><div class="note mt-1"><b>Perguntas de campo:</b> quem responde hoje pelo Educacenso e pelo SIOPE, e desde quando está no cargo? A secretaria manteve o sistema de gestão escolar do mandato anterior ou migrou? Existe plano de captação com as datas de ${anoEleitoral} marcadas, ou a expectativa é assinar convênio no meio do ano eleitoral?</div><p class="small mt-1">Fonte: ${esc(fonte)} (dataset local, pleitos de ${p.previous ? `${p.previous.election} e ` : ""}${p.current.election}). Nome de urna e partido conforme a diplomação; eventual mudança de partido no curso do mandato não aparece nesta base.</p></main>${footer(pagina, fonte)}</section>`;
+  )}${metric(String(anoEleitoral), "próximo pleito municipal")}</div><div class="grid-2 mt-3"><div class="${leitura.classe}"><b>${esc(leitura.titulo)}.</b> ${leitura.texto}</div>${panorama}</div><div class="card warn mt-2"><h3>As duas travas legais do fim de mandato</h3><table><thead><tr><th>Quando</th><th>O que trava</th><th>Base legal</th></tr></thead><tbody><tr><td><b>${anoEleitoral}</b>, três meses antes do pleito</td><td>Transferência voluntária da União e do estado ao município fica <b>vedada</b> (salvo obra em andamento e ações de emergência). Emenda e convênio novos não são assinados nesse intervalo.</td><td>Lei nº 9.504/1997, art. 73, VI, "a"</td></tr><tr><td><b>${ultimoAnoMandato}</b>, últimos 180 dias</td><td>Proibido contrair obrigação de despesa que não possa ser paga no exercício, e aumento de despesa de pessoal no último quadrimestre.</td><td>LRF, art. 42 e art. 21, parágrafo único</td></tr></tbody></table><p class="small mt-1">Consequência prática para a educação: projeto que depende de convênio federal precisa estar <b>assinado e com liberação iniciada antes da janela</b>, e obra contratada no fim do mandato sem caixa vira restos a pagar do sucessor — exatamente o mecanismo que produz as obras paralisadas da página do FNDE.</p></div><div class="note mt-1"><b>Perguntas de campo:</b> quem responde hoje pelo Educacenso e pelo SIOPE, e desde quando está no cargo? A secretaria manteve o sistema de gestão escolar do mandato anterior ou migrou? Existe plano de captação com as datas de ${anoEleitoral} marcadas, ou a expectativa é assinar convênio no meio do ano eleitoral?</div><p class="micro mt-1">Fonte: ${esc(fonte)} (dataset local, pleitos de ${p.previous ? `${p.previous.election} e ` : ""}${p.current.election}). Nome de urna e partido conforme a diplomação; eventual mudança de partido no curso do mandato não aparece nesta base.</p></main>${footer(pagina, fonte)}</section>`;
 }
 
 /**
@@ -2644,8 +2783,11 @@ function paginaCauc(model: MunicipalXrayModel, pagina: number): string {
   const c = model.cauc;
   const fonte = "Tesouro Nacional — CAUC, extrato de requisitos fiscais";
 
+  // O bloco de pontualidade vem de outra fonte (extrato de entregas do
+  // Tesouro) e sobrevive à ausência do CAUC — repeti-lo aqui evita que ele
+  // suma do dossiê junto com um extrato que não respondeu.
   if (!c) {
-    return `<section class="page content-page">${header("Requisitos fiscais")}<main class="page-body"><div class="kicker">O que trava uma transferência</div><h2>Extrato do CAUC indisponível nesta emissão</h2><p class="lede">O extrato do Tesouro não respondeu no momento da geração. O CAUC é atualizado em dias úteis e a consulta pode ser repetida — nenhum valor é estimado no lugar do dado.</p></main>${footer(pagina, fonte)}</section>`;
+    return `<section class="page content-page">${header("Requisitos fiscais")}<main class="page-body"><div class="kicker">O que trava uma transferência</div><h2>Extrato do CAUC indisponível nesta emissão</h2><p class="lede">O extrato do Tesouro não respondeu no momento da geração. O CAUC é atualizado em dias úteis e a consulta pode ser repetida — nenhum valor é estimado no lugar do dado.</p>${blocoPontualidadeFiscal(model)}</main>${footer(pagina, fonte)}</section>`;
   }
 
   const dataPesquisa = c.queriedAt
@@ -2694,7 +2836,7 @@ function paginaCauc(model: MunicipalXrayModel, pagina: number): string {
     c.nextExpiry
       ? `O prazo mais próximo é <b>${esc(new Intl.DateTimeFormat("pt-BR").format(new Date(`${c.nextExpiry.until}T12:00:00Z`)))}</b>, do item ${esc(c.nextExpiry.code)}. Requisito comprovado vira pendência sozinho quando o prazo passa: a rotina que protege a carteira de convênios é olhar o extrato antes do vencimento, não depois da recusa.`
       : "Nenhum vencimento informado nesta emissão."
-  }</p></div></div>${blocoEducacao}<p class="small mt-1">Fonte: ${esc(fonte)}, consulta de ${esc(dataPesquisa)} (publicação diária em dias úteis, CNPJ principal do ente). O extrato cobre parte dos requisitos legais das transferências voluntárias — item comprovado no CAUC não substitui a checagem do órgão concedente na assinatura.</p></main>${footer(pagina, fonte)}</section>`;
+  }</p></div></div>${blocoEducacao}${blocoPontualidadeFiscal(model)}<p class="micro mt-1">Fonte: ${esc(fonte)}, consulta de ${esc(dataPesquisa)} (publicação diária em dias úteis, CNPJ principal do ente). O extrato cobre parte dos requisitos legais das transferências voluntárias — item comprovado no CAUC não substitui a checagem do órgão concedente na assinatura.</p></main>${footer(pagina, `${fonte} · Tesouro Nacional — extrato de entregas`)}</section>`;
 }
 
 /**
@@ -3293,7 +3435,7 @@ h2{max-width:7.05in}
 .territory-fallback{width:92%;height:92%;filter:none}
 .territory-fallback>path:not(.territory-pin),.territory-fallback>circle{fill:none;stroke:#9cbcb7;stroke-width:5}
 .territory-fallback .territory-pin{fill:var(--teal);stroke:var(--navy);stroke-width:5;fill-rule:evenodd}
-.map-escolas{width:3.55in;height:3.55in;display:block;margin:0 auto}.map-escolas .map-shape{fill:var(--wash);stroke:var(--navy);stroke-width:4;vector-effect:non-scaling-stroke;fill-rule:evenodd}.map-escolas .dot-urbana{fill:var(--teal);opacity:.85}.map-escolas .dot-rural{fill:var(--gold);opacity:.9}.map-escolas .dot-dif{fill:var(--red)}.map-legend{display:flex;gap:.16in;justify-content:center;font-size:7.2pt;color:var(--muted);margin-top:.06in}.map-legend i{display:inline-block;width:.09in;height:.09in;border-radius:50%;margin-right:.04in;vertical-align:-1px}.map-legend .li-urbana{background:var(--teal)}.map-legend .li-rural{background:var(--gold)}.map-legend .li-dif{background:var(--red)}
+.map-escolas{width:3.46in;height:3.46in;display:block;margin:0 auto}.map-escolas .map-shape{fill:var(--wash);stroke:var(--navy);stroke-width:4;vector-effect:non-scaling-stroke;fill-rule:evenodd}.map-escolas .dot-urbana{fill:var(--teal);opacity:.85}.map-escolas .dot-rural{fill:var(--gold);opacity:.9}.map-escolas .dot-dif{fill:var(--red)}.map-legend{display:flex;gap:.16in;justify-content:center;font-size:7.2pt;color:var(--muted);margin-top:.06in}.map-legend i{display:inline-block;width:.09in;height:.09in;border-radius:50%;margin-right:.04in;vertical-align:-1px}.map-legend .li-urbana{background:var(--teal)}.map-legend .li-rural{background:var(--gold)}.map-legend .li-dif{background:var(--red)}
 .cover-map-caption{padding:.13in .03in .02in;display:flex;justify-content:space-between;gap:.12in;color:var(--muted);font-size:6.7pt;text-transform:uppercase;letter-spacing:.06em}
 .cover-map-caption b{color:var(--navy)}
 .cover-bottom{padding:.27in var(--page-x) .3in;background:var(--navy);color:#fff}
@@ -3361,11 +3503,7 @@ ${paginaViolencia(model, prox())}
 
 ${paginaEconomia(model, prox())}
 
-<section class="page content-page">${header("Rede de ensino")}<main class="page-body"><div class="kicker">Acesso e oferta</div><h2>A rede precisa crescer com qualidade e capacidade física</h2><p class="lede">O Censo Escolar informa o porte da rede no ano de referência disponível. Matrículas não são projetadas para ${model.currentYear} quando o Inep ainda não publicou a base correspondente.</p><div class="grid-4 mt-3">${metric(int(model.enrollments),"matrículas municipais")}${metric(int(model.schools),"escolas")}${metric(int(model.fullTime),"tempo integral")}${metric(int(model.specialEducation),"educação especial")}</div><div class="grid-2 mt-3"><div class="card accent"><h3>Composição disponível</h3><table><tbody><tr><td>Ano-base do Censo</td><td class="num"><b>${esc(model.enrollmentYear ?? "N/D")}</b></td></tr><tr><td>Educação de jovens e adultos</td><td class="num"><b>${esc(int(model.eja))}</b></td></tr><tr><td>Educação especial</td><td class="num"><b>${esc(int(model.specialEducation))}</b></td></tr><tr><td>Tempo integral</td><td class="num"><b>${esc(int(model.fullTime))}</b></td></tr></tbody></table></div><div class="card warn"><h3>Perguntas para auditoria</h3><ul><li>A expansão aparece por escola e etapa?</li><li>A infraestrutura acompanhou o novo atendimento?</li><li>Há coerência entre Censo, sistemas locais e documentação?</li><li>O financiamento por matrícula está evoluindo de forma sustentável?</li></ul></div></div>${equityBlock(model)}</main>${footer(prox(),"Censo Escolar/Inep")}</section>
-
-<section class="page content-page">${header("Aprendizagem")}<main class="page-body"><div class="kicker">Resultado educacional</div><h2>A escala financeira deve aparecer na aprendizagem</h2><p class="lede">O IDEB mais recente é usado como linha de resultado${model.idebYear ? `, referente a ${model.idebYear}` : ""}. ${model.idebTargetIsNational ? "O INEP projetou metas por rede apenas até 2021 — a edição seguinte saiu sem metas estipuladas. O parâmetro ao lado é a referência nacional, não um compromisso assumido por este município." : "A meta projetada pelo INEP para a rede é exibida lado a lado para orientar o tamanho do esforço necessário."}</p><div class="grid-2 mt-3"><div class="card ${statusClass(model.idebInitial,model.idebInitialTarget)}"><h3>Anos iniciais</h3><div class="grid-2">${metric(model.idebInitial === null ? "N/D" : decimal.format(model.idebInitial),"IDEB observado")}${metric(model.idebInitialTarget === null ? "N/D" : decimal.format(model.idebInitialTarget),model.idebTargetIsNational ? "referência nacional" : "meta")}</div><div class="divider"></div><p>${model.idebInitial !== null && model.idebInitialTarget !== null && model.idebInitial < model.idebInitialTarget ? "A recomposição de aprendizagem deve ser priorizada por habilidade e escola." : "Acompanhar a manutenção do resultado e as desigualdades entre escolas."}</p></div><div class="card ${statusClass(model.idebFinal,model.idebFinalTarget)}"><h3>Anos finais</h3><div class="grid-2">${metric(model.idebFinal === null ? "N/D" : decimal.format(model.idebFinal),"IDEB observado")}${metric(model.idebFinalTarget === null ? "N/D" : decimal.format(model.idebFinalTarget),model.idebTargetIsNational ? "referência nacional" : "meta")}</div><div class="divider"></div><p>${model.idebFinal !== null && model.idebFinalTarget !== null && model.idebFinal < model.idebFinalTarget ? "A transição e a aprendizagem exigem intervenção focalizada e monitoramento curto." : "Preservar trajetória e monitorar abandono, aprovação e proficiência."}</p></div></div><div class="callout mt-3"><h3>Agenda de resultado</h3><p>Definir linha de base por escola, metas bimestrais, rotina de avaliação formativa e apoio pedagógico acionado por evidência.</p></div></main>${footer(prox(),"Inep e QEdu, última observação disponível")}</section>
-
-<section class="page content-page">${header("Saúde fiscal")}<main class="page-body"><div class="kicker">Sustentabilidade</div><h2>Espaço fiscal precisa ser protegido durante a aceleração</h2><p class="lede">A capacidade de investir depende do equilíbrio entre receita, pessoal e compromissos recorrentes.</p><table class="mt-3"><thead><tr><th>Indicador</th><th class="num">Valor</th><th>Leitura</th></tr></thead><tbody><tr><td>Receita Corrente Líquida</td><td class="num">${esc(money(model.rcl))}</td><td>Base para limites fiscais</td></tr><tr><td>Despesa total com pessoal</td><td class="num">${esc(money(model.personnelExpense))}</td><td>${esc(pct(model.personnelPercent))} da RCL ajustada</td></tr><tr><td>Limite máximo de pessoal</td><td class="num">${esc(pct(model.personnelLimit))}</td><td>Parâmetro da entrega Siconfi</td></tr><tr><td>Situação LRF</td><td class="num">${esc(model.fiscalStatus)}</td><td>Requer acompanhamento periódico</td></tr></tbody></table><div class="grid-2 mt-3"><div class="card accent"><h3>Controles essenciais</h3><ul><li>Projeção mensal de receita e despesa.</li><li>Pessoal e contratos continuados.</li><li>Cronograma físico-financeiro dos projetos.</li><li>Riscos e contrapartidas por programa.</li></ul></div><div class="card warn"><h3>Sinal de gestão</h3><p>Uma boa situação fiscal é uma janela para corrigir gargalos. Uma situação pressionada exige priorização ainda mais rigorosa e proteção dos serviços essenciais.</p></div></div></main>${footer(prox(),"Siconfi/Tesouro Nacional")}</section>
+${paginaRedeEResultado(model, prox())}
 
 <section class="page content-page">${header("Infraestrutura escolar")}<main class="page-body"><div class="kicker">Condições de oferta</div><h2>Qualidade também depende do ambiente de aprendizagem</h2><p class="lede">A cobertura de infraestrutura escolar ajuda a localizar gargalos concretos. Os percentuais são calculados sobre as ${model.publicSchools === null ? "escolas" : `${int(model.publicSchools)} escolas`} da rede <b>pública</b> do município — universo maior que a rede municipal, porque o Censo avalia a infraestrutura de todas as escolas públicas do território.</p><div class="mt-3">${infraRows}</div><div class="grid-2 mt-3"><div class="insight"><b>Prioridade:</b> atacar primeiro os itens com menor cobertura e maior efeito sobre segurança, permanência e prática pedagógica.</div><div class="note"><b>Validação local:</b> conferir escola por escola, pois reformas recentes podem ainda não aparecer no Censo publicado.</div></div></main>${footer(prox(),"Microdados do Censo Escolar/Inep")}</section>
 
