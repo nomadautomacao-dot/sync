@@ -2336,3 +2336,78 @@ describe("página do precatório do FUNDEF", () => {
     expect(saida).toContain("A comprovação está no município");
   });
 });
+
+/**
+ * Bloco da FUNAI na página "Declaração étnica" (roadmap #35).
+ *
+ * O quarto elo da corrente, e o único que não é autodeclaração: a FUNAI
+ * cadastra onde há aldeia. Só aparece onde há aldeia registrada.
+ */
+describe("aldeias da FUNAI na declaração étnica", () => {
+  function render(codigoIbge: string, comCenso = true) {
+    return generateMunicipalXrayHtml(
+      mapMunicipalXrayModel({
+        basePayload: {},
+        currentPayload: {
+          dados_basicos: { codigo_ibge: codigoIbge, nome: "X", uf: "BA" },
+          ...(comCenso
+            ? {
+                relatorio_dirigido_base: {
+                  equidadeTerritorial: {
+                    quilombola: { populacao: 0, emIdadeEscolar: 0, matriculasNosSegmentos: 0 },
+                    indigena: { populacao: 812, emIdadeEscolar: 240, matriculasNosSegmentos: 0 },
+                    fatorFaixa: { minimo: 1.4, maximo: 2.17 },
+                  },
+                },
+              }
+            : {}),
+        },
+        baseYear: 2024,
+        currentYear: 2026,
+        generatedAt: new Date("2026-07-30T12:00:00.000Z"),
+      }),
+    );
+  }
+
+  it("não aparece em município sem aldeia registrada", () => {
+    const saida = render("2703007"); // Ibateguara/AL
+    expect(saida).not.toContain("O que a FUNAI cadastra");
+  });
+
+  /**
+   * Paulo Afonso: 3 aldeias no cadastro da FUNAI, nenhuma escola municipal
+   * declarada em terra indígena no Censo — e escola municipal a 1,3 km da
+   * primeira. É a conferência que vale dinheiro, porque o segmento indígena
+   * pondera de 1,40 a 2,17.
+   */
+  it("nomeia o vão entre cadastro e declaração, sem chamar de irregularidade", () => {
+    const saida = render("2924009");
+
+    expect(saida).toContain("O que a FUNAI cadastra");
+    expect(saida).toContain("registra 3 aldeias neste município");
+    expect(saida).toContain("não declara nenhuma escola municipal em terra indígena");
+    expect(saida).toContain("Isso não é irregularidade");
+    expect(saida).toContain("KARIRI");
+  });
+
+  it("lê diferente onde o Censo já declara escola indígena", () => {
+    const saida = render("1302603"); // Manaus
+
+    expect(saida).toContain("O que a FUNAI cadastra");
+    expect(saida).not.toContain("não declara nenhuma escola municipal em terra indígena");
+    expect(saida).toContain("num raio de 10 km");
+  });
+
+  /** Cadastro da FUNAI não depende do Censo Demográfico e não cai com ele. */
+  it("sobrevive à ausência do cruzamento do IBGE", () => {
+    const saida = render("2924009", false);
+
+    expect(saida).toContain("Cruzamento de declaração étnica indisponível");
+    expect(saida).toContain("O que a FUNAI cadastra");
+  });
+
+  it("declara a cauda em vez de truncar em silêncio", () => {
+    const saida = render("1303809"); // São Gabriel da Cachoeira: 141 aldeias
+    expect(saida).toMatch(/e mais \d+ no cadastro/);
+  });
+});

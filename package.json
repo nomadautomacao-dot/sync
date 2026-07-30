@@ -39,6 +39,7 @@
     "dados:assentamentos": "node scripts/dados/gerar-assentamentos-incra.mjs",
     "dados:remuneracao": "node --max-old-space-size=8192 scripts/dados/gerar-remuneracao-docente.mjs",
     "dados:siope": "node scripts/dados/gerar-siope-indicadores.mjs",
+    "dados:terras-indigenas": "node scripts/dados/gerar-terras-indigenas.mjs",
     "dados:ponderadas": "node --max-old-space-size=6144 scripts/dados/gerar-matriculas-ponderadas.mjs"
   },
   "prisma": {

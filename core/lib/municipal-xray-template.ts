@@ -5,6 +5,7 @@ import type {
 import { ROTULOS_STATUS } from "./municipal-profile/types";
 import { levantarAchados, varreduraLimpa, TIERS } from "./municipal-xray-achados";
 import { analisarDispersao } from "./densidade-rede";
+import { getTerrasIndigenas } from "./terras-indigenas";
 import { projectToBoundary, type MunicipalBoundaryMap } from "./ibge-municipal-boundary";
 
 type JsonRecord = Record<string, unknown>;
@@ -393,6 +394,27 @@ export interface MunicipalXrayModel {
    * EC nº 114/2021 amarrou a esse dinheiro. Roadmap #27.
    * Ver `core/lib/precatorio-fundef.ts`.
    */
+  /**
+   * Aldeias registradas pela FUNAI e a distância delas até a rede. Roadmap #35.
+   * Ver `core/lib/terras-indigenas.ts`.
+   */
+  indigenousLands: {
+    villages: Array<{
+      name: string;
+      land: string;
+      ethnicity: string;
+      phase: string;
+      kmToSchool: number | null;
+      kmToIndigenousSchool: number | null;
+    }>;
+    lands: number;
+    indigenousSchools: number;
+    villagesWithoutIndigenousSchool: number;
+    villagesWithoutAnySchool: number;
+    radiusKm: number;
+    registeredButUndeclared: boolean;
+    villagesWithCoords: number;
+  } | null;
   fundefWrit: {
     window: number[];
     missingYears: number[];
@@ -1057,6 +1079,27 @@ export function mapMunicipalXrayModel(params: {
         severelyObese: number(mun.obesidadeGrave) ?? 0,
         statePct: number(asRecord(bruto.estado)?.excessoPesoPct),
         countryPct: number(asRecord(bruto.brasil)?.excessoPesoPct),
+      };
+    })(),
+    indigenousLands: (() => {
+      const t = getTerrasIndigenas(text(at(currentPayload, "dados_basicos.codigo_ibge"), ""));
+      if (!t) return null;
+      return {
+        villages: t.aldeias.map((a) => ({
+          name: a.nome,
+          land: a.terra?.nome ?? "",
+          ethnicity: a.terra?.etnia ?? "",
+          phase: a.terra?.fase ?? "",
+          kmToSchool: a.kmAteEscola,
+          kmToIndigenousSchool: a.kmAteEscolaIndigena,
+        })),
+        lands: t.terras.length,
+        indigenousSchools: t.escolasIndigenas,
+        villagesWithoutIndigenousSchool: t.aldeiasSemEscolaIndigena,
+        villagesWithoutAnySchool: t.aldeiasSemEscolaAlguma,
+        radiusKm: t.raioKm,
+        registeredButUndeclared: t.registroSemDeclaracao,
+        villagesWithCoords: t.aldeiasComCoordenada,
       };
     })(),
     fundefWrit: (() => {
@@ -3283,13 +3326,67 @@ function paginaDensidadeRede(model: MunicipalXrayModel, pagina: number): string 
  * nem estima quantos "deveriam" se declarar. O que ela faz é mostrar a
  * distância entre três contagens oficiais e transformar isso em pergunta.
  */
+/**
+ * O quarto elo da corrente, e o único que não é autodeclaração: a FUNAI
+ * **cadastra** onde há aldeia. Só entra na folha quando existe aldeia
+ * registrada — em nove de cada dez municípios o bloco simplesmente não aparece,
+ * e a página fica como estava.
+ *
+ * O caso que vale a viagem é `registeredButUndeclared`: a FUNAI registra aldeia
+ * e o Censo Escolar não declara **nenhuma** escola municipal em terra indígena.
+ * Isso não é irregularidade — a escola pode ser estadual, as crianças podem
+ * estudar fora da aldeia — mas é a conferência que ninguém faz, e o segmento
+ * indígena é o de maior ponderação da tabela do FUNDEB.
+ */
+function blocoFunai(model: MunicipalXrayModel): string {
+  const t = model.indigenousLands;
+  if (!t || t.villages.length === 0) return "";
+
+  // Bloco compacto de propósito: a folha da declaração étnica já estava no
+  // limite, e uma tabela com cabeçalho custava ~100px — transbordo garantido
+  // nos quatro municípios de teste que têm aldeia. A lista em linha cabe.
+  const MOSTRADAS = 3;
+  const lista = t.villages
+    .slice(0, MOSTRADAS)
+    .map((a) => {
+      // A fase vai como a FUNAI publica: "Encaminhada RI" virava "encaminhada
+      // ri" ao passar por toLowerCase, e a sigla é o que identifica a etapa.
+      const onde = a.land ? ` (TI ${esc(a.land)}${a.phase ? `, ${esc(a.phase)}` : ""})` : "";
+      const perto =
+        a.kmToSchool === null
+          ? "sem coordenada"
+          : `escola a ${decimal.format(a.kmToSchool)} km${
+              a.kmToIndigenousSchool === null
+                ? ", nenhuma indígena"
+                : a.kmToIndigenousSchool > t.radiusKm
+                  ? `, indígena a ${decimal.format(a.kmToIndigenousSchool)} km`
+                  : ""
+            }`;
+      return `${esc(a.name)}${onde} — ${perto}`;
+    })
+    .join(" · ");
+  const resto =
+    t.villages.length > MOSTRADAS ? ` e mais ${int(t.villages.length - MOSTRADAS)} no cadastro.` : ".";
+
+  const leitura = t.registeredButUndeclared
+    ? `<b>A FUNAI registra ${int(t.villages.length)} ${t.villages.length === 1 ? "aldeia" : "aldeias"} neste município e o Censo Escolar não declara nenhuma escola municipal em terra indígena.</b> Isso não é irregularidade — a escola que atende a comunidade pode ser estadual, ou as crianças podem estudar fora da aldeia. Mas é a conferência que ninguém faz, e como a ponderação segue a classificação da escola, é aqui que registro vira ou deixa de virar receita.`
+    : t.villagesWithoutIndigenousSchool > 0
+      ? `Das ${int(t.villagesWithCoords)} aldeias com coordenada, <b>${int(t.villagesWithoutIndigenousSchool)}</b> não têm escola municipal declarada como indígena num raio de ${t.radiusKm} km, contra ${int(t.indigenousSchools)} ${t.indigenousSchools === 1 ? "declarada" : "declaradas"} na rede. <b>Verificar:</b> quem atende essas aldeias, e a classificação da escola está correta na coleta?`
+      : `As ${int(t.villagesWithCoords)} aldeias com coordenada têm escola municipal declarada como indígena a menos de ${t.radiusKm} km. Cadastro da FUNAI e classificação do Censo estão coerentes aqui.`;
+
+  return `<div class="${t.registeredButUndeclared ? "risk" : "insight"} mt-2"><b>O que a FUNAI cadastra:</b> ${leitura}<span class="micro" style="display:block;margin-top:.05in">${lista}${resto} Fonte: FUNAI, cadastro de aldeias e terras indígenas.</span></div>`;
+}
+
 function paginaDeclaracaoEtnica(model: MunicipalXrayModel, pagina: number): string {
   const p = model.peoples;
   const totais = model.schoolMap?.raceTotals ?? null;
   const FONTE = "IBGE — Censo 2022 · INEP — Censo Escolar (cor/raça) · FNDE — matrículas ponderadas";
 
   if (!p) {
-    return `<section class="page content-page">${header("Declaração étnica")}<main class="page-body"><div class="kicker">População, registro e ponderação</div><h2>Cruzamento de declaração étnica indisponível</h2><p class="lede">O Censo 2022 não retornou a população indígena e quilombola deste município na emissão.</p></main>${footer(pagina, FONTE)}</section>`;
+    // O cadastro da FUNAI não depende do Censo Demográfico: se o IBGE não
+    // respondeu, a aldeia registrada continua sendo o dado mais duro da folha
+    // e não pode cair junto.
+    return `<section class="page content-page">${header("Declaração étnica")}<main class="page-body"><div class="kicker">População, registro e ponderação</div><h2>Cruzamento de declaração étnica indisponível</h2><p class="lede">O Censo 2022 não retornou a população indígena e quilombola deste município na emissão, então a corrente população → registro → ponderação fica sem o primeiro elo.</p>${blocoFunai(model)}</main>${footer(pagina, FONTE)}</section>`;
   }
 
   const ind = p.indigenous;
@@ -3347,7 +3444,7 @@ function paginaDeclaracaoEtnica(model: MunicipalXrayModel, pagina: number): stri
     cadastroFragil
       ? `<div class="divider"></div><p class="small"><b>Ressalva de cadastro:</b> ${pct(naoDeclaradaPct)} das matrículas estão sem cor/raça preenchida. Com essa fatia em branco, o número de declarados é piso, não retrato — e a primeira correção é o preenchimento, antes de qualquer conclusão sobre subdeclaração.</p>`
       : ""
-  }</div></div><div class="insight mt-3"><b>Autodeclaração, sempre:</b> pertencimento étnico não se atribui de fora. Nada nesta página estima quantas pessoas "deveriam" se declarar indígenas ou quilombolas, e nenhuma ação daqui envolve classificar aluno. O que a página localiza é a distância entre três contagens oficiais — e o encaminhamento legítimo é procedimental: conferir se o <b>campo do aluno</b> foi preenchido na coleta e se a <b>escola que atende a comunidade</b> está com a classificação correta, ouvindo a própria comunidade.</div><p class="small mt-1">Fonte: IBGE, Censo Demográfico 2022 (agregados 8175 e 8176, população indígena por idade) · INEP, microdados do Censo Escolar${model.schoolMap?.year ? ` ${model.schoolMap.year}` : ""} (cor/raça da matrícula, agregada por escola) · FNDE, matrículas ponderadas do exercício (segmentos indígena e quilombola). Nenhum dado nominal é acessado.</p></main>${footer(pagina, FONTE)}</section>`;
+  }</div></div>${blocoFunai(model)}<div class="insight mt-3"><b>Autodeclaração, sempre:</b> pertencimento étnico não se atribui de fora. Nada nesta página estima quantas pessoas "deveriam" se declarar indígenas ou quilombolas, e nenhuma ação daqui envolve classificar aluno. O que a página localiza é a distância entre três contagens oficiais — e o encaminhamento legítimo é procedimental: conferir se o <b>campo do aluno</b> foi preenchido na coleta e se a <b>escola que atende a comunidade</b> está com a classificação correta, ouvindo a própria comunidade.</div><p class="small mt-1">Fonte: IBGE, Censo Demográfico 2022 (agregados 8175 e 8176, população indígena por idade) · INEP, microdados do Censo Escolar${model.schoolMap?.year ? ` ${model.schoolMap.year}` : ""} (cor/raça da matrícula, agregada por escola) · FNDE, matrículas ponderadas do exercício (segmentos indígena e quilombola). Nenhum dado nominal é acessado.</p></main>${footer(pagina, FONTE)}</section>`;
 }
 
 /**
