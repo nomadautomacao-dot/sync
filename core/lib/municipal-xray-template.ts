@@ -3,6 +3,7 @@ import type {
   MunicipalProfile,
 } from "./municipal-profile/types";
 import { ROTULOS_STATUS } from "./municipal-profile/types";
+import { levantarAchados, varreduraLimpa, TIERS } from "./municipal-xray-achados";
 import { analisarDispersao } from "./densidade-rede";
 import { projectToBoundary, type MunicipalBoundaryMap } from "./ibge-municipal-boundary";
 
@@ -1659,6 +1660,99 @@ function paginaRedeEResultado(model: MunicipalXrayModel, pagina: number): string
   }, para a rede municipal.</p></main>${footer(pagina, "INEP — Censo Escolar e IDEB")}</section>`;
 }
 
+/**
+ * Resumo executivo — o que este município está perdendo, em ordem.
+ *
+ * Substituiu uma folha que terminava em "o município precisa ligar orçamento,
+ * execução e resultado em uma mesma rotina de gestão" — frase idêntica para os
+ * 5.570 municípios — e que repetia, como manchete, números que as páginas
+ * seguintes trazem de novo. Ela pedia que o gestor lesse 40 páginas para
+ * descobrir o que estava em jogo.
+ *
+ * Agora a página 2 diz e as 38 seguintes provam: cada linha aponta a seção que
+ * a sustenta, pelo nome que está no cabeçalho da página.
+ *
+ * A regra do R$ mora em `municipal-xray-achados.ts` e vale aqui: só imprime
+ * valor quando a fonte publicou aquele valor. Não há estimativa de "quanto se
+ * ganharia" — um número inventado na página 2 contamina o dossiê inteiro.
+ */
+function paginaResumoExecutivo(model: MunicipalXrayModel, pagina: number): string {
+  const achados = levantarAchados(model);
+  const limpos = varreduraLimpa(model);
+  const comValor = achados.filter((a) => a.valor !== null);
+
+  // O contraponto da lista. Uma folha com dois achados parece varredura rasa
+  // até o leitor ver quantos pontos foram conferidos — e nenhum desses itens
+  // se acumula: habilitação e extrato são reavaliados todo exercício.
+  const blocoLimpo =
+    limpos.length === 0
+      ? ""
+      : `<div class="note mt-3"><b>Conferido e sem achado (${limpos.length}):</b> ${limpos
+          .map((x) => esc(x))
+          .join("; ")}. Nenhum destes se acumula — habilitação, extrato e meta são reavaliados a cada exercício.</div>`;
+  const somaNomeada = comValor.reduce((t, a) => t + (a.valor ?? 0), 0);
+
+  // Sintagmas nominais de propósito: o rótulo vem sempre precedido de contagem
+  // ("2 em dinheiro já perdido"), e forma verbal concordaria errado no plural.
+  const ROTULO_TIER: Record<number, string> = {
+    [TIERS.perdido]: "em dinheiro já perdido neste exercício",
+    [TIERS.datado]: "em perda com data marcada, ainda evitável",
+    [TIERS.base]: "em base do fundo declarada abaixo da rede",
+    [TIERS.resultado]: "em resultado que as condicionalidades observam",
+  };
+
+  // A régua da página, e o motivo de ela não somar tudo: só entra na soma o
+  // que a fonte publicou em reais. Achado sem R$ publicado não vira zero — ele
+  // aparece na grandeza que a fonte dá.
+  const cabecalho =
+    achados.length === 0
+      ? `<div class="grid-4 mt-3">${metric(
+          compactMoney(model.fundebCurrent),
+          `FUNDEB ${model.currentYear}`,
+        )}${metric(compactMoney(model.revenueCurrent), "receita realizada · parcial")}${metric(
+          int(model.enrollments),
+          `matrículas ${model.enrollmentYear ?? ""}`,
+        )}${metric(int(model.schools), "escolas municipais")}</div>`
+      : `<div class="grid-4 mt-3">${metric(String(achados.length), "achados nomeados")}${metric(
+          comValor.length > 0 ? compactMoney(somaNomeada) : "—",
+          comValor.length > 0 ? "com valor publicado na fonte" : "sem R$ publicado nas fontes",
+        )}${metric(
+          String(achados.filter((a) => a.tier <= TIERS.datado).length),
+          "em dinheiro perdido ou datado",
+        )}${metric(compactMoney(model.fundebCurrent), `FUNDEB ${model.currentYear}`)}</div>`;
+
+  if (achados.length === 0) {
+    return `<section class="page content-page">${header("Resumo executivo")}<main class="page-body"><div class="kicker">Leitura central</div><h2>Nenhuma perda nomeável nas bases consultadas</h2><p class="lede">A varredura das fontes públicas não encontrou complementação zerada, pendência fiscal de educação, obra parada nem meta descumprida neste município. Isso não é atestado de gestão: significa que o achado, se existir, está em documento que não é público — e é isso que o Ofício de solicitação de documentos vai buscar.</p>${cabecalho}<div class="note mt-3"><b>O que isso muda na visita:</b> a conversa deixa de ser sobre corrigir perda e passa a ser sobre <b>ampliar base</b> — cobertura de creche, jornada integral e condição declarada na coleta, que são os três fatores de ponderação sob controle direto da secretaria.</div>${blocoLimpo}</main>${footer(pagina, "Síntese das fontes integradas ao Sync")}</section>`;
+  }
+
+  const linhas = achados
+    .map((a) => {
+      const cifra =
+        a.valor !== null
+          ? `<b>${esc(compactMoney(a.valor))}</b>`
+          : a.medida
+            ? `<b>${esc(a.medida)}</b>`
+            : "—";
+      return `<tr><td><b>${esc(a.titulo)}</b><div class="micro" style="margin-top:.02in">${a.mecanismo}</div></td><td class="num">${cifra}</td><td class="num micro">${esc(a.onde)}</td></tr>`;
+    })
+    .join("");
+
+  const topo = achados[0];
+  const grupos = [...new Set(achados.map((a) => a.tier))]
+    .map((t) => `${achados.filter((a) => a.tier === t).length} ${ROTULO_TIER[t]}`)
+    .join(" · ");
+
+  return `<section class="page content-page">${header("Resumo executivo")}<main class="page-body"><div class="kicker">O que este município está perdendo</div><h2>${esc(topo.titulo)}</h2><p class="lede">${
+    achados.length === 1
+      ? "Um achado nomeado nas bases públicas, com a seção que o prova."
+      : `${achados.length} achados nomeados nas bases públicas, em ordem de urgência: ${grupos}.`
+  } ${
+    comValor.length > 0
+      ? `Só ${comValor.length === 1 ? "um deles tem" : `${comValor.length} deles têm`} valor publicado pela fonte — os demais saem na grandeza que a fonte dá, porque estimar reais aqui seria inventar.`
+      : "Nenhum tem valor em reais publicado pela fonte, então todos saem na grandeza que a fonte dá — estimar aqui seria inventar."
+  }</p>${cabecalho}<table class="mt-3"><thead><tr><th>Achado</th><th class="num">Tamanho</th><th class="num">Onde se prova</th></tr></thead><tbody>${linhas}</tbody></table>${blocoLimpo}<p class="micro mt-1"><b>Onde se prova</b> nomeia a seção que traz o dado, a fonte e o ano. Valor em reais só aparece quando a fonte o publicou: estimar ganho futuro dependeria do VAAF e do VAAT do exercício seguinte, que não existem na data desta emissão.</p></main>${footer(pagina, "Síntese das fontes integradas ao Sync")}</section>`;
+}
+
 function header(section: string) {
   return `<header class="page-header"><strong>Raio-X municipal</strong><span>${esc(section)}</span></header>`;
 }
@@ -1667,25 +1761,49 @@ function footer(page: number, source = "Bases oficiais integradas ao Sync") {
   return `<footer class="page-footer"><span>${esc(source)}</span><span>${page}</span></footer>`;
 }
 
+/**
+ * O plano de ação sai dos mesmos achados do resumo executivo.
+ *
+ * Antes esta função enxergava quatro sinais — variação do FUNDEB, os dois
+ * IDEBs e o item de infraestrutura com pior cobertura — e completava com um
+ * item fixo ("sala de situação municipal") que entrava para qualquer
+ * município, tivesse ele problema ou não. As 38 páginas de achado no meio do
+ * dossiê não chegavam aqui.
+ *
+ * Agora a ordem é a mesma da página 2, então a última folha responde à
+ * primeira: o que se perde, e o que fazer a respeito, com o prazo que a norma
+ * ou o calendário da fonte impõe — não uma estimativa de esforço.
+ *
+ * Os dois itens genéricos sobreviveram como **preenchimento**, e só entram
+ * quando a varredura devolve menos de três achados. Município sem perda
+ * nomeável ainda merece uma próxima ação; o que não pode é conselho genérico
+ * empurrando achado real para fora da lista.
+ */
 function priorityList(model: MunicipalXrayModel) {
-  const priorities: Array<{ title: string; reason: string; horizon: string }> = [];
-  const fundebDelta = change(model.fundebBase, model.fundebCurrent);
-  if (fundebDelta !== null && fundebDelta > 15) {
-    priorities.push({ title: "Governança do novo volume FUNDEB", reason: "A expansão exige metas, trilhas de evidência e monitoramento mensal.", horizon: "0–90 dias" });
+  const priorities = levantarAchados(model).map((a) => ({
+    title: a.acao,
+    reason: a.titulo,
+    horizon: a.prazo,
+  }));
+
+  if (priorities.length < 3) {
+    const weakestInfra = [...model.infrastructure]
+      .filter((item) => item.percent !== null)
+      .sort((a, b) => (a.percent ?? 0) - (b.percent ?? 0))[0];
+    if (weakestInfra) {
+      priorities.push({
+        title: `Atacar a menor cobertura de infraestrutura: ${weakestInfra.name}`,
+        reason: `Cobertura informada de ${pct(weakestInfra.percent)} na base escolar.`,
+        horizon: "6–18 meses",
+      });
+    }
+    priorities.push({
+      title: "Montar a sala de situação municipal",
+      reason: "Finanças, matrículas, aprendizagem e infraestrutura em indicadores auditáveis, num painel só.",
+      horizon: "30 dias",
+    });
   }
-  if (model.idebInitial !== null && model.idebInitialTarget !== null && model.idebInitial < model.idebInitialTarget) {
-    priorities.push({ title: "Recuperação dos anos iniciais", reason: "O IDEB observado está abaixo da meta mais recente disponível.", horizon: "Ano letivo" });
-  }
-  if (model.idebFinal !== null && model.idebFinalTarget !== null && model.idebFinal < model.idebFinalTarget) {
-    priorities.push({ title: "Intervenção nos anos finais", reason: "A transição e a aprendizagem demandam plano focalizado por escola.", horizon: "Ano letivo" });
-  }
-  const weakestInfra = [...model.infrastructure]
-    .filter((item) => item.percent !== null)
-    .sort((a, b) => (a.percent ?? 0) - (b.percent ?? 0))[0];
-  if (weakestInfra) {
-    priorities.push({ title: `Infraestrutura: ${weakestInfra.name}`, reason: `Cobertura informada de ${pct(weakestInfra.percent)} na base escolar.`, horizon: "6–18 meses" });
-  }
-  priorities.push({ title: "Sala de situação municipal", reason: "Unificar finanças, matrículas, aprendizagem e infraestrutura em indicadores auditáveis.", horizon: "30 dias" });
+
   return priorities.slice(0, 5);
 }
 
@@ -3449,7 +3567,7 @@ h2{max-width:7.05in}
 
 <section class="page cover"><div class="cover-topline"></div><header class="cover-header"><div class="brand">Global Company <span>• consultorias</span></div><div class="cover-edition">EDIÇÃO ${model.currentYear}</div></header><main class="cover-body"><div class="cover-copy"><div class="cover-eyebrow">Diagnóstico territorial</div><h1 class="cover-title">Raio-X<small>municipal</small></h1><div class="cover-city${cityLengthClass}">${esc(model.municipality)}</div><div class="cover-place">${esc(model.uf)} · ${esc(model.region)}</div><p class="cover-sub">Uma leitura integrada de finanças, educação, território e capacidade de gestão para orientar o próximo ciclo.</p><div class="cover-meta"><b>Código IBGE ${esc(model.ibgeCode)}</b><br>Comparativo ${model.baseYear} × posição disponível em ${esc(date)}<br>Documento técnico executivo</div></div><div class="cover-visual"><div class="cover-map-frame"><div class="cover-map-canvas">${coverTerritory(model)}</div><div class="cover-map-caption"><b>Território de ${esc(model.municipality)}</b><span>${esc(territoryCaption)}</span></div></div></div></main><footer class="cover-bottom"><div class="cover-stats"><div class="cover-stat"><b>${esc(deltaText(model.fundebBase,model.fundebCurrent))}</b><span>evolução do FUNDEB</span></div><div class="cover-stat"><b>${esc(int(model.population))}</b><span>população ${esc(model.populationYear)}</span></div><div class="cover-stat"><b>${esc(int(model.enrollments))}</b><span>matrículas municipais</span></div></div><div class="cover-date"><span><b>Relatório técnico executivo</b> · tecnologia Global Sync</span><span>${esc(shortDate)}</span></div></footer></section>
 
-<section class="page content-page">${header("Resumo executivo")}<main class="page-body"><div class="kicker">Leitura central</div><h2>Mais recursos só se tornam evolução quando chegam ao resultado</h2><p class="lede">O retrato combina bases públicas integradas ao Sync e compara ${model.baseYear} com a informação mais recente de ${model.currentYear}. A leitura prioriza escala fiscal, financiamento educacional, aprendizagem e capacidade de execução.</p><div class="grid-4 mt-3">${metric(compactMoney(model.fundebCurrent),`FUNDEB ${model.currentYear}`)}${metric(compactMoney(model.revenueCurrent),"receita realizada · parcial")}${metric(int(model.enrollments),`matrículas ${model.enrollmentYear ?? ""}`)}${metric(int(model.schools),"escolas municipais")}</div><div class="grid-2 mt-3"><div class="card accent"><h3>Sinais de capacidade</h3><ul><li>FUNDEB atual: <b>${esc(money(model.fundebCurrent))}</b>.</li><li>Variação frente a ${model.baseYear}: <b class="${fundebClass}">${esc(deltaText(model.fundebBase,model.fundebCurrent))}</b>.</li><li>Receita pública realizada na entrega fiscal disponível: <b>${esc(money(model.revenueCurrent))}</b>.</li><li>Base municipal de ensino: <b>${esc(int(model.enrollments))}</b> matrículas.</li></ul></div><div class="card warn"><h3>Pontos de atenção</h3><ul><li>IDEB dos anos iniciais${model.idebYear ? ` (${model.idebYear})` : ""}: <b>${esc(model.idebInitial === null ? "N/D" : decimal.format(model.idebInitial))}</b>, ${model.idebTargetIsNational ? "referência nacional" : "meta"} ${esc(model.idebInitialTarget === null ? "N/D" : decimal.format(model.idebInitialTarget))}.</li><li>IDEB dos anos finais${model.idebYear ? ` (${model.idebYear})` : ""}: <b>${esc(model.idebFinal === null ? "N/D" : decimal.format(model.idebFinal))}</b>, ${model.idebTargetIsNational ? "referência nacional" : "meta"} ${esc(model.idebFinalTarget === null ? "N/D" : decimal.format(model.idebFinalTarget))}.</li><li>Situação fiscal: <b>${esc(model.fiscalStatus)}</b>.</li><li>Indicadores sem fonte fechada são marcados como não disponíveis.</li></ul></div></div><div class="callout mt-2"><h3>Diagnóstico em uma frase</h3><p>O município precisa ligar orçamento, execução e resultado em uma mesma rotina de gestão, com metas verificáveis e evidências por escola e por política pública.</p></div></main>${footer(prox())}</section>
+${paginaResumoExecutivo(model, prox())}
 
 <section class="page content-page">${header("Metodologia")}<main class="page-body"><div class="kicker">Como ler</div><h2>Comparação honesta começa pela data de corte</h2><p class="lede">${model.baseYear} é tratado como ano-base. ${model.currentYear} representa a posição disponível na data de geração e pode conter entregas parciais.</p><div class="grid-2 mt-3"><div class="card accent"><h3>Ano-base ${model.baseYear}</h3><p>Valores anuais fechados são usados quando existem. Na ausência de encerramento, o relatório identifica a última entrega oficial recuperada.</p></div><div class="card warn"><h3>Posição ${model.currentYear}</h3><p>Estimativas e execuções parciais não são apresentadas como fechamento anual. A data de corte é ${esc(shortDate)}.</p></div></div><table class="mt-3"><thead><tr><th>Camada</th><th>Fonte principal</th><th>Regra de leitura</th></tr></thead><tbody><tr><td>Finanças</td><td>Siconfi / Tesouro</td><td>Última entrega fiscal disponível</td></tr><tr><td>FUNDEB</td><td>FNDE e histórico oficial</td><td>Fechamento ou estimativa vigente</td></tr><tr><td>Rede escolar</td><td>Censo Escolar / Inep</td><td>Ano de referência explicitado</td></tr><tr><td>Aprendizagem</td><td>Inep / QEdu</td><td>Último IDEB observado</td></tr><tr><td>Território</td><td>IBGE Cidades</td><td>Referência informada pela fonte</td></tr></tbody></table><div class="note mt-3"><b>Regra de integridade:</b> “N/D” significa que a fonte não devolveu um valor confiável. O motor não preenche lacunas com estimativas silenciosas.</div></main>${footer(prox(),"Metodologia Global Sync para leitura municipal")}</section>
 
@@ -3523,7 +3641,7 @@ ${paginaQuemDirige(model, prox())}
 
 ${paginaConformidade(model, prox())}
 
-<section class="page content-page">${header("Plano de ação")}<main class="page-body"><div class="kicker">Próximo ciclo</div><h2>Cinco movimentos para converter recurso em entrega</h2><p class="lede">As prioridades são geradas a partir dos sinais encontrados no município e devem ser validadas com a equipe local.</p><table class="mt-3"><thead><tr><th>#</th><th>Prioridade</th><th>Por quê</th><th>Horizonte</th></tr></thead><tbody>${priorities.map((item,index)=>`<tr><td>${index+1}</td><td><b>${esc(item.title)}</b></td><td>${esc(item.reason)}</td><td>${esc(item.horizon)}</td></tr>`).join("")}</tbody></table><div class="grid-2 mt-3"><div class="card accent"><h3>Ritual de acompanhamento</h3><ul><li>Painel mensal com responsáveis.</li><li>Evidência documental por ação.</li><li>Revisão trimestral de metas.</li><li>Comunicação executiva em uma página.</li></ul></div><div class="card"><h3>Critério de sucesso</h3><p>Cada real adicional deve estar conectado a uma entrega verificável e a um indicador de acesso, qualidade, eficiência ou equidade.</p></div></div></main>${footer(prox(),"Síntese técnica gerada pelo Sync")}</section>
+<section class="page content-page">${header("Plano de ação")}<main class="page-body"><div class="kicker">Próximo ciclo</div><h2>${priorities.length === 1 ? "O movimento que converte recurso em entrega" : `${priorities.length} movimentos que convertem recurso em entrega`}</h2><p class="lede">Cada linha responde a um achado da página 2, na mesma ordem de urgência, e traz o prazo que a norma ou o calendário da fonte impõe — não uma estimativa de esforço. A validação com a equipe local é o passo seguinte, não um substituto.</p><table class="mt-3"><thead><tr><th>#</th><th>Movimento</th><th>Responde a</th><th>Prazo</th></tr></thead><tbody>${priorities.map((item,index)=>`<tr><td>${index+1}</td><td><b>${esc(item.title)}</b></td><td>${esc(item.reason)}</td><td>${esc(item.horizon)}</td></tr>`).join("")}</tbody></table><div class="grid-2 mt-3"><div class="card accent"><h3>Ritual de acompanhamento</h3><ul><li>Painel mensal com responsáveis.</li><li>Evidência documental por ação.</li><li>Revisão trimestral de metas.</li><li>Comunicação executiva em uma página.</li></ul></div><div class="card"><h3>Critério de sucesso</h3><p>Cada real adicional deve estar conectado a uma entrega verificável e a um indicador de acesso, qualidade, eficiência ou equidade.</p></div></div></main>${footer(prox(),"Síntese técnica gerada pelo Sync")}</section>
 
 <section class="page content-page">${header("Fontes e conclusão")}<main class="page-body"><div class="kicker">Rastreabilidade</div><h2>Um raio-X útil é atualizado, verificável e acionável</h2><p class="lede">Este documento registra a posição disponível em ${esc(date)}. Novas publicações oficiais podem alterar valores e leituras.</p><div class="grid-2 mt-3"><div class="card accent"><h3>Fontes consultadas</h3><ul class="source-list">${sourceRows}</ul></div><div class="card"><h3>Observações automáticas</h3>${noteRows ? `<ul class="source-list">${noteRows}</ul>` : `<p class="small">Nenhuma observação operacional adicional foi registrada pelas integrações.</p>`}</div></div><div class="callout mt-3"><h3>Conclusão</h3><p>${esc(model.municipality)} dispõe agora de uma leitura comparativa replicável. O próximo passo é validar os dados com as áreas responsáveis e transformar as prioridades em plano de execução com dono, prazo, evidência e indicador.</p></div><div class="note mt-3"><b>Aviso técnico:</b> o relatório é informativo e não substitui demonstrações contábeis, parecer jurídico, auditoria ou validação dos órgãos oficiais.</div></main>${footer(prox(),`Gerado pelo Sync em ${shortDate}`)}</section>
 </body></html>`;

@@ -2115,3 +2115,82 @@ describe("pontualidade fiscal sobrevive à falta do CAUC", () => {
     expect(saida).toContain("Risco de perder o VAAT — lado Siconfi: ALTO");
   });
 });
+
+/**
+ * O resumo executivo e o plano de ação — as duas pontas do dossiê, e as duas
+ * que o gestor lê. Antes a primeira terminava numa frase idêntica para os
+ * 5.570 municípios e a segunda enxergava quatro sinais. Agora as duas saem do
+ * mesmo levantamento de achados, na mesma ordem.
+ */
+describe("resumo executivo e plano de ação saem dos achados", () => {
+  const COM_ACHADOS = {
+    relatorio_dirigido_base: {
+      vaar: {
+        exercicio: 2025,
+        habilitado: false,
+        beneficiario: false,
+        complementacao: 0,
+        reprovadas: ["III"],
+        condIVEstadual: false,
+        referencia: { medianaUf: 2_303_028, ufBeneficiadas: 40, ufAvaliadas: 62 },
+        pendencia: null,
+      },
+      obrasFnde: { totalObras: 3, paralisadas: 2, inacabadas: 0, emRetomada: 1, valorParadoEstimado: 4_900_000, obrasCriticas: [] },
+    },
+  };
+
+  function render(currentPayload: Record<string, unknown>) {
+    return generateMunicipalXrayHtml(
+      mapMunicipalXrayModel({
+        basePayload: {},
+        currentPayload,
+        baseYear: 2024,
+        currentYear: 2026,
+        generatedAt: new Date("2026-07-30T12:00:00.000Z"),
+      }),
+    );
+  }
+
+  it("põe o achado mais urgente na manchete da página 2", () => {
+    const saida = render(COM_ACHADOS);
+
+    expect(saida).toContain("O que este município está perdendo");
+    expect(saida).toContain("2 obras paradas com recurso federal já empenhado");
+    // A seção que prova, nomeada como aparece no cabeçalho da página.
+    expect(saida).toContain("Obras FNDE");
+  });
+
+  /**
+   * Essa frase era o fecho do resumo, igual para todo município do país. Se
+   * ela voltar, o dossiê voltou a pedir que o gestor leia 40 páginas para
+   * descobrir o que está em jogo.
+   */
+  it("não traz de volta o diagnóstico genérico", () => {
+    const saida = render(COM_ACHADOS);
+
+    expect(saida).not.toContain("ligar orçamento, execução e resultado em uma mesma rotina");
+    expect(saida).not.toContain("Diagnóstico em uma frase");
+  });
+
+  it("o plano de ação responde aos mesmos achados, na mesma ordem", () => {
+    const saida = render(COM_ACHADOS);
+
+    expect(saida).toContain("Aderir ao edital de retomada do Pacto");
+    expect(saida).toContain("janela do edital vigente");
+    expect(saida).toContain("movimentos que convertem recurso em entrega");
+  });
+
+  /**
+   * Município sem perda nomeável não recebe folha em branco nem elogio: recebe
+   * o enquadramento honesto de que o achado, se existir, está em documento que
+   * não é público — que é o que o Ofício vai buscar.
+   */
+  it("quando não há achado, diz o que isso significa e o que não significa", () => {
+    const saida = render({});
+
+    expect(saida).toContain("Nenhuma perda nomeável nas bases consultadas");
+    expect(saida).toContain("não é atestado de gestão");
+    // E o plano cai nos itens de preenchimento, em vez de ficar vazio.
+    expect(saida).toContain("Montar a sala de situação municipal");
+  });
+});
