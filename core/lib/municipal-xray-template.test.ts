@@ -13,7 +13,11 @@ import { getIdebEscolas } from "@/core/lib/ideb-escolas";
 import { cruzarContextoResultado, getIndicadoresEscolas } from "@/core/lib/indicadores-escolas";
 import { getSaebDistribuicao } from "@/core/lib/saeb-distribuicao";
 import { getViolenciaMunicipal } from "@/core/lib/violencia-municipal";
-import { getEscolasTerritorio } from "@/core/lib/escolas-territorio";
+import {
+  getEscolasTerritorio,
+  resumirTerritorio,
+  type EscolaTerritorio,
+} from "@/core/lib/escolas-territorio";
 import { getEnemAbstencao } from "@/core/lib/enem-abstencao";
 import { municipalBoundaryFromGeoJson } from "@/core/lib/ibge-municipal-boundary";
 
@@ -184,9 +188,9 @@ describe("páginas de ponderação e vinculações no Raio-X", () => {
     expect(saida).toContain("Declaração ao SIOPE não localizada");
   });
 
-  it("gera as 40 páginas do contrato do renderer, com e sem dados", () => {
+  it("gera as 42 páginas do contrato do renderer, com e sem dados", () => {
     const paginas = (html: string) => html.match(/<section class="page/g)?.length ?? 0;
-    expect(paginas(completo("2930154", "BA"))).toBe(40);
+    expect(paginas(completo("2930154", "BA"))).toBe(42);
     expect(
       paginas(
         generateMunicipalXrayHtml(
@@ -199,7 +203,7 @@ describe("páginas de ponderação e vinculações no Raio-X", () => {
           }),
         ),
       ),
-    ).toBe(40);
+    ).toBe(42);
   });
 
   it("numera as páginas sequencialmente a partir do contador", () => {
@@ -212,7 +216,7 @@ describe("páginas de ponderação e vinculações no Raio-X", () => {
 
     // A capa não tem rodapé numerado; o miolo vai de 2 até o total.
     expect(numeros[0]).toBe(2);
-    expect(numeros[numeros.length - 1]).toBe(40);
+    expect(numeros[numeros.length - 1]).toBe(42);
     for (let i = 1; i < numeros.length; i++) expect(numeros[i]).toBe(numeros[i - 1] + 1);
   });
 });
@@ -1433,5 +1437,296 @@ describe("capa territorial do Raio-X municipal", () => {
 
     expect(saida).toContain("territory-fallback");
     expect(saida).toContain("Malha municipal indisponível");
+  });
+});
+
+describe("densidade e dispersão da rede no Raio-X", () => {
+  function escola(
+    parcial: Partial<EscolaTerritorio> & { codigo: string },
+  ): EscolaTerritorio {
+    return {
+      rural: false,
+      dif: 0,
+      lat: null,
+      lng: null,
+      matriculas: null,
+      transporte: null,
+      racas: null,
+      ...parcial,
+    };
+  }
+
+  /**
+   * Rede sintética: duas urbanas coladas (núcleo ≈ -9.0/-37.0) e duas rurais a
+   * ~22 km e ~44 km ao sul. Números redondos para as asserções serem legíveis.
+   */
+  const REDE = [
+    escola({ codigo: "27000001", lat: -9.0, lng: -37.01, matriculas: 400 }),
+    escola({ codigo: "27000002", lat: -9.0, lng: -36.99, matriculas: 600 }),
+    escola({ codigo: "27000003", lat: -9.2, lng: -37.0, rural: true, matriculas: 100 }),
+    escola({ codigo: "27000004", lat: -9.4, lng: -37.0, rural: true, matriculas: 150 }),
+  ];
+
+  function render(opcoes: { pctRural?: number | null; area?: number | null } = {}) {
+    const { pctRural = 20, area = 500 } = opcoes;
+    return generateMunicipalXrayHtml(
+      mapMunicipalXrayModel({
+        basePayload: {},
+        currentPayload: {
+          relatorio_dirigido_base: {
+            escolasTerritorio: { ano: 2025, escolas: REDE, resumo: resumirTerritorio(REDE) },
+            perfilIBGE: area === null ? {} : { areaTerritorial: area },
+            ...(pctRural === null
+              ? {}
+              : {
+                  populacaoRural: {
+                    ano: 2022,
+                    urbana: 10_000,
+                    rural: Math.round((10_000 * pctRural) / (100 - pctRural)),
+                    total: Math.round(10_000 / ((100 - pctRural) / 100)),
+                    pctRural,
+                  },
+                }),
+          },
+        },
+        baseYear: 2024,
+        currentYear: 2026,
+        generatedAt: new Date("2026-07-29T12:00:00.000Z"),
+      }),
+    );
+  }
+
+  it("mede densidade, envergadura e distância das rurais ao núcleo urbano", () => {
+    const saida = render();
+
+    expect(saida).toContain("Densidade e dispersão");
+    expect(saida).toContain("escolas por 100 km²");
+    // 4 escolas em 500 km².
+    expect(saida).toContain("0,8");
+    // Envergadura: da urbana ao extremo sul, ~44 km.
+    expect(saida).toContain("envergadura da rede");
+    expect(saida).toContain("distância média das rurais ao núcleo");
+  });
+
+  it("declara a distância em linha reta como piso, não como distância rodoviária", () => {
+    expect(render()).toContain("a distância rodoviária é maior, nunca menor");
+  });
+
+  it("faz a pergunta de campo quando a matrícula rural fica abaixo da população rural", () => {
+    // Matrícula rural da REDE = 250/1250 = 20%. População rural em 45% abre
+    // uma lacuna de 25 pontos.
+    const saida = render({ pctRural: 45 });
+
+    expect(saida).toContain("transportada para a escola urbana");
+    expect(saida).toContain("quantas rotas levam aluno do campo para escola da sede");
+  });
+
+  it("aponta rede mais rural que o município quando a matrícula excede a população", () => {
+    const saida = render({ pctRural: 5 });
+
+    expect(saida).toContain("a rede é mais rural que o município");
+    expect(saida).toContain("localização declarada corretamente na coleta");
+  });
+
+  it("reconhece proporção equilibrada sem inventar achado", () => {
+    const saida = render({ pctRural: 22 });
+
+    expect(saida).toContain("acompanha a população rural");
+    expect(saida).not.toContain("transportada para a escola urbana");
+  });
+
+  /**
+   * Regressão do caso Manaus. A primeira versão comparava só a diferença em
+   * pontos percentuais, com limiar de 8: população rural 1,0% contra matrícula
+   * rural 5,4% dava 4,4 pontos e o relatório afirmava "acompanha a população
+   * rural, sem sinal de concentração" — quando a fatia da matrícula era cinco
+   * vezes a da população. Diferença pequena em pontos, enorme em razão.
+   */
+  it("não chama de equilíbrio o que é múltiplo — o caso Manaus", () => {
+    // Matrícula rural da REDE = 20%; população rural em 4% → 5× a fatia.
+    const saida = render({ pctRural: 4 });
+
+    expect(saida).toContain("a rede é mais rural que o município");
+    expect(saida).toContain("5,0 vezes</b> a fatia da população rural");
+    expect(saida).not.toContain("acompanha a população rural");
+  });
+
+  it("não transforma fatia minúscula em achado só porque a razão é alta", () => {
+    // 20% contra 15% é 1,33× — abaixo do limiar de razão, e a diferença de 5
+    // pontos sozinha não basta.
+    const saida = render({ pctRural: 15 });
+
+    expect(saida).toContain("acompanha a população rural");
+  });
+
+  it("avisa que os denominadores das duas fatias são diferentes", () => {
+    expect(render()).toContain("Os denominadores diferem de propósito");
+  });
+
+  it("omite o cruzamento quando o Censo 2022 não respondeu", () => {
+    const saida = render({ pctRural: null });
+
+    expect(saida).toContain("o cruzamento não se sustenta e não é feito aqui");
+    // A parte local continua saindo mesmo sem a fonte viva.
+    expect(saida).toContain("envergadura da rede");
+  });
+
+  it("degrada a densidade sem a área do IBGE, mantendo o resto da página", () => {
+    const saida = render({ area: null });
+
+    expect(saida).toContain("escolas por 100 km²");
+    expect(saida).toContain("envergadura da rede");
+  });
+
+  it("mostra a página de indisponibilidade quando não há rede no Censo", () => {
+    const saida = generateMunicipalXrayHtml(
+      mapMunicipalXrayModel({
+        basePayload: {},
+        currentPayload: {},
+        baseYear: 2024,
+        currentYear: 2026,
+        generatedAt: new Date("2026-07-29T12:00:00.000Z"),
+      }),
+    );
+
+    expect(saida).toContain("Dispersão da rede indisponível");
+  });
+});
+
+describe("quem dirige a educação no Raio-X", () => {
+  const META = {
+    ano: 2021,
+    status: "estrutural" as const,
+    fonte: "IBGE — MUNIC 2021 (SIDRA 7296)",
+    url: null,
+  };
+  const ind = <T,>(valor: T | null) => ({ valor, ...META });
+  const boolNd = () => ind<boolean>(null);
+
+  function render(opcoes: {
+    instrucao?: string | null;
+    formacao?: string | null;
+    estrutura?: string | null;
+    semBloco?: boolean;
+  } = {}) {
+    const {
+      instrucao = "Especialização",
+      formacao = "Pedagogia",
+      estrutura = "Secretaria municipal exclusiva",
+      semBloco = false,
+    } = opcoes;
+
+    return generateMunicipalXrayHtml(
+      mapMunicipalXrayModel({
+        basePayload: {},
+        currentPayload: {},
+        baseYear: 2024,
+        currentYear: 2026,
+        generatedAt: new Date("2026-07-29T12:00:00.000Z"),
+        profile: semBloco
+          ? ({ governancaEducacional: null } as never)
+          : ({
+              governancaEducacional: {
+                conselhos: {
+                  educacao: boolNd(),
+                  alimentacaoEscolar: boolNd(),
+                  transporteEscolar: boolNd(),
+                  acompanhamentoFundeb: boolNd(),
+                },
+                planoMunicipalEducacao: boolNd(),
+                forumPermanenteEducacao: boolNd(),
+                planoCarreiraMagisterio: boolNd(),
+                pisoSalarialPrevisto: boolNd(),
+                limiteHoraAtividade: boolNd(),
+                estruturaOrgaoGestor: ind(estrutura),
+                titularNivelInstrucao: ind(instrucao),
+                titularAreaFormacao: ind(formacao),
+              },
+            } as never),
+      }),
+    );
+  }
+
+  it("lê formação em Pedagogia como interlocução técnica direta", () => {
+    const saida = render({ formacao: "Pedagogia" });
+
+    expect(saida).toContain("Quem dirige a educação");
+    expect(saida).toContain("A secretaria é dirigida por alguém formado em Pedagogia");
+    expect(saida).toContain("pode ir direto ao ponto");
+  });
+
+  it("reconhece licenciatura como quem veio da sala de aula", () => {
+    const saida = render({ formacao: "História" });
+
+    expect(saida).toContain("licenciatura");
+    expect(saida).toContain("chegou à gestão pela sala de aula");
+  });
+
+  it("trata formação fora da área sem transformar em demérito", () => {
+    const saida = render({ formacao: "Direito" });
+
+    expect(saida).toContain("fora da área de educação");
+    expect(saida).toContain("Não é demérito");
+    expect(saida).toContain("equipe técnica da secretaria");
+  });
+
+  /**
+   * Regressão do caso Manaus. "Outra" é a categoria residual da MUNIC — quer
+   * dizer "fora das dez áreas listadas". A primeira versão imprimia
+   * "A secretaria é dirigida por alguém formado em Outra", lendo o rótulo do
+   * balde como se fosse o nome de um curso.
+   */
+  it("não trata a categoria residual 'Outra' como nome de curso", () => {
+    const saida = render({ formacao: "Outra" });
+
+    expect(saida).not.toContain("formado em Outra");
+    expect(saida).toContain("está fora da lista da MUNIC");
+    expect(saida).toContain("Qual é, a pesquisa não diz");
+    // Sem saber a área, não dá para afirmar que está fora da educação.
+    expect(saida).not.toContain("fora da área de educação");
+    expect(saida).toContain("qual a formação e a trajetória");
+  });
+
+  it("alerta que setor subordinado tem um passo a mais de aprovação", () => {
+    const saida = render({ estrutura: "Setor subordinado a outra secretaria" });
+
+    expect(saida).toContain("setor subordinado");
+    expect(saida).toContain("passam por outra autoridade");
+  });
+
+  it("descreve secretaria exclusiva como o arranjo de menor atrito", () => {
+    expect(render({ estrutura: "Secretaria municipal exclusiva" })).toContain(
+      "menos atrito para executar",
+    );
+  });
+
+  /**
+   * Rotatividade e consórcio não existem em base pública — conferido no
+   * catálogo do SIDRA e na planilha da MUNIC 2021. A página tem de perguntar,
+   * nunca afirmar.
+   */
+  it("transforma rotatividade e consórcio em pergunta de campo", () => {
+    const saida = render();
+
+    expect(saida).toContain("quantos secretários de educação o município teve");
+    expect(saida).toContain("participa de consórcio intermunicipal");
+    expect(saida).toContain("o único agregado de consórcio é de saneamento");
+  });
+
+  it("avisa que eleição troca secretário e o dado é estrutural", () => {
+    expect(render()).toContain("Eleição municipal troca secretário");
+  });
+
+  it("degrada sem inventar quando a MUNIC não trouxe a formação", () => {
+    const saida = render({ formacao: null, instrucao: null, estrutura: null });
+
+    expect(saida).toContain("não registrou a área de formação");
+    expect(saida).toContain("O comando da educação no organograma");
+    // Continua perguntando o que a fonte nunca responde.
+    expect(saida).toContain("quantos secretários de educação o município teve");
+  });
+
+  it("mostra página de indisponibilidade sem o módulo de educação", () => {
+    expect(render({ semBloco: true })).toContain("Perfil do órgão gestor indisponível");
   });
 });

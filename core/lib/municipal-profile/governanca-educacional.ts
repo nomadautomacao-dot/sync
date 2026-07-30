@@ -43,6 +43,8 @@ const T = {
   limiteHoraAtividade: 7312,
   /** Caracterização do órgão gestor da educação no organograma. */
   orgaoGestor: 7282,
+  /** Nível de instrução e área de formação do titular do órgão gestor. */
+  titular: 7296,
 } as const;
 
 /**
@@ -84,6 +86,9 @@ const DIM = {
   limite2Tercos:
     "Existência de previsão expressa do limite de 2/3 (dois terços) da carga horária para o desempenho das atividades de interação com os educandos na lei do plano",
   orgaoGestor: "Caracterização do órgão gestor",
+  /** Rótulos da 7296, conferidos no cabeçalho vivo do apisidra em 2026-07-29. */
+  instrucaoTitular: "Nível de instrução do titular do órgão gestor",
+  formacaoTitular: "Área de formação do titular do órgão gestor da área de educação",
 } as const;
 
 /** Categorias lidas, no texto literal do SIDRA. */
@@ -328,10 +333,32 @@ function parIndicador(
  * com estrutura mas sem caracterização declarada sai null, não "Total".
  */
 function lerOrgaoGestor(t: Tabela | null): Indicador<string> {
-  const meta = metaDe(T.orgaoGestor, t?.ano ?? null);
+  return lerCategoriaUnica(t, T.orgaoGestor, DIM.orgaoGestor, (categoria) => categoria);
+}
+
+/**
+ * Lê a única categoria marcada "1" numa dimensão de resposta única.
+ *
+ * `montarChave` existe porque a chave do mapa é a combinação de TODAS as
+ * dimensões pedidas: numa tabela de uma dimensão só ela é a própria categoria,
+ * mas na 7296 — que cruza instrução × formação — cada pergunta é lida com a
+ * outra dimensão fixada em Total, senão a leitura pegaria a célula do
+ * cruzamento em vez da marginal. Verificado ao vivo em Manaus, que sai
+ * "Superior completo | Total" e "Total | Outra" marcados em 1.
+ *
+ * Categoria "Total" é ignorada: ela marca 1 para todo município que tem
+ * estrutura, sem dizer qual — devolvê-la imprimiria "Total" no PDF.
+ */
+function lerCategoriaUnica(
+  t: Tabela | null,
+  tabela: number,
+  dimensao: string,
+  montarChave: (categoria: string) => string,
+): Indicador<string> {
+  const meta = metaDe(tabela, t?.ano ?? null);
   if (!t) return semDado<string>(meta);
-  for (const categoria of t.categorias.get(DIM.orgaoGestor) ?? []) {
-    if (categoria !== TOTAL && t.valores.get(categoria) === "1") {
+  for (const categoria of t.categorias.get(dimensao) ?? []) {
+    if (categoria !== TOTAL && t.valores.get(montarChave(categoria)) === "1") {
       return indicador(categoria, { ano: t.ano, ...meta });
     }
   }
@@ -401,6 +428,14 @@ export async function coletarGovernancaEducacional(params: {
       classificacoes: ["c1048/all"],
       dimensoes: [DIM.orgaoGestor],
     },
+    {
+      // Instrução e formação do titular vêm cruzadas numa tabela só, como
+      // fórum × plano de carreira: cada uma é lida com a outra em Total.
+      tabela: T.titular,
+      variaveis: [V.estruturaEducacao],
+      classificacoes: ["c1060/all", "c1486/all"],
+      dimensoes: [DIM.instrucaoTitular, DIM.formacaoTitular],
+    },
   ];
 
   // allSettled e não all: uma tabela fora do ar não pode derrubar as outras seis.
@@ -419,7 +454,7 @@ export async function coletarGovernancaEducacional(params: {
     return null;
   });
 
-  const [conselhos, conselhosReserva, fundebReserva, planos, forumECarreira, limite, orgaoGestor] = tabelas;
+  const [conselhos, conselhosReserva, fundebReserva, planos, forumECarreira, limite, orgaoGestor, titular] = tabelas;
 
   // Nenhuma tabela respondeu: não há bloco a montar, só falhas a reportar.
   if (tabelas.every((t) => t === null)) return { bloco: null, falhas };
@@ -492,11 +527,29 @@ export async function coletarGovernancaEducacional(params: {
     limiteHoraAtividade: parIndicador(limite, T.limiteHoraAtividade, CAT.limiteSim, CAT.limiteNao),
 
     // Vem da 7282 (c1048 "Caracterização do órgão gestor"), não da 7296 nem da
-    // 7299: a 7296 classifica o TITULAR (instrução e área de formação) e a 7299
-    // lista ações prioritárias — nenhuma das duas diz onde a educação está no
-    // organograma, que é o que este campo promete. Ambas ficam fora da coleta
-    // por não terem campo no contrato; buscá-las só somaria dois modos de falha.
+    // 7299: a 7296 classifica o TITULAR (instrução e área de formação, logo
+    // abaixo) e a 7299 lista ações prioritárias — nenhuma das duas diz onde a
+    // educação está no organograma, que é o que este campo promete. A 7299
+    // segue fora da coleta por não ter campo no contrato.
     estruturaOrgaoGestor: lerOrgaoGestor(orgaoGestor),
+
+    // A MUNIC NÃO pergunta há quanto tempo o titular está no cargo — não há
+    // variável de posse, mandato ou rotatividade em nenhum dos 187 agregados
+    // nem nas 200 colunas da aba Educação da planilha 2021 (conferido em
+    // 2026-07-29). Rotatividade fica como pergunta de campo; o que a fonte
+    // sustenta é a qualificação, abaixo.
+    titularNivelInstrucao: lerCategoriaUnica(
+      titular,
+      T.titular,
+      DIM.instrucaoTitular,
+      (categoria) => `${categoria}${SEP}${TOTAL}`,
+    ),
+    titularAreaFormacao: lerCategoriaUnica(
+      titular,
+      T.titular,
+      DIM.formacaoTitular,
+      (categoria) => `${TOTAL}${SEP}${categoria}`,
+    ),
   };
 
   return { bloco, falhas };

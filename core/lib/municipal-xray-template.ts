@@ -3,6 +3,7 @@ import type {
   MunicipalProfile,
 } from "./municipal-profile/types";
 import { ROTULOS_STATUS } from "./municipal-profile/types";
+import { analisarDispersao } from "./densidade-rede";
 import { projectToBoundary, type MunicipalBoundaryMap } from "./ibge-municipal-boundary";
 
 type JsonRecord = Record<string, unknown>;
@@ -261,7 +262,14 @@ interface MunicipalXrayModel {
    */
   schoolMap: {
     year: number;
-    schools: Array<{ lat: number | null; lng: number | null; rural: boolean; dif: number }>;
+    schools: Array<{
+      codigo: string;
+      lat: number | null;
+      lng: number | null;
+      rural: boolean;
+      dif: number;
+      matriculas: number | null;
+    }>;
     total: number;
     withCoords: number;
     ruralCount: number;
@@ -273,6 +281,17 @@ interface MunicipalXrayModel {
       urban: { enrolled: number; blackPct: number | null; indigenousPct: number | null; undeclaredPct: number | null };
       rural: { enrolled: number; blackPct: number | null; indigenousPct: number | null; undeclaredPct: number | null };
     } | null;
+  } | null;
+  /**
+   * População urbana × rural do Censo 2022 — o denominador da dispersão.
+   * Ver `core/lib/densidade-rede.ts`.
+   */
+  ruralPopulation: {
+    year: number;
+    urban: number;
+    rural: number;
+    total: number;
+    ruralPct: number;
   } | null;
   /**
    * Abstenção no ENEM (município de prova × UF) — termômetro de custo de
@@ -886,10 +905,12 @@ export function mapMunicipalXrayModel(params: {
           .map(asRecord)
           .filter((r): r is JsonRecord => Boolean(r))
           .map((r) => ({
+            codigo: typeof r.codigo === "string" ? r.codigo : "",
             lat: number(r.lat),
             lng: number(r.lng),
             rural: r.rural === true,
             dif: number(r.dif) ?? 0,
+            matriculas: number(r.matriculas),
           })),
         total: number(resumo.total) ?? 0,
         withCoords: number(resumo.comCoordenada) ?? 0,
@@ -911,6 +932,21 @@ export function mapMunicipalXrayModel(params: {
           };
           return { urban: zona(corRaca.urbana), rural: zona(corRaca.rural) };
         })(),
+      };
+    })(),
+    ruralPopulation: (() => {
+      const bruto = asRecord(at(currentPayload, "relatorio_dirigido_base.populacaoRural"));
+      if (!bruto) return null;
+      const urbana = number(bruto.urbana);
+      const rural = number(bruto.rural);
+      const pct = number(bruto.pctRural);
+      if (urbana === null || rural === null || pct === null) return null;
+      return {
+        year: number(bruto.ano) ?? 0,
+        urban: urbana,
+        rural,
+        total: number(bruto.total) ?? urbana + rural,
+        ruralPct: pct,
       };
     })(),
     enem: (() => {
@@ -1579,6 +1615,111 @@ function paginaGovernancaEducacional(model: MunicipalXrayModel, pagina: number):
     ["Transporte Escolar", g.conselhos.transporteEscolar],
   ].filter(([, ind]) => (ind as Indicador<boolean>).valor === false).map(([n]) => n as string);
   return `<section class="page content-page">${header("Governança educacional")}<main class="page-body"><div class="kicker">Controle social e carreira</div><h2>Quem fiscaliza, e com que instrumento</h2><p class="lede">Conselho sem existência legal não fiscaliza, e plano de carreira sem previsão de jornada não protege hora-atividade. A MUNIC registra o que está formalizado — funcionamento efetivo é verificação de campo.</p><div class="grid-2 mt-3"><div class="card accent"><h3>Conselhos</h3><table><tbody>${linha("Conselho Municipal de Educação (CME)", g.conselhos.educacao)}${linha("Conselho de Alimentação Escolar (CAE)", g.conselhos.alimentacaoEscolar, "Condição de regularidade do PNAE")}${linha("CACS-FUNDEB", g.conselhos.acompanhamentoFundeb, "Acompanhamento e controle social do fundo")}${linha("Conselho de Transporte Escolar", g.conselhos.transporteEscolar)}</tbody></table></div><div class="card"><h3>Planejamento e carreira</h3><table><tbody>${linha("Plano Municipal de Educação", g.planoMunicipalEducacao)}${linha("Fórum Permanente de Educação", g.forumPermanenteEducacao)}${linha("Plano de Carreira do Magistério", g.planoCarreiraMagisterio)}${linha("Previsão do limite de 2/3 em sala", g.limiteHoraAtividade, "Lei 11.738/2008 — a regra do 1/3 de hora-atividade")}</tbody></table></div></div><div class="grid-2 mt-3"><div class="card"><h3>Órgão gestor</h3><p>${esc(g.estruturaOrgaoGestor.valor ?? "Não informado")}</p><div class="divider"></div><p class="micro">${esc(g.estruturaOrgaoGestor.fonte)}</p></div><div class="${conselhosAusentes.length ? "risk" : "insight"}">${conselhosAusentes.length ? `<b>Lacuna de controle:</b> sem ${esc(conselhosAusentes.join(", "))}. Conselho ausente compromete a fiscalização exigida por lei e pode travar repasse federal.` : `<b>Estrutura formal completa:</b> os quatro conselhos constam na MUNIC. Confirme mandato vigente e periodicidade das reuniões em campo.`}</div></div><div class="note mt-3"><b>Sobre o piso nacional:</b> a MUNIC pergunta se a prefeitura paga o piso, mas o IBGE não publica essa variável no SIDRA. Por isso ela não aparece aqui — e vira pergunta no roteiro de campo.</div></main>${footer(pagina, "IBGE — MUNIC, módulo educação")}</section>`;
+}
+
+/**
+ * Licenciaturas da lista da MUNIC — quem chegou à secretaria pela sala de aula.
+ * Pedagogia fica fora porque é o caso mais forte e tem leitura própria.
+ */
+const LICENCIATURAS = new Set([
+  "Geografia",
+  "História",
+  "Matemática",
+  "Biologia",
+  "Letras",
+  "Educação Física",
+]);
+
+/**
+ * Quem dirige a educação — qualificação do titular e posição no organograma.
+ *
+ * A MUNIC publica a escolaridade e a área de formação do titular do órgão
+ * gestor (tabela 7296). Para quem vai sentar na mesa, isso muda o registro da
+ * conversa: um secretário formado em Pedagogia discute ponderação e coleta em
+ * outro nível que um formado em Direito, e nenhum dos dois é demérito — é
+ * calibragem de linguagem técnica.
+ *
+ * Duas coisas a MUNIC **não** pergunta, e por isso viram pergunta de campo com
+ * o contexto dentro: **há quanto tempo** o titular está no cargo (não existe
+ * variável de posse ou rotatividade em nenhum dos 187 agregados nem nas 200
+ * colunas da planilha 2021) e a participação em **consórcio intermunicipal de
+ * educação** — conferido em 2026-07-29, o único agregado de consórcio em todo o
+ * SIDRA é de saneamento, e o cadastro de entes do SICONFI só tem municípios,
+ * estados, União e DF.
+ */
+function paginaQuemDirige(model: MunicipalXrayModel, pagina: number): string {
+  const g = model.profile?.governancaEducacional;
+  const FONTE = "IBGE — MUNIC, módulo educação (SIDRA 7282 e 7296)";
+
+  if (!g) {
+    return `<section class="page content-page">${header("Quem dirige a educação")}<main class="page-body"><div class="kicker">Comando e qualificação</div><h2>Perfil do órgão gestor indisponível</h2><p class="lede">A MUNIC não retornou o módulo de educação para este município.</p></main>${footer(pagina, FONTE)}</section>`;
+  }
+
+  const instrucao = g.titularNivelInstrucao.valor;
+  const formacao = g.titularAreaFormacao.valor;
+  const estrutura = g.estruturaOrgaoGestor.valor;
+  const anoMunic = g.titularAreaFormacao.ano ?? g.estruturaOrgaoGestor.ano;
+
+  const nd = (v: string | null) => (v === null ? `<span class="neutral">N/D</span>` : `<b>${esc(v)}</b>`);
+
+  // "Outra" é a categoria residual da MUNIC — quer dizer "fora das onze áreas
+  // listadas", não o nome de um curso. Imprimir "formado em Outra" seria ler o
+  // rótulo como se fosse resposta.
+  const formacaoResidual = formacao === "Outra";
+  const formacaoNomeavel = formacao !== null && !formacaoResidual;
+
+  let leituraFormacao: string;
+  if (formacao === null) {
+    leituraFormacao = `A MUNIC não registrou a área de formação do titular nesta edição. <b>Pergunta de campo:</b> qual a formação e a trajetória de quem hoje dirige a secretaria?`;
+  } else if (formacaoResidual) {
+    leituraFormacao = `A MUNIC classifica a formação do titular como <b>"Outra"</b> — fora das dez áreas que a pesquisa nomeia (Pedagogia, Letras, História, Geografia, Matemática, Biologia, Educação Física, Direito, Administração e Psicologia). Qual é, a pesquisa não diz, e por isso não dá para inferir se o titular vem da educação. <b>Pergunta de campo:</b> qual a formação e a trajetória de quem dirige a secretaria?`;
+  } else if (formacao === "Pedagogia") {
+    leituraFormacao = `Formação em <b>Pedagogia</b> — a área que estuda gestão educacional, currículo e avaliação. A conversa técnica sobre ponderação, coleta do Censo e condicionalidades do VAAR pode ir direto ao ponto, sem tradução.`;
+  } else if (LICENCIATURAS.has(formacao)) {
+    leituraFormacao = `Formação em <b>${esc(formacao)}</b> — licenciatura: o titular provavelmente chegou à gestão pela sala de aula. Conhece a escola por dentro; a ponte a construir é entre a experiência docente e a mecânica financeira do fundo, que é outro vocabulário.`;
+  } else {
+    leituraFormacao = `Formação em <b>${esc(formacao)}</b>, fora da área de educação. Não é demérito — secretarias são cargos políticos e administrativos —, mas muda o registro: os conceitos de ponderação, VAAT e coleta do Censo provavelmente precisam ser apresentados desde a base, e a equipe técnica da secretaria passa a ser o interlocutor da conversa fina.`;
+  }
+
+  const superior =
+    instrucao !== null &&
+    ["Superior completo", "Especialização", "Mestrado", "Doutorado"].includes(instrucao);
+
+  const exclusiva = estrutura !== null && estrutura.startsWith("Secretaria municipal exclusiva");
+  const subordinado = estrutura !== null && estrutura.startsWith("Setor subordinado");
+
+  return `<section class="page content-page">${header("Quem dirige a educação")}<main class="page-body"><div class="kicker">Comando e qualificação</div><h2>${
+    formacaoNomeavel
+      ? `A secretaria é dirigida por alguém formado em ${esc(formacao as string)}`
+      : formacaoResidual
+        ? "A formação de quem dirige a educação está fora da lista da MUNIC"
+        : "O comando da educação no organograma"
+  }</h2><p class="lede">Quem decide, com que formação e em que posição do organograma. Não é curiosidade: define com quem se negocia, em que vocabulário, e quanto poder de decisão a pessoa tem sem passar por outra pasta. Dados da MUNIC${anoMunic ? ` ${anoMunic}` : ""}, a pesquisa de estrutura municipal do IBGE.</p><div class="grid-4 mt-3">${metric(
+    instrucao === null ? "N/D" : esc(instrucao),
+    "escolaridade do titular",
+  )}${metric(
+    formacao === null ? "N/D" : formacaoResidual ? "Outra área" : esc(formacao),
+    "área de formação",
+  )}${metric(
+    estrutura === null ? "N/D" : esc(estrutura.startsWith("Secretaria municipal") ? "Secretaria" : "Setor subordinado"),
+    "posição no organograma",
+  )}${metric(anoMunic === null ? "N/D" : String(anoMunic), "edição da MUNIC")}</div><div class="grid-2 mt-3"><div class="card accent"><h3>A qualificação de quem decide</h3><table><tbody><tr><td>Escolaridade</td><td class="num">${nd(instrucao)}</td></tr><tr><td>Área de formação</td><td class="num">${nd(formacao)}</td></tr><tr><td>Posição da educação no organograma</td><td class="num">${nd(estrutura)}</td></tr></tbody></table><div class="divider"></div><p class="small">${leituraFormacao}</p>${
+    superior
+      ? ""
+      : instrucao === null
+        ? ""
+        : `<p class="small" style="margin-top:.05in">Escolaridade declarada abaixo do superior completo. A lei não exige diploma para o cargo, mas a interlocução técnica tende a acontecer com a equipe da secretaria — vale identificar quem é, logo na primeira visita.</p>`
+  }</div><div class="card ${subordinado ? "warn" : ""}"><h3>Quanto a pasta decide sozinha</h3><p class="small">${
+    exclusiva
+      ? `A educação tem <b>secretaria exclusiva</b>: orçamento, equipe e agenda próprios, e o titular responde direto ao prefeito. É o arranjo com menos atrito para executar o que for pactuado.`
+      : subordinado
+        ? `A educação é <b>setor subordinado</b>, não secretaria própria. Consequência prática: decisão de gasto, contratação e assinatura passam por outra autoridade — o cronograma de qualquer entrega precisa contar com esse passo a mais, e a reunião de fechamento precisa da pessoa que assina, não só da que opera.`
+        : estrutura !== null
+          ? `Arranjo declarado: <b>${esc(estrutura)}</b>. Confirmar quem tem ordenação de despesa e quem assina convênio — é isso que determina o caminho de aprovação.`
+          : `A MUNIC não registrou a caracterização do órgão gestor. <b>Confirmar na visita:</b> a educação é secretaria exclusiva, divide pasta com outra política, ou é setor subordinado?`
+  }</p><div class="divider"></div><p class="small"><b>Vale lembrar:</b> a MUNIC é pesquisa estrutural e a edição de educação é de ${anoMunic ?? "2021"}. Eleição municipal troca secretário — o dado abaixo pode ter mudado, e confirmar isso é a primeira pergunta da visita.</p></div></div><div class="note mt-3"><b>O que a fonte não sustenta — e por isso é pergunta de campo:</b> a MUNIC <b>não</b> pergunta há quanto tempo o titular está no cargo, nem quantos secretários passaram pela pasta no mandato. Rotatividade alta é o maior preditor de projeto interrompido, e não existe base pública dela. <b>Perguntar:</b> quantos secretários de educação o município teve nos últimos quatro anos, e há quanto tempo o atual assumiu? Quem é o quadro técnico que permanece entre uma troca e outra?</div><div class="note mt-2"><b>Consórcio intermunicipal de educação:</b> também sem fonte pública. Em 2026-07-29 varremos o catálogo inteiro do SIDRA — o único agregado de consórcio é de saneamento — e o cadastro de entes do SICONFI só registra municípios, estados, União e DF. <b>Perguntar:</b> o município participa de consórcio intermunicipal para compra de merenda, transporte escolar ou formação de professores? Consórcio muda escala de compra e é caminho conhecido para baratear rota longa${
+    model.schoolMap && model.schoolMap.ruralCount > 0 ? ` — e esta rede tem ${int(model.schoolMap.ruralCount)} escolas rurais` : ""
+  }.</div><p class="small mt-1">Fonte: IBGE, Pesquisa de Informações Básicas Municipais (MUNIC)${anoMunic ? ` ${anoMunic}` : ""} — tabelas SIDRA 7282 (caracterização do órgão gestor) e 7296 (instrução e área de formação do titular). A MUNIC é declaratória: responde a prefeitura.</p></main>${footer(pagina, FONTE)}</section>`;
 }
 
 function paginaConformidade(model: MunicipalXrayModel, pagina: number): string {
@@ -2572,6 +2713,97 @@ function paginaDinheiroFederal(model: MunicipalXrayModel, pagina: number): strin
   }<div class="mt-2">${blocoSancoes}</div><p class="small mt-1">Fonte: Portal da Transparência/CGU — emendas parlamentares (download de dados${e?.dataAsOf ? `, extração de ${esc(e.dataAsOf)}` : ""}; somente emendas com município de aplicação identificado — a fatia estadual/nacional que beneficia o município de forma difusa não entra), convênios e CEIS/CNEP (consulta viva na emissão; sanções por busca nominal do ente). Valores nominais.</p></main>${footer(pagina, "Portal da Transparência/CGU — emendas, convênios e sanções")}</section>`;
 }
 
+/**
+ * Densidade e dispersão — o custo geográfico que o valor-aluno não enxerga.
+ *
+ * O mapa da página anterior mostra onde a rede está; esta mede quão longe ela
+ * chega. Duas redes com a mesma matrícula e o mesmo VAAF custam diferente se
+ * uma cabe em 40 km² e a outra se espalha por milhares: transporte, merenda,
+ * supervisão e reposição de professor são todos função da distância, e o fator
+ * do campo (+15%) paga igual para a escola a 6 km e para a que está a 90.
+ *
+ * O cruzamento é o achado: % da população que é rural × % das escolas rurais ×
+ * % das matrículas nelas. Divergência grande entre a primeira e a última é
+ * pergunta de campo com o número dentro, nunca acusação.
+ */
+function paginaDensidadeRede(model: MunicipalXrayModel, pagina: number): string {
+  const d = model.schoolMap ? analisarDispersao(model.schoolMap.schools, model.area) : null;
+  const pop = model.ruralPopulation;
+  const FONTE = "INEP — Censo Escolar (coordenadas) · IBGE — área territorial e Censo 2022";
+
+  if (!d) {
+    return `<section class="page content-page">${header("Densidade e dispersão")}<main class="page-body"><div class="kicker">O custo geográfico de ofertar</div><h2>Dispersão da rede indisponível</h2><p class="lede">Os microdados do Censo Escolar não trouxeram a rede municipal deste município — sem as escolas, não há dispersão a medir.</p>${
+      pop
+        ? `<div class="note mt-3"><b>População rural:</b> ${pct(pop.ruralPct)} dos ${int(pop.total)} residentes moram em área rural (Censo ${pop.year}).</div>`
+        : ""
+    }</main>${footer(pagina, FONTE)}</section>`;
+  }
+
+  // O nome só existe para escolas que aparecem na divulgação do IDEB; sem
+  // correspondência, a distância sai sozinha em vez de inventar rótulo.
+  const nomeMaisDistante = d.maisDistante
+    ? model.schoolResults?.list.find((e) => e.code === d.maisDistante!.codigo)?.name ?? null
+    : null;
+
+  const semCoordenada = d.total - d.comCoordenada;
+
+  // A comparação que gera a pergunta: população rural × matrícula rural.
+  //
+  // Duas réguas, e as duas precisam concordar antes de o texto afirmar algo.
+  // Só a diferença em pontos percentuais engana nos extremos: em Manaus a
+  // população rural é 1,0% e a matrícula rural 5,4% — 4,4 pontos, que parecem
+  // ruído, mas são cinco vezes a fatia. Só a razão engana no outro extremo,
+  // onde 0,2% contra 0,6% também triplica sem significar nada.
+  const lacuna =
+    pop && d.matriculasRuraisPct !== null ? d.matriculasRuraisPct - pop.ruralPct : null;
+  const razao =
+    pop && pop.ruralPct > 0 && d.matriculasRuraisPct !== null
+      ? d.matriculasRuraisPct / pop.ruralPct
+      : null;
+  const LIMIAR_PP = 3; // guarda absoluta contra ruído em fatias minúsculas.
+  const RAZAO_BAIXA = 0.7;
+  const RAZAO_ALTA = 1.4;
+
+  /** "5,4 vezes" quando a razão é grande; "4,4 pontos" quando é modesta. */
+  const magnitude = (acima: boolean) =>
+    razao !== null && (acima ? razao >= 2 : razao <= 0.5)
+      ? `<b>${decimal.format(Math.round((acima ? razao : 1 / razao) * 10) / 10)} vezes</b> ${acima ? "a fatia da" : "menor que a"} população rural`
+      : `<b>${decimal.format(Math.abs(lacuna ?? 0))} pontos</b> ${acima ? "acima" : "abaixo"} da população rural`;
+
+  let leitura: string;
+  if (lacuna === null || razao === null) {
+    leitura = `Sem uma das duas pontas (população por situação do domicílio ou matrícula por zona), o cruzamento não se sustenta e não é feito aqui.`;
+  } else if (lacuna <= -LIMIAR_PP && razao <= RAZAO_BAIXA) {
+    leitura = `A matrícula rural (${pct(d.matriculasRuraisPct)}) está ${magnitude(false)} (${pct(pop!.ruralPct)}). Duas explicações possíveis, e só o campo separa: a criança do campo é <b>transportada para a escola urbana</b> — despesa de rota que o valor-aluno não cobre — ou está matriculada na <b>rede estadual</b>. <b>Pergunta de campo:</b> quantas rotas levam aluno do campo para escola da sede, e qual o custo anual delas?`;
+  } else if (lacuna >= LIMIAR_PP && razao >= RAZAO_ALTA) {
+    leitura = `A matrícula rural (${pct(d.matriculasRuraisPct)}) é ${magnitude(true)} (${pct(pop!.ruralPct)}) — a rede é mais rural que o município. Isso é custo unitário alto por definição (turma menor, rota longa, escola pequena) e, ao mesmo tempo, é exatamente onde o fator de ponderação do campo rende. <b>Pergunta de campo:</b> todas essas escolas estão com a localização declarada corretamente na coleta?`;
+  } else {
+    leitura = `A matrícula rural (${pct(d.matriculasRuraisPct)}) acompanha a população rural (${pct(pop!.ruralPct)}) — diferença de ${decimal.format(Math.abs(lacuna))} pontos. A rede está distribuída na proporção do território, sem sinal de concentração forçada nem de esvaziamento do campo.`;
+  }
+
+  const linhaMaisDistante = d.maisDistante
+    ? `<tr><td>Escola mais afastada do núcleo${nomeMaisDistante ? ` — ${esc(nomeMaisDistante)}` : ""}</td><td class="num"><b>${decimal.format(d.maisDistante.km)} km</b>${d.maisDistante.matriculas !== null ? ` · ${int(d.maisDistante.matriculas)} alunos` : ""}</td></tr>`
+    : "";
+
+  return `<section class="page content-page">${header("Densidade e dispersão")}<main class="page-body"><div class="kicker">O custo geográfico de ofertar</div><h2>${d.envergaduraKm !== null ? `A rede se estende por ${decimal.format(d.envergaduraKm)} km de ponta a ponta` : "O alcance territorial da rede"}</h2><p class="lede">Dispersão é a despesa que não aparece no valor-aluno. O FUNDEB paga por matrícula ponderada, não por quilômetro rodado — e o fator do campo (+15%) é achatado: vale o mesmo para a escola a 6 km da sede e para a que está a ${d.maisDistante ? decimal.format(d.maisDistante.km) : "dezenas de"} km. As medidas abaixo saem das coordenadas que cada escola declarou ao Censo ${model.schoolMap?.year ?? ""}.</p><div class="grid-4 mt-3">${metric(
+    d.porCemKm2 === null ? "N/D" : decimal.format(d.porCemKm2),
+    "escolas por 100 km²",
+  )}${metric(
+    d.envergaduraKm === null ? "N/D" : `${decimal.format(d.envergaduraKm)} km`,
+    "envergadura da rede",
+  )}${metric(
+    d.mediaRuralKm === null ? "N/D" : `${decimal.format(d.mediaRuralKm)} km`,
+    "distância média das rurais ao núcleo",
+  )}${metric(
+    pop === null ? "N/D" : pct(pop.ruralPct),
+    `população rural${pop ? ` · Censo ${pop.year}` : ""}`,
+  )}</div><div class="grid-2 mt-3"><div class="card accent"><h3>O alcance da rede</h3><table><tbody><tr><td>Área territorial</td><td class="num">${model.area === null ? "N/D" : `${integer.format(model.area)} km²`}</td></tr><tr><td>Escolas municipais</td><td class="num"><b>${int(d.total)}</b></td></tr><tr><td>Com coordenada declarada</td><td class="num">${int(d.comCoordenada)}${semCoordenada > 0 ? ` <span class="micro">(${int(semCoordenada)} sem)</span>` : ""}</td></tr>${linhaMaisDistante}</tbody></table><div class="divider"></div><p class="small">O <b>núcleo</b> é a média das coordenadas das escolas urbanas — proxy da sede, de onde saem as rotas de transporte e a supervisão pedagógica. ${semCoordenada > 0 ? `As ${int(semCoordenada)} escolas sem coordenada não entram nas distâncias, mas contam nos totais e nos percentuais.` : "Todas as escolas da rede têm coordenada declarada."}</p></div><div class="card"><h3>Território × rede × matrícula</h3><table><tbody><tr><td>População em área rural</td><td class="num">${pop === null ? "N/D" : `<b>${pct(pop.ruralPct)}</b>`}</td></tr><tr><td>Escolas em zona rural</td><td class="num"><b>${pct(d.escolasRuraisPct)}</b></td></tr><tr><td>Matrículas em escolas rurais</td><td class="num">${d.matriculasRuraisPct === null ? "N/D" : `<b>${pct(d.matriculasRuraisPct)}</b>`}</td></tr></tbody></table><div class="divider"></div><p class="small">${leitura}</p><p class="micro" style="margin-top:.05in">Os denominadores diferem de propósito: a fatia da população é sobre <b>todos os residentes</b> (Censo 2022) e a da matrícula é sobre a <b>rede municipal</b> (Censo Escolar). A comparação vale como sinal de direção, não como identidade contábil.</p></div></div>${
+    d.mediaRuralKm !== null && d.maisDistante
+      ? `<div class="insight mt-3"><b>O que a distância custa:</b> a escola rural média está a ${decimal.format(d.mediaRuralKm)} km do núcleo urbano, e a mais afastada a ${decimal.format(d.maisDistante.km)} km. Cada quilômetro é ida e volta, todo dia letivo, para aluno e para servidor — e é também tempo de resposta da manutenção, da merenda e da reposição de professor faltante. <b>Conferir:</b> o custo do transporte escolar declarado no SIOPE bate com essa geografia? Rota longa com custo baixo costuma significar terceirização mal medida ou aluno em pé.</div>`
+      : `<div class="note mt-3"><b>Leitura limitada:</b> sem escolas rurais georreferenciadas, a distância ao núcleo não foi calculada. As contagens e percentuais acima seguem válidos.</div>`
+  }<p class="small mt-1">Fonte: coordenadas declaradas ao Censo Escolar${model.schoolMap?.year ? ` ${model.schoolMap.year}` : ""} (INEP, microdados); área territorial do IBGE; população por situação do domicílio no Censo Demográfico 2022 (IBGE, SIDRA tabela 10211), consultada na emissão. Distâncias em linha reta (grande círculo) — a distância rodoviária é maior, nunca menor.</p></main>${footer(pagina, FONTE)}</section>`;
+}
+
 function paginaFrequenciaPbf(model: MunicipalXrayModel, pagina: number): string {
   const b = model.pbf;
 
@@ -3093,6 +3325,8 @@ ${paginaTerritorio(model, prox())}
 
 ${paginaMapaEscolas(model, prox())}
 
+${paginaDensidadeRede(model, prox())}
+
 ${paginaFrequenciaPbf(model, prox())}
 
 ${paginaViolencia(model, prox())}
@@ -3118,6 +3352,8 @@ ${paginaAssistencia(model, prox())}
 ${paginaInstitucional(model, prox())}
 
 ${paginaGovernancaEducacional(model, prox())}
+
+${paginaQuemDirige(model, prox())}
 
 ${paginaConformidade(model, prox())}
 

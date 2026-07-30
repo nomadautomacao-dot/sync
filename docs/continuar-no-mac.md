@@ -2,7 +2,12 @@
 
 > Handoff escrito em **2026-07-29**, no fim de uma sequência de rodadas sobre os
 > relatórios FUNDEB. Serve para retomar o trabalho em outra máquina (MacBook)
-> sem reconstruir contexto. Branch: `migracao-flutter-para-next`.
+> sem reconstruir contexto.
+>
+> **Atualizado em 2026-07-29:** o trabalho foi consolidado na `main` — o
+> repositório passou a ter **uma branch só**, e **push é deploy** (ver
+> `CLAUDE.md` seção 7). A branch `migracao-flutter-para-next` citada abaixo não
+> existe mais.
 
 ---
 
@@ -12,7 +17,7 @@
 git clone <repo> && cd Sync
 npm install
 npx playwright install chromium   # obrigatório: os PDFs são gerados no Chromium
-npm test                          # 343 testes — confirma que a base chegou íntegra
+npm test                          # 379 testes — confirma que a base chegou íntegra
 npm run dev                       # Next em :3100
 ```
 
@@ -75,7 +80,7 @@ lê apenas os JSON de `data/`.
 ### Verificação rápida
 
 ```bash
-npm test              # 343 testes, 38 arquivos — devem passar todos
+npm test              # 379 testes, 39 arquivos — devem passar todos
 npm run dev           # Next em :3100
 ```
 
@@ -91,8 +96,10 @@ não foram introduzidos por este trabalho e não bloqueiam o build do Next.
   `firebase-tools` + **Java** (emulador). Nunca rodaram na máquina Windows.
   No Mac: `brew install openjdk && npx firebase emulators:exec --only firestore
   --project globalconsultorias "node --test"` dentro de `firestore-rules-test/`.
-- Os scripts de `npm run build:flutter:web` apontam para um caminho Linux do
-  Flutter SDK. O app Flutter é **legado** (será apagado) — não investir nele.
+- ~~Os scripts de `npm run build:flutter:web` apontam para um caminho Linux~~ —
+  **resolvido em 2026-07-29: o app Flutter foi apagado**, junto com o bundle
+  `public/flutter-web/` e todos os scripts `flutter`/`apk` do `package.json`.
+  Nada mais depende do SDK do Flutter.
 
 ---
 
@@ -100,7 +107,7 @@ não foram introduzidos por este trabalho e não bloqueiam o build do Next.
 
 | Relatório | Rota | Páginas | Contrato de páginas |
 |---|---|---|---|
-| **Raio-X Municipal** | `POST /api/modulos/levantamento-fundeb/raio-x` | **40** | `PAGINAS_ESPERADAS` em `core/lib/municipal-xray-pdf.ts` |
+| **Raio-X Municipal** | `POST /api/modulos/levantamento-fundeb/raio-x` | **42** | `PAGINAS_ESPERADAS` em `core/lib/municipal-xray-pdf.ts` |
 | **Diagnóstico FUNDEB** (Levantamento) | `POST /api/modulos/levantamento-fundeb/pdf?tipo=levantamento` | 10 (+5 anexos) | gerador Python (`kit_padrao_pdf_rocha_prime/`) |
 | **Histórico do Censo Escolar** | `POST /api/modulos/levantamento-fundeb/historico-censo` | **11** | `PAGINAS_ESPERADAS` em `core/lib/censo-historico-pdf.ts` |
 
@@ -128,6 +135,13 @@ Foram decididas ao longo das rodadas e valem para qualquer bloco novo:
 3. **Afirmação sem fonte vira pergunta de campo** — com o dado que temos
    embutido na pergunta. Nunca preencher lacuna com estimativa silenciosa.
 4. **Ausência ≠ zero.** `"--"`, `"-"`, campo vazio → `null` gracioso.
+4b. **Comparar duas fatias exige as duas réguas.** Diferença em pontos
+   percentuais sozinha mente nos extremos: em Manaus a população rural é 1,0%
+   e a matrícula rural 5,4% — 4,4 pontos, que parecem ruído, mas são **5,4
+   vezes** a fatia. A razão sozinha mente do outro lado (0,2% contra 0,6%
+   triplica sem significar nada). O classificador só afirma quando **as duas
+   concordam**; ver `paginaDensidadeRede` em `municipal-xray-template.ts`.
+   Quando os denominadores diferem, dizer isso na página.
 5. **"Desabilitado" do CAUC nunca é falha local** (vale para o país inteiro).
 6. **Padrão de dados**: script offline em `scripts/dados/*.mjs` → JSON
    versionado em `data/**` → leitor em `core/lib/` com `null` gracioso + cache
@@ -140,7 +154,8 @@ Foram decididas ao longo das rodadas e valem para qualquer bloco novo:
    (`modules/contrato-fundeb/`, `app/api/workspace/settings/route.ts`) ainda
    usam a razão social antiga — **decisão do usuário: não mexer agora**, só
    quando ele fornecer razão social e CNPJ novos.
-9. **Flutter é legado.** Não modificar `sync_flutter/`.
+9. **Flutter não existe mais.** Foi apagado do repositório em 2026-07-29; se
+   precisar consultar uma tela antiga, use o histórico do git. Não recriar.
 10. O hook de design (`impeccable`) está configurado para ignorar
     `core/lib/*-template.ts` (`.impeccable/config.json`) — templates de
     impressão não seguem o design system da web.
@@ -182,6 +197,10 @@ publicar edição nova.
   ICA diferem em uma coluna. Mapear por coluna fixa sem separar os casos mistura
   meta de um ano com a do seguinte (aconteceu; ver comentário no gerador).
 - **Encoding**: INEP e Tesouro publicam em **latin1**, não UTF-8.
+- **SIDRA v3 com classificação**: colchetes e barra vertical precisam ir
+  **percent-encoded** (`%5B`, `%5D`, `%7C`). Com os caracteres crus a API
+  responde **HTTP 200 com corpo vazio** — não dá erro, só não devolve nada.
+  Custou uma rodada de depuração no agregado 10211.
 - **IPEADATA (OData)**: ignora `$filter`/`$top`/`$select` — baixe a série
   inteira e filtre localmente.
 - **SIDRA**: responde HTTP 200 com texto puro quando o município não existe.
@@ -207,7 +226,9 @@ Fonte da verdade detalhada: **`docs/roadmaps/2026-07-29-raio-x-dossie-completo.m
 - **Onda 3**: obras FNDE paralisadas, emendas parlamentares, convênios,
   CEIS/CNEP, **CAUC**, **Criança Alfabetizada (ICA)**.
 - **Onda 4**: **#41 ciclo político** (reeleição/sucessão/alternância + as duas
-  travas legais do fim de mandato).
+  travas legais do fim de mandato), **#3 densidade/dispersão** (página
+  "Densidade e dispersão") e **#40 perfil do titular da educação** (página
+  "Quem dirige a educação"), ambas de 2026-07-29.
 - Fora da lista: **Relatório Histórico do Censo** (11 páginas, 3 Censos lado a
   lado, com cor/raça em série).
 
@@ -215,9 +236,7 @@ Fonte da verdade detalhada: **`docs/roadmaps/2026-07-29-raio-x-dossie-completo.m
 
 | # | Item | Fonte | Nota para retomar |
 |---|---|---|---|
-| **3** | Densidade/dispersão de escolas; % população rural | dados **já locais** | Mais barato de todos: `escolas-territorio.json` já tem lat/long por escola e `ibge-municipal-boundary.ts` já projeta. Calcular dispersão ao centroide, distância máxima, escolas/100 km². Só a % de população rural precisa de SIDRA. |
-| **40** | Perfil e rotatividade do secretário de educação | MUNIC | O repo **já baixa** a base MUNIC 2021 (`municipal-profile/governanca-educacional.ts` e `institucional.ts`, FTP do IBGE). Ver se há edição mais nova e quais variáveis do suplemento de educação servem. |
-| **43** | Consórcios intermunicipais de educação | MUNIC | Mesma base do #40 — fazer os dois juntos. |
+| **37** | Cobertura vacinal infantil | PNI/DataSUS | **É o próximo bloco de fonte nova.** Avaliar OpenDataSUS (CSV) vs TabNet. |
 | **37** | Cobertura vacinal infantil | PNI/DataSUS | Avaliar OpenDataSUS (CSV) vs TabNet. |
 | **38** | Desnutrição/obesidade (SISVAN) × PNAE | DataSUS | idem |
 | **9** | Violência contra criança/adolescente notificada | SINAN | idem — indicador sensível: entra como contexto, nunca rótulo |
@@ -287,9 +306,10 @@ nova foi conferida visualmente.
 
 ## 7. Próximo passo recomendado
 
-1. Rodar `npm test` no Mac para confirmar que a base chegou íntegra (343 testes).
+1. Rodar `npm test` no Mac para confirmar que a base chegou íntegra (379 testes).
 2. Gerar um Raio-X real (Manaus, `1302603`) e um Histórico do Censo, e ler os
    dois PDFs inteiros — é a única forma de ver o conjunto.
-3. Retomar a onda 4 pelo **#3 (densidade/dispersão)**, que não precisa de
-   fonte nova, e depois **#40 + #43 (MUNIC)**, que compartilham a mesma base já
-   integrada.
+3. Onda 4: #3, #40 e #41 entregues; **#43 confirmado sem fonte pública** (ver
+   roadmap). O combinado a seguir é o cruzamento **Censo Escolar × Censo
+   Demográfico** para subdeclaração indígena/quilombola, e depois os blocos de
+   saúde (#37, #38, #39, #9).

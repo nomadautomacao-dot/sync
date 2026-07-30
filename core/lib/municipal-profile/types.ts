@@ -165,6 +165,16 @@ export interface BlocoGovernancaEducacional {
   limiteHoraAtividade: Indicador<boolean>;
   /** Como a educação está posicionada no organograma (secretaria exclusiva etc.). */
   estruturaOrgaoGestor: Indicador<string>;
+  /**
+   * Escolaridade do titular do órgão gestor da educação — de "Fundamental
+   * incompleto" a "Doutorado".
+   */
+  titularNivelInstrucao: Indicador<string>;
+  /**
+   * Área de formação do titular (Pedagogia, Direito, Administração, "Outra"…).
+   * A pergunta que interessa: quem dirige a educação tem formação na área?
+   */
+  titularAreaFormacao: Indicador<string>;
 }
 
 /**

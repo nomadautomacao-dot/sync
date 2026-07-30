@@ -37,6 +37,7 @@ import { getConveniosMunicipio, getSancoesMunicipio } from "@/core/lib/portal-tr
 import { getAlfabetizacaoMunicipal } from "@/core/lib/alfabetizacao-municipal";
 import { getCicloPolitico } from "@/core/lib/alternancia-politica";
 import { getCaucMunicipio } from "@/core/lib/cauc-requisitos";
+import { getPopulacaoRural } from "@/core/lib/densidade-rede";
 import { getEscolasTerritorio } from "@/core/lib/escolas-territorio";
 import { getEnemAbstencao } from "@/core/lib/enem-abstencao";
 import { getDemografiaEducacional } from "@/core/lib/demografia-educacional";
@@ -1032,7 +1033,7 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
   } catch (e) {
     console.warn(`[govia] FNDE receitas fetch failed for ${exercicio}:`, e instanceof Error ? e.message : e);
   }
-  const [vaatContext, ibgeIndicators, inepRecord, fndePublic, qeduIndicators, siconfiFiscal, simecObras, qeduApiSnapshot, pontualidadeFiscal, demografiaEducacional, equidadeTerritorial, frequenciaBolsaFamilia, economiaLocal, conveniosFederais, sancoesFederais, caucRequisitos] =
+  const [vaatContext, ibgeIndicators, inepRecord, fndePublic, qeduIndicators, siconfiFiscal, simecObras, qeduApiSnapshot, pontualidadeFiscal, demografiaEducacional, equidadeTerritorial, frequenciaBolsaFamilia, economiaLocal, conveniosFederais, sancoesFederais, caucRequisitos, populacaoRural] =
     await Promise.all([
     getFundebVaatContext(String(municipio.id), exercicio).catch(() => null),
     getIbgeCidadeIndicators(municipio.nome, municipioUf, String(municipio.id)).catch(() => null),
@@ -1054,6 +1055,7 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
       getConveniosMunicipio(String(municipio.id)).catch(() => null),
       getSancoesMunicipio(municipio.nome, municipioUf).catch(() => null),
       getCaucMunicipio(String(municipio.id)).catch(() => null),
+      getPopulacaoRural(String(municipio.id)).catch(() => null),
     ]);
   // Leituras locais síncronas, hoisted porque o cruzamento contexto ×
   // resultado precisa das duas ao mesmo tempo.
@@ -1538,6 +1540,12 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
        * transporte público. Ver `core/lib/escolas-territorio.ts`.
        */
       escolasTerritorio: getEscolasTerritorio(String(municipio.id)),
+      /**
+       * População urbana × rural (Censo 2022). Denominador honesto da
+       * dispersão: sem ele, "40% das escolas são rurais" não diz se a rede
+       * acompanha o território ou se excede. Ver `core/lib/densidade-rede.ts`.
+       */
+      populacaoRural,
       /**
        * Abstenção no ENEM por município de PROVA, com a régua da UF —
        * termômetro de custo de oportunidade no fim da educação básica.
