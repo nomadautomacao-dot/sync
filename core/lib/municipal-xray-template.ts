@@ -389,6 +389,26 @@ export interface MunicipalXrayModel {
     } | null;
   } | null;
   /**
+   * Precatório do FUNDEF — o que a União pagou por decisão judicial e o que a
+   * EC nº 114/2021 amarrou a esse dinheiro. Roadmap #27.
+   * Ver `core/lib/precatorio-fundef.ts`.
+   */
+  fundefWrit: {
+    window: number[];
+    missingYears: number[];
+    received: boolean;
+    years: Array<{ year: number; value: number; account: string; underEc114: boolean }>;
+    total: number;
+    underEc114: number;
+    beforeEc114: number;
+    /** 60% do que entrou sob a EC — o que a lei destina, não o que foi pago. */
+    minimumBonus: number;
+    remainderMde: number;
+    firstYear: number | null;
+    lastYear: number | null;
+    notes: string[];
+  } | null;
+  /**
    * Indicador Criança Alfabetizada — resultado, meta pactuada do município e
    * participação. Ver `core/lib/alfabetizacao-municipal.ts`.
    */
@@ -1037,6 +1057,41 @@ export function mapMunicipalXrayModel(params: {
         severelyObese: number(mun.obesidadeGrave) ?? 0,
         statePct: number(asRecord(bruto.estado)?.excessoPesoPct),
         countryPct: number(asRecord(bruto.brasil)?.excessoPesoPct),
+      };
+    })(),
+    fundefWrit: (() => {
+      const bruto = asRecord(at(currentPayload, "relatorio_dirigido_base.precatorioFundef"));
+      if (!bruto) return null;
+      const janela = array(bruto.janela)
+        .map((v) => number(v))
+        .filter((v): v is number => v !== null);
+      if (janela.length === 0) return null;
+      return {
+        window: janela,
+        missingYears: array(bruto.semDeclaracao)
+          .map((v) => number(v))
+          .filter((v): v is number => v !== null),
+        received: Boolean(bruto.recebeu),
+        years: array(bruto.exercicios)
+          .map(asRecord)
+          .filter((r): r is JsonRecord => Boolean(r))
+          .map((r) => ({
+            year: number(r.exercicio) ?? 0,
+            value: number(r.valor) ?? 0,
+            account: text(r.codigoConta, ""),
+            underEc114: Boolean(r.sobEc114),
+          }))
+          .filter((e) => e.year > 0),
+        total: number(bruto.total) ?? 0,
+        underEc114: number(bruto.totalSobEc114) ?? 0,
+        beforeEc114: number(bruto.totalAnterior) ?? 0,
+        minimumBonus: number(bruto.minimoAbono) ?? 0,
+        remainderMde: number(bruto.saldoMde) ?? 0,
+        firstYear: number(bruto.primeiroExercicio),
+        lastYear: number(bruto.ultimoExercicio),
+        notes: array(bruto.observacoes)
+          .map((v) => text(v, ""))
+          .filter(Boolean),
       };
     })(),
     enem: (() => {
@@ -3035,6 +3090,84 @@ function paginaDinheiroFederal(model: MunicipalXrayModel, pagina: number): strin
 }
 
 /**
+ * Precatório do FUNDEF — o dinheiro que já entrou e a regra que pesa sobre ele.
+ *
+ * É a única página do Raio-X em que a obrigação legal é aritmética sobre um
+ * número que o próprio município declarou: se entraram R$ X sob a EC nº
+ * 114/2021, então R$ 0,6·X têm destino carimbado em abono. O relatório não
+ * afirma que o abono foi pago — isso não é público em lugar nenhum, nem na DCA
+ * nem no SIOPE. Ele imprime o piso legal e transforma o resto em pergunta.
+ *
+ * Três cuidados que a página tem de manter:
+ *
+ * 1. **Zero não é achado.** Município que só recebeu antes de 2022 tem mínimo
+ *    de abono igual a zero — imprimir "R$ 0,00" como se fosse a obrigação
+ *    seria mentir por aritmética. Esse caso tem ramo próprio.
+ * 2. **Ausência não é prova.** Não haver receita declarada pode ser precatório
+ *    não pago, ação em curso ou classificação em outra conta.
+ * 3. **A sanção é real e já está no relatório.** Descumprir a destinação
+ *    suspende transferência voluntária (Lei nº 14.325/2022, art. 3º) — a mesma
+ *    porta que a página do CAUC e a de convênios tratam.
+ */
+function paginaPrecatorioFundef(model: MunicipalXrayModel, pagina: number): string {
+  const p = model.fundefWrit;
+  const rodape = "SICONFI/Tesouro — DCA, Anexo I-C · EC nº 114/2021 e Lei nº 14.325/2022";
+
+  const base = `<div class="kicker">Decisão judicial</div><h2>Precatório do FUNDEF</h2>`;
+  const lei = `<div class="card mt-2"><h3>A regra que acompanha o dinheiro</h3><p class="small"><b>EC nº 114/2021, art. 5º</b> — as receitas recebidas “deverão ser aplicadas na manutenção e desenvolvimento do ensino fundamental público e na valorização de seu magistério, conforme destinação originária do Fundo”.</p><p class="small"><b>Parágrafo único</b> — “no mínimo 60% (sessenta por cento) deverão ser repassados aos profissionais do magistério, inclusive aposentados e pensionistas, <b>na forma de abono</b>, vedada a incorporação na remuneração, na aposentadoria ou na pensão”.</p><p class="small"><b>Lei nº 14.325/2022</b> — acrescentou o art. 47-A à Lei nº 14.113/2020: têm direito ao rateio os profissionais em efetivo exercício no período dos repasses a menor, aposentados e herdeiros; cada ente define os critérios <b>em lei específica</b> (art. 2º); e a União <b>suspende transferências voluntárias</b> de quem descumprir (art. 3º).</p></div>`;
+
+  if (!p) {
+    return `<section class="page content-page">${header("Precatório do FUNDEF")}<main class="page-body">${base}<p class="lede">O SICONFI não respondeu à consulta da DCA nesta emissão, então o relatório não afirma nem que houve recebimento nem que não houve. A conta a conferir é a de transferências decorrentes de decisão judicial relativas ao FUNDEF.</p>${lei}<div class="note mt-2"><b>Pergunta de campo:</b> o município tem ação judicial de complementação do FUNDEF? Em que fase — trânsito em julgado, precatório expedido, pago? Houve lei municipal de rateio?</div></main>${footer(pagina, rodape)}</section>`;
+  }
+
+  const janela = `${p.window[0]}–${p.window[p.window.length - 1]}`;
+  // As ressalvas aparecem uma vez só, coladas na tabela que elas qualificam —
+  // repeti-las no rodapé de fonte fazia a folha dizer duas vezes a mesma coisa.
+  const lacuna = p.notes.length
+    ? `<p class="micro mt-1">${p.notes.map((n) => esc(n)).join(" ")}</p>`
+    : "";
+
+  if (!p.received) {
+    return `<section class="page content-page">${header("Precatório do FUNDEF")}<main class="page-body">${base}<p class="lede">Nenhuma receita de precatório do FUNDEF foi declarada por este município na DCA dos exercícios ${esc(janela)}. <b>Isso não significa ausência de direito.</b> Pode ser precatório ainda não pago, ação em curso, ou receita classificada em outra conta.</p><div class="insight mt-2"><b>Por que a página existe mesmo assim:</b> entre 1998 e 2006 a União calculou a complementação do FUNDEF por um valor mínimo por aluno abaixo do que a Lei nº 9.424/1996 determinava. Centenas de municípios processaram e ganharam; o pagamento só destravou com a EC nº 114/2021. Município que nunca ajuizou não aparece nesta conta — e não aparecer é exatamente o que precisa ser verificado com a procuradoria.</div>${lei}${lacuna}<div class="grid-2 mt-2"><div class="card accent"><h3>Como conferir em uma tarde</h3><ul class="small"><li>Pedir à procuradoria o <b>número do processo</b> de complementação do FUNDEF e a última movimentação.</li><li>Se houver trânsito em julgado, conferir no Tribunal Regional Federal da região se o <b>precatório já foi expedido</b> e em que fila está.</li><li>Conferir na contabilidade se algum ingresso foi classificado fora das duas contas do precatório do FUNDEF — <b>1.7.1.8.13.0.0</b> (até 2021) e <b>1.7.1.9.56.0.0</b> (de 2022 em diante).</li></ul></div><div class="card"><h3>Por que a conferência não pode esperar</h3><p class="small">O recurso, quando entra, já entra amarrado: no mínimo 60% em abono ao magistério e o resto em MDE do ensino fundamental. Descobrir isso <b>depois</b> de o dinheiro ter sido aplicado em outra coisa é o cenário caro — o art. 3º da Lei nº 14.325/2022 suspende transferência voluntária de quem descumpre a destinação, e a devolução é cobrada do ente, não de quem decidiu.</p></div></div><div class="note mt-2"><b>Perguntas de campo:</b> (1) existe ação de complementação do FUNDEF ajuizada pelo município, e em que fase está? (2) se houve recebimento, em que conta contábil ele foi classificado? (3) existe lei municipal de rateio aprovada?</div><p class="small mt-2">Fonte: SICONFI/Tesouro Nacional — DCA, Anexo I-C, exercícios ${esc(janela)}.</p></main>${footer(pagina, rodape)}</section>`;
+  }
+
+  const linhas = p.years
+    .map(
+      (a) =>
+        `<tr><td>${a.year}</td><td class="num">${esc(money(a.value))}</td><td class="num">${esc(a.account)}</td><td>${a.underEc114 ? `<b class="good">sim</b>` : `<span class="neutral">não</span>`}</td></tr>`,
+    )
+    .join("");
+
+  const proporcao =
+    model.fundebCurrent !== null && model.fundebCurrent > 0
+      ? Math.round((p.total / model.fundebCurrent) * 1000) / 10
+      : null;
+  const escala =
+    proporcao !== null
+      ? `<p class="small mt-1">O total recebido equivale a <b>${esc(pct(proporcao))}</b> da receita anual do FUNDEB de ${model.currentYear} — é dinheiro de uma ordem de grandeza que muda orçamento, e por isso a regra de destino é dura.</p>`
+      : "";
+
+  // Só quem recebeu a partir de 2022 tem mínimo de abono a apurar. Quem
+  // recebeu antes tem outra conversa — e ela não é "R$ 0,00".
+  const bloco =
+    p.underEc114 > 0
+      ? `<div class="grid-3 mt-3">${metric(compactMoney(p.total), `recebido · ${esc(janela)}`)}${metric(
+          compactMoney(p.minimumBonus),
+          "mínimo em abono ao magistério (60%)",
+        )}${metric(compactMoney(p.remainderMde), "restante, carimbado em MDE")}</div>${escala}<div class="risk mt-2"><b>O que a lei destina, e o que o relatório não sabe:</b> dos ${esc(
+          money(p.underEc114),
+        )} recebidos sob a EC nº 114/2021, <b>${esc(
+          money(p.minimumBonus),
+        )}</b> têm destino carimbado em abono ao magistério. Se esse pagamento foi feito, <b>nenhuma base pública registra</b> — nem a DCA, que não tem conta de despesa para isso, nem o SIOPE, que não tem indicador. A comprovação está no município.</div>`
+      : `<div class="grid-2 mt-3">${metric(compactMoney(p.total), `recebido · ${esc(janela)}`)}${metric(
+          `${p.firstYear ?? ""}${p.lastYear && p.lastYear !== p.firstYear ? `–${p.lastYear}` : ""}`,
+          "exercícios do recebimento",
+        )}</div>${escala}<div class="note mt-2"><b>Todo o valor entrou antes de 2022.</b> A subvinculação de 60% em abono nasceu com a EC nº 114/2021, promulgada em 16/12/2021 — este relatório não a aplica retroativamente, porque isso seria tese jurídica e não leitura de fonte. O que já valia, por decorrência da natureza do Fundo, é a destinação ao ensino fundamental e à valorização do magistério. <b>Se os recursos ainda não foram integralmente aplicados</b>, o alcance da regra sobre o saldo é pergunta para a procuradoria do município.</div>`;
+
+  return `<section class="page content-page">${header("Precatório do FUNDEF")}<main class="page-body">${base}<p class="lede">A União pagou a este município, por decisão judicial, a diferença da complementação do FUNDEF que deixou de repassar entre 1998 e 2006. O valor abaixo é o que a <b>própria prefeitura declarou</b> ter recebido na Declaração de Contas Anuais.</p>${bloco}<table class="mt-2"><thead><tr><th>Exercício</th><th class="num">Recebido</th><th class="num">Conta no SICONFI</th><th>Sob a EC 114/2021</th></tr></thead><tbody>${linhas}</tbody></table>${lacuna}${lei}<div class="note mt-2"><b>Perguntas de campo, com o número na mão:</b> (1) existe lei municipal de rateio, como manda o art. 2º da Lei nº 14.325/2022? (2) o abono foi pago, a quantos profissionais e em que exercício? (3) o pagamento respeitou a vedação de incorporação? (4) há saldo do precatório ainda não aplicado, e onde ele está?</div><p class="small mt-2">Fonte: SICONFI/Tesouro Nacional — DCA, Anexo I-C, exercícios ${esc(janela)}, receita bruta realizada declarada pelo ente. Valores nominais, sem correção.</p></main>${footer(pagina, rodape)}</section>`;
+}
+
+/**
  * Densidade e dispersão — o custo geográfico que o valor-aluno não enxerga.
  *
  * O mapa da página anterior mostra onde a rede está; esta mede quão longe ela
@@ -3588,6 +3721,8 @@ ${paginaVinculacoes(model, prox())}
 ${paginaObras(model, prox())}
 
 ${paginaDinheiroFederal(model, prox())}
+
+${paginaPrecatorioFundef(model, prox())}
 
 ${paginaCauc(model, prox())}
 

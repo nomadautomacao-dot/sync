@@ -140,7 +140,7 @@ describe("questionário — tom de coleta, não de veredito", () => {
     const perguntas = (saida.match(/class="q-pergunta"/g) ?? []).length;
     const linhas = (saida.match(/class="q-linha"/g) ?? []).length;
 
-    expect(perguntas).toBe(17);
+    expect(perguntas).toBe(18);
     expect(linhas).toBe(perguntas);
   });
 
@@ -362,5 +362,77 @@ describe("Plano Municipal de Educação", () => {
     // Sem perfil, o contexto fica só com a regra — nenhum "MUNIC: ..." falso.
     expect(saida).toContain("Plano vigente e monitorado é exigência frequente");
     expect(saida).not.toContain("MUNIC 2021: Plano Municipal de Educação registrado");
+  });
+});
+
+/**
+ * Precatório do FUNDEF no ofício. A pergunta mora na seção "o que trava
+ * repasse" porque a consequência de descumprir a destinação é exatamente essa:
+ * a União suspende transferência voluntária (Lei nº 14.325/2022, art. 3º).
+ */
+describe("pergunta do precatório do FUNDEF", () => {
+  const SOB_EC = {
+    janela: [2020, 2021, 2022, 2023, 2024, 2025],
+    semDeclaracao: [],
+    exercicios: [{ exercicio: 2022, valor: 938562.78, codigoConta: "1.7.1.9.56.0.0", sobEc114: true }],
+    recebeu: true,
+    total: 938562.78,
+    totalSobEc114: 938562.78,
+    totalAnterior: 0,
+    minimoAbono: 563137.67,
+    saldoMde: 375425.11,
+    primeiroExercicio: 2022,
+    ultimoExercicio: 2022,
+    observacoes: [],
+  };
+
+  it("pergunta pela lei de rateio mesmo sem registro de recebimento", () => {
+    const saida = render();
+
+    expect(saida).toContain("Há precatório do FUNDEF recebido ou em curso?");
+    expect(saida).toContain("suspende transferências voluntárias");
+    // Sem dado, o contexto é só a regra — nenhum valor inventado.
+    expect(saida).not.toContain("DCA/SICONFI:");
+  });
+
+  it("embute o valor apurado quando o município declarou recebimento", () => {
+    const saida = render({ relatorio_dirigido_base: { precatorioFundef: SOB_EC } });
+
+    expect(saida).toContain("DCA/SICONFI:");
+    expect(saida).toContain("o que carimba");
+    expect(saida).toContain("563.138");
+  });
+
+  /**
+   * Recebimento anterior a 2022 não gera mínimo de abono. Anunciar "carimba
+   * R$ 0" num ofício que vai para a prefeitura seria pior do que não citar.
+   */
+  it("não anuncia carimbo de abono sobre dinheiro anterior à Emenda", () => {
+    const saida = render({
+      relatorio_dirigido_base: {
+        precatorioFundef: {
+          ...SOB_EC,
+          exercicios: [{ exercicio: 2020, valor: 40811940.79, codigoConta: "1.7.1.8.13.0.0", sobEc114: false }],
+          total: 40811940.79,
+          totalSobEc114: 0,
+          totalAnterior: 40811940.79,
+          minimoAbono: 0,
+          saldoMde: 0,
+        },
+      },
+    });
+
+    expect(saida).toContain("todos antes de 2022");
+    // "carimbada" existe na pergunta do PME — a negativa é sobre esta frase.
+    expect(saida).not.toContain("o que carimba");
+  });
+
+  /** O ofício continua em duas folhas de questionário depois da pergunta nova. */
+  it("não estoura o contrato de duas páginas de questionário", () => {
+    const grupos = distribuirQuestionario(montarQuestionario(modelo()));
+    const pesos = grupos.map((g) => g.reduce((t, s) => t + s.itens.length, 0));
+
+    expect(pesos).toHaveLength(2);
+    expect(Math.max(...pesos)).toBeLessThanOrEqual(10);
   });
 });

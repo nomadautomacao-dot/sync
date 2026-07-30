@@ -2,6 +2,9 @@ import { chromium, type Browser } from "playwright";
 
 import { ajustarParaCaber, assertSemCorte } from "./pdf-corte";
 
+/** Contrato de folhas do documento. A tela de emissão anuncia este número. */
+export const PAGINAS_ESPERADAS_HISTORICO_CENSO = 11;
+
 export async function generateCensoHistoricoPdf(
   htmlContent: string,
   municipalitySlug: string,
@@ -19,11 +22,10 @@ export async function generateCensoHistoricoPdf(
     // Capa + como ler + 8 páginas de séries (redes, infantil, fundamental,
     // EJA/especial, cor/raça, integral, docentes/escolas, infraestrutura) +
     // leitura da trajetória com perguntas de campo.
-    const PAGINAS_ESPERADAS = 11;
     const pageCount = await page.locator("section.page").count();
-    if (pageCount !== PAGINAS_ESPERADAS) {
+    if (pageCount !== PAGINAS_ESPERADAS_HISTORICO_CENSO) {
       throw new Error(
-        `O template do Histórico do Censo gerou ${pageCount} páginas; eram esperadas ${PAGINAS_ESPERADAS}.`,
+        `O template do Histórico do Censo gerou ${pageCount} páginas; eram esperadas ${PAGINAS_ESPERADAS_HISTORICO_CENSO}.`,
       );
     }
 

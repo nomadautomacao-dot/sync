@@ -188,9 +188,9 @@ describe("páginas de ponderação e vinculações no Raio-X", () => {
     expect(saida).toContain("Declaração ao SIOPE não localizada");
   });
 
-  it("gera as 40 páginas do contrato do renderer, com e sem dados", () => {
+  it("gera as 41 páginas do contrato do renderer, com e sem dados", () => {
     const paginas = (html: string) => html.match(/<section class="page/g)?.length ?? 0;
-    expect(paginas(completo("2930154", "BA"))).toBe(40);
+    expect(paginas(completo("2930154", "BA"))).toBe(41);
     expect(
       paginas(
         generateMunicipalXrayHtml(
@@ -203,7 +203,7 @@ describe("páginas de ponderação e vinculações no Raio-X", () => {
           }),
         ),
       ),
-    ).toBe(40);
+    ).toBe(41);
   });
 
   it("numera as páginas sequencialmente a partir do contador", () => {
@@ -216,7 +216,7 @@ describe("páginas de ponderação e vinculações no Raio-X", () => {
 
     // A capa não tem rodapé numerado; o miolo vai de 2 até o total.
     expect(numeros[0]).toBe(2);
-    expect(numeros[numeros.length - 1]).toBe(40);
+    expect(numeros[numeros.length - 1]).toBe(41);
     for (let i = 1; i < numeros.length; i++) expect(numeros[i]).toBe(numeros[i - 1] + 1);
   });
 });
@@ -2162,7 +2162,7 @@ describe("resumo executivo e plano de ação saem dos achados", () => {
 
   /**
    * Essa frase era o fecho do resumo, igual para todo município do país. Se
-   * ela voltar, o dossiê voltou a pedir que o gestor leia 40 páginas para
+   * ela voltar, o dossiê voltou a pedir que o gestor leia 41 páginas para
    * descobrir o que está em jogo.
    */
   it("não traz de volta o diagnóstico genérico", () => {
@@ -2192,5 +2192,147 @@ describe("resumo executivo e plano de ação saem dos achados", () => {
     expect(saida).toContain("não é atestado de gestão");
     // E o plano cai nos itens de preenchimento, em vez de ficar vazio.
     expect(saida).toContain("Montar a sala de situação municipal");
+  });
+});
+
+/**
+ * Precatório do FUNDEF (roadmap #27).
+ *
+ * A página tem quatro estados e três deles são fáceis de errar: fonte muda,
+ * dinheiro anterior à EC, e ausência de registro. O único caso trivial é o do
+ * município que recebeu sob a Emenda.
+ */
+describe("página do precatório do FUNDEF", () => {
+  const SOB_EC = {
+    codigoIBGE: "2510105",
+    janela: [2020, 2021, 2022, 2023, 2024, 2025],
+    semDeclaracao: [],
+    exercicios: [
+      { exercicio: 2022, valor: 938562.78, codigoConta: "1.7.1.9.56.0.0", sobEc114: true },
+      { exercicio: 2023, valor: 733121.91, codigoConta: "1.7.1.9.56.0.0", sobEc114: true },
+      { exercicio: 2024, valor: 787562.16, codigoConta: "1.7.1.9.56.0.0", sobEc114: true },
+    ],
+    recebeu: true,
+    total: 2459246.85,
+    totalSobEc114: 2459246.85,
+    totalAnterior: 0,
+    minimoAbono: 1475548.11,
+    saldoMde: 983698.74,
+    primeiroExercicio: 2022,
+    ultimoExercicio: 2024,
+    observacoes: [],
+  };
+
+  /** Rafael Jambeiro/BA: R$ 42 mi, tudo antes da Emenda. */
+  const ANTES_DA_EC = {
+    ...SOB_EC,
+    codigoIBGE: "2925956",
+    exercicios: [
+      { exercicio: 2020, valor: 40811940.79, codigoConta: "1.7.1.8.13.0.0", sobEc114: false },
+      { exercicio: 2021, valor: 1284818.78, codigoConta: "1.7.1.8.13.0.0", sobEc114: false },
+    ],
+    total: 42096759.57,
+    totalSobEc114: 0,
+    totalAnterior: 42096759.57,
+    minimoAbono: 0,
+    saldoMde: 0,
+    primeiroExercicio: 2020,
+    ultimoExercicio: 2021,
+    observacoes: ["R$ 42.096.759,57 entraram antes de 2022, quando a subvinculação de 60% em abono ainda não existia."],
+  };
+
+  const SEM_RECEITA = {
+    ...SOB_EC,
+    codigoIBGE: "2924009",
+    exercicios: [],
+    recebeu: false,
+    total: 0,
+    totalSobEc114: 0,
+    totalAnterior: 0,
+    minimoAbono: 0,
+    saldoMde: 0,
+    primeiroExercicio: null,
+    ultimoExercicio: null,
+    observacoes: [],
+  };
+
+  function render(precatorio: Record<string, unknown> | null) {
+    return generateMunicipalXrayHtml(
+      mapMunicipalXrayModel({
+        basePayload: {},
+        currentPayload: {
+          relatorio_dirigido_base: precatorio ? { precatorioFundef: precatorio } : {},
+        },
+        baseYear: 2024,
+        currentYear: 2026,
+        generatedAt: new Date("2026-07-30T12:00:00.000Z"),
+      }),
+    );
+  }
+
+  /** Recorta só a folha do precatório: outras páginas podem imprimir zero. */
+  function folha(precatorio: Record<string, unknown> | null) {
+    const saida = render(precatorio);
+    const inicio = saida.indexOf('<span>Precatório do FUNDEF</span>');
+    expect(inicio).toBeGreaterThan(0);
+    return saida.slice(inicio, saida.indexOf("</section>", inicio));
+  }
+
+  it("imprime o mínimo de abono sobre o que entrou sob a Emenda", () => {
+    const saida = render(SOB_EC);
+
+    expect(saida).toContain("Precatório do FUNDEF");
+    expect(saida).toContain("mínimo em abono ao magistério (60%)");
+    expect(saida).toContain("1.475.548");
+    expect(saida).toContain("1.7.1.9.56.0.0");
+  });
+
+  /**
+   * O erro que este bloco existe para impedir. Município que recebeu R$ 42
+   * milhões antes de 2022 tem mínimo de abono igual a zero — e "R$ 0,00" numa
+   * métrica de obrigação legal lê-se como "não deve nada", que é uma
+   * afirmação que a fonte não sustenta.
+   */
+  it("não estampa R$ 0,00 como obrigação de quem recebeu antes da Emenda", () => {
+    const saida = render(ANTES_DA_EC);
+
+    expect(saida).toContain("Todo o valor entrou antes de 2022");
+    expect(saida).toContain("promulgada em 16/12/2021");
+    expect(saida).not.toContain("mínimo em abono ao magistério (60%)");
+    // Nenhum "R$ 0" na folha — nem como métrica, nem no meio de uma frase.
+    expect(folha(ANTES_DA_EC)).not.toMatch(/R\$\u00a00(?!\d)/);
+  });
+
+  it("diz que ausência de receita declarada não é ausência de direito", () => {
+    const saida = render(SEM_RECEITA);
+
+    expect(saida).toContain("Nenhuma receita de precatório do FUNDEF foi declarada");
+    expect(saida).toContain("não significa ausência de direito");
+    expect(saida).toContain("existe ação de complementação do FUNDEF ajuizada");
+  });
+
+  it("separa fonte que não respondeu de município que não recebeu", () => {
+    const saida = render(null);
+
+    expect(saida).toContain("O SICONFI não respondeu");
+    expect(saida).not.toContain("Nenhuma receita de precatório do FUNDEF foi declarada");
+  });
+
+  /** A base legal é o produto da página: sem ela, é uma tabela de valores. */
+  it("cita a regra em todos os estados, inclusive quando não há dado", () => {
+    for (const estado of [SOB_EC, ANTES_DA_EC, SEM_RECEITA, null]) {
+      const saida = render(estado);
+      expect(saida).toContain("EC nº 114/2021, art. 5º");
+      expect(saida).toContain("na forma de abono");
+      expect(saida).toContain("suspende transferências voluntárias");
+    }
+  });
+
+  /** Nem a DCA nem o SIOPE registram o pagamento — a página tem de admitir. */
+  it("admite que o pagamento do abono não é público", () => {
+    const saida = render(SOB_EC);
+
+    expect(saida).toContain("nenhuma base pública registra");
+    expect(saida).toContain("A comprovação está no município");
   });
 });

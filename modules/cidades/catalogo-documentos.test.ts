@@ -4,6 +4,9 @@ import { describe, expect, it } from "vitest";
 
 import { DOCUMENTOS } from "@/app/(sync)/modulos/levantamento-fundeb/_components/documentos";
 import { CITY_REPORT_TYPES, CITY_REPORT_TYPE_LABELS } from "@/modules/cidades/reports-types";
+import { PAGINAS_ESPERADAS_RAIO_X } from "@/core/lib/municipal-xray-pdf";
+import { PAGINAS_ESPERADAS_HISTORICO_CENSO } from "@/core/lib/censo-historico-pdf";
+import { PAGINAS_ESPERADAS_OFICIO } from "@/core/lib/oficio-documentos-pdf";
 
 /**
  * O catálogo de emissão é ligado por strings — `endpoint` aponta para uma rota
@@ -75,6 +78,26 @@ describe("catálogo de documentos da tela de emissão", () => {
   it("os dossiês não anunciam contagem fixa de páginas", () => {
     for (const documento of DOCUMENTOS.filter((d) => d.id.startsWith("dossie-"))) {
       expect(documento.paginas, `${documento.nome} anuncia ${documento.paginas} páginas`).toBe(0);
+    }
+  });
+
+  /**
+   * O card anuncia o tamanho antes de gerar, e o gerador tem contrato de
+   * folhas. Eram dois números soltos: o card do Raio-X dizia 41 enquanto o
+   * relatório entregava 40, e nada quebrou — o usuário é que descobriria, ao
+   * abrir o PDF. Agora a constante é a mesma nos dois lados.
+   */
+  it("o que o card anuncia é o contrato do gerador", () => {
+    const esperado: Record<string, number> = {
+      "raio-x": PAGINAS_ESPERADAS_RAIO_X,
+      "historico-censo": PAGINAS_ESPERADAS_HISTORICO_CENSO,
+      "oficio-documentos": PAGINAS_ESPERADAS_OFICIO,
+    };
+
+    for (const [id, paginas] of Object.entries(esperado)) {
+      const documento = DOCUMENTOS.find((d) => d.id === id);
+      expect(documento, `card ${id} sumiu do catálogo`).toBeDefined();
+      expect(documento!.paginas, `${documento!.nome} anuncia página a mais ou a menos`).toBe(paginas);
     }
   });
 

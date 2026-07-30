@@ -39,6 +39,7 @@ import { getCicloPolitico } from "@/core/lib/alternancia-politica";
 import { getCaucMunicipio } from "@/core/lib/cauc-requisitos";
 import { getPopulacaoRural } from "@/core/lib/densidade-rede";
 import { getEstadoNutricional } from "@/core/lib/sisvan-nutricional";
+import { getPrecatorioFundef } from "@/core/lib/precatorio-fundef";
 import { getEscolasTerritorio } from "@/core/lib/escolas-territorio";
 import { getEnemAbstencao } from "@/core/lib/enem-abstencao";
 import { getDemografiaEducacional } from "@/core/lib/demografia-educacional";
@@ -1034,7 +1035,7 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
   } catch (e) {
     console.warn(`[govia] FNDE receitas fetch failed for ${exercicio}:`, e instanceof Error ? e.message : e);
   }
-  const [vaatContext, ibgeIndicators, inepRecord, fndePublic, qeduIndicators, siconfiFiscal, simecObras, qeduApiSnapshot, pontualidadeFiscal, demografiaEducacional, equidadeTerritorial, frequenciaBolsaFamilia, economiaLocal, conveniosFederais, sancoesFederais, caucRequisitos, populacaoRural, estadoNutricional] =
+  const [vaatContext, ibgeIndicators, inepRecord, fndePublic, qeduIndicators, siconfiFiscal, simecObras, qeduApiSnapshot, pontualidadeFiscal, demografiaEducacional, equidadeTerritorial, frequenciaBolsaFamilia, economiaLocal, conveniosFederais, sancoesFederais, caucRequisitos, populacaoRural, estadoNutricional, precatorioFundef] =
     await Promise.all([
     getFundebVaatContext(String(municipio.id), exercicio).catch(() => null),
     getIbgeCidadeIndicators(municipio.nome, municipioUf, String(municipio.id)).catch(() => null),
@@ -1060,6 +1061,7 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
       // O SISVAN publica com defasagem: o exercicio corrente costuma estar
       // incompleto, entao a consulta vai no anterior.
       getEstadoNutricional(String(municipio.id), exercicio - 1).catch(() => null),
+      getPrecatorioFundef(String(municipio.id), exercicio).catch(() => null),
     ]);
   // Leituras locais síncronas, hoisted porque o cruzamento contexto ×
   // resultado precisa das duas ao mesmo tempo.
@@ -1557,6 +1559,12 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
        * Ver `core/lib/sisvan-nutricional.ts`.
        */
       estadoNutricional,
+      /**
+       * Precatório do FUNDEF — receita declarada pelo próprio município na
+       * DCA, e a subvinculação de 60% em abono que a EC nº 114/2021 amarrou a
+       * ela. Ver `core/lib/precatorio-fundef.ts`.
+       */
+      precatorioFundef,
       /**
        * Abstenção no ENEM por município de PROVA, com a régua da UF —
        * termômetro de custo de oportunidade no fim da educação básica.

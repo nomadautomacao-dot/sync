@@ -399,6 +399,22 @@ export function montarQuestionario(model: MunicipalXrayModel): SecaoCampo[] {
         },
         {
           pergunta:
+            "Há precatório do FUNDEF recebido ou em curso? Existe lei municipal de rateio, e o abono ao magistério foi pago?",
+          contexto: (() => {
+            // Descumprir a destinação suspende transferência voluntária — é
+            // por isso que a pergunta mora nesta seção, e não na de dinheiro.
+            const regra =
+              "A EC nº 114/2021 destina no mínimo 60% do precatório do FUNDEF a abono ao magistério, o rateio depende de lei municipal específica (Lei nº 14.325/2022, art. 2º) e o descumprimento suspende transferências voluntárias da União (art. 3º).";
+            const p = model.fundefWrit;
+            if (!p?.received) return regra;
+            if (p.underEc114 <= 0) {
+              return `DCA/SICONFI: o município declarou ${compactMoney(p.total)} recebidos de precatório do FUNDEF, todos antes de 2022. ${regra}`;
+            }
+            return `DCA/SICONFI: ${compactMoney(p.underEc114)} recebidos sob a EC, o que carimba ${compactMoney(p.minimumBonus)} em abono. ${regra}`;
+          })(),
+        },
+        {
+          pergunta:
             "Quem acompanha o SIMEC e as obras pactuadas com o FNDE, e o que trava as que estão paradas?",
           contexto: (() => {
             const regra =

@@ -2,6 +2,9 @@ import { chromium, type Browser } from "playwright";
 
 import { ajustarParaCaber, assertSemCorte } from "./pdf-corte";
 
+/** Contrato de folhas do documento. A tela de emissão anuncia este número. */
+export const PAGINAS_ESPERADAS_OFICIO = 4;
+
 export async function generateOficioDocumentosPdf(
   htmlContent: string,
   municipalitySlug: string,
@@ -22,11 +25,10 @@ export async function generateOficioDocumentosPdf(
     // transbordo: conteúdo que estoura a altura vira folha extra só no PDF
     // impresso. Ao engordar uma página existente, conferir as folhas reais —
     // ver a seção do contrato de páginas em `docs/continuar-no-mac.md`.
-    const PAGINAS_ESPERADAS = 4;
     const pageCount = await page.locator("section.page").count();
-    if (pageCount !== PAGINAS_ESPERADAS) {
+    if (pageCount !== PAGINAS_ESPERADAS_OFICIO) {
       throw new Error(
-        `O template do Ofício gerou ${pageCount} páginas; eram esperadas ${PAGINAS_ESPERADAS}.`,
+        `O template do Ofício gerou ${pageCount} páginas; eram esperadas ${PAGINAS_ESPERADAS_OFICIO}.`,
       );
     }
 
