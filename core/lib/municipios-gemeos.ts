@@ -46,7 +46,8 @@ export type SentidoGemeos = "maior-melhor" | "menor-melhor" | "neutro";
 export interface IndicadorGemeos {
   chave: string;
   rotulo: string;
-  unidade: "percentual" | "reais" | "fator";
+  /** `indice` é escala de uma casa decimal, como o IDEB — `fator` é a ponderação do FUNDEB, que precisa de três. */
+  unidade: "percentual" | "reais" | "fator" | "indice";
   valor: number;
   medianaPorte: number;
   medianaUf: number | null;
@@ -92,7 +93,8 @@ export type GrupoIndicador = "fundo" | "resultado" | "financiamento" | "cadastro
 interface DefinicaoIndicador {
   chave: string;
   rotulo: string;
-  unidade: "percentual" | "reais" | "fator";
+  /** `indice` é escala de uma casa decimal, como o IDEB — `fator` é a ponderação do FUNDEB, que precisa de três. */
+  unidade: "percentual" | "reais" | "fator" | "indice";
   sentido: SentidoGemeos;
   grupo: GrupoIndicador;
 }
@@ -108,8 +110,8 @@ const INDICADORES: DefinicaoIndicador[] = [
   { chave: "fatorMedio", rotulo: "Fator médio de ponderação da rede", unidade: "fator", sentido: "maior-melhor", grupo: "fundo" },
   { chave: "crecheIntegral", rotulo: "Creche pública em tempo integral", unidade: "percentual", sentido: "maior-melhor", grupo: "fundo" },
   { chave: "coberturaAee", rotulo: "Cobertura de AEE na educação especial", unidade: "percentual", sentido: "maior-melhor", grupo: "fundo" },
-  { chave: "idebAnosIniciais", rotulo: "IDEB dos anos iniciais", unidade: "fator", sentido: "maior-melhor", grupo: "resultado" },
-  { chave: "idebAnosFinais", rotulo: "IDEB dos anos finais", unidade: "fator", sentido: "maior-melhor", grupo: "resultado" },
+  { chave: "idebAnosIniciais", rotulo: "IDEB dos anos iniciais", unidade: "indice", sentido: "maior-melhor", grupo: "resultado" },
+  { chave: "idebAnosFinais", rotulo: "IDEB dos anos finais", unidade: "indice", sentido: "maior-melhor", grupo: "resultado" },
   { chave: "distorcaoFundamental", rotulo: "Distorção idade-série no fundamental", unidade: "percentual", sentido: "menor-melhor", grupo: "resultado" },
   { chave: "abandonoFundamental", rotulo: "Abandono no fundamental", unidade: "percentual", sentido: "menor-melhor", grupo: "resultado" },
   { chave: "insuficienteLp5", rotulo: "Nível insuficiente em Português do 5º ano", unidade: "percentual", sentido: "menor-melhor", grupo: "resultado" },

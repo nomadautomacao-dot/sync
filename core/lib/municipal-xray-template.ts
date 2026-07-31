@@ -164,7 +164,7 @@ export interface MunicipalXrayModel {
     indicators: Array<{
       key: string;
       label: string;
-      unit: "percentual" | "reais" | "fator";
+      unit: "percentual" | "reais" | "fator" | "indice";
       value: number;
       cohortMedian: number;
       stateMedian: number | null;
@@ -2434,8 +2434,16 @@ function paginaGemeos(model: MunicipalXrayModel, pagina: number): string {
     return `<section class="page content-page">${header("Entre os seus iguais")}<main class="page-body"><div class="kicker">Comparação por porte</div><h2>Coorte de comparação indisponível</h2><p class="lede">Os datasets locais não trouxeram este município, então não há coorte de porte para comparar sem misturar apurações diferentes.</p></main>${footer(pagina, "Datasets FNDE/SIOPE integrados ao Sync")}</section>`;
   }
 
-  const fmtValor = (valor: number, unit: "percentual" | "reais" | "fator") =>
-    unit === "reais" ? compactMoney(valor) : unit === "fator" ? valor.toLocaleString("pt-BR", { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : `${decimal.format(valor)}%`;
+  const fmtValor = (valor: number, unit: "percentual" | "reais" | "fator" | "indice") =>
+    unit === "reais"
+      ? compactMoney(valor)
+      : unit === "fator"
+        ? valor.toLocaleString("pt-BR", { minimumFractionDigits: 3, maximumFractionDigits: 3 })
+        : // O IDEB é escala de uma casa: com o formato de `fator` saía "5,900",
+          // que lê como outra grandeza. Auditoria do Raio-X de Fortaleza.
+          unit === "indice"
+          ? decimal.format(valor)
+          : `${decimal.format(valor)}%`;
 
   // Nota de leitura por direção: percentil alto é bom quando maior é melhor,
   // ruim quando menor é melhor, e só informativo no neutro.
