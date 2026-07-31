@@ -16,6 +16,8 @@
 # ── Environment ──
 .env*
 !.env.example
+# Config web do Firebase — pública por construção, e o build precisa dela.
+!.env.production
 cloudrun.env.yaml
 
 # ── TypeScript ──
