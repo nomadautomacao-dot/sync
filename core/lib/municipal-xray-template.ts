@@ -3424,7 +3424,7 @@ function blocoFunai(model: MunicipalXrayModel): string {
     t.villages.length > MOSTRADAS ? ` e mais ${int(t.villages.length - MOSTRADAS)} no cadastro.` : ".";
 
   const leitura = t.registeredButUndeclared
-    ? `<b>A FUNAI registra ${int(t.villages.length)} ${t.villages.length === 1 ? "aldeia" : "aldeias"} neste município e o Censo Escolar não declara nenhuma escola municipal em terra indígena.</b> Isso não é irregularidade — a escola que atende a comunidade pode ser estadual, ou as crianças podem estudar fora da aldeia. Mas é a conferência que ninguém faz, e como a ponderação segue a classificação da escola, é aqui que registro vira ou deixa de virar receita.`
+    ? `<b>A FUNAI registra ${int(t.villages.length)} ${t.villages.length === 1 ? "aldeia" : "aldeias"} aqui e o Censo não declara nenhuma escola municipal em terra indígena.</b> Não é irregularidade — a escola pode ser estadual, ou as crianças podem estudar fora da aldeia. Mas a ponderação segue a classificação da escola, e é aqui que registro vira ou deixa de virar receita.`
     : t.villagesWithoutIndigenousSchool > 0
       ? `Das ${int(t.villagesWithCoords)} aldeias com coordenada, <b>${int(t.villagesWithoutIndigenousSchool)}</b> não têm escola municipal declarada como indígena num raio de ${t.radiusKm} km, contra ${int(t.indigenousSchools)} ${t.indigenousSchools === 1 ? "declarada" : "declaradas"} na rede. <b>Verificar:</b> quem atende essas aldeias, e a classificação da escola está correta na coleta?`
       : `As ${int(t.villagesWithCoords)} aldeias com coordenada têm escola municipal declarada como indígena a menos de ${t.radiusKm} km. Cadastro da FUNAI e classificação do Censo estão coerentes aqui.`;
@@ -3571,8 +3571,8 @@ function blocoNotificacaoViolencia(model: MunicipalXrayModel): string {
   const silenciosos = n.citiesInCountry - n.reportingCities;
 
   const leitura = n.totalSilence
-    ? `<b>Nenhuma notificação de violência contra criança de ${esc(n.ageRange)} foi registrada neste município</b> em ${n.series.length} ${n.series.length === 1 ? "exercício" : "exercícios"}. Isso quase nunca significa ausência de violência — significa ausência de registro, e este município está entre os ${int(silenciosos)} do país sem notificação no último exercício. <b>A escola é notificante obrigatória</b> (Lei nº 13.431/2017 e ECA, art. 245): a pergunta de campo é se a rede tem fluxo definido e se os profissionais sabem acioná-lo.`
-    : `A rede de proteção registrou notificações de violência contra criança de ${esc(n.ageRange)} nos últimos exercícios. <b>Número maior não significa mais violência</b> — costuma significar vigilância melhor, com escola e conselho tutelar acionando o fluxo. O que este bloco sustenta é que o fluxo existe; o que ele não mede é se a escola participa dele.`;
+    ? `<b>Nenhuma notificação de violência contra criança de ${esc(n.ageRange)} em ${n.series.length} ${n.series.length === 1 ? "exercício" : "exercícios"}.</b> Isso quase nunca significa ausência de violência — significa ausência de registro, e ${int(silenciosos)} municípios do país estão nessa situação. <b>A escola é notificante obrigatória</b> (Lei nº 13.431/2017 e ECA, art. 245): a rede tem fluxo definido, e os profissionais sabem acioná-lo?`
+    : `A rede registrou notificações de violência contra criança de ${esc(n.ageRange)} nos últimos exercícios. <b>Número maior não significa mais violência</b> — costuma significar vigilância melhor. O bloco sustenta que o fluxo existe; não mede se a escola participa dele.`;
 
   return `<div class="${n.totalSilence ? "note" : "insight"} mt-2"><b>Notificação, não ocorrência:</b> ${leitura}<span class="micro" style="display:block;margin-top:.05in">${serie} notificações (${esc(n.ageRange)}, município de notificação) · ${int(n.reportingCities)} municípios do país notificaram no último exercício. Fonte: SINAN/SVSA — a ressalva de indicador sensível do rodapé desta folha vale aqui também.</span></div>`;
 }
