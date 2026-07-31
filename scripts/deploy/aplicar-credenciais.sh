@@ -69,13 +69,39 @@ python3 -c "import json,sys; json.loads(sys.argv[1])" "$FSA" 2>/dev/null \
 echo "Lidas do .env.local: service account (${#FSA} caracteres) e token (${#PTT} caracteres)."
 
 # `--env-vars-file` é o único caminho que aceita JSON multilinha sem o shell
-# reinterpretar. As demais variáveis do serviço são preservadas.
-python3 - "$TMP" "$FSA" "$PTT" <<'PY'
-import sys, yaml  # PyYAML acompanha o gcloud
-destino, fsa, ptt = sys.argv[1], sys.argv[2], sys.argv[3]
+# reinterpretar — mas ele **substitui** o conjunto inteiro de variáveis, não
+# soma. A primeira versão disto teria apagado QEDU_TOKEN e OPENROUTER_API_KEY.
+# Por isso o arquivo é montado a partir do que o serviço já tem.
+#
+# JSON e não YAML de propósito: YAML é superconjunto de JSON, o `gcloud` aceita
+# os dois, e assim o script não depende do PyYAML, que não existe no python do
+# sistema deste Mac.
+echo "Lendo as variáveis atuais do serviço, para não apagar nenhuma…"
+ATUAIS="$(gcloud run services describe "$SERVICO" --region="$REGIAO" --format=json)"
+
+python3 - "$TMP" "$FSA" "$PTT" "$ATUAIS" <<'PY'
+import json, sys
+destino, fsa, ptt, bruto = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+servico = json.loads(bruto)
+# `.get("value", "")`: variável definida como string vazia vem do gcloud sem o
+# campo `value`. Filtrar por `if "value" in e` a apagaria — foi o que quase
+# aconteceu com OPENROUTER_API_KEY, que está vazia em produção de propósito.
+# Referência a Secret Manager (`valueFrom`) não é suportada aqui: se aparecer,
+# o script para em vez de silenciosamente convertê-la em texto.
+env = servico["spec"]["template"]["spec"]["containers"][0].get("env", [])
+segredos = [e["name"] for e in env if "valueFrom" in e]
+if segredos:
+    sys.exit(
+        "erro: estas variáveis vêm do Secret Manager e este script as perderia: "
+        + ", ".join(segredos)
+        + ". Aplique pelo console do Cloud Run."
+    )
+atuais = {e["name"]: e.get("value", "") for e in env}
+atuais["FIREBASE_SERVICE_ACCOUNT"] = fsa
+atuais["PORTAL_TRANSPARENCIA_TOKEN"] = ptt
 with open(destino, "w", encoding="utf-8") as f:
-    yaml.safe_dump({"FIREBASE_SERVICE_ACCOUNT": fsa, "PORTAL_TRANSPARENCIA_TOKEN": ptt}, f,
-                   allow_unicode=True, default_flow_style=False)
+    json.dump(atuais, f, ensure_ascii=False)
+print("  preservadas:", ", ".join(sorted(k for k in atuais if k not in ("FIREBASE_SERVICE_ACCOUNT", "PORTAL_TRANSPARENCIA_TOKEN"))))
 PY
 
 echo "Aplicando em $SERVICO ($REGIAO)…"
