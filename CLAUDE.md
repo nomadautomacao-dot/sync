@@ -38,11 +38,13 @@ migração para o React e **foi removido do repositório**. Se precisar consulta
 como uma tela antiga funcionava, o código está no histórico do git (a remoção é
 o último commit que menciona `sync_flutter/`). Não recriar.
 
-**Legado em desativação:**
-- Prisma 6 + PostgreSQL (Supabase) — ainda importado por 4 rotas de API
-  (`workspace/settings`, `municipalities/[id]`, `case-de-sucesso` ×2) e pelos
-  `core/lib/*-data-access.ts`. O build do Next depende de `prisma generate`
-  enquanto esses imports existirem. Migrar para o Firestore e então remover.
+**Prisma/PostgreSQL foram removidos.** O Firestore é a única persistência.
+Não há `prisma/schema.prisma`, nem `@prisma/client`, nem `prisma generate` no
+build; `DATABASE_URL`/`DIRECT_URL` não são mais lidas por nada. As rotas de API
+que liam o Postgres eram todas código morto — nenhuma tela as chamava, porque a
+interface já lê o Firestore direto — e foram apagadas junto com os
+`core/lib/*-data-access.ts`. O schema antigo está no histórico do git, caso
+alguém precise consultar o formato dos dados legados.
 
 **Infraestrutura:**
 - Google Cloud Run (us-central1) — 2 vCPU, 2GB RAM, timeout 900s
@@ -68,11 +70,10 @@ Sync/
 ├── core/                         # Código compartilhado (server-side)
 │   ├── domain/                   # Modelos de domínio (Zod schemas + interfaces)
 │   │   ├── module.ts             # moduleCatalog
-│   │   ├── organization.ts       # Company, Employee + validação CNPJ
-│   │   ├── collaboration.ts      # Collaborator, Municipality, Commission
-│   │   ├── fundeb-consulting.ts  # FundebConsultingProject
 │   │   └── rbac.ts               # GroupRole
 │   ├── lib/                      # Utilitários server-side (ver seção 3.3)
+│   │                             #   tipos do Firestore: city-types.ts,
+│   │                             #   company-types.ts, people-types.ts
 │   └── providers/app-providers.tsx
 │
 ├── modules/                      # Lógica de negócio consumida pelas rotas
@@ -80,10 +81,9 @@ Sync/
 │   ├── contrato-fundeb/          # services (agent, docx, collectors) + types
 │   └── propostas/                # types + utils de cálculo
 │
-├── prisma/schema.prisma          # Schema completo (ver seção 3.4)
 ├── scripts/                      # Ferramentas — ver seção 8
 │   ├── deploy/                   # Cloud Run (Linux e Windows)
-│   ├── db/                       # Supabase (check, bootstrap, clean)
+│   ├── firebase/                 # set-claims.mjs (custom claims)
 │   ├── dados/                    # Pipelines INEP / IDEB / TSE
 │   └── pdf/                      # Comparação e análise de PDFs, templates DOCX
 ├── data/                         # JSONs derivados (IDEB, INEP, TSE) + fnde/*.csv
@@ -149,29 +149,25 @@ cliente; as rotas apenas verificam o ID token. Ver seção 3.2.
 **Organizacional:**
 | Rota | Método | Descrição |
 |------|--------|-----------|
-| `/api/companies` | GET/POST | Listar/criar empresas do grupo |
-| `/api/companies/[companyId]` | GET/PUT/DELETE | CRUD empresa específica |
-| `/api/companies/upload-logo` | POST | Upload de logo da empresa |
-| `/api/employees` | GET/POST | Listar/criar funcionários |
-| `/api/audit` | GET | Logs de auditoria |
-| `/api/dashboard/executive` | GET | KPIs executivos cross-empresa |
-| `/api/workspace/settings` | GET/PUT | Configurações do workspace |
+| `/api/companies/upload-logo` | POST | Upload de logo da empresa (Supabase Storage) |
 
-**Colaboradores e Municípios:**
+> Empresas, funcionários, colaboradores, auditoria, dashboard executivo e
+> configurações do workspace **não têm rota de API**. A interface lê e escreve
+> essas coleções direto no Firestore (`companies`, `employees`, `collaborators`,
+> `audit`, `workspace_settings`), com as regras em `firestore.rules`. As rotas
+> equivalentes existiam sobre o Postgres, nunca tiveram consumidor e foram
+> removidas.
+
+**Municípios:**
 | Rota | Método | Descrição |
 |------|--------|-----------|
-| `/api/collaborators` | GET/POST | CRUD colaboradores (parceiros, articuladores) |
-| `/api/collaborators/[id]` | GET/PUT/DELETE | Colaborador específico |
-| `/api/collaborators/[id]/dashboard` | GET | Indicadores do colaborador |
-| `/api/collaborators/[id]/documents` | GET/POST | Documentos do colaborador |
-| `/api/collaborators/[id]/documents/[docId]` | GET/DELETE | Documento específico |
-| `/api/municipalities` | GET/POST | CRUD contas municipais |
-| `/api/municipalities/[id]` | PUT/DELETE | Conta municipal específica |
 | `/api/municipios/buscar` | GET | Busca de municípios por nome |
 | `/api/municipios/carteira` | GET | Carteira de municípios |
 | `/api/municipios/recentes` | GET | Municípios acessados recentemente |
 | `/api/municipio/completo` | GET | Levantamento completo de município |
-| `/api/fundeb-consulting` | GET/POST | Projetos de consultoria FUNDEB |
+
+> A carteira de cidades do pipeline vive na coleção `cities` do Firestore
+> (`core/lib/cities-firestore.ts`), não numa rota de API.
 
 **Módulos de negócio:**
 | Rota | Método | Descrição |
@@ -193,8 +189,6 @@ cliente; as rotas apenas verificam o ID token. Ver seção 3.2.
 | `/api/modulos/dossies/equidade` | GET/POST | Dossiê da Equidade — cor/raça em série, corrente de três elos, territórios |
 | `/api/modulos/dossies/comparativo` | GET/POST | Dossiê Comparativo — cada indicador contra a coorte de porte semelhante |
 | `/api/modulos/contrato-fundeb` | POST | Monta contrato a partir do levantamento |
-| `/api/modulos/case-de-sucesso` | GET | Lista de cases |
-| `/api/modulos/case-de-sucesso/[municipio]` | GET | Case de um município |
 | `/api/modulos/slides` | GET | Templates de apresentação |
 | `/api/modulos/slides/gerar` | POST | Gera o deck em PDF |
 | `/api/contratos-fundeb/agent` | POST | Agent de coleta de dados do contrato |
@@ -237,9 +231,8 @@ Para conceder acesso a um usuário:
 As claims valem a partir do próximo token: o usuário refaz login. A service
 account fica em `FIREBASE_SERVICE_ACCOUNT` (`.env.local`), nunca versionada.
 
-> A migração é fase 1 de uma transição maior para Firebase — ver
-> `docs/superpowers/specs/2026-07-22-migracao-firebase-design.md`. Os **dados**
-> ainda vivem no Postgres/Prisma (fase 2 os move para o Firestore).
+> Contexto da transição: `docs/superpowers/specs/2026-07-22-migracao-firebase-design.md`.
+> Auth e **dados** já estão no Firebase; o Postgres saiu do código.
 
 ### 3.3 core/lib/ — Arquivos e funções
 
@@ -249,10 +242,11 @@ account fica em `FIREBASE_SERVICE_ACCOUNT` (`.env.local`), nunca versionada.
 | `auth-token.ts` | `bearerToken()`, `sessionUserFromClaims()` — parsing puro, testável |
 | `firebase-admin.ts` | Cliente do Admin SDK (lê `FIREBASE_SERVICE_ACCOUNT`) |
 | `assets-paths.ts` | Resolve `CONTRATOS_ASSETS_DIR` |
-| `prisma.ts` | Singleton do Prisma Client |
-| `data-access.ts` (19KB) | Acesso a dados organizacionais (empresas, funcionários, audit) |
-| `collaboration-data-access.ts` (22KB) | CRUD colaboradores, municípios, comissões |
-| `fundeb-consulting-data-access.ts` (7KB) | CRUD projetos FUNDEB |
+| `firebase-client.ts` | Web SDK do Firebase (`getFirebaseDb`, `getFirebaseAuth`) |
+| `cities-firestore.ts` | CRUD da coleção `cities` (carteira e pipeline) |
+| `companies-firestore.ts` | CRUD da coleção `companies` |
+| `collaborators-firestore.ts` | CRUD da coleção `collaborators` |
+| `city-types.ts`, `company-types.ts`, `people-types.ts` | Tipos e conversores dos documentos do Firestore |
 | `govia-compat.ts` (48KB) | Camada de compatibilidade com sistema legado GovIA |
 | `fundeb-fnde.ts` (12KB) | Integração com dados FNDE (repasses FUNDEB) |
 | `fundeb-estimate.ts` (10KB) | Cálculos de estimativa FUNDEB |
@@ -269,37 +263,27 @@ account fica em `FIREBASE_SERVICE_ACCOUNT` (`.env.local`), nunca versionada.
 | `tse-prefeitos.ts` | Dados de prefeitos eleitos (TSE) |
 | `python-runtime.ts` | Executor de scripts Python (ReportLab) |
 
-### 3.4 Schema do banco (Prisma)
+### 3.4 Persistência (Firestore)
 
-PostgreSQL via Supabase. Dual connection: `DATABASE_URL` (pooler, porta 6543) + `DIRECT_URL` (direct, porta 5432).
+Projeto `globalconsultorias`. Não há banco relacional: as coleções abaixo são a
+fonte de verdade, e `firestore.rules` é o controle de acesso. A interface lê e
+escreve pelo Web SDK; as Cloud Functions em `functions/` escrevem pelo Admin SDK.
 
-**Modelos core:**
-| Modelo | Descrição |
-|--------|-----------|
-| `Group` | Grupo empresarial raiz → Company[], Collaborator[], User[] |
-| `Company` | Empresa do grupo → Employee[], enabledModules: String[] |
-| `User` | Usuário do sistema (groupRole: owner/admin/member/viewer) |
-| `Employee` | Vínculo user↔company, @@unique([userId, companyId]) |
-| `Session` | Sessão customizada legada — token único, expiresAt (hoje a sessão é do Firebase Auth) |
-| `AuditLog` | Log de auditoria — action, userId, metadata (Json) |
+| Coleção | Conteúdo |
+|---------|----------|
+| `companies` | Empresas do grupo |
+| `employees` | Vínculo pessoa ↔ empresa |
+| `collaborators` | Parceiros e articuladores |
+| `collaboratorDocuments` | Documentos do colaborador |
+| `cities` | Carteira e pipeline de municípios |
+| `cities/{id}/profitSnapshots` | Receita/custo/lucro por competência |
+| `cityDocuments`, `cityReports` | Kit documental e relatórios arquivados |
+| `commissionRules`, `commissionAccruals`, `commissionPayouts` | Comissionamento |
+| `workspace_settings` | Configurações do workspace, por `groupId` |
+| `audit` | Log de auditoria |
 
-**Modelos de colaboração:**
-| Modelo | Descrição |
-|--------|-----------|
-| `Collaborator` | Parceiro/articulador com dados de comissão |
-| `MunicipalityAccount` | Conta municipal no pipeline (13 estágios) |
-| `CollaboratorParticipation` | Participação de colaborador em município |
-| `ServiceImplementation` | Implantação de serviço com status de fidelização |
-
-**Modelos financeiros:**
-| Modelo | Descrição |
-|--------|-----------|
-| `ProfitSnapshot` | Snapshot mensal de receita/custo/lucro por município |
-| `CommissionRule` | Regra de comissão (%, tipo, gatilho) |
-| `CommissionAccrual` | Provisão mensal de comissão |
-| `CommissionPayout` | Pagamento de comissão |
-
-**Enums:** `CollaboratorType` (8 tipos), `MunicipalityStage` (13 estágios), `CommissionBaseType` (5), `FidelityStatus` (6), `AccrualStatus` (6), `PayoutStatus` (5).
+Os índices ficam em `firestore.indexes.json`. Para criar uma coleção nova, some
+a regra correspondente em `firestore.rules` — sem regra, o acesso é negado.
 
 ---
 
@@ -360,8 +344,12 @@ impressão seguem regra de papel, não o design system da web.
 | **Consultoria FUNDEB** | `fundeb` | Pipeline de municípios, projeção de faturamento |
 | **Levantamento FUNDEB** | `levantamento-fundeb` | Diagnóstico automático por código IBGE |
 | **Contrato FUNDEB** | `contrato-fundeb` | Processo administrativo com 15 anexos (Lei 14.133/21) |
-| **Case de Sucesso** | `case-de-sucesso` | Evolução VAAF/VAAT/VAAR 2024-2025 |
 | **Propostas** | `propostas` | Propostas comerciais padronizadas |
+
+> **Case de Sucesso** (`case-de-sucesso`) continua no `moduleCatalog`, mas não
+> tem rota nem tela: as duas rotas que existiam liam a tabela `CaseSucessoFundeb`
+> do Postgres, não tinham consumidor e saíram junto com o Prisma. Reimplementar
+> significa escolher uma fonte no Firestore.
 
 > `modules/` guarda apenas lógica server-side consumida pelas rotas de API.
 > A interface de cada módulo é uma página em `app/(sync)/modulos/<nome>/`.
@@ -373,7 +361,7 @@ impressão seguem regra de papel, não o design system da web.
 3. Se houver lógica de domínio reaproveitável, criar `modules/<nome>/`
 4. Criar a página em `app/(sync)/modulos/<nome>/page.tsx`
 5. Se precisar persistir: coleção no Firestore + regra em `firestore.rules`
-   (**não** criar migration Prisma — é legado em desativação)
+   (o Firestore é a única persistência — ver seção 3.4)
 
 ---
 
@@ -405,7 +393,7 @@ deploy**.
 Um trigger do Cloud Build observa a `main` no GitHub. A cada push ele roda o
 `cloudbuild.yaml`, em sequência:
 
-1. **`test`** — `npm ci` + `prisma generate` + `npm test`. **É o gate:** se a
+1. **`test`** — `npm ci` + `npm test`. **É o gate:** se a
    suíte falha, o build aborta e a produção continua na revisão anterior.
 2. **`build`** — imagem Docker (`gcr.io/opus-sec/sync-app:$BUILD_ID`).
 3. **`push`** — envia a imagem ao registry.
@@ -428,11 +416,15 @@ Reverter: `gcloud run services update-traffic sync-app --to-revisions=<revisão-
 ### Variáveis obrigatórias
 
 ```yaml
-DATABASE_URL: "postgresql://..."     # Supabase pooler (porta 6543) — dados (fase 2 migra p/ Firestore)
-DIRECT_URL: "postgresql://..."       # Supabase direct (porta 5432)
 FIREBASE_SERVICE_ACCOUNT: '{...}'    # JSON da service account (globalconsultorias) — verifica o ID token
 NODE_ENV: "production"
 ```
+
+`DATABASE_URL` e `DIRECT_URL` não são mais usadas — podem ser removidas do
+serviço no Cloud Run. Se o Supabase for desligado de vez, note que
+`/api/companies/upload-logo` ainda usa o **Storage** dele (`SUPABASE_URL` +
+`SUPABASE_SERVICE_ROLE_KEY`); é outro serviço, não o Postgres, e essa rota
+também não tem consumidor hoje.
 
 ### Comandos
 
@@ -458,12 +450,10 @@ No fluxo normal não se usa nenhum dos dois.
 
 ## 8. Scripts Úteis
 
-### Banco
+### Firebase
 | Script | Comando npm | Descrição |
 |--------|------------|-----------|
-| `db/supabase-check.mjs` | `supabase:check` | Valida conexão |
-| `db/supabase-bootstrap.mjs` | `supabase:bootstrap` | Setup completo do banco |
-| `db/supabase-clean.mjs` | `supabase:clean` | Limpa e recria mínimo |
+| `firebase/set-claims.mjs` | `firebase:claims` | Concede `groupId`/`groupRole` a um usuário |
 
 ### Deploy
 | Script | Descrição |

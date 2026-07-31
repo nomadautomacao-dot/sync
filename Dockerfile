@@ -10,12 +10,10 @@ WORKDIR /app
 
 # Copy package files
 COPY package.json package-lock.json* ./
-COPY prisma ./prisma/
 COPY kit_padrao_pdf_rocha_prime/requirements.txt ./kit_padrao_pdf_rocha_prime/requirements.txt
 
 # Install dependencies
 RUN npm ci
-RUN npx prisma generate
 RUN python3 -m pip install --no-cache-dir --break-system-packages \
     -r kit_padrao_pdf_rocha_prime/requirements.txt
 
@@ -66,7 +64,6 @@ RUN python3 -m pip install --no-cache-dir --break-system-packages \
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/prisma ./prisma
 
 # Copy pdfjs-dist worker files required at runtime (not bundled in standalone)
 RUN mkdir -p ./node_modules/pdfjs-dist/legacy/build

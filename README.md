@@ -65,7 +65,7 @@ npm run dev
 abre em `/entrar`.
 
 > `.env.example` cobre apenas a configuração do Firebase. As integrações opcionais
-> (`QEDU_TOKEN`, `SUPABASE_*`, e `DATABASE_URL`/`DIRECT_URL` do Postgres legado) precisam ser
+> (`QEDU_TOKEN`, `SUPABASE_*` para o Storage do upload de logo) precisam ser
 > adicionadas manualmente ao `.env.local`.
 
 > As telas React leem a config do Firebase em tempo de build do bundle: as seis
@@ -82,13 +82,12 @@ abre em `/entrar`.
 | Serverless | Cloud Functions v2 (`functions/`) — motor de comissões |
 | Documentos | Python 3 + ReportLab 5/Pillow 12, Playwright/Chromium, docxtemplater |
 | Infra | Google Cloud Run, Cloud Build, Docker multi-stage |
-| Legado | Prisma 6 + Supabase/PostgreSQL — em desativação |
 
-> **Migração ainda em curso: Prisma/PostgreSQL → Firestore.** O CRUD operacional já roda no
-> Firestore, mas quatro rotas seguem importando o Prisma (`workspace/settings`,
-> `municipalities/[id]` e as duas de `case-de-sucesso`), junto com
-> `core/lib/data-access.ts` e `collaboration-data-access.ts`. Enquanto esses imports
-> existirem, o build depende de `prisma generate`.
+> **Migração Prisma/PostgreSQL → Firestore concluída.** O Firestore é a única
+> persistência: não há mais `@prisma/client`, `prisma/schema.prisma` nem
+> `prisma generate` no build, e `DATABASE_URL`/`DIRECT_URL` deixaram de ser lidas.
+> As rotas de API que liam o Postgres não tinham consumidor — a interface já lia o
+> Firestore direto — e foram removidas. O schema antigo está no histórico do git.
 
 ## Estrutura
 
