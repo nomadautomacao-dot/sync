@@ -8,6 +8,7 @@ import { markGoviaMunicipioAccess } from "@/core/lib/govia-storage";
 import { montarDossieDemanda } from "@/core/lib/dossie-demanda";
 import { generateDossieDemandaHtml } from "@/core/lib/dossie-demanda-template";
 import { generateDossieDemandaPdf } from "@/core/lib/dossie-demanda-pdf";
+import { registrarErro } from "@/core/lib/structured-log";
 
 /**
  * Dossiê da Demanda — a coorte que já nasceu contra a vaga que existe.
@@ -160,7 +161,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("[Dossiê da Demanda] Erro:", error);
+    registrarErro("Dossiê da Demanda", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Falha ao gerar o dossiê." },
       { status: 500 },

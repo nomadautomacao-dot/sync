@@ -7,6 +7,7 @@ import {
   mapCensoHistoricoModel,
 } from "@/core/lib/censo-historico-template";
 import { generateCensoHistoricoPdf } from "@/core/lib/censo-historico-pdf";
+import { registrarErro } from "@/core/lib/structured-log";
 
 export const maxDuration = 120;
 
@@ -93,7 +94,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("[Histórico do Censo] Erro:", error);
+    registrarErro("Histórico do Censo", error);
     return NextResponse.json(
       {
         error:

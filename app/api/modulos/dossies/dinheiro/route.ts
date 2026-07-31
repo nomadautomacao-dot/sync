@@ -8,6 +8,7 @@ import { markGoviaMunicipioAccess } from "@/core/lib/govia-storage";
 import { montarDossieDinheiro } from "@/core/lib/dossie-dinheiro";
 import { generateDossieDinheiroHtml } from "@/core/lib/dossie-dinheiro-template";
 import { generateDossieDinheiroPdf } from "@/core/lib/dossie-dinheiro-pdf";
+import { registrarErro } from "@/core/lib/structured-log";
 
 /**
  * Dossiê do Dinheiro Federal — obras, emendas, convênios e sanções.
@@ -181,7 +182,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("[Dossiê do Dinheiro Federal] Erro:", error);
+    registrarErro("Dossiê do Dinheiro Federal", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Falha ao gerar o dossiê." },
       { status: 500 },

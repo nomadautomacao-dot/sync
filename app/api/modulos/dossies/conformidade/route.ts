@@ -8,6 +8,7 @@ import { markGoviaMunicipioAccess } from "@/core/lib/govia-storage";
 import { montarDossieConformidade } from "@/core/lib/dossie-conformidade";
 import { generateDossieConformidadeHtml } from "@/core/lib/dossie-conformidade-template";
 import { generateDossieConformidadePdf } from "@/core/lib/dossie-conformidade-pdf";
+import { registrarErro } from "@/core/lib/structured-log";
 
 /**
  * Dossiê da Conformidade — todo requisito, toda vinculação, toda entrega.
@@ -161,7 +162,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("[Dossiê da Conformidade] Erro:", error);
+    registrarErro("Dossiê da Conformidade", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Falha ao gerar o dossiê." },
       { status: 500 },

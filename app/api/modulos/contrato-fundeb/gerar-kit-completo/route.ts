@@ -16,6 +16,7 @@ import {
   type AnexoHabilitacao,
 } from "@/modules/contrato-fundeb/services/contrato-docx-generator";
 import type { ContratosFundebData } from "@/modules/contrato-fundeb/types";
+import { registrarErro } from "@/core/lib/structured-log";
 
 /** Categorias válidas para os arquivos de habilitação */
 const CATEGORIAS_VALIDAS = [
@@ -117,10 +118,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error(
-      "[api/modulos/contrato-fundeb/gerar-kit-completo] Erro:",
-      error,
-    );
+    registrarErro("contrato-fundeb/gerar-kit-completo", error);
     return NextResponse.json(
       {
         success: false,

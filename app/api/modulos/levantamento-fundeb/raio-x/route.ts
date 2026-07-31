@@ -6,6 +6,7 @@ import { markGoviaMunicipioAccess } from "@/core/lib/govia-storage";
 import { generateMunicipalXrayPdf } from "@/core/lib/municipal-xray-pdf";
 import { generateMunicipalXrayHtml, mapMunicipalXrayModel } from "@/core/lib/municipal-xray-template";
 import { fetchMunicipalBoundary } from "@/core/lib/ibge-municipal-boundary";
+import { registrarErro } from "@/core/lib/structured-log";
 
 export const maxDuration = 300;
 
@@ -27,8 +28,15 @@ function slug(value: string) {
 }
 
 export async function POST(request: NextRequest) {
+  // Preenchido assim que o corpo é lido, para que o `catch` saiba *de qual
+  // município* era o relatório que falhou. Sem isso o erro chega ao Error
+  // Reporting como "falhou", sem o que reproduzir.
+  const contexto: Record<string, unknown> = { relatorio: "raio-x" };
   try {
     const body = (await request.json()) as MunicipalXrayRequest;
+    contexto.codigoIbge = body.codigo_ibge ?? null;
+    contexto.municipio = body.nome ?? null;
+    contexto.uf = body.uf ?? null;
     const hasCodigo = Boolean(body.codigo_ibge?.trim());
     const hasNameAndUf = Boolean(body.nome?.trim() && body.uf?.trim());
     if (!hasCodigo && !hasNameAndUf) {
@@ -95,7 +103,10 @@ export async function POST(request: NextRequest) {
     });
     const html = generateMunicipalXrayHtml(model);
     const municipalitySlug = `${slug(model.municipality)}_${slug(model.uf)}_${baseYear}_${currentYear}`;
-    const { pdfBuffer, filename } = await generateMunicipalXrayPdf(html, municipalitySlug);
+    const { pdfBuffer, filename, ajustadas } = await generateMunicipalXrayPdf(
+      html,
+      municipalitySlug,
+    );
 
     if (body.response_format === "bundle") {
       const generatedAt = model.generatedAt.toISOString();
@@ -105,6 +116,13 @@ export async function POST(request: NextRequest) {
           fileName: filename,
           mimeType: "application/pdf",
           pdfBase64: pdfBuffer.toString("base64"),
+          /**
+           * Diagnóstico da geração, não conteúdo do relatório: as páginas que
+           * só couberam depois de encolhidas. O smoke test pós-deploy lê isto
+           * para alertar quando o template está no limite — corte de verdade
+           * já é erro em `assertSemCorte`, mas o auto-ajuste salva em silêncio.
+           */
+          diagnostics: { paginasAjustadas: ajustadas },
           archive: {
             schemaVersion: 1,
             generationId: randomUUID(),
@@ -141,7 +159,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("[Raio-X municipal] Erro:", error);
+    registrarErro("Raio-X municipal", error, contexto);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Falha ao gerar o Raio-X municipal." },
       { status: 500 },

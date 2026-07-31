@@ -8,6 +8,7 @@ import { markGoviaMunicipioAccess } from "@/core/lib/govia-storage";
 import { montarDossieAprendizagem } from "@/core/lib/dossie-aprendizagem";
 import { generateDossieAprendizagemHtml } from "@/core/lib/dossie-aprendizagem-template";
 import { generateDossieAprendizagemPdf } from "@/core/lib/dossie-aprendizagem-pdf";
+import { registrarErro } from "@/core/lib/structured-log";
 
 /**
  * Dossiê da Aprendizagem — a distribuição que a média esconde.
@@ -163,7 +164,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("[Dossiê da Aprendizagem] Erro:", error);
+    registrarErro("Dossiê da Aprendizagem", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Falha ao gerar o dossiê." },
       { status: 500 },

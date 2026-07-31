@@ -8,6 +8,7 @@ import { markGoviaMunicipioAccess } from "@/core/lib/govia-storage";
 import { montarDossieComparativo } from "@/core/lib/dossie-comparativo";
 import { generateDossieComparativoHtml } from "@/core/lib/dossie-comparativo-template";
 import { generateDossieComparativoPdf } from "@/core/lib/dossie-comparativo-pdf";
+import { registrarErro } from "@/core/lib/structured-log";
 
 /**
  * Dossiê Comparativo — o município contra os pares de porte semelhante.
@@ -161,7 +162,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("[Dossiê Comparativo] Erro:", error);
+    registrarErro("Dossiê Comparativo", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Falha ao gerar o dossiê." },
       { status: 500 },

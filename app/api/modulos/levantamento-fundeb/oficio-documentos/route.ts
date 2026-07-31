@@ -9,6 +9,7 @@ import {
   RESPONSAVEL_PADRAO,
 } from "@/core/lib/oficio-documentos-template";
 import { mapMunicipalXrayModel } from "@/core/lib/municipal-xray-template";
+import { registrarErro } from "@/core/lib/structured-log";
 
 export const maxDuration = 300;
 
@@ -143,7 +144,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("[Ofício de documentos] Erro:", error);
+    registrarErro("Ofício de documentos", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Falha ao gerar o ofício." },
       { status: 500 },

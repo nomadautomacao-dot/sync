@@ -10,6 +10,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "smoke": "tsx scripts/smoke/run.ts",
     "firebase:claims": "node scripts/firebase/set-claims.mjs",
     "fundeb:analyze-models": "node scripts/pdf/analyze-fundeb-pdf-models.mjs",
     "fundeb:compare-pdfs": "node scripts/pdf/compare-fundeb-pdf-pair.mjs",

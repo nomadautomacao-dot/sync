@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { gerarPropostaDocx } from "@/modules/contrato-fundeb/services/contrato-docx-generator";
 import type { ContratosFundebData } from "@/modules/contrato-fundeb/types";
+import { registrarErro } from "@/core/lib/structured-log";
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("[api/modulos/contrato-fundeb/gerar-proposta] Erro:", error);
+    registrarErro("api/modulos/contrato-fundeb/gerar-proposta", error);
     return NextResponse.json(
       { error: "Falha ao gerar a proposta." },
       { status: 500 },

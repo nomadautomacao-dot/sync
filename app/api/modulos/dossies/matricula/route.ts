@@ -9,6 +9,7 @@ import { montarDossieMatricula } from "@/core/lib/dossie-matricula";
 import { getCatalogoSegmentos } from "@/core/lib/fundeb-ponderacao";
 import { generateDossieMatriculaHtml } from "@/core/lib/dossie-matricula-template";
 import { generateDossieMatriculaPdf } from "@/core/lib/dossie-matricula-pdf";
+import { registrarErro } from "@/core/lib/structured-log";
 
 /**
  * Dossiê da Matrícula Ponderada — de onde vem cada real do fundo.
@@ -174,7 +175,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("[Dossiê da Matrícula Ponderada] Erro:", error);
+    registrarErro("Dossiê da Matrícula Ponderada", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Falha ao gerar o dossiê." },
       { status: 500 },

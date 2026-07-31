@@ -8,6 +8,7 @@ import { markGoviaMunicipioAccess } from "@/core/lib/govia-storage";
 import { montarDossieEquidade } from "@/core/lib/dossie-equidade";
 import { generateDossieEquidadeHtml } from "@/core/lib/dossie-equidade-template";
 import { generateDossieEquidadePdf } from "@/core/lib/dossie-equidade-pdf";
+import { registrarErro } from "@/core/lib/structured-log";
 
 /**
  * Dossiê da Equidade e dos Territórios.
@@ -161,7 +162,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("[Dossiê da Equidade] Erro:", error);
+    registrarErro("Dossiê da Equidade", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Falha ao gerar o dossiê." },
       { status: 500 },

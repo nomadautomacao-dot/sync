@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { gerarKitContratoZip } from "@/modules/contrato-fundeb/services/contrato-docx-generator";
 import { ContratosFundebData } from "@/modules/contrato-fundeb/types";
+import { registrarErro } from "@/core/lib/structured-log";
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Erro ao gerar o kit de documentos FUNDEB:", error);
+    registrarErro("Erro ao gerar o kit de documentos FUNDEB", error);
     return NextResponse.json(
       { success: false, error: "Falha ao gerar o lote de documentos. Verifique os dados informados." },
       { status: 500 },

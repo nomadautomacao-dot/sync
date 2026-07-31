@@ -19,6 +19,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { executeContratoAgent } from "@/modules/contrato-fundeb/services/contrato-agent";
 import { gerarKitContratoZip } from "@/modules/contrato-fundeb/services/contrato-docx-generator";
 import type { ContratosFundebData } from "@/modules/contrato-fundeb/types";
+import { registrarErro } from "@/core/lib/structured-log";
 
 export async function POST(request: NextRequest) {
   try {
@@ -82,7 +83,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("[api/contratos-fundeb/generate-kit] Erro:", error);
+    registrarErro("api/contratos-fundeb/generate-kit", error);
     return NextResponse.json(
       {
         success: false,

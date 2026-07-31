@@ -9,6 +9,7 @@ import { buildGoviaMunicipioCompleto } from "@/core/lib/govia-compat";
 import { generateLevantamentoHtml } from "@/core/lib/fundeb-levantamento-template";
 import { generateLevantamentoPdf } from "@/core/lib/fundeb-levantamento-pdf";
 import type { RelatorioFundeb } from "@/modules/levantamento-fundeb/types";
+import { registrarErro } from "@/core/lib/structured-log";
 
 export const maxDuration = 300;
 
@@ -157,7 +158,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("[PDF] Erro na API:", error);
+    registrarErro("PDF", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Falha na requisicao" },
       { status: 500 },

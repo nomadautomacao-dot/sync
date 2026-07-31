@@ -55,13 +55,49 @@ steps:
       - '--min-instances'
       - '0'
 
+  # 5. Smoke test pos-deploy. Emite um Raio-X de verdade contra a revisao que
+  #    acabou de subir e confere o que o `npm test` nao ve: se as fontes vivas
+  #    (APIs publicas de governo) responderam, se o PDF saiu com as 41 folhas
+  #    contratadas e se nenhuma pagina transbordou.
+  #
+  #    ATENCAO — este passo NAO e um gate: ele roda *depois* do deploy, entao
+  #    quando falha a revisao nova ja esta recebendo trafego. O que ele da e
+  #    aviso rapido; a reversao e manual, e o proprio script imprime o comando:
+  #
+  #      gcloud run services update-traffic sync-app \
+  #        --to-revisions=<revisao-anterior>=100 --region=us-central1
+  #
+  #    `--producao` e o consentimento explicito de gerar um relatorio real
+  #    contra o ambiente de producao. Fora do CI o script se recusa a fazer
+  #    isso sem a flag, porque cada execucao dispara dezenas de chamadas a
+  #    APIs publicas de terceiros.
+  #
+  #    O node_modules vem do passo `test` (mesmo /workspace), entao nao ha
+  #    `npm ci` aqui — `tsx` ja esta instalado como devDependency.
+  - name: 'node:22-slim'
+    id: 'smoke'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -e
+        npx tsx scripts/smoke/run.ts "${_SERVICE_URL}" --producao
+    timeout: '900s'
+
+# URL do servico. Fica como substituicao para que o smoke test possa ser
+# apontado a outro ambiente sem editar o pipeline.
+substitutions:
+  _SERVICE_URL: 'https://sync-app-n7cfomhaaq-uc.a.run.app'
+
 # Store images
 images:
   - 'gcr.io/$PROJECT_ID/sync-app:${BUILD_ID}'
   - 'gcr.io/$PROJECT_ID/sync-app:latest'
 
-# Teto global do build (testes + build da imagem + deploy).
-timeout: '3600s'
+# Teto global do build (testes + build da imagem + deploy + smoke test).
+# Soma dos tetos por passo: 900 (test) + 1800 (build) + push/deploy + 900
+# (smoke). O teto anterior, 3600s, ficaria menor que a soma depois do smoke.
+timeout: '4500s'
 
 options:
   machineType: 'E2_HIGHCPU_8'

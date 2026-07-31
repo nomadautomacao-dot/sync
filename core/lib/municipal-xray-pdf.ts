@@ -1,6 +1,7 @@
 import { chromium, type Browser } from "playwright";
 
 import { ajustarParaCaber, assertSemCorte } from "./pdf-corte";
+import { registrarInfo } from "./structured-log";
 
 /**
  * Contrato de folhas do Raio-X. **A tela de emissão anuncia este número** —
@@ -31,10 +32,21 @@ import { ajustarParaCaber, assertSemCorte } from "./pdf-corte";
  */
 export const PAGINAS_ESPERADAS_RAIO_X = 41;
 
+/**
+ * Página que só coube porque o auto-ajuste a encolheu. Sai junto com o PDF
+ * para que o chamador possa expor a informação — encolhimento não é erro, mas
+ * é o aviso de que a folha chegou ao limite, e até aqui vivia só num
+ * `console.info` que ninguém lê.
+ */
+export interface PaginaAjustadaRaioX {
+  pagina: number;
+  escala: number;
+}
+
 export async function generateMunicipalXrayPdf(
   htmlContent: string,
   municipalitySlug: string,
-): Promise<{ pdfBuffer: Buffer; filename: string }> {
+): Promise<{ pdfBuffer: Buffer; filename: string; ajustadas: PaginaAjustadaRaioX[] }> {
   let browser: Browser | null = null;
 
   try {
@@ -58,9 +70,10 @@ export async function generateMunicipalXrayPdf(
     // outro: primeiro encolhe o que passou, depois falha se nem no piso coube.
     const ajustadas = await ajustarParaCaber(page);
     if (ajustadas.length > 0) {
-      console.info(
-        `[Raio-X] ${ajustadas.length} página(s) ajustadas para caber:`,
-        ajustadas.map((a) => `p${a.pagina} ${Math.round(a.escala * 100)}%`).join(", "),
+      registrarInfo(
+        "Raio-X",
+        `${ajustadas.length} página(s) ajustadas para caber.`,
+        { paginasAjustadas: ajustadas, municipio: municipalitySlug },
       );
     }
     await assertSemCorte(page, "Raio-X");
@@ -75,6 +88,7 @@ export async function generateMunicipalXrayPdf(
     return {
       pdfBuffer: Buffer.from(pdfBytes),
       filename: `RAIO_X_${municipalitySlug}.pdf`,
+      ajustadas,
     };
   } finally {
     await browser?.close();

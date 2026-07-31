@@ -262,6 +262,7 @@ account fica em `FIREBASE_SERVICE_ACCOUNT` (`.env.local`), nunca versionada.
 | `siconfi-fiscal.ts` (14KB) | Dados fiscais SICONFI (Tesouro Nacional) |
 | `tse-prefeitos.ts` | Dados de prefeitos eleitos (TSE) |
 | `python-runtime.ts` | Executor de scripts Python (ReportLab) |
+| `structured-log.ts` | `registrarErro/registrarAlerta/registrarInfo` — log JSON que o Cloud Error Reporting agrupa (seção 7.2) |
 
 ### 3.4 Persistência (Firestore)
 
@@ -399,9 +400,40 @@ Um trigger do Cloud Build observa a `main` no GitHub. A cada push ele roda o
 3. **`push`** — envia a imagem ao registry.
 4. **`deploy`** — `gcloud run deploy` no serviço `sync-app`. Troca só a imagem;
    **as variáveis de ambiente já configuradas no serviço são preservadas**.
+5. **`smoke`** — `npm run smoke` contra a revisão recém-publicada (seção 7.1).
 
 Consequência prática: **commit quebrado não derruba o ar, mas commit que passa
 nos testes vai direto para os usuários.** Não existe staging.
+
+### 7.1 Smoke test pós-deploy
+
+O `npm test` é gate de código e cego para erro de **dado** — que aqui é a falha
+mais provável, porque o produto são PDFs montados de uma dúzia de APIs públicas
+vivas. Fonte que muda de layout, endpoint que passa a devolver 200 com corpo
+vazio, coletor que engole a exceção e devolve `null`: nada disso quebra teste de
+unidade, e tudo isso vira relatório entregue com "N/D" onde havia número.
+
+O smoke test emite um **Raio-X de verdade** (município-canário: Igaci/AL,
+`2703106`) e confere `/api/health`, a geração ponta a ponta, as 41 folhas no PDF
+**entregue**, as páginas que só couberam encolhidas e se as fontes vivas
+responderam com dado dentro.
+
+```bash
+npm run smoke -- http://localhost:3100          # local
+npm run smoke -- <url> --municipio 2704302      # outro canário
+npm run smoke -- <url> --salvar-pdf /tmp/x.pdf  # guarda o PDF para inspeção
+```
+
+Contra produção o script se recusa a rodar sem `--producao`: cada execução
+dispara dezenas de chamadas a APIs públicas de governo.
+
+**O passo `smoke` NÃO é gate** — roda *depois* do deploy, então quando falha a
+revisão nova já está no ar. Ele dá aviso rápido; a reversão é manual (comando
+logo abaixo, e o próprio script o imprime ao falhar). Alerta não derruba o
+build; só falha sai com código 1.
+
+As regras de julgamento ficam em `scripts/smoke/verificacoes.ts`, puras e
+cobertas pela suíte; `scripts/smoke/run.ts` é só o encanamento de rede.
 
 Acompanhar um deploy: console do Cloud Build, ou `gcloud builds list --limit=5`.
 Reverter: `gcloud run services update-traffic sync-app --to-revisions=<revisão-anterior>=100 --region=us-central1`.
@@ -412,6 +444,33 @@ Reverter: `gcloud run services update-traffic sync-app --to-revisions=<revisão-
 - **Região:** `us-central1`
 - **Recursos:** 2 vCPU, 2GB RAM, timeout 900s, 0-10 instâncias
 - **URL:** `https://sync-app-n7cfomhaaq-uc.a.run.app`
+
+### 7.2 Observabilidade de erro
+
+Sem SDK e sem serviço de terceiro: o Cloud Error Reporting já vem ligado no
+projeto e só precisa que o erro saia em **JSON numa linha só** no stderr, com
+`severity: "ERROR"` e o marcador `@type` de `ReportedErrorEvent`. É o que
+`core/lib/structured-log.ts` monta.
+
+```ts
+import { registrarErro } from "@/core/lib/structured-log";
+// ...
+} catch (error) {
+  registrarErro("Raio-X municipal", error, { codigoIbge, uf });
+}
+```
+
+O que muda: o erro passa a ser **agrupado por assinatura de stack, contado e
+alertável**, em vez de virar uma linha de texto com severidade `DEFAULT` que
+só se acha quem souber a string exata. O `contexto` vira campo próprio,
+pesquisável no Logs Explorer (`jsonPayload.codigoIbge="2703106"`).
+
+Fora de produção a saída é legível, não JSON. Segredos em query string
+(`token=`, `api_key=`, …) são redigidos antes de escrever — `qedu-api.ts` monta
+URL com `QEDU_TOKEN`, e um `fetch` que falha traz a URL inteira na mensagem.
+
+**Não coloque dado pessoal nem segredo no contexto**: log é lugar de onde a
+informação não sai mais.
 
 ### Variáveis obrigatórias
 
@@ -437,6 +496,9 @@ npm run dev
 
 # Rodar o gate localmente antes de dar push
 npm test
+
+# Smoke test contra um alvo (seção 7.1) — emite um Raio-X de verdade
+npm run smoke -- http://localhost:3100
 
 # Docker local
 docker build -t sync-app . && docker run -p 3000:3000 sync-app
@@ -477,6 +539,12 @@ No fluxo normal não se usa nenhum dos dois.
 | `dados/gerar-vaar-municipios.mjs` | `npm run dados:vaar` — status das 5 condicionalidades do VAAR e valores por município (FNDE). Regerar a cada portaria quadrimestral |
 | `pdf/prepare-docx-templates.mjs` | Templates DOCX contratos |
 
+### Smoke test
+| Script | Comando npm | Descrição |
+|--------|------------|-----------|
+| `smoke/run.ts` | `smoke` | Emite um Raio-X real contra uma URL e audita saúde, folhas, corte e fontes vivas (seção 7.1) |
+| `smoke/verificacoes.ts` | — | Regras de julgamento, puras e cobertas por `npm test` |
+
 ---
 
 ## 9. Convenções
@@ -508,9 +576,13 @@ No fluxo normal não se usa nenhum dos dois.
 ### O que NÃO está implementado
 - Módulos: Terceirização, Formação, Atas, Tecnologia, RH, Financeiro — existem
   como chaves no `moduleCatalog` (a tela `/modulos` as exibe), sem rota nem tela
-- Testes de ponta a ponta (a suíte é de unidade/integração: 602 testes, Vitest)
+- Testes de ponta a ponta na suíte (ela é de unidade/integração: 694 testes,
+  Vitest). O caminho ponta a ponta existe fora dela, no smoke test — seção 7.1
 - **Staging separado de produção** — o deploy da `main` vai direto ao ar
-- Monitoramento (Sentry, Axiom)
+- Monitoramento de APM / tracing (Sentry, Axiom). O que existe é erro
+  agrupado no Cloud Error Reporting — seção 7.2. Falta: alerta configurado
+  (o Error Reporting captura, mas ninguém é notificado), métrica de latência,
+  e o log estruturado nas rotas que não são de geração de relatório
 
 <!-- code-review-graph MCP tools -->
 ## MCP Tools: code-review-graph

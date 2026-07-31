@@ -7,6 +7,7 @@ import { getIbgeCidadeIndicators } from "@/core/lib/ibge-cidade-indicators";
 import { getIdebMunicipalRecord } from "@/core/lib/ideb-municipal";
 import { getTsePrefeitoRecord } from "@/core/lib/tse-prefeitos";
 import { getSiconfiFiscalRecord } from "@/core/lib/siconfi-fiscal";
+import { registrarErro } from "@/core/lib/structured-log";
 
 const TEMPLATES_REQUIRING_MUNICIPIO = new Set(["proposta-fundeb", "resumo-executivo"]);
 
@@ -141,7 +142,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("[Slides/Gerar] Erro na API:", error);
+    registrarErro("Slides/Gerar", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Falha na geracao de slides." },
       { status: 500 },

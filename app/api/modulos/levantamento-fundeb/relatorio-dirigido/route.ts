@@ -3,6 +3,7 @@ import { buildDirectedFundebReportBase } from "@/core/lib/fundeb-directed-report
 import { buildGoviaMunicipioCompleto } from "@/core/lib/govia-compat";
 import { buildDirectedReportMarkdown } from "@/modules/levantamento-fundeb/utils/directed-report-format";
 import type { FundebRelatorioParametros } from "@/modules/levantamento-fundeb/types";
+import { registrarErro } from "@/core/lib/structured-log";
 
 interface DirectedReportRequestBody {
   codigo_ibge?: string;
@@ -65,7 +66,7 @@ export async function POST(request: NextRequest) {
       base: report,
     });
   } catch (error) {
-    console.error("[Relatorio Dirigido FUNDEB] Erro:", error);
+    registrarErro("Relatorio Dirigido FUNDEB", error);
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "Falha ao gerar relatorio dirigido." },
       { status: 500 },
