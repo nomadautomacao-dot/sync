@@ -149,7 +149,7 @@ async function main(): Promise<number> {
 
   // Sem serviço de pé não há o que medir adiante — as verificações seguintes
   // só produziriam ruído sobre a mesma causa.
-  if (resumir(verificacoes).falhas > 0) return imprimir(verificacoes);
+  if (resumir(verificacoes).falhas > 0) return imprimir(verificacoes, opcoes.producao);
 
   // 2. A geração de um Raio-X de verdade termina sem erro?
   //
@@ -251,7 +251,7 @@ async function main(): Promise<number> {
     }
   }
 
-  return imprimir(verificacoes);
+  return imprimir(verificacoes, opcoes.producao);
 }
 
 function extrairAjustadas(bundle: Record<string, unknown>): PaginaAjustada[] | null {
@@ -267,7 +267,7 @@ function extrairAjustadas(bundle: Record<string, unknown>): PaginaAjustada[] | n
   );
 }
 
-function imprimir(verificacoes: Verificacao[]): number {
+function imprimir(verificacoes: Verificacao[], producao: boolean): number {
   for (const v of verificacoes) {
     console.log(`[${icone(v.situacao)}] ${v.nome}: ${v.detalhe}`);
   }
@@ -275,8 +275,13 @@ function imprimir(verificacoes: Verificacao[]): number {
   console.log(
     `\n${resumo.oks} ok · ${resumo.alertas} alerta(s) · ${resumo.falhas} falha(s) — ` +
       (resumo.falhas > 0
-        ? "SMOKE TEST FALHOU. Se veio logo depois de um deploy, reverta o tráfego:\n" +
-          "  gcloud run services update-traffic sync-app --to-revisions=<revisão-anterior>=100 --region=us-central1"
+        ? // O conselho de rollback só faz sentido contra produção. Mandar
+          // reverter o tráfego de quem está testando localhost é ruído no
+          // melhor caso e comando perigoso copiado por engano no pior.
+          producao
+          ? "SMOKE TEST FALHOU. Se veio logo depois de um deploy, reverta o tráfego:\n" +
+            "  gcloud run services update-traffic sync-app --to-revisions=<revisão-anterior>=100 --region=us-central1"
+          : "SMOKE TEST FALHOU."
         : resumo.alertas > 0
           ? "passou com alerta."
           : "passou."),
