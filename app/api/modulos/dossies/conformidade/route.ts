@@ -59,9 +59,16 @@ export async function GET(request: NextRequest) {
     vencemEm60Dias: dossie.resumo.vencemEm60Dias,
     indicadoresSiope: dossie.resumo.indicadoresSiope,
     // Capa, sumário e as seções que a emissão conseguiu montar.
+    //
+    // O divisor da tabela de requisitos era 26 e prometia sempre uma folha a
+    // mais do que o PDF entregava — em Paulo Afonso, Ibateguara, Manaus e São
+    // Paulo, os quatro com os mesmos 28 requisitos do extrato do CAUC, a
+    // prévia dizia 10 e saíam 9. Medido: as 28 linhas cabem em uma folha, e é
+    // essa a maior contagem observada cabendo. O número vem da medição, não de
+    // conta de tipografia — se o extrato do CAUC crescer, remedir.
     paginasEstimadas:
       2 +
-      (dossie.cauc ? 2 + Math.ceil(dossie.resumo.requisitos / 26) : 0) +
+      (dossie.cauc ? 2 + Math.ceil(dossie.resumo.requisitos / 28) : 0) +
       (dossie.siope ? 1 : 0) +
       (dossie.pontualidade ? 1 : 0) +
       (dossie.vaar ? 1 : 0) +

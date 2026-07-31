@@ -44,6 +44,18 @@ async function carregarLogo(): Promise<string | null> {
 }
 
 /** Prévia para a tela: o placar, sem gerar o PDF. */
+/**
+ * Espelha a condição de `secaoQuemFicaDeFora` no template. São dois lugares
+ * porque a prévia não renderiza HTML — e a varredura de dossiês existe
+ * justamente para pegar quando os dois discordarem.
+ */
+function temQuemFicaDeFora(d: Awaited<ReturnType<typeof montarDossieEquidade>>): boolean {
+  const ocupacao = Boolean(d.trabalhoInfantil && !d.trabalhoInfantil.semOcupacaoEstimada);
+  const aldeia = Boolean(d.aldeias && d.aldeias.aldeias.length > 0);
+  const saude = Boolean(d.vacinacao || d.violencia);
+  return ocupacao || aldeia || saude;
+}
+
 export async function GET(request: NextRequest) {
   const codigo = request.nextUrl.searchParams.get("codigo_ibge")?.trim();
   const uf = request.nextUrl.searchParams.get("uf")?.trim() ?? "";
@@ -65,7 +77,11 @@ export async function GET(request: NextRequest) {
       (d.series.length > 0 ? 1 : 0) +
       Math.max(0, Math.ceil(d.correntes.length / 1.5)) +
       (d.condicoes.length > 0 || d.assentamentos ? 1 : 0) +
-      (d.vaar ? 1 : 0),
+      (d.vaar ? 1 : 0) +
+      // A seção "Quem fica de fora, por outras quatro fontes" só existe quando
+      // ao menos um dos quatro cruzamentos tem o que dizer — e ela ocupa uma
+      // folha. Sem esta parcela a prévia prometia 5 e saíam 6 em Ibateguara.
+      (temQuemFicaDeFora(d) ? 1 : 0),
   });
 }
 

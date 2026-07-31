@@ -5,6 +5,14 @@ import { getEscolasTerritorio, type ResumoTerritorio, ROTULOS_DIFERENCIADA } fro
 import { getAssentamentos, type AssentamentosMunicipio } from "./assentamentos-incra";
 import { getCatalogoSegmentos } from "./fundeb-ponderacao";
 import { getValorAlunoAno } from "./fundeb-valor-aluno";
+import { getTerrasIndigenas, type TerrasIndigenasMunicipio } from "@/core/lib/terras-indigenas";
+import { getTrabalhoInfantil, type TrabalhoInfantilMunicipio } from "@/core/lib/trabalho-infantil";
+import {
+  getCoberturaVacinal,
+  getViolenciaInfantil,
+  type CoberturaVacinalMunicipio,
+  type ViolenciaInfantilMunicipio,
+} from "@/core/lib/saude-escolar";
 import { getSituacaoVaar, type SituacaoVaar } from "./fundeb-vaar";
 
 /**
@@ -132,6 +140,15 @@ export interface DossieEquidade {
   territorio: ResumoTerritorio | null;
   condicoes: CondicaoTerritorio[];
   assentamentos: AssentamentosMunicipio | null;
+  /**
+   * Os quatro cruzamentos que o Raio-X já fazia e o dossiê não via. Todos
+   * respondem à mesma pergunta que esta peça faz — quem fica de fora, e por
+   * quê —, e nenhum exige coleta nova: os datasets já estão versionados.
+   */
+  aldeias: TerrasIndigenasMunicipio | null;
+  trabalhoInfantil: TrabalhoInfantilMunicipio | null;
+  vacinacao: CoberturaVacinalMunicipio | null;
+  violencia: ViolenciaInfantilMunicipio | null;
   vaar: SituacaoVaar | null;
   anoCensoEscolar: number | null;
   ausencias: string[];
@@ -335,6 +352,10 @@ export async function montarDossieEquidade(
   const territorio = escolas?.resumo ?? null;
   const assentamentos = getAssentamentos(codigoIBGE);
   const vaar = getSituacaoVaar(codigoIBGE);
+  const aldeias = getTerrasIndigenas(codigoIBGE);
+  const trabalhoInfantil = getTrabalhoInfantil(codigoIBGE);
+  const vacinacao = getCoberturaVacinal(codigoIBGE);
+  const violencia = getViolenciaInfantil(codigoIBGE);
 
   const valores = getValorAlunoAno(uf);
   const valorPorEquivalente =
@@ -402,6 +423,10 @@ export async function montarDossieEquidade(
     territorio,
     condicoes: montarCondicoes(territorio),
     assentamentos,
+    aldeias,
+    trabalhoInfantil,
+    vacinacao,
+    violencia,
     vaar,
     anoCensoEscolar: escolas?.ano ?? null,
     ausencias,

@@ -564,7 +564,98 @@ ${
     : ""
 }
 
+${secaoQuemFicaDeFora(d)}
+
 </body></html>`;
+}
+
+/**
+ * Quatro cruzamentos que já existiam no Raio-X e que este dossiê não via.
+ *
+ * Todos respondem à pergunta que a peça inteira faz — **quem fica de fora, e
+ * por quê** — e nenhum exige coleta nova: os datasets estão versionados. A
+ * seção só imprime o que o município tem; num município sem aldeia, sem
+ * ocupação estimada e com notificação em dia, ela simplesmente não aparece.
+ *
+ * A ordem é deliberada: primeiro o que a lei já resolve (idade mínima),
+ * depois o que a ponderação paga (aldeia), depois as duas condições de
+ * chegada — a atenção primária alcança? a rede de proteção registra?
+ *
+ * Cada bloco carrega a ressalva da sua fonte, e nenhuma delas é opcional:
+ * ocupação vem de **amostra** do Censo; notificação **não é** ocorrência; e
+ * cobertura vacinal acima de 100% não é excelência, é artefato de
+ * denominador.
+ */
+function secaoQuemFicaDeFora(d: DossieEquidade): string {
+  const blocos: string[] = [];
+
+  const ti = d.trabalhoInfantil;
+  if (ti && !ti.semOcupacaoEstimada) {
+    const menor = ti.abaixoDaIdadeMinima;
+    const maior = ti.idadeDeAprendizagem;
+    blocos.push(`<div class="card ${menor && menor.ocupadas > 0 ? "ruim" : ""}">
+      <h3>Ocupação na idade escolar</h3>
+      <table><tbody>
+        ${menor ? `<tr class="destaque"><td><b>10 a 13 anos ocupados</b></td><td class="num"><b>${n0(menor.ocupadas)}</b>${menor.taxaPct !== null ? ` · ${pc(menor.taxaPct)}` : ""}</td></tr>` : ""}
+        ${maior ? `<tr><td>14 a 17 anos ocupados</td><td class="num">${n0(maior.ocupadas)}${maior.taxaPct !== null ? ` · ${pc(maior.taxaPct)}` : ""}</td></tr>` : ""}
+      </tbody></table>
+      <p class="micro" style="margin-top:.07in">As duas faixas <b>não se somam</b>: abaixo de 14 não há
+      hipótese legal de trabalho (CF, art. 7º, XXXIII); de 14 a 17 há, e ocupação nessa faixa não é, por si,
+      irregularidade. ${esc(ti.ressalva)}</p>
+    </div>`);
+  }
+
+  const al = d.aldeias;
+  if (al && al.aldeias.length > 0) {
+    blocos.push(`<div class="card ${al.registroSemDeclaracao ? "ruim" : ""}">
+      <h3>Aldeias no cadastro da FUNAI</h3>
+      <table><tbody>
+        <tr class="destaque"><td><b>Aldeias registradas</b></td><td class="num"><b>${n0(al.aldeias.length)}</b></td></tr>
+        <tr><td>Escolas municipais em terra indígena</td><td class="num ${al.registroSemDeclaracao ? "alerta" : ""}">${n0(al.escolasIndigenas)}</td></tr>
+        <tr><td>Aldeias sem escola indígena a ${al.raioKm} km</td><td class="num">${n0(al.aldeiasSemEscolaIndigena)}</td></tr>
+      </tbody></table>
+      <p class="micro" style="margin-top:.07in">${
+        al.registroSemDeclaracao
+          ? "A FUNAI cadastra aldeia e o Censo não declara nenhuma escola municipal em terra indígena. <b>Não é irregularidade</b> — a escola pode ser estadual, ou as crianças podem estudar fora da aldeia. Mas a ponderação segue a classificação da escola, e é o único elo desta corrente que não depende de autodeclaração."
+          : "O cadastro da FUNAI é o único elo desta corrente que não depende de autodeclaração: ele registra onde há aldeia, e a ponderação segue a classificação da escola."
+      }</p>
+    </div>`);
+  }
+
+  const vac = d.vacinacao;
+  const vio = d.violencia;
+  if (vac || vio) {
+    const linhaVac = vac
+      ? `<tr><td>Coberturas abaixo da mediana nacional</td><td class="num ${vac.abaixoDaMediana >= 3 ? "alerta" : ""}">${n0(vac.abaixoDaMediana)} de ${n0(vac.vacinas.length)}</td></tr>`
+      : "";
+    const linhaVio = vio
+      ? `<tr class="destaque"><td><b>Notificações de violência (5 a 14)</b></td><td class="num"><b>${n0(vio.total)}</b></td></tr>`
+      : "";
+    blocos.push(`<div class="card ${vio?.silencioTotal ? "ruim" : ""}">
+      <h3>O que alcança a criança, e o que fica registrado</h3>
+      <table><tbody>${linhaVio}${linhaVac}</tbody></table>
+      <p class="micro" style="margin-top:.07in">${
+        vio?.silencioTotal
+          ? "<b>Zero notificação quase nunca significa ausência de violência</b> — significa ausência de registro, e a escola é notificante obrigatória (Lei nº 13.431/2017 e ECA, art. 245). "
+          : "<b>Número maior de notificações não significa mais violência</b> — costuma significar vigilância melhor. "
+      }${
+        vac
+          ? `A cobertura vacinal mede se a atenção primária alcança o território; acima de 100% ela não sustenta leitura, porque o denominador é população estimada. Série do PNI encerrada em ${vac.ano}.`
+          : ""
+      }</p>
+    </div>`);
+  }
+
+  if (blocos.length === 0) return "";
+
+  return `<section class="flow">
+  <h2 class="secao">Quem fica de fora, por outras quatro fontes</h2>
+  <p class="secao-sub">As folhas anteriores mediram quem a rede registra e como isso vira ponderação. Estes
+  quatro cruzamentos vêm de fora da educação e respondem à mesma pergunta por outro caminho — ocupação em
+  idade escolar, aldeia cadastrada, alcance da atenção primária e fluxo de proteção. Nenhum classifica o
+  município: todos apontam onde conferir.</p>
+  <div class="${blocos.length >= 2 ? "duas" : ""}">${blocos.join("")}</div>
+</section>`;
 }
 
 function kpi(valor: string, rotulo: string): string {
