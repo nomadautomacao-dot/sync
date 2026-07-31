@@ -2384,9 +2384,9 @@ describe("aldeias da FUNAI na declaração étnica", () => {
     const saida = render("2924009");
 
     expect(saida).toContain("O que a FUNAI cadastra");
-    expect(saida).toContain("registra 3 aldeias neste município");
+    expect(saida).toContain("registra 3 aldeias aqui");
     expect(saida).toContain("não declara nenhuma escola municipal em terra indígena");
-    expect(saida).toContain("Isso não é irregularidade");
+    expect(saida).toContain("Não é irregularidade");
     expect(saida).toContain("KARIRI");
   });
 
@@ -2438,10 +2438,10 @@ describe("saúde da criança em idade escolar no Raio-X", () => {
   it("liga a cobertura vacinal ao Programa Saúde na Escola", () => {
     const saida = render("2703007"); // Ibateguara: 6 de 6 abaixo da mediana
 
-    expect(saida).toContain("Cobertura vacinal (2022)");
-    expect(saida).toContain("6 das 6 coberturas");
+    expect(saida).toContain("Atenção primária (2022)");
+    expect(saida).toContain("6 das 6 coberturas vacinais");
     expect(saida).toContain("Programa Saúde na Escola");
-    expect(saida).toContain("Régua: mediana nacional");
+    expect(saida).toContain("régua = mediana nacional");
   });
 
   /** Cobertura acima de 100% não pode virar elogio na folha. */
@@ -2450,7 +2450,7 @@ describe("saúde da criança em idade escolar no Raio-X", () => {
 
     expect(saida).toContain("passam de 100%");
     expect(saida).toContain("não é excelência");
-    expect(saida).not.toContain("coberturas</b> estão abaixo da mediana nacional");
+    expect(saida).not.toContain("coberturas vacinais</b> estão abaixo da mediana nacional");
   });
 
   /**

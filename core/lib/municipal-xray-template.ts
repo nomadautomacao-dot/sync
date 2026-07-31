@@ -3400,7 +3400,9 @@ function blocoFunai(model: MunicipalXrayModel): string {
   // Bloco compacto de propósito: a folha da declaração étnica já estava no
   // limite, e uma tabela com cabeçalho custava ~100px — transbordo garantido
   // nos quatro municípios de teste que têm aldeia. A lista em linha cabe.
-  const MOSTRADAS = 3;
+  // Duas, não três: a folha oscilava entre 95% e 100% conforme o payload vivo
+  // do IBGE, e passar raspando num município é transbordar no seguinte.
+  const MOSTRADAS = 2;
   const lista = t.villages
     .slice(0, MOSTRADAS)
     .map((a) => {
@@ -3421,7 +3423,7 @@ function blocoFunai(model: MunicipalXrayModel): string {
     })
     .join(" · ");
   const resto =
-    t.villages.length > MOSTRADAS ? ` e mais ${int(t.villages.length - MOSTRADAS)} no cadastro.` : ".";
+    t.villages.length > MOSTRADAS ? ` · e mais ${int(t.villages.length - MOSTRADAS)} no cadastro.` : ".";
 
   const leitura = t.registeredButUndeclared
     ? `<b>A FUNAI registra ${int(t.villages.length)} ${t.villages.length === 1 ? "aldeia" : "aldeias"} aqui e o Censo não declara nenhuma escola municipal em terra indígena.</b> Não é irregularidade — a escola pode ser estadual, ou as crianças podem estudar fora da aldeia. Mas a ponderação segue a classificação da escola, e é aqui que registro vira ou deixa de virar receita.`
@@ -3517,15 +3519,12 @@ function paginaDeclaracaoEtnica(model: MunicipalXrayModel, pagina: number): stri
  * acima de 100% sai como "sem leitura", nunca como excelência — o numerador é
  * dose aplicada e o denominador é população estimada.
  */
-function blocoVacinacao(model: MunicipalXrayModel): string {
+function fraseVacinacao(model: MunicipalXrayModel): string {
   const v = model.childHealth?.vaccination;
   if (!v || v.shots.length === 0) return "";
 
-  // A folha do SISVAN já estava no limite: a lista completa com a mediana
-  // repetida a cada vacina custava 46px e transbordava em todos os municípios
-  // de teste. A mediana é dita uma vez, e a lista mostra as quatro primeiras.
-  const MOSTRADAS = 4;
-  const linhas = v.shots
+  const MOSTRADAS = 3;
+  const lista = v.shots
     .slice(0, MOSTRADAS)
     .map((s) => {
       const marca = s.unreadable
@@ -3539,14 +3538,12 @@ function blocoVacinacao(model: MunicipalXrayModel): string {
 
   const leitura =
     v.belowMedian === 0 && v.unreadable === v.shots.length
-      ? `Todas as ${v.shots.length} coberturas passam de 100%, o que <b>não é excelência</b>: o numerador é dose aplicada e o denominador é população estimada. Sem leitura de déficit aqui.`
+      ? `as ${v.shots.length} coberturas passam de 100%, o que <b>não é excelência</b> — o numerador é dose aplicada e o denominador é população estimada, então não há leitura de déficit aqui`
       : v.belowMedian >= Math.ceil(v.shots.length / 2)
-        ? `<b>${v.belowMedian} das ${v.shots.length} coberturas</b> estão abaixo da mediana nacional. É a mesma equipe que executa o Programa Saúde na Escola: onde ela não alcança a criança para vacinar, dificilmente alcança a escola. <b>Verificar:</b> há adesão ao PSE vigente, e quais escolas foram pactuadas?`
-        : `${v.belowMedian === 0 ? "Nenhuma cobertura" : `${v.belowMedian} de ${v.shots.length}`} abaixo da mediana nacional — a atenção primária alcança a criança neste território.`;
+        ? `<b>${v.belowMedian} das ${v.shots.length} coberturas vacinais</b> estão abaixo da mediana nacional. É a mesma equipe que executa o Programa Saúde na Escola: onde não alcança a criança para vacinar, dificilmente alcança a escola`
+        : `${v.belowMedian === 0 ? "nenhuma cobertura vacinal está" : `${v.belowMedian} de ${v.shots.length} coberturas estão`} abaixo da mediana nacional — a atenção primária alcança a criança neste território`;
 
-  // mt-1 e não mt-2: os 8px de diferença são exatamente o que separava esta
-  // folha de transbordar nos municípios de teste.
-  return `<div class="${v.belowMedian >= Math.ceil(v.shots.length / 2) ? "note" : "insight"} mt-1"><b>Cobertura vacinal (${v.year}):</b> ${leitura}<span class="micro" style="display:block;margin-top:.05in">${linhas}${v.shots.length > MOSTRADAS ? ` · e mais ${int(v.shots.length - MOSTRADAS)}` : ""}. Régua: mediana nacional de ${v.year} (PNI/DATASUS, série pública encerrada nesse ano).</span></div>`;
+  return `<b>Atenção primária (${v.year}):</b> ${leitura}. <span class="micro">${lista}; régua = mediana nacional do ano (PNI/DATASUS, série encerrada em ${v.year}).</span>`;
 }
 
 /**
@@ -3574,7 +3571,13 @@ function blocoNotificacaoViolencia(model: MunicipalXrayModel): string {
     ? `<b>Nenhuma notificação de violência contra criança de ${esc(n.ageRange)} em ${n.series.length} ${n.series.length === 1 ? "exercício" : "exercícios"}.</b> Isso quase nunca significa ausência de violência — significa ausência de registro, e ${int(silenciosos)} municípios do país estão nessa situação. <b>A escola é notificante obrigatória</b> (Lei nº 13.431/2017 e ECA, art. 245): a rede tem fluxo definido, e os profissionais sabem acioná-lo?`
     : `A rede registrou notificações de violência contra criança de ${esc(n.ageRange)} nos últimos exercícios. <b>Número maior não significa mais violência</b> — costuma significar vigilância melhor. O bloco sustenta que o fluxo existe; não mede se a escola participa dele.`;
 
-  return `<div class="${n.totalSilence ? "note" : "insight"} mt-2"><b>Notificação, não ocorrência:</b> ${leitura}<span class="micro" style="display:block;margin-top:.05in">${serie} notificações (${esc(n.ageRange)}, município de notificação) · ${int(n.reportingCities)} municípios do país notificaram no último exercício. Fonte: SINAN/SVSA — a ressalva de indicador sensível do rodapé desta folha vale aqui também.</span></div>`;
+  // Um bloco só para os dois indicadores de saúde: a folha estava cheia, e
+  // dois divs com margem e linha de fonte própria custavam ~50px que ela não
+  // tinha. Editorialmente também fecha melhor — cobertura vacinal e
+  // notificação são o mesmo argumento: o que alcança a criança neste
+  // território, e o que fica registrado.
+  const vacina = fraseVacinacao(model);
+  return `<div class="${n.totalSilence ? "note" : "insight"} mt-2">${vacina ? `${vacina}<br>` : ""}<b>Notificação, não ocorrência:</b> ${leitura}<span class="micro" style="display:block;margin-top:.04in">${serie} notificações (${esc(n.ageRange)}, município de notificação) · ${int(n.reportingCities)} municípios notificaram no último exercício. Fonte: SINAN/SVSA — vale a ressalva de indicador sensível do rodapé.</span></div>`;
 }
 
 /**
@@ -3710,7 +3713,7 @@ function paginaViolencia(model: MunicipalXrayModel, pagina: number): string {
     nd > 0
       ? `<b>Cruzamento com as páginas anteriores:</b> ${nd === 1 ? "1 escola ficou" : `${int(nd)} escolas ficaram`} sem resultado no Saeb por participação abaixo de 80% — em território conflagrado, dia de prova é dia de risco. Vale sobrepor a lista dessas escolas ao mapa da violência local antes de tratar a participação como desinteresse.`
       : `Nenhuma escola da rede teve resultado retido por participação no Saeb — se a violência pesa, ainda não é no dia da prova.`
-  }</p></div></div><div class="insight mt-3"><b>Perguntas de campo que este dado gera:</b> as rotas escolares atravessam áreas de risco e há horário alternativo? A oferta noturna de EJA tem transporte e segurança de acesso — ou o turno da noite é a razão da evasão? Há protocolo com a rede de proteção para aluno ameaçado (transferência emergencial sem perda de matrícula)? A faixa de 15 a 29 anos${v.youthSharePct !== null ? ` — ${pct(v.youthSharePct)} das vítimas —` : ""} é o público do EJA e do médio: permanência na escola é a política de proteção mais barata que o município opera.</div>${blocoVacinacao(model)}${blocoNotificacaoViolencia(model)}<p class="small mt-1">Fonte: Atlas da Violência (IPEA/FBSP), base SIM/DataSUS, via IPEADATA — série municipal encerrada em ${v.latest.year}. Indicador sensível: use como contexto de planejamento, não como comparação pública entre municípios.</p></main>${footer(pagina, `Atlas da Violência — IPEA/FBSP, até ${v.latest.year}`)}</section>`;
+  }</p></div></div><div class="insight mt-3"><b>Perguntas de campo que este dado gera:</b> as rotas escolares atravessam áreas de risco e há horário alternativo? A oferta noturna de EJA tem transporte e segurança de acesso — ou o turno da noite é a razão da evasão? Há protocolo com a rede de proteção para aluno ameaçado (transferência emergencial sem perda de matrícula)? A faixa de 15 a 29 anos${v.youthSharePct !== null ? ` — ${pct(v.youthSharePct)} das vítimas —` : ""} é o público do EJA e do médio: permanência na escola é a política de proteção mais barata que o município opera.</div>${blocoNotificacaoViolencia(model)}<p class="small mt-1">Fonte: Atlas da Violência (IPEA/FBSP), base SIM/DataSUS, via IPEADATA — série municipal encerrada em ${v.latest.year}. Indicador sensível: use como contexto de planejamento, não como comparação pública entre municípios.</p></main>${footer(pagina, `Atlas da Violência — IPEA/FBSP, até ${v.latest.year}`)}</section>`;
 }
 
 /**
