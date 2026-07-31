@@ -36,6 +36,22 @@ function token(): string | null {
 const TENTATIVAS = 3;
 const ESPERA_BASE_MS = 1500;
 
+/**
+ * 20 segundos era pouco. Medido em produção em 31/07/2026: a consulta de
+ * sanções por nome de órgão é textual e cara, e o Portal chegou a devolver
+ * **HTTP 504** — gateway timeout do lado dele. Da máquina de desenvolvimento
+ * a mesma chamada passa; do Cloud Run, não.
+ */
+const TIMEOUT_MS = 30_000;
+
+/**
+ * Teto de tempo para uma consulta inteira, somando páginas e repetições. Sem
+ * ele, cinco páginas × três tentativas × 30s comeriam o `maxDuration` de 300s
+ * da rota e derrubariam o relatório inteiro por causa de uma fonte lenta.
+ * Estourado o teto, devolve o que já tem e marca como truncado.
+ */
+const ORCAMENTO_MS = 75_000;
+
 function dormir(ms: number): Promise<void> {
   return new Promise((resolver) => setTimeout(resolver, ms));
 }
@@ -43,24 +59,38 @@ function dormir(ms: number): Promise<void> {
 async function fetchPagina(caminho: string, chave: string): Promise<unknown[]> {
   let ultimoStatus = 0;
 
-  for (let tentativa = 1; tentativa <= TENTATIVAS; tentativa += 1) {
-    const resposta = await fetch(`${BASE}/${caminho}`, {
-      headers: { "chave-api-dados": chave, Accept: "application/json" },
-      signal: AbortSignal.timeout(20_000),
-    });
+  let ultimoErro = "";
 
-    if (resposta.ok) {
-      const corpo = (await resposta.json()) as unknown;
-      return Array.isArray(corpo) ? corpo : [];
+  for (let tentativa = 1; tentativa <= TENTATIVAS; tentativa += 1) {
+    // O `try` é o conserto principal: `AbortSignal.timeout` lança, e a versão
+    // anterior deixava a exceção escapar do laço — ou seja, **timeout não era
+    // repetido**, virava falha na primeira ocorrência. Era o que apagava
+    // convênios e sanções de todo relatório gerado em produção.
+    try {
+      const resposta = await fetch(`${BASE}/${caminho}`, {
+        headers: { "chave-api-dados": chave, Accept: "application/json" },
+        signal: AbortSignal.timeout(TIMEOUT_MS),
+      });
+
+      if (resposta.ok) {
+        const corpo = (await resposta.json()) as unknown;
+        return Array.isArray(corpo) ? corpo : [];
+      }
+
+      ultimoStatus = resposta.status;
+      // 404 é ausência de dado, não excesso de chamada: repetir não muda nada.
+      if (resposta.status === 404) return [];
+      ultimoErro = `HTTP ${resposta.status}`;
+    } catch (erro) {
+      ultimoErro = erro instanceof Error ? erro.message : String(erro);
     }
 
-    ultimoStatus = resposta.status;
-    // 404 é ausência de dado, não excesso de chamada: repetir não muda nada.
-    if (resposta.status === 404) return [];
     if (tentativa < TENTATIVAS) await dormir(ESPERA_BASE_MS * tentativa);
   }
 
-  throw new Error(`Portal da Transparência: HTTP ${ultimoStatus} em ${caminho}`);
+  throw new Error(
+    `Portal da Transparência: ${ultimoErro || `HTTP ${ultimoStatus}`} em ${caminho}`,
+  );
 }
 
 async function fetchTodas(
@@ -69,7 +99,14 @@ async function fetchTodas(
   maxPaginas: number,
 ): Promise<{ registros: unknown[]; truncado: boolean }> {
   const registros: unknown[] = [];
+  const limite = Date.now() + ORCAMENTO_MS;
+
   for (let pagina = 1; pagina <= maxPaginas; pagina += 1) {
+    // Meia página a mais não vale derrubar o relatório: se o orçamento acabou,
+    // devolve o que já veio e assume o truncamento em voz alta. A primeira
+    // página é sempre tentada — sem ela não há dado nenhum a preservar.
+    if (pagina > 1 && Date.now() > limite) return { registros, truncado: true };
+
     const lote = await fetchPagina(montarCaminho(pagina), chave);
     registros.push(...lote);
     if (lote.length < 15) return { registros, truncado: false };

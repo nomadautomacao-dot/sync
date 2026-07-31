@@ -3196,11 +3196,15 @@ function paginaDinheiroFederal(model: MunicipalXrayModel, pagina: number): strin
     : "";
 
   const c = f.convenios;
+  // O objeto do convênio é o campo mais longo da folha e o que mais empurra a
+  // altura; 68 caracteres bastam para identificar. Cortar *linhas* foi
+  // tentado e revertido: `topVigentes` já vem limitado a 5 da origem, então
+  // tirar uma só trocava um convênio por uma frase de aviso.
   const linhasTop = c && c.top.length
     ? c.top
         .map(
           (t) =>
-            `<tr><td>${esc(t.objeto.length > 90 ? `${t.objeto.slice(0, 90)}…` : t.objeto)}</td><td class="num">${esc(compactMoney(t.valor))}</td><td class="num">${esc(t.fimVigencia ?? "N/D")}</td></tr>`,
+            `<tr><td>${esc(t.objeto.length > 68 ? `${t.objeto.slice(0, 68)}…` : t.objeto)}</td><td class="num">${esc(compactMoney(t.valor))}</td><td class="num">${esc(t.fimVigencia ?? "N/D")}</td></tr>`,
         )
         .join("")
     : "";
