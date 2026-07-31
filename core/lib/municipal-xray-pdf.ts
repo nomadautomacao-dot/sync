@@ -9,14 +9,14 @@ import { registrarInfo } from "./structured-log";
  * dois. Antes disso o card dizia 41 enquanto o relatório entregava 40, e
  * ninguém percebeu.
  *
- * 11 do núcleo (fiscal, FUNDEB, educação) + 17 do FUNDEB profundo
+ * 11 do núcleo (fiscal, FUNDEB, educação) + 18 do FUNDEB profundo
  * (complementações e por que se perdem, ponderação + ganho apurado,
  * vinculações SIOPE + piso, obras FNDE, dinheiro federal além do fundo,
  * precatório do FUNDEF, requisitos fiscais do CAUC, gêmeos estatísticos,
  * Saeb/IDEB por escola, contexto por escola, alfabetização, distribuição de
  * proficiência, demografia e demanda futura, território e fator, declaração
  * étnica, mapa das escolas, densidade e dispersão, estado nutricional,
- * frequência do PBF, contexto de segurança)
+ * frequência do PBF, contexto de segurança, trabalho na idade escolar)
  * + 8 do Perfil Municipal (saneamento, saúde, emprego, assistência,
  * capacidade institucional, governança educacional, quem dirige a educação,
  * conformidade legal)
@@ -30,7 +30,7 @@ import { registrarInfo } from "./structured-log";
  *     saúde fiscal saiu, por repetir a de capacidade fiscal linha por linha.
  *     Ver o doc-comment de `paginaRedeEResultado`.
  */
-export const PAGINAS_ESPERADAS_RAIO_X = 41;
+export const PAGINAS_ESPERADAS_RAIO_X = 42;
 
 /**
  * Página que só coube porque o auto-ajuste a encolheu. Sai junto com o PDF

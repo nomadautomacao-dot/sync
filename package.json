@@ -34,7 +34,8 @@
     "dados:terras-indigenas": "node scripts/dados/gerar-terras-indigenas.mjs",
     "dados:vacinacao": "node scripts/dados/gerar-cobertura-vacinal.mjs",
     "dados:violencia-infantil": "node scripts/dados/gerar-violencia-infantil.mjs",
-    "dados:ponderadas": "node --max-old-space-size=6144 scripts/dados/gerar-matriculas-ponderadas.mjs"
+    "dados:ponderadas": "node --max-old-space-size=6144 scripts/dados/gerar-matriculas-ponderadas.mjs",
+    "dados:trabalho-infantil": "node scripts/dados/gerar-trabalho-infantil.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

@@ -188,9 +188,9 @@ describe("páginas de ponderação e vinculações no Raio-X", () => {
     expect(saida).toContain("Declaração ao SIOPE não localizada");
   });
 
-  it("gera as 41 páginas do contrato do renderer, com e sem dados", () => {
+  it("gera as 42 páginas do contrato do renderer, com e sem dados", () => {
     const paginas = (html: string) => html.match(/<section class="page/g)?.length ?? 0;
-    expect(paginas(completo("2930154", "BA"))).toBe(41);
+    expect(paginas(completo("2930154", "BA"))).toBe(42);
     expect(
       paginas(
         generateMunicipalXrayHtml(
@@ -203,7 +203,7 @@ describe("páginas de ponderação e vinculações no Raio-X", () => {
           }),
         ),
       ),
-    ).toBe(41);
+    ).toBe(42);
   });
 
   it("numera as páginas sequencialmente a partir do contador", () => {
@@ -216,7 +216,7 @@ describe("páginas de ponderação e vinculações no Raio-X", () => {
 
     // A capa não tem rodapé numerado; o miolo vai de 2 até o total.
     expect(numeros[0]).toBe(2);
-    expect(numeros[numeros.length - 1]).toBe(41);
+    expect(numeros[numeros.length - 1]).toBe(42);
     for (let i = 1; i < numeros.length; i++) expect(numeros[i]).toBe(numeros[i - 1] + 1);
   });
 });
@@ -2162,7 +2162,7 @@ describe("resumo executivo e plano de ação saem dos achados", () => {
 
   /**
    * Essa frase era o fecho do resumo, igual para todo município do país. Se
-   * ela voltar, o dossiê voltou a pedir que o gestor leia 41 páginas para
+   * ela voltar, o dossiê voltou a pedir que o gestor leia 42 páginas para
    * descobrir o que está em jogo.
    */
   it("não traz de volta o diagnóstico genérico", () => {
@@ -2482,5 +2482,88 @@ describe("saúde da criança em idade escolar no Raio-X", () => {
       expect(saida).not.toMatch(/pior município|ranking|o mais violento|posição no ranking/i);
       expect(saida).toContain("nunca rótulo do município");
     }
+  });
+});
+
+/**
+ * Trabalho na idade escolar (#15). A página imprime estimativa preliminar da
+ * amostra do Censo 2022 sobre criança ocupada — o dado mais fácil de usar
+ * errado do dossiê inteiro. Os testes travam as quatro portas: somar as
+ * faixas, chamar ocupação de 14 a 17 de ilegalidade, deixar estimativa mínima
+ * decidir comparação, e omitir a ressalva da fonte.
+ */
+describe("trabalho na idade escolar no Raio-X", () => {
+  function render(codigoIbge: string) {
+    return generateMunicipalXrayHtml(
+      mapMunicipalXrayModel({
+        basePayload: {},
+        currentPayload: { dados_basicos: { codigo_ibge: codigoIbge, nome: "X", uf: "BA" } },
+        baseYear: 2024,
+        currentYear: 2026,
+        generatedAt: new Date("2026-07-31T12:00:00.000Z"),
+      }),
+    );
+  }
+
+  it("separa as duas faixas e nunca imprime um total somado", () => {
+    const saida = render("2924009"); // Paulo Afonso/BA: 29 e 455
+
+    expect(saida).toContain("Trabalho na idade escolar");
+    expect(saida).toContain("ocupadas de 10 a 13 anos");
+    expect(saida).toContain("ocupados de 14 a 17 anos");
+    // 29 + 455 = 484: o total somado não pode aparecer em lugar nenhum.
+    expect(saida).not.toContain("484");
+    expect(saida).not.toMatch(/total de trabalho infantil|crianças em trabalho infantil/i);
+  });
+
+  it("imprime a moldura legal que separa as faixas", () => {
+    const saida = render("2924009");
+
+    expect(saida).toContain("não há hipótese legal de trabalho");
+    expect(saida).toContain("art. 7º, XXXIII");
+    expect(saida).toContain("Decreto nº 6.481/2008");
+    // A trava que impede a página de acusar: ocupação de 14 a 17 é lícita.
+    expect(saida).toContain("Ocupação nesta faixa não é, por si, irregularidade");
+  });
+
+  it("carrega a ressalva de amostra preliminar e o piso, não teto", () => {
+    const saida = render("1302603"); // Manaus/AM
+
+    expect(saida).toContain("Resultados preliminares da amostra");
+    expect(saida).toContain("áreas de ponderação preliminares");
+    expect(saida).toContain("piso, não teto");
+    expect(saida).toContain("consumo do próprio domicílio");
+  });
+
+  it("recusa a comparação quando a estimativa é pequena demais", () => {
+    // Ibateguara/AL: 21 crianças de 10 a 13 — taxa acima da nacional, mas a
+    // estimativa não sustenta a leitura, e a página diz isso.
+    const saida = render("2703007");
+
+    expect(saida).toContain("não decide nada");
+    expect(saida).toContain("sustenta é a pergunta");
+    expect(saida).not.toMatch(/Está <b>(acima|abaixo)/);
+  });
+
+  it("lê as duas réguas, que discordam com frequência", () => {
+    // Manaus/AM: 1,40% na faixa de 10 a 13 — acima do país (1,20%) e abaixo do
+    // próprio estado (2,02%). Ler só uma régua imprimiria "acima" ao lado de um
+    // número estadual maior.
+    const saida = render("1302603");
+    expect(saida).toContain("Está <b>acima da nacional</b> e abaixo da estadual");
+    expect(saida).toContain("até os 14 não existe trabalho lícito");
+  });
+
+  it("não ordena municípios nem atribui rótulo", () => {
+    for (const codigo of ["2703007", "1302603", "3550308", "2924009"]) {
+      const saida = render(codigo);
+      expect(saida).not.toMatch(/ranking|pior município|campeão|líder em trabalho/i);
+      expect(saida).toContain("nunca rótulo do município");
+    }
+  });
+
+  it("degrada com honestidade quando o município não está no dataset", () => {
+    const saida = render("9999999");
+    expect(saida).toContain("Ocupação na idade escolar indisponível");
   });
 });

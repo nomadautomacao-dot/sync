@@ -41,7 +41,7 @@ export const DOCUMENTOS = [
     reportType: "raio_x" as CityReportType,
     icone: ZapIcon,
     nome: "Raio-X Municipal",
-    paginas: 41,
+    paginas: 42,
     variante: "secundario" as const,
     prefixoArquivo: "RaioX_Municipal",
     endpoint: "/api/modulos/levantamento-fundeb/raio-x",

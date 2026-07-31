@@ -7,6 +7,7 @@ import { levantarAchados, varreduraLimpa, TIERS } from "./municipal-xray-achados
 import { analisarDispersao } from "./densidade-rede";
 import { getTerrasIndigenas } from "./terras-indigenas";
 import { getCoberturaVacinal, getViolenciaInfantil } from "./saude-escolar";
+import { getTrabalhoInfantil } from "./trabalho-infantil";
 import { projectToBoundary, type MunicipalBoundaryMap } from "./ibge-municipal-boundary";
 
 type JsonRecord = Record<string, unknown>;
@@ -415,6 +416,31 @@ export interface MunicipalXrayModel {
       reportingCities: number;
       citiesInCountry: number;
     } | null;
+  } | null;
+  /**
+   * Crianças e adolescentes ocupados na semana de referência (Censo 2022),
+   * nas duas faixas que o direito trata de forma diferente. Roadmap #15.
+   * Ver `core/lib/trabalho-infantil.ts` — as faixas nunca são somadas.
+   */
+  childLabor: {
+    censusYear: number;
+    table: number;
+    caveat: string;
+    bands: Array<{
+      label: string;
+      population: number;
+      occupied: number;
+      ratePct: number | null;
+      stateRatePct: number | null;
+      countryRatePct: number | null;
+      aboveState: boolean;
+      aboveCountry: boolean;
+      weakComparison: boolean;
+      /** Falso na faixa de 10 a 13: não há hipótese legal de trabalho. */
+      legalWorkPossible: boolean;
+    }>;
+    /** Nenhuma ocupação estimada em nenhuma faixa. */
+    noneEstimated: boolean;
   } | null;
   /**
    * Aldeias registradas pela FUNAI e a distância delas até a rede. Roadmap #35.
@@ -1134,6 +1160,28 @@ export function mapMunicipalXrayModel(params: {
               citiesInCountry: vio.municipiosNoPais,
             }
           : null,
+      };
+    })(),
+    childLabor: (() => {
+      const t = getTrabalhoInfantil(text(at(currentPayload, "dados_basicos.codigo_ibge"), ""));
+      if (!t) return null;
+      return {
+        censusYear: t.anoCenso,
+        table: t.tabela,
+        caveat: t.ressalva,
+        bands: t.faixas.map((f) => ({
+          label: f.rotulo,
+          population: f.populacao,
+          occupied: f.ocupadas,
+          ratePct: f.taxaPct,
+          stateRatePct: f.taxaUfPct,
+          countryRatePct: f.taxaBrasilPct,
+          aboveState: f.acimaDaUf,
+          aboveCountry: f.acimaDoBrasil,
+          weakComparison: f.comparacaoFragil,
+          legalWorkPossible: f.admiteTrabalhoLegal,
+        })),
+        noneEstimated: t.semOcupacaoEstimada,
       };
     })(),
     indigenousLands: (() => {
@@ -3827,6 +3875,128 @@ function paginaEconomia(model: MunicipalXrayModel, pagina: number): string {
   }. A ligação entre economia e evasão é leitura interpretativa sobre dados oficiais — verificável em campo, nunca determinística.</p></main>${footer(pagina, "IBGE — PIB dos Municípios e Censo 2022")}</section>`;
 }
 
+/**
+ * Trabalho na idade escolar — o outro lado da conta de frequência.
+ *
+ * O relatório já mede o efeito por várias fontes: distorção idade-série e
+ * abandono por escola (INEP), crianças do PBF que a escola não localizou
+ * (SICON), abstenção no ENEM. Faltava a medida da causa candidata, e o Censo
+ * a publica por município a partir dos 10 anos.
+ *
+ * Três disciplinas que o corpo da página respeita, e que valem mais que o
+ * número:
+ *
+ * 1. **As faixas não se somam.** 10 a 13 anos não admite trabalho em nenhuma
+ *    hipótese; 14 a 17 admite aprendizagem e emprego regular. Um total único
+ *    apagaria a diferença e transformaria dado em acusação.
+ * 2. **Não é contagem.** É estimativa expandida da amostra, ainda preliminar
+ *    (nota 1 da tabela 10268). A ressalva sai impressa, literal.
+ * 3. **Não é causa provada.** As duas medições — ocupação e fluxo escolar —
+ *    são independentes. A página as coloca lado a lado e devolve pergunta, não
+ *    conclusão.
+ */
+function paginaTrabalhoInfantil(model: MunicipalXrayModel, pagina: number): string {
+  const t = model.childLabor;
+  const FONTE = "IBGE — Censo Demográfico 2022 (SIDRA, tabela 10268)";
+
+  if (!t || t.bands.length === 0) {
+    return `<section class="page content-page">${header("Trabalho na idade escolar")}<main class="page-body"><div class="kicker">O que compete com a aula</div><h2>Ocupação na idade escolar indisponível</h2><p class="lede">O recorte municipal de pessoas de 10 a 17 anos ocupadas na semana de referência não retornou para este município no Censo 2022.</p></main>${footer(pagina, FONTE)}</section>`;
+  }
+
+  const menor = t.bands.find((b) => !b.legalWorkPossible) ?? null;
+  const maior = t.bands.find((b) => b.legalWorkPossible) ?? null;
+  const taxa2 = (v: number | null) => (v === null ? "N/D" : `${decimal2.format(v)}%`);
+
+  const titulo = (() => {
+    if (t.noneEstimated) return "A amostra do Censo não encontrou ocupação nas duas faixas";
+    if (menor && menor.occupied > 0) {
+      return `${int(menor.occupied)} ${menor.occupied === 1 ? "criança" : "crianças"} de 10 a 13 anos ocupadas na semana de referência`;
+    }
+    if (maior && maior.occupied > 0) {
+      return `${int(maior.occupied)} adolescentes de 14 a 17 anos ocupados na semana de referência`;
+    }
+    return "Ocupação na idade escolar, faixa a faixa";
+  })();
+
+  const linhas = t.bands
+    .map(
+      (b) =>
+        `<tr><td><b>${esc(b.label)}</b></td><td class="num">${int(b.occupied)}</td><td class="num">${taxa2(b.ratePct)}</td><td class="num">${taxa2(b.stateRatePct)}</td><td class="num">${taxa2(b.countryRatePct)}</td></tr>`,
+    )
+    .join("");
+
+  // A leitura da faixa sem hipótese legal é a única que a página trata como
+  // sinal; a de 14 a 17 é contexto, porque ali há trabalho lícito.
+  const leituraMenor = (() => {
+    if (!menor) return "";
+    if (menor.occupied === 0) {
+      return "A amostra <b>não estimou</b> nenhuma criança ocupada nesta faixa. Estimativa zero não é prova de ausência — é o que a amostra encontrou —, mas é a melhor notícia que esta página pode dar.";
+    }
+    if (menor.weakComparison) {
+      return `A estimativa é de <b>${int(menor.occupied)}</b>${menor.ratePct !== null ? ` (${taxa2(menor.ratePct)} da faixa)` : ""}. Numa ordem de grandeza destas, a distância para a régua da UF e do país <b>não decide nada</b>: a expansão da amostra move o número mais que a diferença. O que ela sustenta é a pergunta, não o diagnóstico.`;
+    }
+    // As duas réguas discordam com frequência — Manaus fica acima do país e
+    // abaixo do próprio estado. Ler só uma produziria "acima" impresso ao lado
+    // de um número estadual maior, que é contradição na cara do leitor.
+    const posicao = (() => {
+      if (menor.aboveState && menor.aboveCountry) return "Está <b>acima das duas réguas</b>";
+      if (menor.aboveCountry) return "Está <b>acima da nacional</b> e abaixo da estadual";
+      if (menor.aboveState) return "Está <b>acima da estadual</b> e abaixo da nacional";
+      return "Está <b>abaixo das duas réguas</b>";
+    })();
+    return `A taxa desta faixa é <b>${taxa2(menor.ratePct)}</b>, contra ${taxa2(menor.stateRatePct)} na UF e ${taxa2(menor.countryRatePct)} no país. ${posicao} — e a posição não muda o que a faixa é: até os 14 não existe trabalho lícito, então cada caso é matéria da rede de proteção.`;
+  })();
+
+  // Cruzamentos: só com o que o próprio relatório já apurou, e nomeando a
+  // página de origem. Nenhum deles é apresentado como causa.
+  //
+  // O nome de escola é truncado porque a folha é apertada: nomes municipais
+  // passam de 90 caracteres e cada um deles empurra uma linha inteira.
+  const nomeCurto = (nome: string) => (nome.length > 34 ? `${nome.slice(0, 33)}…` : nome);
+  const cruzamentos: string[] = [];
+  const ctx = model.schoolContext;
+  if (ctx && ctx.dropoutCount > 0 && ctx.worstDropout) {
+    cruzamentos.push(
+      `<b>${ctx.dropoutCount === 1 ? "1 escola registra" : `${int(ctx.dropoutCount)} escolas registram`}</b> abandono no fundamental — pior: ${esc(nomeCurto(ctx.worstDropout.name))}, ${decimal.format(ctx.worstDropout.value)}% (${ctx.years.rendimento}).`,
+    );
+  }
+  if (ctx?.worstTdi) {
+    cruzamentos.push(
+      `Maior <b>distorção idade-série</b> da rede: ${decimal.format(ctx.worstTdi.value)}% em ${esc(nomeCurto(ctx.worstTdi.name))} (${ctx.years.tdi}).`,
+    );
+  }
+  if (model.pbf && model.pbf.notFound > 0) {
+    cruzamentos.push(
+      `<b>${int(model.pbf.notFound)}</b> crianças do Bolsa Família que a escola não localizou — a lista nominal existe, e é por onde a checagem começa.`,
+    );
+  }
+  if (model.economy?.dominant === "agropecuaria" && model.economy.crop) {
+    cruzamentos.push(
+      `Economia de safra, cultura dominante <b>${esc(model.economy.crop.name)}</b>: aqui a ocupação de adolescente tende a ser sazonal, e o calendário escolar é a alavanca da secretaria.`,
+    );
+  }
+
+  // Teto de três: a folha comporta três linhas de cruzamento sem apertar, e o
+  // quarto item nunca é o que decide a conversa. Medido em 2026-07-31 com
+  // `medirCorte` nos quatro municípios de referência.
+  const blocoCruzamento = cruzamentos.length
+    ? `<ul class="small" style="margin:.03in 0 0 .14in">${cruzamentos
+        .slice(0, 3)
+        .map((c) => `<li>${c}</li>`)
+        .join("")}</ul>`
+    : `<p class="small">Nenhum sinal de fluxo (abandono, distorção, busca ativa do PBF) foi apurado nas páginas anteriores para cruzar com esta estimativa.</p>`;
+
+  return `<section class="page content-page">${header("Trabalho na idade escolar")}<main class="page-body"><div class="kicker">O que compete com a aula</div><h2>${titulo}</h2><p class="lede">Criança que trabalha falta, repete e sai — efeitos que este relatório já mede por outras fontes. Esta página traz a outra ponta: quantas pessoas de 10 a 17 anos o Censo ${t.censusYear} encontrou <b>ocupadas na semana de referência</b>. As faixas saem separadas porque o direito as trata de forma diferente, e somá-las trocaria um fato por uma acusação.</p><div class="grid-4 mt-3">${metric(
+    menor ? int(menor.occupied) : "N/D",
+    "ocupadas de 10 a 13 anos",
+  )}${metric(menor ? taxa2(menor.ratePct) : "N/D", "da faixa de 10 a 13 anos")}${metric(
+    maior ? int(maior.occupied) : "N/D",
+    "ocupados de 14 a 17 anos",
+  )}${metric(maior ? taxa2(maior.ratePct) : "N/D", "da faixa de 14 a 17 anos")}</div><div class="grid-2 mt-2"><div class="card ${
+    menor && menor.occupied > 0 && menor.aboveCountry ? "warn" : "accent"
+  }"><h3>As duas faixas, e a régua</h3><table><thead><tr><th>Faixa</th><th class="num">Ocupadas</th><th class="num">Taxa</th><th class="num">UF</th><th class="num">Brasil</th></tr></thead><tbody>${linhas}</tbody></table><div class="divider"></div><p class="small">${leituraMenor}</p></div><div class="card"><h3>O que a lei separa</h3><p class="small"><b>10 a 13 anos:</b> não há hipótese legal de trabalho. A Constituição proíbe trabalho a menores de 16, salvo como aprendiz <b>a partir dos 14</b> (art. 7º, XXXIII) — abaixo disso nem aprendizagem existe.</p><p class="small" style="margin-top:.05in"><b>14 a 17 anos:</b> há trabalho lícito — aprendiz dos 14 aos 17, emprego regular dos 16 —, vedados o noturno, o perigoso, o insalubre e o que consta da Lista TIP (Decreto nº 6.481/2008). <b>Ocupação nesta faixa não é, por si, irregularidade</b>, e esta página não a trata como tal.</p><div class="divider"></div><p class="small">Suspeita de violação de direito vai ao Conselho Tutelar (ECA, art. 56 e 245) — a apuração não é da rede de ensino.</p></div></div><div class="grid-2 mt-2"><div class="insight"><b>O que isto conversa com o dossiê</b> — medições independentes do mesmo território; a ligação é da literatura, não deste relatório:${blocoCruzamento}</div><div class="note"><b>Perguntas de campo:</b> a infrequência concentra em algum mês, turno ou distrito, e coincide com atividade econômica local? Há fluxo escrito entre escola e Conselho Tutelar para infrequência reiterada, com prazo? O programa de aprendizagem (Lei nº 10.097/2000) tem vaga aberta aqui para os 14 a 17?</div></div><p class="small mt-1">Fonte: ${esc(FONTE)}, variáveis 140 e 696. <b>Ressalva da própria tabela:</b> ${esc(t.caveat)} O trabalho para consumo do próprio domicílio (roça, criação, pesca) o IBGE classifica como <b>não ocupado</b> e fica fora deste número — que por isso é piso, não teto. UF e país entram como escala de grandeza: nenhuma ordenação entre municípios é produzida aqui, e o dado é contexto de planejamento, nunca rótulo do município.</p></main>${footer(pagina, FONTE)}</section>`;
+}
+
 function coverTerritory(model: MunicipalXrayModel) {
   if (model.boundary) {
     return `<svg class="territory-svg" viewBox="${esc(model.boundary.viewBox)}" role="img" aria-label="Contorno territorial de ${esc(model.municipality)}"><path class="territory-shadow" d="${esc(model.boundary.path)}"></path><path class="territory-shape" d="${esc(model.boundary.path)}"></path></svg>`;
@@ -3985,6 +4155,8 @@ ${paginaFrequenciaPbf(model, prox())}
 ${paginaViolencia(model, prox())}
 
 ${paginaEconomia(model, prox())}
+
+${paginaTrabalhoInfantil(model, prox())}
 
 ${paginaRedeEResultado(model, prox())}
 

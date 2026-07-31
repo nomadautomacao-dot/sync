@@ -178,7 +178,7 @@ cliente; as rotas apenas verificam o ID token. Ver seção 3.2.
 | `/api/modulos/levantamento-fundeb/censo-inep` | GET | Dados do Censo INEP |
 | `/api/modulos/levantamento-fundeb/pdf` | POST | Geração de PDF (Python/ReportLab) |
 | `/api/modulos/levantamento-fundeb/relatorio-dirigido` | POST | Relatório dirigido com IA |
-| `/api/modulos/levantamento-fundeb/raio-x` | POST | Raio-X municipal em PDF (41 páginas) |
+| `/api/modulos/levantamento-fundeb/raio-x` | POST | Raio-X municipal em PDF (42 páginas) |
 | `/api/modulos/levantamento-fundeb/oficio-documentos` | POST | Ofício à prefeitura + questionário (4 páginas) |
 | `/api/modulos/dossies/escolas` | GET/POST | Dossiê das Escolas — um bloco por unidade da rede |
 | `/api/modulos/dossies/conformidade` | GET/POST | Dossiê da Conformidade — CAUC, SIOPE, DCA, VAAR, piso |
@@ -537,6 +537,7 @@ No fluxo normal não se usa nenhum dos dois.
 | `dados/gerar-violencia-infantil.mjs` | `npm run dados:violencia-infantil` — notificações de violência contra criança de 5 a 14 anos (SINAN). Notificação ≠ ocorrência |
 | `dados/gerar-matriculas-ponderadas.mjs` | `npm run dados:ponderadas` — matrícula ponderada e fatores oficiais do FUNDEB, derivados da planilha do FNDE |
 | `dados/gerar-vaar-municipios.mjs` | `npm run dados:vaar` — status das 5 condicionalidades do VAAR e valores por município (FNDE). Regerar a cada portaria quadrimestral |
+| `dados/gerar-trabalho-infantil.mjs` | `npm run dados:trabalho-infantil` — pessoas de 10 a 17 anos ocupadas na semana de referência, por município (IBGE, Censo 2022, SIDRA 10268). Censo é decenal: regerar só quando sair a divulgação **definitiva** da amostra — nesse dia a ressalva de "resultados preliminares" muda e o texto do módulo tem de mudar junto |
 | `pdf/prepare-docx-templates.mjs` | Templates DOCX contratos |
 
 ### Smoke test
