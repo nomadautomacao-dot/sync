@@ -34,6 +34,7 @@ import { getSaebDistribuicao } from "@/core/lib/saeb-distribuicao";
 import { getViolenciaMunicipal } from "@/core/lib/violencia-municipal";
 import { getEmendasMunicipio } from "@/core/lib/emendas-municipais";
 import { getConveniosMunicipio, getSancoesMunicipio } from "@/core/lib/portal-transparencia";
+import { registrarAlerta } from "@/core/lib/structured-log";
 import { getAlfabetizacaoMunicipal } from "@/core/lib/alfabetizacao-municipal";
 import { getCicloPolitico } from "@/core/lib/alternancia-politica";
 import { getCaucMunicipio } from "@/core/lib/cauc-requisitos";
@@ -1054,8 +1055,26 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
       getEquidadeTerritorial(String(municipio.id)),
       getFrequenciaBolsaFamilia(String(municipio.id)),
       getEconomiaLocal(String(municipio.id)),
-      getConveniosMunicipio(String(municipio.id)).catch(() => null),
-      getSancoesMunicipio(municipio.nome, municipioUf).catch(() => null),
+      // `.catch(() => null)` mantém a emissão de pé quando uma fonte cai — mas
+      // engolir em silêncio custou caro: com o token do Portal ausente em
+      // produção, todo relatório saiu sem convênios e sem sanções por semanas,
+      // e não havia uma linha de log dizendo por quê. Degrada igual, agora
+      // deixa rastro.
+      getConveniosMunicipio(String(municipio.id)).catch((erro) => {
+        registrarAlerta("portal-transparencia.convenios", "consulta falhou; a página sai sem convênios", {
+          codigoIbge: String(municipio.id),
+          detalhe: erro instanceof Error ? erro.message : String(erro),
+        });
+        return null;
+      }),
+      getSancoesMunicipio(municipio.nome, municipioUf).catch((erro) => {
+        registrarAlerta("portal-transparencia.sancoes", "consulta falhou; a página sai sem CEIS/CNEP", {
+          municipio: municipio.nome,
+          uf: municipioUf,
+          detalhe: erro instanceof Error ? erro.message : String(erro),
+        });
+        return null;
+      }),
       getCaucMunicipio(String(municipio.id)).catch(() => null),
       getPopulacaoRural(String(municipio.id)).catch(() => null),
       // O SISVAN publica com defasagem: o exercicio corrente costuma estar
