@@ -10,11 +10,23 @@ const instrumentSans = Instrument_Sans({
   display: "swap",
 });
 
+/**
+ * A monoespaçada é a fonte dos números, e número só existe depois do login.
+ *
+ * Com `preload` ligado, o navegador baixava os três pesos já na tela de
+ * entrada e depois avisava, com razão, que os baixou à toa — era esse o
+ * "preloaded but not used" que enchia o console. Sem o preload ela é buscada
+ * quando a primeira tabela aparece, e `display: swap` garante que o texto não
+ * fique invisível durante a busca.
+ */
 const ibmPlexMono = IBM_Plex_Mono({
-  weight: ["400", "500", "600"],
+  /* O 700 entra porque 33 pontos da interface pedem negrito em número; sem ele
+     o navegador engorda a letra por conta própria e o dígito sai borrado. */
+  weight: ["400", "500", "600", "700"],
   variable: "--font-sync-mono",
   subsets: ["latin"],
   display: "swap",
+  preload: false,
 });
 
 export const metadata: Metadata = {
