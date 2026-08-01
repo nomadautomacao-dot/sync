@@ -1,13 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
+import { Button, Empty, Tag, Typography, theme } from "antd";
+
 import type { CityAccount, StageKey } from "@/core/lib/city-types";
-import { STAGE_LABELS, BOARD_STAGES, formatCurrencyCompact } from "@/core/lib/city-types";
-import { stageSignal, signalColor } from "./stage-helpers";
+import { STAGE_LABELS, BOARD_STAGES, INDEX_STAGES, formatCurrencyCompact } from "@/core/lib/city-types";
+import { stageSignal, signalColor, stagePastelColor } from "./stage-helpers";
 import { CityCard } from "./city-card";
 import { StageIndex } from "./stage-index";
-import { useState } from "react";
-import { MapPinIcon, LayersIcon } from "lucide-react";
 
 interface PipelineKanbanProps {
   cities: CityAccount[];
@@ -21,23 +22,6 @@ const INDEX_COLUMN_WIDTH = 140;
 const GAP = 12;
 const CARDS_PER_COLUMN = 6;
 
-// Cores temáticas por estágio da negociação
-const STAGE_ACCENTS: Record<StageKey, { border: string; bg: string; text: string }> = {
-  mapping: { border: "border-[#16181D]", bg: "bg-[#F2F1F7]", text: "text-[#16181D]" },
-  first_contact: { border: "border-[#93B8F2]", bg: "bg-[#E2EDFA]", text: "text-[#16181D]" },
-  technical_diagnostic: { border: "border-[#8FD3B6]", bg: "bg-[#DFF2E7]", text: "text-[#16181D]" },
-  proposal_presented: { border: "border-[#F7C77E]", bg: "bg-[#FBF0D9]", text: "text-[#16181D]" },
-  contractual: { border: "border-[#F5A3B5]", bg: "bg-[#FBE0E7]", text: "text-[#16181D]" },
-  institutional_validation: { border: "border-[#16181D]", bg: "bg-[#F2F1F7]", text: "text-[#16181D]" },
-  negotiation: { border: "border-[#F7C77E]", bg: "bg-[#FBF0D9]", text: "text-[#16181D]" },
-  verbal_approval: { border: "border-[#8FD3B6]", bg: "bg-[#DFF2E7]", text: "text-[#16181D]" },
-  implementation: { border: "border-[#8FD3B6]", bg: "bg-[#DFF2E7]", text: "text-[#16181D]" },
-  assisted_operation: { border: "border-[#93B8F2]", bg: "bg-[#E2EDFA]", text: "text-[#16181D]" },
-  fidelized: { border: "border-[#8FD3B6]", bg: "bg-[#DFF2E7]", text: "text-[#16181D]" },
-  paused: { border: "border-[#A2A6B2]", bg: "bg-[#F2F1F7]", text: "text-[#3B3F4A]" },
-  lost: { border: "border-rose-400", bg: "bg-rose-50", text: "text-rose-700" },
-};
-
 export function PipelineKanban({
   cities,
   selectedCityId,
@@ -46,15 +30,9 @@ export function PipelineKanban({
 }: PipelineKanbanProps) {
   const [expandedStages, setExpandedStages] = useState<Set<StageKey>>(new Set());
 
-  const indexStages: StageKey[] = [
-    "institutional_validation",
-    "negotiation",
-    "verbal_approval",
-    "implementation",
-    "assisted_operation",
-    "fidelized",
-    "paused",
-  ];
+  // Os estágios "fechados" (institucional em diante, exceto perdido) vivem no
+  // índice compacto ao lado das colunas — mesmo recorte de antes.
+  const indexStages = INDEX_STAGES.filter((stage) => stage !== "lost");
 
   const toggleExpand = (stage: StageKey) => {
     setExpandedStages((prev) => {
@@ -69,10 +47,16 @@ export function PipelineKanban({
     BOARD_STAGES.length * (MIN_COLUMN_WIDTH + GAP) + INDEX_COLUMN_WIDTH;
 
   return (
-    <div className="h-full">
+    <div style={{ height: "100%" }}>
       <div
-        className="flex h-full gap-3 overflow-x-auto pb-4"
-        style={{ minWidth: minBoardWidth }}
+        style={{
+          display: "flex",
+          height: "100%",
+          gap: GAP,
+          overflowX: "auto",
+          paddingBottom: 16,
+          minWidth: minBoardWidth,
+        }}
       >
         {BOARD_STAGES.map((stage) => (
           <StageColumn
@@ -86,11 +70,7 @@ export function PipelineKanban({
             onStageDrop={onStageDrop}
           />
         ))}
-        <StageIndex
-          stages={indexStages}
-          cities={cities}
-          onDrop={onStageDrop}
-        />
+        <StageIndex stages={indexStages} cities={cities} onDrop={onStageDrop} />
       </div>
     </div>
   );
@@ -115,8 +95,8 @@ function StageColumn({
   onToggleExpand,
   selectedCityId,
   onSelectCity,
-  onStageDrop,
 }: StageColumnProps) {
+  const { token } = theme.useToken();
   const { isOver, setNodeRef } = useDroppable({
     id: `column-${stage}`,
     data: { stage },
@@ -124,7 +104,7 @@ function StageColumn({
 
   const columnRevenue = cities.reduce(
     (sum, c) => sum + c.estimatedAnnualRevenue,
-    0
+    0,
   );
   const signal = stageSignal(cities);
   const visible =
@@ -132,55 +112,81 @@ function StageColumn({
       ? cities
       : cities.slice(0, CARDS_PER_COLUMN);
   const hidden = cities.length - visible.length;
+  const tone = stagePastelColor(stage);
 
-  const accent = STAGE_ACCENTS[stage] || { border: "border-[#16181D]", bg: "bg-[#F7F6FA]", text: "text-[#3B3F4A]" };
-
+  // Continua `div` própria, e não `Card`: o `useDroppable` precisa do `ref`
+  // no mesmo nó que recebe o "solte aqui" — um `Card` por cima cria uma
+  // camada própria e quebra o arrasto do mesmo jeito que em `city-card.tsx`.
+  // O conteúdo interno (título, contadores, botão) é todo Ant.
   return (
     <div
       ref={setNodeRef}
-      className={`flex min-w-[220px] flex-1 flex-col rounded-2xl border bg-white/[.88] shadow-[0_10px_26px_rgba(22,24,29,.05)] transition-all ${
-        isOver
-          ? "border-[#16181D] ring-2 ring-[#16181D]/20 bg-[#F7F6FA]/20"
-          : "border-white/95"
-      }`}
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        minWidth: MIN_COLUMN_WIDTH,
+        flex: 1,
+        borderRadius: token.borderRadiusLG,
+        border: `1px solid ${isOver ? token.colorPrimary : token.colorBorderSecondary}`,
+        boxShadow: token.boxShadowTertiary,
+        backgroundColor: isOver ? token.colorPrimaryBg : token.colorBgContainer,
+        transition: "background-color .15s, border-color .15s",
+      }}
     >
-      {/* Cabeçalho da coluna com border accent no topo */}
-      <div className={`rounded-t-2xl border-b border-[#F0F1F5] p-3.5 border-t-4 ${accent.border}`}>
-        <div className="flex items-center justify-between gap-1.5">
-          <div className="flex items-center gap-2 min-w-0">
+      {/* Cabeçalho da coluna, com a cor do estágio no topo */}
+      <div
+        style={{
+          padding: 14,
+          borderTop: `4px solid ${tone.dot}`,
+          borderTopLeftRadius: token.borderRadiusLG,
+          borderTopRightRadius: token.borderRadiusLG,
+          borderBottom: `1px solid ${token.colorBorderSecondary}`,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, minWidth: 0 }}>
             <span
-              className="size-2 shrink-0 rounded-full"
-              style={{ backgroundColor: signalColor(signal) }}
+              style={{
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                backgroundColor: signalColor(signal),
+                flexShrink: 0,
+              }}
             />
-            <h3 className="truncate text-xs font-bold text-[#16181D]">
+            <Typography.Text strong ellipsis style={{ fontSize: 12 }}>
               {STAGE_LABELS[stage]}
-            </h3>
+            </Typography.Text>
           </div>
-          <span className="rounded-full bg-[#F2F1F7] px-2 py-0.5 font-mono text-[10px] font-bold text-[#3B3F4A] shrink-0">
+          <Tag style={{ fontFamily: "var(--font-sync-mono)", fontSize: 10, marginInlineEnd: 0 }}>
             {cities.length}
-          </span>
+          </Tag>
         </div>
 
-        <div className="mt-2 flex items-center justify-between text-[11px]">
-          <span className="font-mono font-bold text-[#16181D]">
+        <div style={{ marginTop: 8, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <Typography.Text strong style={{ fontFamily: "var(--font-sync-mono)", fontSize: 11 }}>
             {columnRevenue > 0 ? formatCurrencyCompact(columnRevenue) : "R$ 0"}
-          </span>
-          <span className="text-[10px] font-medium text-[#767A86]">acumulado</span>
+          </Typography.Text>
+          <Typography.Text type="secondary" style={{ fontSize: 10 }}>
+            acumulado
+          </Typography.Text>
         </div>
       </div>
 
       {/* Corpo: cards */}
-      <div className="flex-1 overflow-y-auto p-2.5">
+      <div style={{ flex: 1, overflowY: "auto", padding: 10 }}>
         {cities.length === 0 ? (
-          /* Placeholder de coluna vazia */
-          <div className={`flex h-32 flex-col items-center justify-center rounded-xl border border-dashed border-[#F0F1F5]/80 p-3 text-center transition-colors ${isOver ? "bg-[#F7F6FA]/40 border-[#16181D]" : "bg-[#F7F6FA]/40"}`}>
-            <MapPinIcon className="size-5 text-[#A2A6B2]" />
-            <p className="mt-1 text-[11px] font-medium text-[#A2A6B2]">
-              {isOver ? "Solte para mover" : "Nenhuma cidade nesta fase"}
-            </p>
-          </div>
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description={
+              <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                {isOver ? "Solte para mover" : "Nenhuma cidade nesta fase"}
+              </Typography.Text>
+            }
+            style={{ marginTop: 16 }}
+          />
         ) : (
-          <div className="flex flex-col gap-2.5">
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {visible.map((city) => (
               <CityCard
                 key={city.id}
@@ -195,18 +201,12 @@ function StageColumn({
 
       {/* Rodapé "+N" / "Mostrar menos" */}
       {(hidden > 0 || isExpanded) && (
-        <div className="p-2.5 pt-0">
-          <button
-            type="button"
-            onClick={onToggleExpand}
-            className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-[#F0F1F5] py-1.5 text-xs font-semibold text-[#5A5E6A] transition-colors hover:bg-[#F7F6FA] hover:text-[#16181D]"
-            title={isExpanded ? "Mostrar menos" : "Mostrar todos"}
-          >
-            <span>{isExpanded ? "−" : "+"}</span>
-            <span className="font-mono text-[11px]">
+        <div style={{ padding: "0 10px 10px" }}>
+          <Button type="dashed" block size="small" onClick={onToggleExpand}>
+            <span style={{ fontFamily: "var(--font-sync-mono)", fontSize: 11 }}>
               {isExpanded ? "Mostrar menos" : `+${hidden} cidades`}
             </span>
-          </button>
+          </Button>
         </div>
       )}
     </div>

@@ -1,43 +1,60 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import dayjs from "dayjs";
 import {
-  AlertTriangleIcon,
-  ArrowLeftIcon,
-  ArrowUpRightIcon,
-  BotIcon,
-  CheckCircle2Icon,
-  DatabaseIcon,
-  DownloadIcon,
-  EyeIcon,
-  FileIcon,
-  FileTextIcon,
-  FolderArchiveIcon,
-  LandmarkIcon,
-  LoaderCircleIcon,
-  MapPinIcon,
-  MoreHorizontalIcon,
-  PaperclipIcon,
-  SaveIcon,
-  SparklesIcon,
-  TrendingUpIcon,
-} from "lucide-react";
+  ArrowLeftOutlined,
+  BankOutlined,
+  CheckCircleOutlined,
+  DatabaseOutlined,
+  DownloadOutlined,
+  EnvironmentOutlined,
+  EyeOutlined,
+  FileOutlined,
+  FileTextOutlined,
+  FolderOutlined,
+  MoreOutlined,
+  PaperClipOutlined,
+  RightOutlined,
+  RiseOutlined,
+  RobotOutlined,
+  RocketOutlined,
+  SaveOutlined,
+  WarningOutlined,
+} from "@ant-design/icons";
+import { ProTable } from "@ant-design/pro-components";
+import type { ProColumns } from "@ant-design/pro-components";
+import {
+  Alert,
+  Button,
+  Card,
+  Col,
+  DatePicker,
+  Descriptions,
+  Dropdown,
+  Empty,
+  Flex,
+  Input,
+  InputNumber,
+  List,
+  Result,
+  Row,
+  Select,
+  Skeleton,
+  Space,
+  Statistic,
+  Tabs,
+  Tag,
+  theme,
+  Typography,
+} from "antd";
+import type { MenuProps } from "antd";
 import { toast } from "sonner";
 
-import { Button } from "@/core/components/ui/button";
 import { VisualizadorPdf } from "@/core/components/visualizador-pdf";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/core/components/ui/dropdown-menu";
-import { Input } from "@/core/components/ui/input";
 import {
   deleteCity,
   getCity,
@@ -70,9 +87,10 @@ import type {
 } from "@/modules/documentos/types";
 
 import { DocumentUploadDialog } from "../../documentos/_components/document-upload-dialog";
-import pageStyles from "./city-detail.module.css";
 import { DeleteCityDialog } from "./_components/delete-city-dialog";
 import { FundebDataTab } from "./_components/fundeb-data-tab";
+
+const { Text, Title } = Typography;
 
 type CityTab = "visao-geral" | "dados-fundeb" | "relatorios" | "documentos";
 
@@ -82,6 +100,7 @@ export default function CidadeDetailPage() {
   const router = useRouter();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { token } = theme.useToken();
   const [tab, setTab] = useState<CityTab>("visao-geral");
   const [uploadOpen, setUploadOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -172,26 +191,23 @@ export default function CidadeDetailPage() {
 
   if (cityPending) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <LoaderCircleIcon className="size-6 animate-spin text-[#767A86]" />
-      </div>
+      <Card>
+        <Skeleton active paragraph={{ rows: 6 }} />
+      </Card>
     );
   }
 
   if (cityError || !city) {
     return (
-      <div className="glass-card flex min-h-[420px] flex-col items-center justify-center text-center">
-        <MapPinIcon className="size-7 text-[#A2A6B2]" />
-        <h1 className="mt-3 text-[14px] font-bold text-[#16181D]">
-          Cidade não encontrada
-        </h1>
-        <Link
-          href="/cidades"
-          className="mt-4 text-[11px] font-bold text-[#2C4E82] hover:underline"
-        >
-          Voltar para cidades
-        </Link>
-      </div>
+      <Result
+        icon={<EnvironmentOutlined style={{ color: token.colorTextTertiary }} />}
+        title="Cidade não encontrada"
+        extra={
+          <Link href="/cidades">
+            <Button type="primary">Voltar para cidades</Button>
+          </Link>
+        }
+      />
     );
   }
 
@@ -207,149 +223,52 @@ export default function CidadeDetailPage() {
     await uploadMutation.mutateAsync({ file, input });
   };
 
-  return (
-    <div className="flex min-h-full flex-col gap-[14px] px-1 pb-4 pt-1">
-      <header className="glass-card overflow-hidden">
-        <div className="flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 items-start gap-3.5">
-            <Link
-              href="/cidades"
-              className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full bg-[#F2F1F7] text-[#5A5E6A] hover:bg-[#ECEBF2] hover:text-[#16181D]"
-              aria-label="Voltar para cidades"
-            >
-              <ArrowLeftIcon className="size-4" />
-            </Link>
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2.5">
-                <h1 className="truncate text-[21px] font-bold tracking-[-0.7px] text-[#16181D]">
-                  {city.name}
-                </h1>
-                <span
-                  className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[9.5px] font-bold"
-                  style={{ backgroundColor: tone.bg, color: tone.text }}
-                >
-                  <span
-                    className="size-1.5 rounded-full"
-                    style={{ backgroundColor: tone.dot }}
-                  />
-                  {STAGE_LABELS[city.stage]}
-                </span>
-              </div>
-              <p className="mt-1 font-mono text-[10px] text-[#A2A6B2]">
-                {city.uf}
-                {city.region ? ` · ${city.region}` : ""} · IBGE{" "}
-                {city.codigoIbge || "não informado"} ·{" "}
-                {reportsError
-                  ? "relatórios indisponíveis"
-                  : `${reports.length} relatórios`}{" "}
-                · {documents.length} documentos
-              </p>
-            </div>
-          </div>
+  const optionsMenu: MenuProps["items"] = [
+    {
+      key: "excluir",
+      danger: true,
+      label: "Excluir cidade",
+      onClick: () => setDeleteOpen(true),
+    },
+  ];
 
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setUploadOpen(true)}
-              className="h-9 rounded-full border-[#E2E3E9] bg-white px-4 text-[11px] font-bold text-[#5A5E6A]"
-            >
-              <PaperclipIcon className="size-3.5" />
-              Anexar documento
-            </Button>
-            <Button
-              asChild
-              className="h-9 rounded-full bg-[#16181D] px-4 text-[11px] font-bold text-white hover:bg-[#2C2F38]"
-            >
-              <Link
-                href={`/modulos/levantamento-fundeb?ibge=${city.codigoIbge}`}
-              >
-                <SparklesIcon className="size-3.5" />
-                Gerar relatório
-              </Link>
-            </Button>
-            {(user?.groupRole === "owner" || user?.groupRole === "admin") && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon-lg"
-                    aria-label="Mais opções da cidade"
-                    title="Mais opções"
-                    className="rounded-full border-[#E2E3E9] bg-white text-[#767A86] hover:bg-[#F2F1F7] hover:text-[#16181D]"
-                  >
-                    <MoreHorizontalIcon className="size-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  sideOffset={8}
-                  className={pageStyles.optionsMenu}
-                >
-                  <DropdownMenuLabel className={pageStyles.optionsMenuLabel}>
-                    Opções da cidade
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator
-                    className={pageStyles.optionsMenuSeparator}
-                  />
-                  <DropdownMenuItem
-                    variant="destructive"
-                    onSelect={() => setDeleteOpen(true)}
-                    className={pageStyles.optionsMenuItem}
-                  >
-                    Excluir cidade
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            )}
-          </div>
-        </div>
-
-        <nav className="flex overflow-x-auto border-t border-[#F0F1F5] px-2 [scrollbar-width:none] sm:px-5 [&::-webkit-scrollbar]:hidden">
-          {(
-            [
-              ["visao-geral", "Visão geral", TrendingUpIcon],
-              ["dados-fundeb", "Levantamento FUNDEB", DatabaseIcon],
-              [
-                "relatorios",
-                `Relatórios (${reportsError ? "—" : reports.length})`,
-                FileTextIcon,
-              ],
-              [
-                "documentos",
-                `Documentos (${documents.length})`,
-                FolderArchiveIcon,
-              ],
-            ] as const
-          ).map(([key, label, Icon]) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setTab(key)}
-              className={`flex h-11 shrink-0 items-center gap-2 border-b-2 px-3 text-[10.5px] font-bold transition-colors sm:px-4 ${
-                tab === key
-                  ? "border-[#16181D] text-[#16181D]"
-                  : "border-transparent text-[#A2A6B2] hover:text-[#5A5E6A]"
-              }`}
-            >
-              <Icon className="size-3.5" />
-              {label}
-            </button>
-          ))}
-        </nav>
-      </header>
-
-      {tab === "visao-geral" && (
+  /* Conteúdo por aba: renderizado fora do `Tabs` (que aqui só resolve a
+     barra de navegação) para o cabeçalho — nome, estágio, ações — ficar num
+     cartão só, e o conteúdo de cada aba em cartões próprios abaixo, como já
+     era antes da migração. */
+  const tabPanels: { key: CityTab; label: string; icon: ReactNode; content: ReactNode }[] = [
+    {
+      key: "visao-geral",
+      label: "Visão geral",
+      icon: <RiseOutlined />,
+      content: (
         <OverviewTab
           city={city}
           reports={reports}
           documents={documents}
           onOpenReports={() => setTab("relatorios")}
         />
-      )}
-
-      {tab === "relatorios" && (
+      ),
+    },
+    {
+      key: "dados-fundeb",
+      label: "Levantamento FUNDEB",
+      icon: <DatabaseOutlined />,
+      content: (
+        <FundebDataTab
+          city={city}
+          reports={reports}
+          pending={reportsPending}
+          selected={selectedReport}
+          onSelect={setSelectedReportId}
+        />
+      ),
+    },
+    {
+      key: "relatorios",
+      label: `Relatórios (${reportsError ? "—" : reports.length})`,
+      icon: <FileTextOutlined />,
+      content: (
         <ReportsTab
           city={city}
           reports={reports}
@@ -358,25 +277,102 @@ export default function CidadeDetailPage() {
           selected={selectedReport}
           onSelect={setSelectedReportId}
         />
-      )}
-
-      {tab === "dados-fundeb" && (
-        <FundebDataTab
-          city={city}
-          reports={reports}
-          pending={reportsPending}
-          selected={selectedReport}
-          onSelect={setSelectedReportId}
-        />
-      )}
-
-      {tab === "documentos" && (
+      ),
+    },
+    {
+      key: "documentos",
+      label: `Documentos (${documents.length})`,
+      icon: <FolderOutlined />,
+      content: (
         <DocumentsTab
           documents={documents}
           pending={documentsPending}
           onUpload={() => setUploadOpen(true)}
         />
-      )}
+      ),
+    },
+  ];
+
+  return (
+    <Flex vertical gap={14}>
+      <Card>
+        <Flex justify="space-between" align="flex-start" wrap="wrap" gap={16}>
+          <Flex gap={14} align="flex-start" style={{ minWidth: 0 }}>
+            <Link href="/cidades" aria-label="Voltar para cidades">
+              <Button shape="circle" icon={<ArrowLeftOutlined />} />
+            </Link>
+            <div style={{ minWidth: 0 }}>
+              <Flex align="center" gap={10} wrap="wrap">
+                <Title level={3} style={{ margin: 0 }}>
+                  {city.name}
+                </Title>
+                <Tag
+                  style={{
+                    backgroundColor: tone.bg,
+                    color: tone.text,
+                    border: "none",
+                    borderRadius: 999,
+                  }}
+                >
+                  {STAGE_LABELS[city.stage]}
+                </Tag>
+              </Flex>
+              <Text
+                type="secondary"
+                style={{ fontFamily: "var(--font-sync-mono)", fontSize: 11 }}
+              >
+                {city.uf}
+                {city.region ? ` · ${city.region}` : ""} · IBGE{" "}
+                {city.codigoIbge || "não informado"} ·{" "}
+                {reportsError
+                  ? "relatórios indisponíveis"
+                  : `${reports.length} relatórios`}{" "}
+                · {documents.length} documentos
+              </Text>
+            </div>
+          </Flex>
+
+          <Space wrap>
+            <Button
+              icon={<PaperClipOutlined />}
+              onClick={() => setUploadOpen(true)}
+            >
+              Anexar documento
+            </Button>
+            <Link href={`/modulos/levantamento-fundeb?ibge=${city.codigoIbge}`}>
+              <Button type="primary" icon={<RocketOutlined />}>
+                Gerar relatório
+              </Button>
+            </Link>
+            {(user?.groupRole === "owner" || user?.groupRole === "admin") && (
+              <Dropdown menu={{ items: optionsMenu }} trigger={["click"]}>
+                <Button
+                  icon={<MoreOutlined />}
+                  aria-label="Mais opções da cidade"
+                  title="Mais opções"
+                />
+              </Dropdown>
+            )}
+          </Space>
+        </Flex>
+
+        <Tabs
+          activeKey={tab}
+          onChange={(key) => setTab(key as CityTab)}
+          style={{ marginTop: 4, marginBottom: -16 }}
+          items={tabPanels.map(({ key, label, icon }) => ({
+            key,
+            label: (
+              <Space size={6}>
+                {icon}
+                {label}
+              </Space>
+            ),
+          }))}
+        />
+      </Card>
+
+      {tabPanels.find((panel) => panel.key === tab)?.content}
 
       {uploadOpen && (
         <DocumentUploadDialog
@@ -401,7 +397,7 @@ export default function CidadeDetailPage() {
           onConfirm={() => deleteMutation.mutate(city.id)}
         />
       )}
-    </div>
+    </Flex>
   );
 }
 
@@ -417,9 +413,10 @@ function OverviewTab({
   onOpenReports: () => void;
 }) {
   const queryClient = useQueryClient();
+  const { token } = theme.useToken();
   const [stage, setStage] = useState<StageKey>(city.stage);
-  const [probability, setProbability] = useState(String(city.probability));
-  const [revenue, setRevenue] = useState(String(city.estimatedAnnualRevenue));
+  const [probability, setProbability] = useState(city.probability);
+  const [revenue, setRevenue] = useState(city.estimatedAnnualRevenue);
   const [nextStep, setNextStep] = useState(city.nextStepDescription ?? "");
   const [dueDate, setDueDate] = useState(city.nextStepDueDate ?? "");
 
@@ -427,8 +424,8 @@ function OverviewTab({
     mutationFn: () =>
       updateCityPipeline(getFirebaseDb(), city.id, {
         stage,
-        probability: Number(probability),
-        estimatedAnnualRevenue: Number(revenue),
+        probability,
+        estimatedAnnualRevenue: revenue,
         nextStepDescription: nextStep,
         nextStepDueDate: dueDate,
         lastActivityAt: new Date().toISOString(),
@@ -453,197 +450,269 @@ function OverviewTab({
       title: report.title,
       meta: `Relatório ${report.exercise}`,
       date: report.generatedAt,
-      icon: BotIcon,
-      background: "#DFF2E7",
-      color: "#1F6A47",
+      icon: RobotOutlined,
+      background: token.colorSuccessBg,
+      color: token.colorSuccess,
     })),
     ...documents.map((document) => ({
       id: `document-${document.id}`,
       title: document.title,
       meta: "Documento anexado",
       date: document.createdAt,
-      icon: PaperclipIcon,
-      background: "var(--color-stage-contato-to)",
-      color: "var(--color-primary-softer)",
+      icon: PaperClipOutlined,
+      background: token.colorInfoBg,
+      color: token.colorInfo,
     })),
   ]
     .sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""))
     .slice(0, 5);
 
   return (
-    <div className="grid gap-[14px] xl:grid-cols-[minmax(480px,1.25fr)_minmax(320px,.75fr)]">
-      <section className="glass-card p-5">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-[14px] font-bold text-[#16181D]">
-              Pipeline e próxima ação
-            </h2>
-            <p className="mt-1 text-[10.5px] text-[#767A86]">
-              Este status alimenta o Kanban e o painel comercial.
-            </p>
-          </div>
-          <span className="font-mono text-[10px] text-[#A2A6B2]">
-            {probability || 0}% probabilidade
-          </span>
-        </div>
-
-        <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          <Field label="Estágio atual">
-            <select
-              value={stage}
-              onChange={(event) => {
-                const nextStage = event.target.value as StageKey;
-                setStage(nextStage);
-                setProbability(String(stageProbability(nextStage)));
-              }}
-              className="h-10 w-full rounded-[12px] border border-[#E2E3E9] bg-white px-3 text-[11.5px] font-semibold text-[#16181D] outline-none focus:border-[#16181D]"
+    <Row gutter={[14, 14]}>
+      <Col xs={24} xl={15}>
+        <Card>
+          <Flex justify="space-between" align="flex-start">
+            <div>
+              <Title level={5} style={{ margin: 0 }}>
+                Pipeline e próxima ação
+              </Title>
+              <Text type="secondary" style={{ fontSize: 11 }}>
+                Este status alimenta o Kanban e o painel comercial.
+              </Text>
+            </div>
+            <Text
+              type="secondary"
+              style={{ fontFamily: "var(--font-sync-mono)", fontSize: 11 }}
             >
-              {STAGE_KEYS.map((key) => (
-                <option key={key} value={key}>
-                  {STAGE_LABELS[key]}
-                </option>
-              ))}
-            </select>
-          </Field>
-          <Field label="Probabilidade (%)">
-            <Input
-              type="number"
-              min="0"
-              max="100"
-              value={probability}
-              onChange={(event) => setProbability(event.target.value)}
-              className="h-10 rounded-[12px] text-[11.5px]"
-            />
-          </Field>
-          <Field label="Receita anual estimada">
-            <Input
-              type="number"
-              min="0"
-              step="1000"
-              value={revenue}
-              onChange={(event) => setRevenue(event.target.value)}
-              className="h-10 rounded-[12px] text-[11.5px]"
-            />
-          </Field>
-          <Field label="Prazo da próxima ação">
-            <Input
-              type="date"
-              value={dueDate}
-              onChange={(event) => setDueDate(event.target.value)}
-              className="h-10 rounded-[12px] text-[11.5px]"
-            />
-          </Field>
-        </div>
-        <div className="mt-4">
-          <Field label="Próxima ação">
-            <textarea
+              {probability}% probabilidade
+            </Text>
+          </Flex>
+
+          <Row gutter={[16, 16]} style={{ marginTop: 20 }}>
+            <Col xs={24} sm={12}>
+              <Flex vertical gap={6}>
+                <Text strong style={{ fontSize: 11 }}>
+                  Estágio atual
+                </Text>
+                <Select<StageKey>
+                  value={stage}
+                  onChange={(value) => {
+                    setStage(value);
+                    setProbability(stageProbability(value));
+                  }}
+                  options={STAGE_KEYS.map((key) => ({
+                    value: key,
+                    label: STAGE_LABELS[key],
+                  }))}
+                />
+              </Flex>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Flex vertical gap={6}>
+                <Text strong style={{ fontSize: 11 }}>
+                  Probabilidade (%)
+                </Text>
+                <InputNumber
+                  min={0}
+                  max={100}
+                  value={probability}
+                  onChange={(value) => setProbability(value ?? 0)}
+                  style={{ width: "100%" }}
+                />
+              </Flex>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Flex vertical gap={6}>
+                <Text strong style={{ fontSize: 11 }}>
+                  Receita anual estimada
+                </Text>
+                <InputNumber
+                  min={0}
+                  step={1000}
+                  value={revenue}
+                  onChange={(value) => setRevenue(value ?? 0)}
+                  style={{ width: "100%" }}
+                  prefix="R$"
+                />
+              </Flex>
+            </Col>
+            <Col xs={24} sm={12}>
+              <Flex vertical gap={6}>
+                <Text strong style={{ fontSize: 11 }}>
+                  Prazo da próxima ação
+                </Text>
+                <DatePicker
+                  value={dueDate ? dayjs(dueDate) : null}
+                  onChange={(date) =>
+                    setDueDate(date ? date.format("YYYY-MM-DD") : "")
+                  }
+                  style={{ width: "100%" }}
+                  format="DD/MM/YYYY"
+                />
+              </Flex>
+            </Col>
+          </Row>
+
+          <Flex vertical gap={6} style={{ marginTop: 16 }}>
+            <Text strong style={{ fontSize: 11 }}>
+              Próxima ação
+            </Text>
+            <Input.TextArea
               value={nextStep}
               onChange={(event) => setNextStep(event.target.value)}
               rows={3}
               placeholder="Ex.: Apresentar diagnóstico ao secretário de educação"
-              className="w-full resize-none rounded-[12px] border border-[#E2E3E9] bg-white px-3 py-2.5 text-[11.5px] text-[#16181D] outline-none focus:border-[#16181D] focus:ring-2 focus:ring-[#16181D]/10"
             />
-          </Field>
-        </div>
-        <div className="mt-5 flex justify-end">
-          <Button
-            type="button"
-            onClick={() => saveMutation.mutate()}
-            disabled={saveMutation.isPending}
-            className="h-9 rounded-full bg-[#16181D] px-4 text-[11px] font-bold text-white"
-          >
-            {saveMutation.isPending ? (
-              <LoaderCircleIcon className="size-3.5 animate-spin" />
-            ) : (
-              <SaveIcon className="size-3.5" />
-            )}
-            Salvar acompanhamento
-          </Button>
-        </div>
-      </section>
+          </Flex>
 
-      <div className="flex flex-col gap-[14px]">
-        <section className="glass-card p-5">
-          <h2 className="text-[13px] font-bold text-[#16181D]">
-            Resumo da cidade
-          </h2>
-          <div className="mt-4 grid grid-cols-3 divide-x divide-[#F0F1F5]">
-            <SummaryNumber value={reports.length} label="relatórios" />
-            <SummaryNumber value={documents.length} label="documentos" />
-            <SummaryNumber
-              value={`${city.probability}%`}
-              label="probabilidade"
-            />
-          </div>
-          <div className="mt-4 rounded-[12px] bg-[#FAFAFC] p-3">
-            <div className="text-[9px] font-bold text-[#A2A6B2] uppercase">
-              Receita estimada
-            </div>
-            <div className="mt-1 font-mono text-[16px] font-bold text-[#16181D]">
-              {formatCurrency(city.estimatedAnnualRevenue)}
-            </div>
-          </div>
-          {reports[0] && (
-            <button
-              type="button"
-              onClick={onOpenReports}
-              className="mt-3 flex w-full items-center justify-between rounded-[12px] border border-[#F0F1F5] p-3 text-left hover:bg-[#FAFAFC]"
+          <Flex justify="flex-end" style={{ marginTop: 20 }}>
+            <Button
+              type="primary"
+              icon={<SaveOutlined />}
+              loading={saveMutation.isPending}
+              onClick={() => saveMutation.mutate()}
             >
-              <div>
-                <div className="text-[10.5px] font-bold text-[#16181D]">
-                  {reports[0].title}
-                </div>
-                <div className="mt-0.5 text-[9px] text-[#A2A6B2]">
-                  Último relatório · {formatDate(reports[0].generatedAt)}
-                </div>
-              </div>
-              <ArrowUpRightIcon className="size-3.5 text-[#767A86]" />
-            </button>
-          )}
-        </section>
+              Salvar acompanhamento
+            </Button>
+          </Flex>
+        </Card>
+      </Col>
 
-        <section className="glass-card flex-1 p-5">
-          <h2 className="text-[13px] font-bold text-[#16181D]">
-            Atividade recente
-          </h2>
-          {latestActivities.length ? (
-            <div className="mt-3 space-y-1">
-              {latestActivities.map((activity) => {
-                const Icon = activity.icon;
-                return (
-                  <div
-                    key={activity.id}
-                    className="flex items-center gap-2.5 rounded-[11px] px-1 py-2"
-                  >
-                    <span
-                      className="flex size-7 shrink-0 items-center justify-center rounded-[9px]"
-                      style={{ backgroundColor: activity.background }}
-                    >
-                      <Icon
-                        className="size-3.5"
-                        style={{ color: activity.color }}
-                      />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-[10px] font-bold text-[#3B3F4A]">
-                        {activity.title}
-                      </div>
-                      <div className="mt-0.5 text-[8.5px] text-[#A2A6B2]">
-                        {activity.meta} · {formatDate(activity.date)}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+      <Col xs={24} xl={9}>
+        <Flex vertical gap={14}>
+          <Card>
+            <Title level={5} style={{ margin: 0 }}>
+              Resumo da cidade
+            </Title>
+            <Row style={{ marginTop: 16 }}>
+              <Col span={8}>
+                <Statistic
+                  title="relatórios"
+                  value={reports.length}
+                  valueStyle={{
+                    fontFamily: "var(--font-sync-mono)",
+                    fontSize: 16,
+                  }}
+                />
+              </Col>
+              <Col span={8}>
+                <Statistic
+                  title="documentos"
+                  value={documents.length}
+                  valueStyle={{
+                    fontFamily: "var(--font-sync-mono)",
+                    fontSize: 16,
+                  }}
+                />
+              </Col>
+              <Col span={8}>
+                <Statistic
+                  title="probabilidade"
+                  value={`${city.probability}%`}
+                  valueStyle={{
+                    fontFamily: "var(--font-sync-mono)",
+                    fontSize: 16,
+                  }}
+                />
+              </Col>
+            </Row>
+
+            <div
+              style={{
+                marginTop: 16,
+                padding: 12,
+                borderRadius: token.borderRadiusLG,
+                background: token.colorFillTertiary,
+              }}
+            >
+              <Text
+                type="secondary"
+                style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase" }}
+              >
+                Receita estimada
+              </Text>
+              <Title
+                level={4}
+                style={{ margin: "4px 0 0", fontFamily: "var(--font-sync-mono)" }}
+              >
+                {formatCurrency(city.estimatedAnnualRevenue)}
+              </Title>
             </div>
-          ) : (
-            <p className="mt-4 text-[10px] text-[#A2A6B2]">
-              A atividade aparecerá quando um relatório ou documento for salvo.
-            </p>
-          )}
-        </section>
-      </div>
-    </div>
+
+            {reports[0] && (
+              <Button
+                block
+                type="text"
+                onClick={onOpenReports}
+                style={{ marginTop: 12, height: "auto", padding: 12, textAlign: "left" }}
+              >
+                <Flex justify="space-between" align="center" style={{ width: "100%" }}>
+                  <div style={{ minWidth: 0 }}>
+                    <Text strong style={{ fontSize: 11, display: "block" }}>
+                      {reports[0].title}
+                    </Text>
+                    <Text type="secondary" style={{ fontSize: 9 }}>
+                      Último relatório · {formatDate(reports[0].generatedAt)}
+                    </Text>
+                  </div>
+                  <RightOutlined style={{ color: token.colorTextTertiary }} />
+                </Flex>
+              </Button>
+            )}
+          </Card>
+
+          <Card style={{ flex: 1 }}>
+            <Title level={5} style={{ margin: 0 }}>
+              Atividade recente
+            </Title>
+            {latestActivities.length ? (
+              <List
+                size="small"
+                style={{ marginTop: 8 }}
+                dataSource={latestActivities}
+                renderItem={(activity) => {
+                  const Icon = activity.icon;
+                  return (
+                    <List.Item style={{ border: "none", padding: "8px 0" }}>
+                      <Flex align="center" gap={10} style={{ width: "100%" }}>
+                        <Flex
+                          align="center"
+                          justify="center"
+                          style={{
+                            width: 28,
+                            height: 28,
+                            flex: "0 0 auto",
+                            borderRadius: token.borderRadius,
+                            background: activity.background,
+                            color: activity.color,
+                          }}
+                        >
+                          <Icon style={{ fontSize: 13 }} />
+                        </Flex>
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <Text strong ellipsis style={{ fontSize: 10, display: "block" }}>
+                            {activity.title}
+                          </Text>
+                          <Text type="secondary" style={{ fontSize: 8.5 }}>
+                            {activity.meta} · {formatDate(activity.date)}
+                          </Text>
+                        </div>
+                      </Flex>
+                    </List.Item>
+                  );
+                }}
+              />
+            ) : (
+              <Empty
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                description="A atividade aparecerá quando um relatório ou documento for salvo."
+                style={{ marginTop: 16 }}
+              />
+            )}
+          </Card>
+        </Flex>
+      </Col>
+    </Row>
   );
 }
 
@@ -662,126 +731,137 @@ function ReportsTab({
   selected?: CityReport;
   onSelect: (id: string) => void;
 }) {
+  const { token } = theme.useToken();
+
   if (pending) {
     return (
-      <div className="glass-card flex min-h-[460px] items-center justify-center">
-        <LoaderCircleIcon className="size-6 animate-spin text-[#767A86]" />
-      </div>
+      <Card style={{ minHeight: 460 }}>
+        <Skeleton active paragraph={{ rows: 10 }} />
+      </Card>
     );
   }
 
   if (error) {
     return (
-      <div className="glass-card flex min-h-[460px] flex-col items-center justify-center px-6 text-center">
-        <div className="flex size-16 items-center justify-center rounded-[20px] bg-[#FBF0D9]">
-          <AlertTriangleIcon className="size-7 text-[#8A5A00]" />
-        </div>
-        <h2 className="mt-4 text-[14px] font-bold text-[#16181D]">
-          Não foi possível consultar os relatórios
-        </h2>
-        <p className="mt-1.5 max-w-md text-[10.5px] leading-relaxed text-[#767A86]">
-          A leitura do histórico falhou. Verifique as regras do Firestore e
-          tente recarregar a página; o sistema não exibirá “zero” enquanto a
-          consulta estiver indisponível.
-        </p>
-      </div>
+      <Result
+        status="warning"
+        icon={<WarningOutlined />}
+        title="Não foi possível consultar os relatórios"
+        subTitle="A leitura do histórico falhou. Verifique as regras do Firestore e tente recarregar a página; o sistema não exibirá “zero” enquanto a consulta estiver indisponível."
+      />
     );
   }
 
   if (!reports.length) {
     return (
-      <div className="glass-card flex min-h-[460px] flex-col items-center justify-center text-center">
-        <div className="flex size-16 items-center justify-center rounded-[20px] bg-[#F2F1F7]">
-          <FileTextIcon className="size-7 text-[#767A86]" />
-        </div>
-        <h2 className="mt-4 text-[14px] font-bold text-[#16181D]">
-          Nenhum relatório gerado
-        </h2>
-        <p className="mt-1.5 max-w-sm text-[10.5px] text-[#767A86]">
-          Gere o primeiro levantamento. O PDF e uma versão navegável ficarão
-          vinculados automaticamente a esta cidade.
-        </p>
-        <Button
-          asChild
-          className="mt-5 h-9 rounded-full bg-[#16181D] px-4 text-[11px] font-bold text-white"
+      <Card style={{ minHeight: 460 }}>
+        <Empty
+          image={Empty.PRESENTED_IMAGE_DEFAULT}
+          description={
+            <Space direction="vertical" size={4} style={{ maxWidth: 380 }}>
+              <Text strong>Nenhum relatório gerado</Text>
+              <Text type="secondary">
+                Gere o primeiro levantamento. O PDF e uma versão navegável
+                ficarão vinculados automaticamente a esta cidade.
+              </Text>
+            </Space>
+          }
         >
           <Link href={`/modulos/levantamento-fundeb?ibge=${city.codigoIbge}`}>
-            <SparklesIcon className="size-3.5" />
-            Gerar levantamento
+            <Button type="primary" icon={<RocketOutlined />}>
+              Gerar levantamento
+            </Button>
           </Link>
-        </Button>
-      </div>
+        </Empty>
+      </Card>
     );
   }
 
   return (
-    <div className="grid min-h-[520px] gap-[14px] xl:grid-cols-[310px_minmax(0,1fr)]">
-      <aside className="glass-card p-3">
-        <div className="px-2 pb-2 pt-1 font-mono text-[9px] font-bold tracking-[1px] text-[#A2A6B2] uppercase">
-          Histórico de versões
-        </div>
-        <div className="space-y-1.5">
-          {reports.map((report) => {
-            const active = selected?.id === report.id;
-            return (
-              <button
-                key={report.id}
-                type="button"
-                onClick={() => onSelect(report.id)}
-                className={`w-full rounded-[13px] border p-3 text-left transition-colors ${
-                  active
-                    ? "border-[#D9D7E2] bg-[#F2F1F7]"
-                    : "border-transparent hover:bg-[#FAFAFC]"
-                }`}
-              >
-                <div className="flex items-start gap-2.5">
-                  <span
-                    className={`flex size-8 shrink-0 items-center justify-center rounded-[10px] ${
-                      active ? "bg-white" : "bg-[#F2F1F7]"
-                    }`}
-                  >
-                    <FileTextIcon className="size-4 text-[#5A5E6A]" />
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-[10.5px] font-bold text-[#16181D]">
-                      {report.title}
+    <Row gutter={[14, 14]}>
+      <Col xs={24} xl={7}>
+        <Card size="small" title="Histórico de versões">
+          <List
+            size="small"
+            dataSource={reports}
+            renderItem={(report) => {
+              const active = selected?.id === report.id;
+              return (
+                <List.Item
+                  key={report.id}
+                  onClick={() => onSelect(report.id)}
+                  style={{
+                    cursor: "pointer",
+                    borderRadius: token.borderRadiusLG,
+                    background: active ? token.colorFillSecondary : "transparent",
+                    padding: 12,
+                    marginBottom: 6,
+                    border: "none",
+                  }}
+                >
+                  <Flex gap={10} align="flex-start" style={{ width: "100%" }}>
+                    <Flex
+                      align="center"
+                      justify="center"
+                      style={{
+                        width: 32,
+                        height: 32,
+                        flex: "0 0 auto",
+                        borderRadius: token.borderRadius,
+                        background: active
+                          ? token.colorBgContainer
+                          : token.colorFillTertiary,
+                      }}
+                    >
+                      <FileTextOutlined style={{ color: token.colorTextSecondary }} />
+                    </Flex>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <Text strong ellipsis style={{ fontSize: 10.5, display: "block" }}>
+                        {report.title}
+                      </Text>
+                      <Text
+                        type="secondary"
+                        style={{ fontFamily: "var(--font-sync-mono)", fontSize: 8.5 }}
+                      >
+                        {report.exercise} · {formatDate(report.generatedAt)}
+                      </Text>
+                      <Flex gap={6} wrap="wrap" style={{ marginTop: 8 }}>
+                        {report.downloadUrl ? (
+                          <Tag color="success" style={{ fontSize: 8 }}>
+                            PDF arquivado
+                          </Tag>
+                        ) : (
+                          <Tag color="warning" style={{ fontSize: 8 }}>
+                            versão navegável
+                          </Tag>
+                        )}
+                        {report.snapshot && (
+                          <Tag color="purple" style={{ fontSize: 8 }}>
+                            JSON salvo
+                            {report.snapshotBytes
+                              ? ` · ${formatJsonSize(report.snapshotBytes)}`
+                              : ""}
+                          </Tag>
+                        )}
+                      </Flex>
                     </div>
-                    <div className="mt-1 font-mono text-[8.5px] text-[#A2A6B2]">
-                      {report.exercise} · {formatDate(report.generatedAt)}
-                    </div>
-                    <div className="mt-2 flex items-center gap-1.5">
-                      {report.downloadUrl ? (
-                        <span className="rounded-full bg-[#DFF2E7] px-2 py-0.5 text-[8px] font-bold text-[#1F6A47]">
-                          PDF arquivado
-                        </span>
-                      ) : (
-                        <span className="rounded-full bg-[#FBF0D9] px-2 py-0.5 text-[8px] font-bold text-[#8A5A00]">
-                          versão navegável
-                        </span>
-                      )}
-                      {report.snapshot && (
-                        <span className="rounded-full bg-[#EEE7F9] px-2 py-0.5 text-[8px] font-bold text-[#67478C]">
-                          JSON salvo
-                          {report.snapshotBytes
-                            ? ` · ${formatJsonSize(report.snapshotBytes)}`
-                            : ""}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </button>
-            );
-          })}
-        </div>
-      </aside>
+                  </Flex>
+                </List.Item>
+              );
+            }}
+          />
+        </Card>
+      </Col>
 
-      {selected && <ReportPreview report={selected} />}
-    </div>
+      <Col xs={24} xl={17}>
+        {selected && <ReportPreview report={selected} />}
+      </Col>
+    </Row>
   );
 }
 
 function ReportPreview({ report }: { report: CityReport }) {
+  const { token } = theme.useToken();
   const [pdfAberto, setPdfAberto] = useState(false);
   const snapshot = report.snapshot;
   const identification = snapshot?.identificacao;
@@ -798,34 +878,42 @@ function ReportPreview({ report }: { report: CityReport }) {
   const gain = numberField(projection, "totalGanho");
 
   return (
-    <section className="glass-card overflow-hidden">
-      <div className="flex flex-col gap-3 border-b border-[#F0F1F5] p-5 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="flex size-8 items-center justify-center rounded-[11px] bg-[#DFF2E7]">
-              <LandmarkIcon className="size-4 text-[#1F6A47]" />
-            </span>
-            <div>
-              <h2 className="text-[14px] font-bold text-[#16181D]">
-                {CITY_REPORT_TYPE_LABELS[report.type] ?? report.title}
-              </h2>
-              <p className="mt-0.5 text-[9.5px] text-[#A2A6B2]">
-                {municipality} · {report.cityUf} · exercício {report.exercise}
-              </p>
-            </div>
-          </div>
-        </div>
-        {report.downloadUrl && (
-          <button
-            type="button"
-            onClick={() => setPdfAberto(true)}
-            className="flex h-9 items-center justify-center gap-2 rounded-full bg-[#16181D] px-4 text-[10.5px] font-bold text-white hover:bg-[#2C2F38]"
+    <Card>
+      <Flex justify="space-between" align="flex-start" wrap="wrap" gap={12}>
+        <Flex align="center" gap={10}>
+          <Flex
+            align="center"
+            justify="center"
+            style={{
+              width: 32,
+              height: 32,
+              flex: "0 0 auto",
+              borderRadius: token.borderRadiusLG,
+              background: token.colorSuccessBg,
+              color: token.colorSuccess,
+            }}
           >
-            <EyeIcon className="size-3.5" />
+            <BankOutlined />
+          </Flex>
+          <div>
+            <Title level={5} style={{ margin: 0 }}>
+              {CITY_REPORT_TYPE_LABELS[report.type] ?? report.title}
+            </Title>
+            <Text type="secondary" style={{ fontSize: 10.5 }}>
+              {municipality} · {report.cityUf} · exercício {report.exercise}
+            </Text>
+          </div>
+        </Flex>
+        {report.downloadUrl && (
+          <Button
+            type="primary"
+            icon={<EyeOutlined />}
+            onClick={() => setPdfAberto(true)}
+          >
             Abrir PDF exato
-          </button>
+          </Button>
         )}
-      </div>
+      </Flex>
 
       {pdfAberto && report.downloadUrl && (
         <VisualizadorPdf
@@ -837,49 +925,100 @@ function ReportPreview({ report }: { report: CityReport }) {
         />
       )}
 
-      <div className="p-5">
-        <div className="rounded-[17px] bg-gradient-to-br from-[#252832] to-[#3B3F4A] p-5 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="font-mono text-[9px] font-bold tracking-[1px] text-white/55 uppercase">
-                Resumo do levantamento
-              </div>
-              <h3 className="mt-1 text-[16px] font-bold">{municipality}</h3>
-            </div>
-            <span className="rounded-full bg-white/10 px-2.5 py-1 font-mono text-[9px]">
-              versão {formatDate(report.generatedAt)}
-            </span>
+      <Card
+        style={{ marginTop: 20, background: token.colorBgSpotlight, border: "none" }}
+      >
+        <Flex justify="space-between" align="flex-start" wrap="wrap" gap={12}>
+          <div>
+            <Text
+              style={{
+                color: "rgba(255,255,255,.55)",
+                fontSize: 9,
+                fontWeight: 700,
+                textTransform: "uppercase",
+              }}
+            >
+              Resumo do levantamento
+            </Text>
+            <Title
+              level={4}
+              style={{ color: token.colorTextLightSolid, margin: "4px 0 0" }}
+            >
+              {municipality}
+            </Title>
           </div>
-          <div className="mt-5 grid grid-cols-3 divide-x divide-white/10">
-            <ReportMetric label="Atual" value={formatCurrency(current)} />
-            <ReportMetric label="Projetado" value={formatCurrency(projected)} />
-            <ReportMetric
-              label="Ganho recuperável"
-              value={`+${formatCurrency(gain)}`}
-              positive
+          <Tag
+            style={{
+              background: "rgba(255,255,255,.1)",
+              color: token.colorTextLightSolid,
+              border: "none",
+            }}
+          >
+            versão {formatDate(report.generatedAt)}
+          </Tag>
+        </Flex>
+        <Row gutter={16} style={{ marginTop: 20 }}>
+          <Col span={8}>
+            <Statistic
+              title={
+                <Text style={{ color: "rgba(255,255,255,.5)", fontSize: 8.5 }}>
+                  Atual
+                </Text>
+              }
+              value={formatCurrency(current)}
+              valueStyle={{
+                color: token.colorTextLightSolid,
+                fontFamily: "var(--font-sync-mono)",
+                fontSize: 15,
+              }}
             />
-          </div>
-        </div>
+          </Col>
+          <Col span={8}>
+            <Statistic
+              title={
+                <Text style={{ color: "rgba(255,255,255,.5)", fontSize: 8.5 }}>
+                  Projetado
+                </Text>
+              }
+              value={formatCurrency(projected)}
+              valueStyle={{
+                color: token.colorTextLightSolid,
+                fontFamily: "var(--font-sync-mono)",
+                fontSize: 15,
+              }}
+            />
+          </Col>
+          <Col span={8}>
+            <Statistic
+              title={
+                <Text style={{ color: "rgba(255,255,255,.5)", fontSize: 8.5 }}>
+                  Ganho recuperável
+                </Text>
+              }
+              value={`+${formatCurrency(gain)}`}
+              valueStyle={{
+                color: token.colorSuccess,
+                fontFamily: "var(--font-sync-mono)",
+                fontSize: 15,
+              }}
+            />
+          </Col>
+        </Row>
+      </Card>
 
-        {snapshot ? (
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+      {snapshot ? (
+        <Row gutter={[12, 12]} style={{ marginTop: 16 }}>
+          <Col xs={24} sm={12}>
             <PreviewBlock
               title="Complementações FUNDEB"
               rows={[
-                [
-                  "VAAF atual",
-                  formatCurrency(numberField(projection, "vaafAtual")),
-                ],
-                [
-                  "VAAT atual",
-                  formatCurrency(numberField(projection, "vaatAtual")),
-                ],
-                [
-                  "VAAR atual",
-                  formatCurrency(numberField(projection, "vaarAtual")),
-                ],
+                ["VAAF atual", formatCurrency(numberField(projection, "vaafAtual"))],
+                ["VAAT atual", formatCurrency(numberField(projection, "vaatAtual"))],
+                ["VAAR atual", formatCurrency(numberField(projection, "vaarAtual"))],
               ]}
             />
+          </Col>
+          <Col xs={24} sm={12}>
             <PreviewBlock
               title="Censo Escolar"
               rows={[
@@ -894,21 +1033,60 @@ function ReportPreview({ report }: { report: CityReport }) {
                 ],
               ]}
             />
-          </div>
-        ) : (
-          <div className="mt-4 rounded-[14px] border border-[#F2DEAF] bg-[#FFF9EC] p-4 text-[10.5px] text-[#7A642E]">
-            Esta versão possui apenas o arquivo PDF. Abra o documento exato pelo
-            botão acima.
-          </div>
-        )}
+          </Col>
+        </Row>
+      ) : (
+        <Alert
+          style={{ marginTop: 16 }}
+          type="warning"
+          showIcon
+          message="Esta versão possui apenas o arquivo PDF. Abra o documento exato pelo botão acima."
+        />
+      )}
 
-        <div className="mt-4 flex items-center gap-2 rounded-[12px] bg-[#FAFAFC] px-3 py-2.5 text-[9.5px] text-[#767A86]">
-          <CheckCircle2Icon className="size-3.5 text-[#1F6A47]" />
+      <Flex
+        align="center"
+        gap={8}
+        style={{
+          marginTop: 16,
+          padding: "10px 12px",
+          borderRadius: token.borderRadiusLG,
+          background: token.colorFillTertiary,
+        }}
+      >
+        <CheckCircleOutlined style={{ color: token.colorSuccess }} />
+        <Text type="secondary" style={{ fontSize: 9.5 }}>
           Gerado por {report.generatedByName || "Global Sync"} em{" "}
           {formatDate(report.generatedAt)}
-        </div>
-      </div>
-    </section>
+        </Text>
+      </Flex>
+    </Card>
+  );
+}
+
+function PreviewBlock({
+  title,
+  rows,
+}: {
+  title: string;
+  rows: [string, string][];
+}) {
+  return (
+    <Card size="small" title={title}>
+      <Descriptions
+        size="small"
+        column={1}
+        items={rows.map(([label, value]) => ({
+          key: label,
+          label,
+          children: (
+            <Text strong style={{ fontFamily: "var(--font-sync-mono)", fontSize: 11 }}>
+              {value}
+            </Text>
+          ),
+        }))}
+      />
+    </Card>
   );
 }
 
@@ -921,96 +1099,130 @@ function DocumentsTab({
   pending: boolean;
   onUpload: () => void;
 }) {
+  const { token } = theme.useToken();
   /* Só PDF abre por dentro: o visor embutido é o do Chromium, e DOCX ou XLSX
      nele viram tela em branco. Para esses, baixar continua sendo o caminho. */
   const [aberto, setAberto] = useState<CityDocument | null>(null);
 
+  const columns: ProColumns<CityDocument>[] = [
+    {
+      title: "Documento",
+      dataIndex: "title",
+      search: false,
+      sorter: (a, b) => a.title.localeCompare(b.title, "pt-BR"),
+      render: (_, document) => (
+        <Flex align="center" gap={10}>
+          <Flex
+            align="center"
+            justify="center"
+            style={{
+              width: 30,
+              height: 30,
+              flex: "0 0 auto",
+              borderRadius: token.borderRadius,
+              background: token.colorFillTertiary,
+            }}
+          >
+            {document.source === "generated" ? (
+              <RobotOutlined style={{ color: token.colorPrimary }} />
+            ) : (
+              <FileOutlined style={{ color: token.colorTextSecondary }} />
+            )}
+          </Flex>
+          <div style={{ minWidth: 0 }}>
+            <Text strong style={{ fontSize: 11, display: "block" }}>
+              {document.title}
+            </Text>
+            <Text
+              type="secondary"
+              style={{ fontFamily: "var(--font-sync-mono)", fontSize: 8.5 }}
+            >
+              {document.fileName} · {formatFileSize(document.fileSize)} ·{" "}
+              {formatDate(document.createdAt)}
+            </Text>
+          </div>
+        </Flex>
+      ),
+    },
+    {
+      title: "Categoria",
+      dataIndex: "category",
+      width: 160,
+      search: false,
+      sorter: (a, b) => a.category.localeCompare(b.category, "pt-BR"),
+      render: (_, document) => <Tag>{document.category.replaceAll("_", " ")}</Tag>,
+    },
+    {
+      title: "",
+      key: "acoes",
+      width: 110,
+      align: "right",
+      search: false,
+      render: (_, document) => (
+        <Space size={4}>
+          {ehPdf(document) && (
+            <Button
+              size="small"
+              icon={<EyeOutlined />}
+              onClick={() => setAberto(document)}
+              aria-label={`Abrir ${document.title} no app`}
+            >
+              Abrir
+            </Button>
+          )}
+          <Button
+            size="small"
+            type="text"
+            icon={<DownloadOutlined />}
+            href={document.downloadUrl}
+            target="_blank"
+            rel="noreferrer"
+            aria-label={`Baixar ${document.title}`}
+            title="Baixar"
+          />
+        </Space>
+      ),
+    },
+  ];
+
   return (
-    <section className="glass-card min-h-[460px] overflow-hidden">
-      <div className="flex items-center justify-between border-b border-[#F0F1F5] p-4">
+    <Card>
+      <Flex justify="space-between" align="center" wrap="wrap" gap={12}>
         <div>
-          <h2 className="text-[13px] font-bold text-[#16181D]">
+          <Title level={5} style={{ margin: 0 }}>
             Pasta digital da cidade
-          </h2>
-          <p className="mt-1 text-[10px] text-[#767A86]">
+          </Title>
+          <Text type="secondary" style={{ fontSize: 10 }}>
             Contratos, relatórios, ofícios, planilhas e qualquer outro arquivo.
-          </p>
+          </Text>
         </div>
-        <Button
-          type="button"
-          onClick={onUpload}
-          className="h-9 rounded-full bg-[#16181D] px-4 text-[11px] font-bold text-white"
-        >
-          <PaperclipIcon className="size-3.5" />
+        <Button type="primary" icon={<PaperClipOutlined />} onClick={onUpload}>
           Anexar
         </Button>
-      </div>
+      </Flex>
 
-      {pending ? (
-        <div className="flex h-[360px] items-center justify-center">
-          <LoaderCircleIcon className="size-6 animate-spin text-[#767A86]" />
-        </div>
-      ) : documents.length ? (
-        <div className="divide-y divide-[#F4F5F8]">
-          {documents.map((document) => (
-            <div
-              key={document.id}
-              className="flex items-center gap-3 px-5 py-3.5 hover:bg-[#FAFAFC]"
-            >
-              <span className="flex size-9 shrink-0 items-center justify-center rounded-[12px] bg-[#F2F1F7]">
-                {document.source === "generated" ? (
-                  <BotIcon className="size-4 text-[#67478C]" />
-                ) : (
-                  <FileIcon className="size-4 text-[#5A5E6A]" />
-                )}
-              </span>
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-[11px] font-bold text-[#16181D]">
-                  {document.title}
-                </div>
-                <div className="mt-1 truncate font-mono text-[8.5px] text-[#A2A6B2]">
-                  {document.fileName} · {formatFileSize(document.fileSize)} ·{" "}
-                  {formatDate(document.createdAt)}
-                </div>
-              </div>
-              <span className="rounded-full bg-[#F2F1F7] px-2.5 py-1 text-[8.5px] font-bold text-[#5A5E6A]">
-                {document.category.replaceAll("_", " ")}
-              </span>
-              {ehPdf(document) && (
-                <button
-                  type="button"
-                  onClick={() => setAberto(document)}
-                  className="flex h-8 items-center gap-1.5 rounded-full bg-[#F2F1F7] px-3 text-[10px] font-bold text-[#3B3F4A] transition-colors hover:bg-[#ECEBF2]"
-                  aria-label={`Abrir ${document.title} no app`}
-                >
-                  <EyeIcon className="size-3.5" />
-                  Abrir
-                </button>
-              )}
-              <a
-                href={document.downloadUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="flex size-8 items-center justify-center rounded-full text-[#767A86] hover:bg-[#E2EDFA] hover:text-[#2C4E82]"
-                aria-label={`Baixar ${document.title}`}
-                title="Baixar"
-              >
-                <DownloadIcon className="size-3.5" />
-              </a>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="flex h-[360px] flex-col items-center justify-center text-center">
-          <FolderArchiveIcon className="size-7 text-[#A2A6B2]" />
-          <h3 className="mt-3 text-[12px] font-bold text-[#16181D]">
-            Nenhum documento anexado
-          </h3>
-          <p className="mt-1 text-[10px] text-[#767A86]">
-            Use o botão Anexar para iniciar a pasta digital.
-          </p>
-        </div>
-      )}
+      <div style={{ marginTop: 16 }}>
+        {pending ? (
+          <Skeleton active paragraph={{ rows: 6 }} />
+        ) : documents.length ? (
+          <ProTable<CityDocument>
+            rowKey="id"
+            size="small"
+            search={false}
+            toolBarRender={false}
+            options={false}
+            pagination={false}
+            dateFormatter="string"
+            dataSource={documents}
+            columns={columns}
+          />
+        ) : (
+          <Empty
+            description="Nenhum documento anexado — use o botão Anexar para iniciar a pasta digital."
+            style={{ padding: "60px 0" }}
+          />
+        )}
+      </div>
 
       {aberto && (
         <VisualizadorPdf
@@ -1021,7 +1233,7 @@ function DocumentsTab({
           onFechar={() => setAberto(null)}
         />
       )}
-    </section>
+    </Card>
   );
 }
 
@@ -1030,90 +1242,6 @@ function ehPdf(documento: CityDocument): boolean {
   return (
     documento.mimeType === "application/pdf" ||
     documento.fileName.toLowerCase().endsWith(".pdf")
-  );
-}
-
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="block">
-      <span className="mb-1.5 block text-[10px] font-bold text-[#5A5E6A]">
-        {label}
-      </span>
-      {children}
-    </label>
-  );
-}
-
-function SummaryNumber({
-  value,
-  label,
-}: {
-  value: number | string;
-  label: string;
-}) {
-  return (
-    <div className="px-3 first:pl-0 last:pr-0">
-      <div className="font-mono text-[16px] font-bold text-[#16181D]">
-        {value}
-      </div>
-      <div className="mt-0.5 text-[8.5px] text-[#A2A6B2]">{label}</div>
-    </div>
-  );
-}
-
-function ReportMetric({
-  label,
-  value,
-  positive,
-}: {
-  label: string;
-  value: string;
-  positive?: boolean;
-}) {
-  return (
-    <div className="px-4 first:pl-0 last:pr-0">
-      <div className="font-mono text-[8.5px] text-white/50 uppercase">
-        {label}
-      </div>
-      <div
-        className={`mt-1 truncate font-mono text-[15px] font-bold ${
-          positive ? "text-[#8FD3B6]" : "text-white"
-        }`}
-      >
-        {value}
-      </div>
-    </div>
-  );
-}
-
-function PreviewBlock({
-  title,
-  rows,
-}: {
-  title: string;
-  rows: [string, string][];
-}) {
-  return (
-    <div className="rounded-[14px] border border-[#F0F1F5] bg-white p-4">
-      <h3 className="text-[10.5px] font-bold text-[#16181D]">{title}</h3>
-      <div className="mt-3 space-y-2">
-        {rows.map(([label, value]) => (
-          <div
-            key={label}
-            className="flex items-center justify-between gap-3 text-[9.5px]"
-          >
-            <span className="text-[#767A86]">{label}</span>
-            <span className="font-mono font-bold text-[#3B3F4A]">{value}</span>
-          </div>
-        ))}
-      </div>
-    </div>
   );
 }
 

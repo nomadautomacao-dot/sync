@@ -3,12 +3,12 @@
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import {
-  ArrowUpRightIcon,
-  FileTextIcon,
-  LoaderCircleIcon,
-  RefreshCwIcon,
-  SparklesIcon,
-} from "lucide-react";
+  ExportOutlined,
+  FileTextOutlined,
+  ReloadOutlined,
+  RocketOutlined,
+} from "@ant-design/icons";
+import { Button, Card, Empty, Result, Skeleton, Typography, theme } from "antd";
 
 import type { CityAccount } from "@/core/lib/city-types";
 import { formatCurrency } from "@/core/lib/city-types";
@@ -38,7 +38,10 @@ interface ReportResponse {
   };
 }
 
+const FONTE_NUMERO = "var(--font-sync-mono)";
+
 export function FundebTab({ city }: FundebTabProps) {
+  const { token } = theme.useToken();
   const { data, isLoading, error, refetch } = useQuery<ReportResponse>({
     queryKey: ["levantamento-fundeb", city.codigoIbge],
     queryFn: async () => {
@@ -57,42 +60,43 @@ export function FundebTab({ city }: FundebTabProps) {
 
   if (!city.codigoIbge) {
     return (
-      <EmptyState
-        title="Código IBGE não cadastrado"
-        description="Cadastre o código IBGE na ficha da cidade para consultar o FUNDEB."
-      />
+      <div style={{ padding: 24 }}>
+        <Empty
+          image={<FileTextOutlined style={{ fontSize: 28, color: token.colorTextQuaternary }} />}
+          description={
+            <>
+              <Typography.Text strong>Código IBGE não cadastrado</Typography.Text>
+              <br />
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                Cadastre o código IBGE na ficha da cidade para consultar o FUNDEB.
+              </Typography.Text>
+            </>
+          }
+        />
+      </div>
     );
   }
 
   if (isLoading) {
     return (
-      <div className="flex h-full min-h-[360px] flex-col items-center justify-center">
-        <LoaderCircleIcon className="size-6 animate-spin text-[#767A86]" />
-        <p className="mt-3 text-[10.5px] text-[#767A86]">
-          Consultando o levantamento…
-        </p>
+      <div style={{ padding: 16 }}>
+        <Skeleton active paragraph={{ rows: 5 }} />
       </div>
     );
   }
 
   if (error || !data?.relatorio) {
     return (
-      <div className="flex h-full min-h-[360px] flex-col items-center justify-center px-6 text-center">
-        <p className="text-[11px] font-bold text-[#8A3A50]">
-          Não foi possível carregar os dados FUNDEB
-        </p>
-        <p className="mt-1 text-[9.5px] text-[#767A86]">
-          {error instanceof Error ? error.message : "Tente novamente."}
-        </p>
-        <button
-          type="button"
-          onClick={() => refetch()}
-          className="mt-4 flex h-8 items-center gap-1.5 rounded-full bg-[#F2F1F7] px-3 text-[10px] font-bold text-[#5A5E6A]"
-        >
-          <RefreshCwIcon className="size-3" />
-          Tentar novamente
-        </button>
-      </div>
+      <Result
+        status="warning"
+        title="Não foi possível carregar os dados FUNDEB"
+        subTitle={error instanceof Error ? error.message : "Tente novamente."}
+        extra={
+          <Button icon={<ReloadOutlined />} onClick={() => refetch()}>
+            Tentar novamente
+          </Button>
+        }
+      />
     );
   }
 
@@ -101,101 +105,109 @@ export function FundebTab({ city }: FundebTabProps) {
   const census = data.relatorio.censoEscolar;
 
   return (
-    <div className="space-y-3 p-4">
-      <section className="rounded-[16px] bg-gradient-to-br from-[#252832] to-[#3B3F4A] p-4 text-white">
-        <div className="font-mono text-[8.5px] font-bold tracking-[1px] text-white/55 uppercase">
+    <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
+      {/* Cartão escuro com o número principal — mesmo tratamento do KPI do
+          topo do pipeline (`pipeline-kpis.tsx`). */}
+      <div
+        style={{
+          borderRadius: token.borderRadiusLG,
+          padding: 16,
+          color: "#FFFFFF",
+          background: `linear-gradient(135deg, ${token.colorPrimary} 0%, #3B3F4A 100%)`,
+        }}
+      >
+        <Typography.Text
+          style={{
+            color: "rgba(255,255,255,.55)",
+            fontSize: 9,
+            fontWeight: 700,
+            textTransform: "uppercase",
+            letterSpacing: 1,
+          }}
+        >
           Diagnóstico FUNDEB atual
-        </div>
-        <div className="mt-3 font-mono text-[24px] font-bold">
+        </Typography.Text>
+        <div style={{ marginTop: 8, fontFamily: FONTE_NUMERO, fontSize: 24, fontWeight: 700 }}>
           {formatCurrency(projection.totalAtual ?? 0)}
         </div>
-        <div className="mt-4 grid grid-cols-2 divide-x divide-white/10 border-t border-white/10 pt-3">
+        <div
+          style={{
+            marginTop: 12,
+            paddingTop: 10,
+            borderTop: "1px solid rgba(255,255,255,.12)",
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+          }}
+        >
           <div>
-            <div className="font-mono text-[8px] text-white/50">PROJETADO</div>
-            <div className="mt-1 font-mono text-[12px] font-bold">
+            <Typography.Text style={{ color: "rgba(255,255,255,.5)", fontSize: 8 }}>
+              PROJETADO
+            </Typography.Text>
+            <div style={{ marginTop: 2, fontFamily: FONTE_NUMERO, fontSize: 12, fontWeight: 700 }}>
               {formatCurrency(projection.totalProjetado ?? 0)}
             </div>
           </div>
-          <div className="pl-3">
-            <div className="font-mono text-[8px] text-white/50">
+          <div style={{ borderLeft: "1px solid rgba(255,255,255,.12)", paddingLeft: 12 }}>
+            <Typography.Text style={{ color: "rgba(255,255,255,.5)", fontSize: 8 }}>
               GANHO RECUPERÁVEL
-            </div>
-            <div className="mt-1 font-mono text-[12px] font-bold text-[#8FD3B6]">
+            </Typography.Text>
+            <div
+              style={{
+                marginTop: 2,
+                fontFamily: FONTE_NUMERO,
+                fontSize: 12,
+                fontWeight: 700,
+                color: token.colorSuccess,
+              }}
+            >
               +{formatCurrency(projection.totalGanho ?? 0)}
             </div>
           </div>
         </div>
-      </section>
+      </div>
 
-      <section className="grid grid-cols-2 gap-2">
-        <SmallMetric
-          label="Matrículas"
-          value={formatInteger(census?.totalMatriculas ?? 0)}
-        />
-        <SmallMetric
-          label="Escolas"
-          value={formatInteger(census?.totalEscolas ?? 0)}
-        />
-        <SmallMetric
-          label="VAAF atual"
-          value={formatCurrency(projection.vaafAtual ?? 0)}
-        />
-        <SmallMetric
-          label="Ganho"
-          value={`${(projection.ganhoPercentual ?? 0).toFixed(1)}%`}
-        />
-      </section>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        <SmallMetric label="Matrículas" value={formatInteger(census?.totalMatriculas ?? 0)} />
+        <SmallMetric label="Escolas" value={formatInteger(census?.totalEscolas ?? 0)} />
+        <SmallMetric label="VAAF atual" value={formatCurrency(projection.vaafAtual ?? 0)} />
+        <SmallMetric label="Ganho" value={`${(projection.ganhoPercentual ?? 0).toFixed(1)}%`} />
+      </div>
 
-      <Link
-        href={`/cidades/${city.id}`}
-        className="flex h-10 items-center justify-between rounded-[12px] border border-[#F0F1F5] bg-white px-3 text-[10.5px] font-bold text-[#3B3F4A] hover:bg-[#FAFAFC]"
-      >
-        <span className="flex items-center gap-2">
-          <FileTextIcon className="size-3.5 text-[#767A86]" />
-          Ver relatórios e versões salvas
-        </span>
-        <ArrowUpRightIcon className="size-3.5 text-[#A2A6B2]" />
+      <Link href={`/cidades/${city.id}`}>
+        <Button
+          block
+          style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}
+        >
+          <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <FileTextOutlined style={{ color: token.colorTextTertiary }} />
+            Ver relatórios e versões salvas
+          </span>
+          <ExportOutlined style={{ color: token.colorTextQuaternary }} />
+        </Button>
       </Link>
 
-      <Link
-        href={`/modulos/levantamento-fundeb?ibge=${city.codigoIbge}`}
-        className="flex h-10 items-center justify-center gap-2 rounded-full bg-[#16181D] px-4 text-[10.5px] font-bold text-white hover:bg-[#2C2F38]"
-      >
-        <SparklesIcon className="size-3.5" />
-        Gerar novo relatório
+      <Link href={`/modulos/levantamento-fundeb?ibge=${city.codigoIbge}`}>
+        <Button block type="primary" icon={<RocketOutlined />}>
+          Gerar novo relatório
+        </Button>
       </Link>
-    </div>
-  );
-}
-
-function EmptyState({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="flex h-full min-h-[360px] flex-col items-center justify-center px-6 text-center">
-      <FileTextIcon className="size-7 text-[#A2A6B2]" />
-      <p className="mt-3 text-[11px] font-bold text-[#16181D]">{title}</p>
-      <p className="mt-1 text-[9.5px] leading-relaxed text-[#767A86]">
-        {description}
-      </p>
     </div>
   );
 }
 
 function SmallMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-[12px] border border-[#F0F1F5] bg-white p-3">
-      <div className="text-[8.5px] font-bold text-[#A2A6B2] uppercase">
+    <Card size="small" styles={{ body: { padding: 12 } }}>
+      <Typography.Text
+        type="secondary"
+        style={{ fontSize: 8.5, fontWeight: 700, textTransform: "uppercase" }}
+      >
         {label}
-      </div>
-      <div className="mt-1 font-mono text-[12px] font-bold text-[#16181D]">
+      </Typography.Text>
+      <div style={{ marginTop: 4, fontFamily: FONTE_NUMERO, fontSize: 12, fontWeight: 700 }}>
         {value}
       </div>
-    </div>
+    </Card>
   );
 }
 

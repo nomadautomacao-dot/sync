@@ -5,11 +5,12 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  ChevronRightIcon,
-  FolderPlusIcon,
-  LoaderIcon,
-  PaperclipIcon,
-} from "lucide-react";
+  FolderAddOutlined,
+  LoadingOutlined,
+  PaperClipOutlined,
+  RightOutlined,
+} from "@ant-design/icons";
+import { Alert, Button, Card, Flex, List, Result, Skeleton, Typography, theme } from "antd";
 import { toast } from "sonner";
 
 import type { IbgeMunicipio } from "@/core/lib/ibge-client";
@@ -78,6 +79,7 @@ function Bancada() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { enfileirar } = useFilaDeEmissao();
+  const { token } = theme.useToken();
 
   /* O município ativo mora na URL: é o que faz a faixa "retomar" do hub abrir a
      bancada já carregada, e o que deixa a tela sobreviver a um refresh. */
@@ -593,24 +595,44 @@ function Bancada() {
     }
   };
 
+  /* Os dois grupos de documento — cada um vira um bloco de `List` dentro do
+     mesmo card, com um cabeçalho de seção entre eles. */
+  const grupos = (
+    [
+      { titulo: "Relatórios", prefixo: false },
+      { titulo: "Dossiês temáticos", prefixo: true },
+    ] as const
+  ).map((grupo) => ({
+    ...grupo,
+    documentos: DOCUMENTOS.filter(
+      (documento) => documento.id.startsWith("dossie-") === grupo.prefixo,
+    ),
+  }));
+
+  const documentoDesabilitado =
+    !municipio || isLoading || Boolean(error) || !resposta || !relatorio || gerando !== null;
+
   return (
-    <div className="flex flex-col gap-[14px] px-[4px] pt-[4px] pb-[14px]">
+    <Flex vertical gap={14} style={{ padding: "4px 4px 14px" }}>
       {/* Cabeçalho em uma linha: o título ocupava três, com um parágrafo que
           listava as fontes — informação de folheto numa tela de trabalho. */}
-      <header className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
-        <nav className="flex items-center gap-[4px] text-[11px] text-[#A2A6B2]">
-          <Link href="/modulos" className="transition-colors hover:text-[#16181D]">
+      <Flex align="baseline" wrap="wrap" gap={8} component="header">
+        <Link href="/modulos">
+          <Typography.Text type="secondary" style={{ fontSize: 11 }}>
             Módulos
-          </Link>
-          <ChevronRightIcon className="size-[11px]" />
-        </nav>
-        <h1 className="text-[16px] font-bold tracking-[-0.45px] text-[#16181D]">
+          </Typography.Text>
+        </Link>
+        <RightOutlined style={{ fontSize: 10, color: token.colorTextQuaternary }} />
+        <Typography.Title level={4} style={{ margin: 0 }}>
           Relatórios &amp; Levantamentos FUNDEB
-        </h1>
-        <p className="font-mono text-[10px] text-[#A2A6B2]">
+        </Typography.Title>
+        <Typography.Text
+          type="secondary"
+          style={{ fontFamily: "var(--font-sync-mono)", fontSize: 10 }}
+        >
           IBGE · FNDE · INEP · DATASUS · CAGED · CadÚnico · SICONFI
-        </p>
-      </header>
+        </Typography.Text>
+      </Flex>
 
       {!codigoIbge ? (
         <BuscaMunicipio onSelecionar={selecionarMunicipio} />
@@ -628,68 +650,88 @@ function Bancada() {
               onTrocar={trocarMunicipio}
             />
           ) : (
-            <div
-              role="status"
-              aria-label="Carregando o município"
-              className="h-[80px] animate-pulse rounded-[16px] border border-white/95 bg-white/60"
-            />
+            <Card size="small">
+              <Skeleton active title={{ width: "35%" }} paragraph={{ rows: 1, width: "55%" }} />
+            </Card>
           )}
 
           {municipio &&
             (cidadeNaCarteira ? (
-              <div className="flex items-center gap-2 rounded-[12px] border border-[#CFE8DB] bg-[#F2FAF6] px-3.5 py-2 text-[11px] font-semibold text-[#1F6A47]">
-                <PaperclipIcon className="size-3.5 shrink-0" />
-                {municipio.nome} está na carteira — cada relatório gerado fica
-                anexado à ficha.
-                <Link
-                  href={`/cidades/${cidadeNaCarteira.id}`}
-                  className="ml-auto shrink-0 font-bold underline underline-offset-2"
-                >
-                  Abrir ficha
-                </Link>
-              </div>
+              <Alert
+                type="success"
+                showIcon
+                icon={<PaperClipOutlined />}
+                message={
+                  <Flex align="center" justify="space-between" gap={12} wrap="wrap">
+                    <span>
+                      {municipio.nome} está na carteira — cada relatório gerado fica anexado
+                      à ficha.
+                    </span>
+                    <Link href={`/cidades/${cidadeNaCarteira.id}`}>Abrir ficha</Link>
+                  </Flex>
+                }
+              />
             ) : (
-              <div className="flex items-center gap-2 rounded-[12px] border border-[#ECEDF2] bg-white/80 px-3.5 py-2 text-[11px] font-semibold text-[#5A5E6A]">
-                <FolderPlusIcon className="size-3.5 shrink-0 text-[#A2A6B2]" />
-                {municipio.nome} não está na carteira. Os relatórios são apenas
-                baixados; nada é arquivado.
-                <button
-                  type="button"
-                  onClick={() => adicionarNaCarteira.mutate()}
-                  disabled={adicionarNaCarteira.isPending}
-                  className="ml-auto inline-flex h-[28px] shrink-0 items-center gap-1.5 rounded-full bg-[#16181D] px-3 text-[10.5px] font-bold text-white transition-colors hover:bg-[#2C2F38] disabled:opacity-50"
-                >
-                  {adicionarNaCarteira.isPending ? (
-                    <LoaderIcon className="size-3 animate-spin" />
-                  ) : (
-                    <FolderPlusIcon className="size-3" />
-                  )}
-                  Adicionar à carteira
-                </button>
-              </div>
+              <Alert
+                type="info"
+                showIcon
+                icon={<FolderAddOutlined />}
+                message={
+                  <Flex align="center" justify="space-between" gap={12} wrap="wrap">
+                    <span>
+                      {municipio.nome} não está na carteira. Os relatórios são apenas
+                      baixados; nada é arquivado.
+                    </span>
+                    <Button
+                      size="small"
+                      type="primary"
+                      icon={<FolderAddOutlined />}
+                      loading={adicionarNaCarteira.isPending}
+                      onClick={() => adicionarNaCarteira.mutate()}
+                    >
+                      Adicionar à carteira
+                    </Button>
+                  </Flex>
+                }
+              />
             ))}
 
-          <section className="glass-card overflow-hidden">
-            {(
-              [
-                { titulo: "Relatórios", prefixo: false },
-                { titulo: "Dossiês temáticos", prefixo: true },
-              ] as const
-            ).map((grupo) => {
-              const documentos = DOCUMENTOS.filter(
-                (documento) => documento.id.startsWith("dossie-") === grupo.prefixo,
-              );
-              return (
-                <div key={grupo.titulo}>
-                  <div className="flex items-center gap-2 border-b border-[#ECEDF2] bg-[#FAFAFC] px-3 py-1.5">
-                    <span className="font-mono text-[9px] font-semibold uppercase tracking-[1.1px] text-[#A2A6B2]">
-                      {grupo.titulo}
-                    </span>
-                    <span className="font-mono text-[9px] text-[#C1C3CB]">
-                      {documentos.length}
-                    </span>
-                  </div>
-                  {documentos.map((documento) => (
+          <Card size="small" styles={{ body: { padding: 0 } }}>
+            {grupos.map((grupo) => (
+              <div key={grupo.titulo}>
+                <Flex
+                  align="center"
+                  gap={8}
+                  style={{
+                    padding: "6px 12px",
+                    background: token.colorFillAlter,
+                    borderBottom: `1px solid ${token.colorBorderSecondary}`,
+                  }}
+                >
+                  <Typography.Text
+                    type="secondary"
+                    style={{
+                      fontFamily: "var(--font-sync-mono)",
+                      fontSize: 9,
+                      fontWeight: 600,
+                      textTransform: "uppercase",
+                      letterSpacing: 1.1,
+                    }}
+                  >
+                    {grupo.titulo}
+                  </Typography.Text>
+                  <Typography.Text
+                    type="secondary"
+                    style={{ fontFamily: "var(--font-sync-mono)", fontSize: 9 }}
+                  >
+                    {grupo.documentos.length}
+                  </Typography.Text>
+                </Flex>
+
+                <List
+                  dataSource={grupo.documentos}
+                  rowKey="id"
+                  renderItem={(documento) => (
                     <LinhaDocumento
                       key={documento.id}
                       icone={documento.icone}
@@ -699,29 +741,27 @@ function Bancada() {
                       descricao={documento.descricao}
                       variante={documento.variante}
                       gerando={gerando === documento.id}
-                      desabilitado={
-                        !municipio ||
-                        isLoading ||
-                        Boolean(error) ||
-                        !resposta ||
-                        !relatorio ||
-                        gerando !== null
-                      }
+                      desabilitado={documentoDesabilitado}
                       onGerar={() => gerarDocumento(documento)}
                     />
-                  ))}
-                </div>
-              );
-            })}
-          </section>
+                  )}
+                />
+              </div>
+            ))}
+          </Card>
 
           {isLoading ? (
-            <div className="flex items-center justify-center gap-[10px] rounded-[16px] border border-white/95 bg-white/88 py-[48px] shadow-[0_10px_26px_rgba(22,24,29,.05)]">
-              <LoaderIcon className="size-[16px] animate-spin text-[#A2A6B2]" />
-              <span className="text-[12.5px] text-[#767A86]">
-                Consultando portarias FNDE, Censo INEP e SICONFI…
-              </span>
-            </div>
+            <Card size="small">
+              <Flex vertical gap={12}>
+                <Flex align="center" gap={10}>
+                  <LoadingOutlined style={{ fontSize: 16, color: token.colorTextTertiary }} />
+                  <Typography.Text type="secondary" style={{ fontSize: 12.5 }}>
+                    Consultando portarias FNDE, Censo INEP e SICONFI…
+                  </Typography.Text>
+                </Flex>
+                <Skeleton active title={false} paragraph={{ rows: 4 }} />
+              </Flex>
+            </Card>
           ) : error ? (
             <ErroDoLevantamento
               mensagem={error instanceof Error ? error.message : "Erro ao carregar o município."}
@@ -742,37 +782,38 @@ function Bancada() {
           ) : null}
         </>
       )}
-    </div>
+    </Flex>
   );
 }
 
 function ErroDoLevantamento({ mensagem, onTrocar }: { mensagem: string; onTrocar: () => void }) {
   return (
-    <section className="rounded-[16px] border border-white/95 bg-white/88 p-[24px] text-center shadow-[0_10px_26px_rgba(22,24,29,.05)]">
-      <p className="text-[13px] font-semibold text-[#991B1B]">{mensagem}</p>
-      <p className="mt-[6px] text-[12px] text-[#767A86]">
-        Os documentos acima dependem desses dados e seguem indisponíveis para este município.
-      </p>
-      <button
-        type="button"
-        onClick={onTrocar}
-        className="mt-[16px] inline-flex h-[38px] items-center rounded-[20px] bg-[#F2F1F7] px-[16px] text-[12.5px] font-semibold text-[#3B3F4A] transition-colors hover:bg-[#ECEBF2]"
-      >
-        Escolher outro município
-      </button>
-    </section>
+    <Result
+      status="error"
+      title={mensagem}
+      subTitle="Os documentos acima dependem desses dados e seguem indisponíveis para este município."
+      extra={
+        <Button type="primary" onClick={onTrocar}>
+          Escolher outro município
+        </Button>
+      }
+    />
   );
 }
 
 function EsqueletoDaBancada() {
   return (
-    <div
+    <Flex
+      vertical
+      gap={14}
+      style={{ padding: "4px 4px 0" }}
       role="status"
       aria-label="Carregando o levantamento"
-      className="flex animate-pulse flex-col gap-[14px] px-[4px] pt-[4px]"
     >
-      <div className="h-[56px] w-[420px] max-w-full rounded-[12px] bg-white/50" />
-      <div className="h-[150px] rounded-[16px] border border-white/95 bg-white/60" />
-    </div>
+      <Skeleton.Input active size="large" style={{ width: 420, maxWidth: "100%" }} />
+      <Card size="small">
+        <Skeleton active paragraph={{ rows: 3 }} />
+      </Card>
+    </Flex>
   );
 }

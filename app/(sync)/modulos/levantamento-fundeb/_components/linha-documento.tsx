@@ -1,6 +1,10 @@
 "use client";
 
-import { DownloadIcon, LoaderIcon } from "lucide-react";
+import { DownloadOutlined } from "@ant-design/icons";
+import { Button, Flex, Grid, List, Typography, theme } from "antd";
+
+const { useBreakpoint } = Grid;
+const { Text } = Typography;
 
 /**
  * Um documento por linha, não por card.
@@ -34,52 +38,64 @@ export function LinhaDocumento({
   desabilitado,
   onGerar,
 }: LinhaDocumentoProps) {
+  const { token } = theme.useToken();
+  /* A descrição só cabe a partir de telas largas — abaixo disso ela empurraria
+     o botão para fora da coluna fixa que o consultor aprendeu a mirar. */
+  const telas = useBreakpoint();
+
   return (
-    <div className="group flex items-center gap-3 border-b border-[#F4F4F8] px-3 py-2 transition-colors last:border-0 hover:bg-[#FAFAFC]">
-      <span className="flex size-[28px] shrink-0 items-center justify-center rounded-[9px] border border-white/90 bg-gradient-to-br from-[#EEE7F9] to-[#E2EDFA]">
-        <Icone className="size-[14px] text-[#16181D]" />
-      </span>
+    <List.Item style={{ padding: "8px 12px", border: "none" }}>
+      <Flex align="center" gap={12} style={{ width: "100%" }}>
+        <Flex
+          align="center"
+          justify="center"
+          style={{
+            width: 28,
+            height: 28,
+            flex: "0 0 auto",
+            borderRadius: token.borderRadius,
+            background: token.colorFillTertiary,
+          }}
+        >
+          <Icone style={{ fontSize: 14, color: token.colorText }} />
+        </Flex>
 
-      <div className="w-[230px] shrink-0">
-        <div className="truncate text-[12.5px] font-semibold text-[#16181D]" title={nome}>
-          {nome}
+        <div style={{ width: 230, flex: "0 0 auto", minWidth: 0 }}>
+          <Text strong ellipsis={{ tooltip: nome }} style={{ fontSize: 12.5, display: "block" }}>
+            {nome}
+          </Text>
+          <Text
+            type="secondary"
+            ellipsis={{ tooltip: medida ?? `${paginas} páginas` }}
+            style={{ fontFamily: "var(--font-sync-mono)", fontSize: 9.5, display: "block" }}
+          >
+            {medida ?? `${paginas} páginas`}
+          </Text>
         </div>
-        <div className="truncate font-mono text-[9.5px] text-[#A2A6B2]">
-          {medida ?? `${paginas} páginas`}
-        </div>
-      </div>
 
-      <p
-        className="hidden min-w-0 flex-1 truncate text-[11.5px] text-[#767A86] xl:block"
-        title={descricao}
-      >
-        {descricao}
-      </p>
-
-      <button
-        type="button"
-        onClick={onGerar}
-        disabled={desabilitado || gerando}
-        aria-busy={gerando}
-        aria-label={`Gerar ${nome}`}
-        className={`ml-auto inline-flex h-[30px] w-[104px] shrink-0 items-center justify-center gap-[6px] rounded-full text-[11px] font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
-          variante === "primario"
-            ? "bg-[#16181D] text-white hover:bg-[#2C2F38]"
-            : "bg-[#F2F1F7] text-[#3B3F4A] hover:bg-[#ECEBF2]"
-        }`}
-      >
-        {gerando ? (
-          <>
-            <LoaderIcon className="size-[13px] animate-spin" />
-            Gerando…
-          </>
-        ) : (
-          <>
-            <DownloadIcon className="size-[13px]" />
-            Gerar PDF
-          </>
+        {telas.xl && (
+          <Text
+            type="secondary"
+            ellipsis={{ tooltip: descricao }}
+            style={{ flex: "1 1 auto", minWidth: 0, fontSize: 11.5 }}
+          >
+            {descricao}
+          </Text>
         )}
-      </button>
-    </div>
+
+        <Button
+          type={variante === "primario" ? "primary" : "default"}
+          shape="round"
+          icon={<DownloadOutlined />}
+          loading={gerando}
+          disabled={desabilitado || gerando}
+          aria-label={`Gerar ${nome}`}
+          onClick={onGerar}
+          style={{ marginLeft: "auto", flex: "0 0 auto", minWidth: 108 }}
+        >
+          {gerando ? "Gerando…" : "Gerar PDF"}
+        </Button>
+      </Flex>
+    </List.Item>
   );
 }

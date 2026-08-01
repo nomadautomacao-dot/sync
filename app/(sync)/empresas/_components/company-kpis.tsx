@@ -1,6 +1,8 @@
 "use client";
 
-import React from 'react';
+import { AppstoreOutlined, BankOutlined, TeamOutlined } from "@ant-design/icons";
+import { ProCard } from "@ant-design/pro-components";
+import { Statistic, Typography, theme } from "antd";
 
 interface CompanyKpisProps {
   totalCompanies: number;
@@ -8,51 +10,61 @@ interface CompanyKpisProps {
   totalActiveModules: number;
 }
 
+const FONTE_NUMERO = "var(--font-sync-mono)";
+
 export function CompanyKpis({
   totalCompanies,
   totalEmployees,
   totalActiveModules,
 }: CompanyKpisProps) {
+  const { token } = theme.useToken();
+
   return (
-    <div className="flex flex-row gap-3">
-      {/* Total Empresas */}
-      <div className="flex-1 bg-white/[.88] border border-white/95 rounded-2xl shadow-[0_10px_26px_rgba(22,24,29,.05)] px-[18px] py-4">
-        <div className="font-mono text-[10px] font-semibold uppercase tracking-[1.1px] text-soft">
-          Empresas Cadastradas
-        </div>
-        <div className="font-mono text-[26px] font-semibold leading-none tracking-[-1.2px] text-title tabular-nums mt-1">
-          {totalCompanies}
-        </div>
-        <div className="font-mono text-[11px] text-soft mt-1">
+    <ProCard gutter={16} wrap ghost>
+      <ProCard colSpan={{ xs: 24, sm: 8 }}>
+        <Statistic
+          title={
+            <>
+              EMPRESAS CADASTRADAS <BankOutlined />
+            </>
+          }
+          value={totalCompanies}
+          valueStyle={{ fontFamily: FONTE_NUMERO, fontWeight: 700 }}
+        />
+        <Typography.Text type="secondary" style={{ fontSize: 11 }}>
           Entidades do grupo
-        </div>
-      </div>
+        </Typography.Text>
+      </ProCard>
 
-      {/* Funcionários */}
-      <div className="flex-1 bg-white/[.88] border border-white/95 rounded-2xl shadow-[0_10px_26px_rgba(22,24,29,.05)] px-[18px] py-4">
-        <div className="font-mono text-[10px] font-semibold uppercase tracking-[1.1px] text-soft">
-          Funcionários / Quadro
-        </div>
-        <div className="font-mono text-[26px] font-semibold leading-none tracking-[-1.2px] text-title tabular-nums mt-1">
-          {totalEmployees}
-        </div>
-        <div className="font-mono text-[11px] text-soft mt-1">
+      <ProCard colSpan={{ xs: 24, sm: 8 }}>
+        <Statistic
+          title={
+            <>
+              FUNCIONÁRIOS / QUADRO <TeamOutlined />
+            </>
+          }
+          value={totalEmployees}
+          valueStyle={{ fontFamily: FONTE_NUMERO, fontWeight: 700 }}
+        />
+        <Typography.Text type="secondary" style={{ fontSize: 11 }}>
           Total de posições vinculadas
-        </div>
-      </div>
+        </Typography.Text>
+      </ProCard>
 
-      {/* Módulos Habilitados */}
-      <div className="flex-1 bg-white/[.88] border border-white/95 rounded-2xl shadow-[0_10px_26px_rgba(22,24,29,.05)] px-[18px] py-4">
-        <div className="font-mono text-[10px] font-semibold uppercase tracking-[1.1px] text-soft">
-          Módulos Ativos
-        </div>
-        <div className="font-mono text-[26px] font-semibold leading-none tracking-[-1.2px] text-primary-strong tabular-nums mt-1">
-          {totalActiveModules}
-        </div>
-        <div className="font-mono text-[11px] text-soft mt-1">
+      <ProCard colSpan={{ xs: 24, sm: 8 }}>
+        <Statistic
+          title={
+            <>
+              MÓDULOS ATIVOS <AppstoreOutlined />
+            </>
+          }
+          value={totalActiveModules}
+          valueStyle={{ fontFamily: FONTE_NUMERO, fontWeight: 700, color: token.colorPrimary }}
+        />
+        <Typography.Text type="secondary" style={{ fontSize: 11 }}>
           Acessos autorizados
-        </div>
-      </div>
-    </div>
+        </Typography.Text>
+      </ProCard>
+    </ProCard>
   );
 }

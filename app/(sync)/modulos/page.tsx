@@ -1,7 +1,9 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { GraduationCapIcon } from "lucide-react";
+import { ReadOutlined } from "@ant-design/icons";
+import { Col, Flex, Row, Skeleton, Typography } from "antd";
+import { ProCard } from "@ant-design/pro-components";
 
 import { getFirebaseDb } from "@/core/lib/firebase-client";
 import { listCities } from "@/core/lib/cities-firestore";
@@ -30,7 +32,7 @@ interface ModuloDisponivel {
 const MODULOS: ModuloDisponivel[] = [
   {
     href: "/modulos/levantamento-fundeb",
-    icone: GraduationCapIcon,
+    icone: ReadOutlined,
     nome: "Levantamento FUNDEB",
     descricao:
       "Diagnóstico automático por código IBGE: repasses VAAF, VAAT e VAAR, projeção de ganho e o retrato completo do município.",
@@ -55,29 +57,31 @@ export default function ModulosPage() {
   });
 
   return (
-    <div className="flex flex-col gap-[14px] px-[4px] pt-[4px] pb-[14px]">
-      <header>
-        <h1 className="text-[21px] font-bold tracking-[-0.7px] text-[#16181D]">Módulos</h1>
-        <p className="mt-[3px] text-[13px] text-[#767A86]">
+    <Flex vertical gap={14}>
+      <div>
+        <Typography.Title level={3} style={{ margin: 0 }}>
+          Módulos
+        </Typography.Title>
+        <Typography.Text type="secondary">
           As ferramentas que produzem os documentos da consultoria, a partir das bases oficiais.
-        </p>
-      </header>
-
-      <div className="grid grid-cols-1 gap-[14px] lg:grid-cols-2">
-        {MODULOS.map((modulo) => (
-          <ModuleCard key={modulo.href} {...modulo} />
-        ))}
+        </Typography.Text>
       </div>
 
+      <Row gutter={[14, 14]}>
+        {MODULOS.map((modulo) => (
+          <Col key={modulo.href} xs={24} lg={12}>
+            <ModuleCard {...modulo} />
+          </Col>
+        ))}
+      </Row>
+
       {isLoading ? (
-        <div
-          role="status"
-          aria-label="Carregando a carteira"
-          className="h-[220px] animate-pulse rounded-[16px] border border-white/95 bg-white/60"
-        />
+        <ProCard>
+          <Skeleton active paragraph={{ rows: 4 }} />
+        </ProCard>
       ) : (
         <RetomarStrip cidades={cidades} />
       )}
-    </div>
+    </Flex>
   );
 }

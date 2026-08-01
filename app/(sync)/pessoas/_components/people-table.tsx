@@ -1,129 +1,221 @@
 "use client";
 
-import React from 'react';
-import type { CollaboratorItem } from '@/core/lib/people-types';
+import { RightOutlined } from "@ant-design/icons";
+import { ProTable } from "@ant-design/pro-components";
+import type { ProColumns } from "@ant-design/pro-components";
+import { Avatar, Empty, Input, Segmented, Tag, theme } from "antd";
+
+import type { CollaboratorItem, LinkFilter } from "@/core/lib/people-types";
 import {
   collaboratorInitials,
   collaboratorLinkCategory,
-  statusTone,
   formatCompactCurrency,
-} from '@/core/lib/people-types';
+} from "@/core/lib/people-types";
 
 interface PeopleTableProps {
   collaborators: CollaboratorItem[];
   selectedId?: string;
   onSelect: (item: CollaboratorItem) => void;
+  /* Busca e filtro de vínculo entram como estado controlado vindo da página —
+     a mesma `useQuery` de sempre decide o que aparece; só muda onde a caixa
+     de busca é desenhada (dentro da própria ProTable). */
+  search: string;
+  onSearchChange: (value: string) => void;
+  linkFilter: LinkFilter;
+  onLinkFilterChange: (value: LinkFilter) => void;
+}
+
+/**
+ * Mesma categorização de `statusTone` (core/lib/people-types.ts), devolvendo
+ * cor de `Tag` do Ant em vez de classe Tailwind. A ordem dos `includes`
+ * importa: "inativo"/"pausado" também contêm substrings de "ativ".
+ */
+function tonalidadeDoStatus(status: string): "success" | "warning" | "default" {
+  const s = status.toLowerCase();
+  if (s.includes("inativ") || s.includes("encerrad") || s.includes("desligad")) return "default";
+  if (s.includes("ativ")) return "success";
+  if (s.includes("pend") || s.includes("pausad")) return "warning";
+  return "default";
 }
 
 export function PeopleTable({
   collaborators,
   selectedId,
   onSelect,
+  search,
+  onSearchChange,
+  linkFilter,
+  onLinkFilterChange,
 }: PeopleTableProps) {
-  if (collaborators.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center p-12 bg-card rounded-[14px] border border-line text-center">
-        <p className="font-mono text-sm text-soft">
-          Nenhuma pessoa encontrada com os filtros selecionados.
-        </p>
-      </div>
-    );
-  }
+  const { token } = theme.useToken();
+
+  const columns: ProColumns<CollaboratorItem>[] = [
+    {
+      title: "Nome / Função",
+      dataIndex: "fullName",
+      search: false,
+      sorter: (a, b) => a.fullName.localeCompare(b.fullName, "pt-BR"),
+      render: (_, item) => (
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <Avatar
+            style={{
+              background: token.colorFillTertiary,
+              color: token.colorText,
+              fontWeight: 700,
+              fontFamily: "var(--font-sync-mono)",
+              fontSize: 11,
+            }}
+          >
+            {collaboratorInitials(item.fullName)}
+          </Avatar>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontWeight: 700, fontSize: 13 }}>{item.fullName}</div>
+            <div
+              style={{
+                fontFamily: "var(--font-sync-mono)",
+                fontSize: 11,
+                color: token.colorTextTertiary,
+              }}
+            >
+              {item.primaryRole}
+            </div>
+          </div>
+        </div>
+      ),
+    },
+    {
+      title: "Vínculo",
+      dataIndex: "collaboratorType",
+      width: 110,
+      search: false,
+      sorter: (a, b) =>
+        collaboratorLinkCategory(a.collaboratorType).localeCompare(
+          collaboratorLinkCategory(b.collaboratorType),
+          "pt-BR",
+        ),
+      render: (_, item) => <Tag>{collaboratorLinkCategory(item.collaboratorType)}</Tag>,
+    },
+    {
+      title: "UF",
+      dataIndex: "state",
+      width: 64,
+      align: "center",
+      search: false,
+      sorter: (a, b) => (a.state ?? "").localeCompare(b.state ?? "", "pt-BR"),
+      render: (_, item) => (
+        <span style={{ fontFamily: "var(--font-sync-mono)" }}>{item.state || "—"}</span>
+      ),
+    },
+    {
+      title: "Cidades",
+      dataIndex: "sourcedCitiesCount",
+      width: 88,
+      align: "right",
+      search: false,
+      sorter: (a, b) => (a.sourcedCitiesCount || 0) - (b.sourcedCitiesCount || 0),
+      render: (_, item) => (
+        <span style={{ fontFamily: "var(--font-sync-mono)", fontWeight: 600 }}>
+          {item.sourcedCitiesCount || 0}
+        </span>
+      ),
+    },
+    {
+      title: "Lucro YTD",
+      dataIndex: "profitAccruedYtd",
+      width: 110,
+      align: "right",
+      search: false,
+      sorter: (a, b) => (a.profitAccruedYtd || 0) - (b.profitAccruedYtd || 0),
+      render: (_, item) => (
+        <span style={{ fontFamily: "var(--font-sync-mono)" }}>
+          {formatCompactCurrency(item.profitAccruedYtd || 0)}
+        </span>
+      ),
+    },
+    {
+      title: "Comissão YTD",
+      dataIndex: "commissionPaidYtd",
+      width: 120,
+      align: "right",
+      search: false,
+      sorter: (a, b) => (a.commissionPaidYtd || 0) - (b.commissionPaidYtd || 0),
+      render: (_, item) => (
+        <span
+          style={{
+            fontFamily: "var(--font-sync-mono)",
+            fontWeight: 600,
+            color: token.colorPrimary,
+          }}
+        >
+          {formatCompactCurrency(item.commissionPaidYtd || 0)}
+        </span>
+      ),
+    },
+    {
+      title: "Status",
+      dataIndex: "partnershipStatus",
+      width: 110,
+      align: "center",
+      search: false,
+      sorter: (a, b) => a.partnershipStatus.localeCompare(b.partnershipStatus, "pt-BR"),
+      render: (_, item) => (
+        <Tag color={tonalidadeDoStatus(item.partnershipStatus)} style={{ textTransform: "capitalize" }}>
+          {item.partnershipStatus}
+        </Tag>
+      ),
+    },
+    {
+      title: "",
+      width: 40,
+      align: "right",
+      search: false,
+      render: () => <RightOutlined style={{ color: token.colorTextQuaternary }} />,
+    },
+  ];
 
   return (
-    <div className="overflow-x-auto rounded-[14px] border border-line bg-card shadow-sm">
-      <table className="w-full text-left border-collapse min-w-[850px]">
-        <thead>
-          <tr className="border-b border-line bg-surface-subtle font-mono text-[10px] font-semibold uppercase tracking-[1px] text-soft">
-            <th className="py-3 px-4">Nome / Função</th>
-            <th className="py-3 px-3">Vínculo</th>
-            <th className="py-3 px-2 text-center">UF</th>
-            <th className="py-3 px-3 text-center">Cidades</th>
-            <th className="py-3 px-3 text-right">Lucro YTD</th>
-            <th className="py-3 px-3 text-right">Comissão YTD</th>
-            <th className="py-3 px-3 text-center">Status</th>
-            <th className="py-3 px-3 text-right"></th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-line text-[12px]">
-          {collaborators.map((item) => {
-            const isSelected = item.id === selectedId;
-            const category = collaboratorLinkCategory(item.collaboratorType);
-            const tone = statusTone(item.partnershipStatus);
-            const initials = collaboratorInitials(item.fullName);
-
-            return (
-              <tr
-                key={item.id}
-                onClick={() => onSelect(item)}
-                className={`cursor-pointer transition-colors hover:bg-surface-subtle ${
-                  isSelected ? 'bg-primary-light/40' : ''
-                }`}
-              >
-                {/* Nome / Avatar */}
-                <td className="py-3 px-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-surface-subtle border border-line flex items-center justify-center font-mono font-bold text-[10px] text-title flex-shrink-0">
-                      {initials}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="font-bold text-[13px] text-title truncate">
-                        {item.fullName}
-                      </div>
-                      <div className="font-mono text-[11px] text-soft truncate">
-                        {item.primaryRole}
-                      </div>
-                    </div>
-                  </div>
-                </td>
-
-                {/* Vínculo */}
-                <td className="py-3 px-3">
-                  <span className="inline-block rounded-[6px] px-2 py-0.5 font-mono text-[11px] bg-surface-subtle text-title border border-line">
-                    {category}
-                  </span>
-                </td>
-
-                {/* UF */}
-                <td className="py-3 px-2 text-center font-mono text-[11px] text-soft">
-                  {item.state || '—'}
-                </td>
-
-                {/* Cidades */}
-                <td className="py-3 px-3 text-center font-mono text-[12px] font-semibold text-title tabular-nums">
-                  {item.sourcedCitiesCount || 0}
-                </td>
-
-                {/* Lucro YTD */}
-                <td className="py-3 px-3 text-right font-mono text-[11px] text-title tabular-nums">
-                  {formatCompactCurrency(item.profitAccruedYtd || 0)}
-                </td>
-
-                {/* Comissão YTD */}
-                <td className="py-3 px-3 text-right font-mono text-[11px] font-semibold text-primary-strong tabular-nums">
-                  {formatCompactCurrency(item.commissionPaidYtd || 0)}
-                </td>
-
-                {/* Status */}
-                <td className="py-3 px-3 text-center">
-                  <span
-                    className={`inline-block rounded-[6px] px-2 py-0.5 font-mono text-[10px] font-medium capitalize ${tone.bg} ${tone.fg}`}
-                  >
-                    {item.partnershipStatus}
-                  </span>
-                </td>
-
-                {/* Chevron */}
-                <td className="py-3 px-3 text-right text-muted">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M9 18l6-6-6-6" />
-                  </svg>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+    <ProTable<CollaboratorItem>
+      rowKey="id"
+      size="small"
+      cardBordered
+      search={false}
+      dataSource={collaborators}
+      columns={columns}
+      pagination={false}
+      scroll={{ x: 980 }}
+      options={{ density: false, fullScreen: false, reload: false, setting: false }}
+      onRow={(record) => ({
+        onClick: () => onSelect(record),
+        style: {
+          cursor: "pointer",
+          background: record.id === selectedId ? token.colorPrimaryBg : undefined,
+        },
+      })}
+      locale={{
+        emptyText: (
+          <Empty description="Nenhuma pessoa encontrada com os filtros selecionados." />
+        ),
+      }}
+      toolBarRender={() => [
+        <Segmented
+          key="vinculo"
+          value={linkFilter}
+          onChange={(value) => onLinkFilterChange(value as LinkFilter)}
+          options={[
+            { label: "Todos", value: "todos" },
+            { label: "Parceiros", value: "parceiros" },
+            { label: "Internos", value: "internos" },
+          ]}
+        />,
+        <Input.Search
+          key="busca"
+          allowClear
+          placeholder="Buscar por nome, função, UF..."
+          value={search}
+          onChange={(event) => onSearchChange(event.target.value)}
+          style={{ width: 260 }}
+        />,
+      ]}
+    />
   );
 }

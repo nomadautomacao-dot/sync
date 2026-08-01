@@ -1,13 +1,16 @@
 "use client";
 
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState, type ReactNode } from "react";
-import { MenuIcon } from "lucide-react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { MenuOutlined } from "@ant-design/icons";
+import { Button, Grid, Layout, Skeleton, theme } from "antd";
 
 import { SyncHeader } from "@/core/components/sync-shell/header";
 import { SyncSidebar } from "@/core/components/sync-shell/sidebar";
 import { useAuth } from "@/core/providers/auth-provider";
 import { FilaEmissaoProvider } from "@/core/providers/fila-emissao-provider";
+
+const { useBreakpoint } = Grid;
 
 interface SyncLayoutProps {
   children: ReactNode;
@@ -27,6 +30,8 @@ export default function SyncLayout({ children }: SyncLayoutProps) {
   const router = useRouter();
   const pathname = usePathname();
   const { user, loading } = useAuth();
+  const { token } = theme.useToken();
+  const screens = useBreakpoint();
   const [sidebarMobileAberta, setSidebarMobileAberta] = useState(false);
   const comBarra = ROTAS_COM_BARRA.includes(pathname);
 
@@ -38,57 +43,82 @@ export default function SyncLayout({ children }: SyncLayoutProps) {
 
   return (
     <FilaEmissaoProvider>
-    <div className="relative flex h-dvh w-full gap-2 overflow-hidden p-2 font-sans md:gap-[14px] md:p-[14px]">
-      {/* ── Ambient background glows (Console Soft) ───────────────────────── */}
-      <div className="pointer-events-none absolute -right-[240px] -top-[60px] h-[300px] w-[560px] bg-[radial-gradient(ellipse,_rgba(255,255,255,0.95),_transparent_65%)]" />
-      <div className="pointer-events-none absolute -left-[140px] bottom-[120px] h-[20px] w-[460px] bg-[linear-gradient(90deg,_transparent,_rgba(245,163,181,0.5),_rgba(247,199,126,0.5),_transparent)] blur-[24px]" />
+      <Layout style={{ height: "100dvh", background: token.colorBgLayout, padding: 10, gap: 10 }}>
+        {/* A `SyncSidebar` decide sozinha se é `Layout.Sider` (desktop) ou
+            `Drawer` (mobile) — ver o comentário no topo do componente. */}
+        <SyncSidebar
+          abertaNoMobile={sidebarMobileAberta}
+          aoFecharNoMobile={() => setSidebarMobileAberta(false)}
+        />
 
-      <SyncSidebar
-        abertaNoMobile={sidebarMobileAberta}
-        aoFecharNoMobile={() => setSidebarMobileAberta(false)}
-      />
-      <div className="relative z-10 flex min-w-0 flex-1 flex-col gap-2 overflow-hidden md:gap-[14px]">
-        {comBarra ? (
-          <SyncHeader
-            sidebarMobileAberta={sidebarMobileAberta}
-            aoAbrirSidebarMobile={() => setSidebarMobileAberta(true)}
-          />
-        ) : (
-          // Sem a barra, o celular perderia o único caminho para a navegação —
-          // no desktop a lateral está sempre visível e este botão não aparece.
-          <button
-            type="button"
-            onClick={() => setSidebarMobileAberta(true)}
-            aria-label="Abrir navegação"
-            aria-controls="sync-sidebar"
-            aria-expanded={sidebarMobileAberta}
-            className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-white/95 bg-white/90 text-[#3B3F4A] shadow-[0_10px_26px_rgba(22,24,29,.06)] backdrop-blur-xl transition-colors hover:bg-white md:hidden"
-          >
-            <MenuIcon className="size-[18px]" />
-          </button>
-        )}
-        <main className="min-w-0 flex-1 overflow-y-auto">{children}</main>
-      </div>
-    </div>
+        <Layout style={{ background: "transparent", minWidth: 0, gap: 10, display: "flex", flexDirection: "column" }}>
+          {comBarra ? (
+            <SyncHeader
+              sidebarMobileAberta={sidebarMobileAberta}
+              aoAbrirSidebarMobile={() => setSidebarMobileAberta(true)}
+            />
+          ) : (
+            // Sem a barra, o celular perderia o único caminho para a navegação —
+            // no desktop a lateral está sempre visível e este botão não aparece.
+            !screens.md && (
+              <Button
+                type="text"
+                shape="circle"
+                icon={<MenuOutlined />}
+                onClick={() => setSidebarMobileAberta(true)}
+                aria-label="Abrir navegação"
+                aria-controls="sync-sidebar"
+                aria-expanded={sidebarMobileAberta}
+                style={{
+                  alignSelf: "flex-start",
+                  background: token.colorBgContainer,
+                  boxShadow: token.boxShadowTertiary,
+                }}
+              />
+            )
+          )}
+
+          <Layout.Content style={{ minWidth: 0, flex: 1, overflowY: "auto" }}>
+            {children}
+          </Layout.Content>
+        </Layout>
+      </Layout>
     </FilaEmissaoProvider>
   );
 }
 
+const soLeitorDeTela: CSSProperties = {
+  position: "absolute",
+  width: 1,
+  height: 1,
+  padding: 0,
+  margin: -1,
+  overflow: "hidden",
+  clip: "rect(0, 0, 0, 0)",
+  whiteSpace: "nowrap",
+  border: 0,
+};
+
 function EsqueletoDoShell() {
+  const { token } = theme.useToken();
   return (
     <div
       role="status"
       aria-live="polite"
-      className="flex h-dvh w-full animate-pulse gap-2 bg-transparent p-2 font-sans md:gap-[14px] md:p-[14px]"
+      style={{ display: "flex", height: "100dvh", width: "100%", gap: 10, padding: 10 }}
     >
-      <span className="sr-only">Carregando sua sessão…</span>
-      <div className="hidden w-[240px] shrink-0 rounded-[18px] border border-white/95 bg-white/85 backdrop-blur-xl md:block" />
-      <div className="flex min-w-0 flex-1 flex-col gap-2 md:gap-[14px]">
-        <div className="h-14 shrink-0 rounded-[18px] bg-white/85 backdrop-blur-xl border border-white/95" />
-        <div className="flex-1">
-          <div className="h-7 w-52 rounded-control bg-[#ECEBF2]" />
-          <div className="mt-6 h-40 w-full rounded-card border border-[#F0F1F5] bg-white" />
-        </div>
+      <span style={soLeitorDeTela}>Carregando sua sessão…</span>
+      <div
+        style={{
+          width: 240,
+          flexShrink: 0,
+          borderRadius: token.borderRadiusLG,
+          background: token.colorFillTertiary,
+        }}
+      />
+      <div style={{ display: "flex", minWidth: 0, flex: 1, flexDirection: "column", gap: 10 }}>
+        <Skeleton.Button active block style={{ height: 60, borderRadius: token.borderRadiusLG }} />
+        <Skeleton active paragraph={{ rows: 6 }} style={{ flex: 1 }} />
       </div>
     </div>
   );

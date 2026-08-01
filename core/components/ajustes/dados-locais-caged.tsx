@@ -14,7 +14,10 @@
  */
 
 import { useState } from "react";
-import { RefreshCwIcon, DownloadIcon, CheckCircle2Icon, AlertCircleIcon } from "lucide-react";
+import { CloudDownloadOutlined, ReloadOutlined } from "@ant-design/icons";
+import { Alert, Button, Card, Descriptions, Flex, List, Tag, Typography, theme } from "antd";
+
+const { Text, Paragraph } = Typography;
 
 interface EstadoSerie {
   codigo: string;
@@ -54,65 +57,36 @@ function formatarTamanho(bytes: number | null) {
 function Veredito({ estado }: { estado: EstadoSnapshot }) {
   if (!estado.presente) {
     return (
-      <Faixa tom="erro" icone={<AlertCircleIcon size={15} />}>
-        Snapshot ausente. O relatório cai no download de ~117 MB a cada reinício do servidor.
-      </Faixa>
+      <Alert
+        type="error"
+        showIcon
+        message="Snapshot ausente. O relatório cai no download de ~117 MB a cada reinício do servidor."
+      />
     );
   }
   if (estado.indeterminado) {
     return (
-      <Faixa tom="aviso" icone={<AlertCircleIcon size={15} />}>
-        Não foi possível falar com o IPEADATA. O snapshot local continua servindo normalmente.
-      </Faixa>
+      <Alert
+        type="warning"
+        showIcon
+        message="Não foi possível falar com o IPEADATA. O snapshot local continua servindo normalmente."
+      />
     );
   }
   if (estado.desatualizado) {
     return (
-      <Faixa tom="aviso" icone={<AlertCircleIcon size={15} />}>
-        O IPEADATA republicou a série depois desta cópia. Há dado novo para baixar.
-      </Faixa>
+      <Alert
+        type="warning"
+        showIcon
+        message="O IPEADATA republicou a série depois desta cópia. Há dado novo para baixar."
+      />
     );
   }
-  return (
-    <Faixa tom="ok" icone={<CheckCircle2Icon size={15} />}>
-      Em dia com a fonte. Nada a baixar.
-    </Faixa>
-  );
-}
-
-function Faixa({
-  tom,
-  icone,
-  children,
-}: {
-  tom: "ok" | "aviso" | "erro";
-  icone: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  const estilo = {
-    ok: "bg-success-light text-success-dark",
-    aviso: "bg-warning-light text-warning-dark",
-    erro: "bg-error-light text-error-dark",
-  }[tom];
-
-  return (
-    <div className={`flex items-start gap-2 rounded-[10px] px-3 py-2.5 text-[13px] ${estilo}`}>
-      <span className="mt-px shrink-0">{icone}</span>
-      <span className="leading-snug">{children}</span>
-    </div>
-  );
-}
-
-function Linha({ rotulo, valor }: { rotulo: string; valor: string }) {
-  return (
-    <div className="flex items-baseline justify-between gap-4 py-1.5">
-      <span className="text-[13px] text-soft">{rotulo}</span>
-      <span className="text-[13px] font-medium text-title tabular-nums">{valor}</span>
-    </div>
-  );
+  return <Alert type="success" showIcon message="Em dia com a fonte. Nada a baixar." />;
 }
 
 export function DadosLocaisCaged() {
+  const { token } = theme.useToken();
   const [estado, setEstado] = useState<EstadoSnapshot | null>(null);
   const [verificando, setVerificando] = useState(false);
   const [baixando, setBaixando] = useState(false);
@@ -161,121 +135,136 @@ export function DadosLocaisCaged() {
   const podeAtualizar = Boolean(estado && (estado.desatualizado || !estado.presente));
 
   return (
-    <section className="rounded-[14px] border border-line bg-white p-5">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-[15px] font-semibold text-title">Novo CAGED — dados locais</h2>
-          <p className="mt-1 max-w-[420px] text-[13px] leading-relaxed text-soft">
-            Emprego formal do Raio-X municipal. A fonte não permite consulta por município, então o
-            recorte fica em <code className="text-[12px]">data/caged-municipios.json</code>.
-          </p>
-        </div>
-        <span className="shrink-0 rounded-full bg-primary-light px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.8px] text-soft">
+    <Card
+      title="Novo CAGED — dados locais"
+      extra={
+        <Tag style={{ fontFamily: "var(--font-sync-mono)" }} bordered={false}>
           dev
-        </span>
-      </div>
+        </Tag>
+      }
+    >
+      <Paragraph type="secondary" style={{ maxWidth: 460 }}>
+        Emprego formal do Raio-X municipal. A fonte não permite consulta por município, então o
+        recorte fica em <Text code>data/caged-municipios.json</Text>.
+      </Paragraph>
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        <button
-          type="button"
-          onClick={verificar}
-          disabled={ocupado}
-          className="inline-flex h-10 items-center gap-2 rounded-[20px] bg-[#16181D] px-4 text-[14px] font-semibold text-white transition-colors hover:bg-[#2C2F38] disabled:opacity-50"
-        >
-          <RefreshCwIcon size={15} className={verificando ? "animate-spin" : undefined} />
+      <Flex gap={8} wrap>
+        <Button type="primary" icon={<ReloadOutlined />} loading={verificando} disabled={ocupado} onClick={verificar}>
           {verificando ? "Verificando…" : "Verificar dados"}
-        </button>
+        </Button>
 
-        <button
-          type="button"
-          onClick={atualizar}
+        <Button
+          icon={<CloudDownloadOutlined />}
+          loading={baixando}
           disabled={ocupado || !podeAtualizar}
+          onClick={atualizar}
           title={
             podeAtualizar
               ? "Baixa ~117 MB do IPEADATA e regrava o snapshot"
               : "Verifique primeiro; o botão libera se houver dado novo"
           }
-          className="inline-flex h-10 items-center gap-2 rounded-[20px] border border-line-stronger px-4 text-[14px] font-semibold text-title transition-colors hover:bg-surface-hover disabled:opacity-40"
         >
-          <DownloadIcon size={15} />
           {baixando ? "Baixando… (~80s)" : "Atualizar agora"}
-        </button>
-      </div>
+        </Button>
+      </Flex>
 
-      {erro && (
-        <div className="mt-4">
-          <Faixa tom="erro" icone={<AlertCircleIcon size={15} />}>
-            {erro}
-          </Faixa>
-        </div>
-      )}
+      {erro && <Alert style={{ marginTop: 16 }} type="error" showIcon message={erro} />}
 
       {estado && (
-        <div className="mt-4 space-y-4">
+        <Flex vertical gap={16} style={{ marginTop: 16 }}>
           <Veredito estado={estado} />
 
-          <div className="rounded-[10px] bg-surface-subtle px-4 py-2">
-            <Linha rotulo="Gerado em" valor={formatarInstante(estado.geradoEm)} />
-            <Linha
-              rotulo="Competências"
-              valor={
-                estado.primeiraCompetencia
+          <Descriptions
+            size="small"
+            column={1}
+            items={[
+              { key: "gerado", label: "Gerado em", children: formatarInstante(estado.geradoEm) },
+              {
+                key: "competencias",
+                label: "Competências",
+                children: estado.primeiraCompetencia
                   ? `${estado.primeiraCompetencia} a ${estado.ultimaCompetencia}`
-                  : "—"
-              }
-            />
-            <Linha
-              rotulo="Municípios"
-              valor={estado.municipios?.toLocaleString("pt-BR") ?? "—"}
-            />
-            <Linha rotulo="Tamanho" valor={formatarTamanho(estado.tamanhoBytes)} />
-          </div>
+                  : "—",
+              },
+              {
+                key: "municipios",
+                label: "Municípios",
+                children: estado.municipios?.toLocaleString("pt-BR") ?? "—",
+              },
+              { key: "tamanho", label: "Tamanho", children: formatarTamanho(estado.tamanhoBytes) },
+            ]}
+          />
 
           <div>
-            <p className="font-mono text-[10px] font-semibold uppercase tracking-[1px] text-dim">
+            <Text
+              type="secondary"
+              style={{
+                fontFamily: "var(--font-sync-mono)",
+                fontSize: 10,
+                textTransform: "uppercase",
+                letterSpacing: 1,
+              }}
+            >
               Séries na fonte
-            </p>
-            <div className="mt-2 space-y-2">
-              {estado.series.map((serie) => (
-                <div
-                  key={serie.codigo}
-                  className="flex items-center justify-between gap-3 rounded-[10px] border border-line px-3 py-2"
-                >
-                  <span className="font-mono text-[12px] font-semibold text-title">
-                    {serie.codigo}
-                  </span>
-                  <span className="text-right text-[12px] text-soft">
-                    {serie.erro ? (
-                      <span className="text-error-dark">{serie.erro}</span>
-                    ) : (
-                      <>
-                        cópia {formatarInstante(serie.local)} · fonte{" "}
-                        {formatarInstante(serie.remoto)}
-                        {serie.temDadoNovo && (
-                          <span className="ml-2 font-semibold text-warning-dark">novo</span>
-                        )}
-                      </>
-                    )}
-                  </span>
-                </div>
-              ))}
-            </div>
+            </Text>
+            <List
+              size="small"
+              bordered
+              style={{ marginTop: 8 }}
+              dataSource={estado.series}
+              renderItem={(serie) => (
+                <List.Item key={serie.codigo}>
+                  <Flex justify="space-between" align="center" style={{ width: "100%", gap: 12 }}>
+                    <Text strong style={{ fontFamily: "var(--font-sync-mono)" }}>
+                      {serie.codigo}
+                    </Text>
+                    <Text type={serie.erro ? "danger" : "secondary"} style={{ textAlign: "right" }}>
+                      {serie.erro ? (
+                        serie.erro
+                      ) : (
+                        <>
+                          cópia {formatarInstante(serie.local)} · fonte {formatarInstante(serie.remoto)}
+                          {serie.temDadoNovo && (
+                            <Tag color="warning" style={{ marginLeft: 8 }}>
+                              novo
+                            </Tag>
+                          )}
+                        </>
+                      )}
+                    </Text>
+                  </Flex>
+                </List.Item>
+              )}
+            />
           </div>
-        </div>
+        </Flex>
       )}
 
       {log && (
-        <pre className="mt-4 max-h-52 overflow-auto rounded-[10px] bg-surface-alt px-3 py-2.5 font-mono text-[11px] leading-relaxed text-body">
+        <pre
+          style={{
+            marginTop: 16,
+            maxHeight: 208,
+            overflow: "auto",
+            borderRadius: token.borderRadius,
+            background: token.colorFillTertiary,
+            padding: "10px 12px",
+            fontFamily: "var(--font-sync-mono)",
+            fontSize: 11,
+            lineHeight: 1.6,
+            color: token.colorText,
+          }}
+        >
           {log}
         </pre>
       )}
 
       {estado?.desatualizado === false && estado.presente && (
-        <p className="mt-4 text-[12px] leading-relaxed text-dim">
-          Depois de atualizar, comite <code>data/caged-municipios.json</code> — é o commit que leva
-          o dado para o deploy e para as outras máquinas.
-        </p>
+        <Paragraph type="secondary" style={{ marginTop: 16, fontSize: 12 }}>
+          Depois de atualizar, comite <Text code>data/caged-municipios.json</Text> — é o commit que
+          leva o dado para o deploy e para as outras máquinas.
+        </Paragraph>
       )}
-    </section>
+    </Card>
   );
 }

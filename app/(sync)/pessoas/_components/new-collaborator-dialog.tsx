@@ -1,185 +1,196 @@
 "use client";
 
-import React, { useState } from 'react';
-import type { CollaboratorItem } from '@/core/lib/people-types';
+import { useState } from "react";
+import { UserAddOutlined } from "@ant-design/icons";
+import {
+  Button,
+  Col,
+  Flex,
+  Form,
+  Input,
+  InputNumber,
+  Modal,
+  Row,
+  Select,
+  Space,
+  Typography,
+  theme,
+} from "antd";
+
+import type { CollaboratorItem } from "@/core/lib/people-types";
 
 interface NewCollaboratorDialogProps {
+  open: boolean;
   onClose: () => void;
   onSubmit: (input: Partial<CollaboratorItem> & { fullName: string }) => Promise<void>;
 }
 
+const TIPOS_DE_VINCULO = [
+  { value: "consultor_parceiro", label: "Consultor Parceiro" },
+  { value: "articulador_politico", label: "Articulador Político" },
+  { value: "socio_executivo", label: "Sócio Executivo" },
+  { value: "equipe_interna", label: "Equipe Interna" },
+  { value: "suporte_tecnico", label: "Suporte Técnico" },
+];
+
+/* Campos que ficam de fato dentro do `Form` do Ant. */
+interface CamposDoFormulario {
+  fullName: string;
+  email: string;
+  phone: string;
+  state: string;
+  primaryRole: string;
+  collaboratorType: string;
+  defaultCommissionPercent: number;
+}
+
 export function NewCollaboratorDialog({
+  open,
   onClose,
   onSubmit,
 }: NewCollaboratorDialogProps) {
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
-  const [state, setState] = useState('DF');
-  const [primaryRole, setPrimaryRole] = useState('Consultor Regional');
-  const [collaboratorType, setCollaboratorType] = useState('consultor_parceiro');
-  const [defaultCommissionPercent, setDefaultCommissionPercent] = useState(10);
+  const { token } = theme.useToken();
+  const [form] = Form.useForm<CamposDoFormulario>();
   const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!fullName.trim()) return;
+  const reset = () => {
+    form.resetFields();
+    setSubmitting(false);
+    onClose();
+  };
 
+  const handleFinish = async (values: CamposDoFormulario) => {
     setSubmitting(true);
     try {
       await onSubmit({
-        fullName: fullName.trim(),
-        email: email.trim() || undefined,
-        phone: phone.trim() || undefined,
-        state,
-        primaryRole,
-        collaboratorType,
-        defaultCommissionPercent,
-        partnershipStatus: 'ativo',
+        fullName: values.fullName.trim(),
+        email: values.email?.trim() || undefined,
+        phone: values.phone?.trim() || undefined,
+        state: values.state,
+        primaryRole: values.primaryRole,
+        collaboratorType: values.collaboratorType,
+        defaultCommissionPercent: values.defaultCommissionPercent,
+        partnershipStatus: "ativo",
       });
-      onClose();
-    } finally {
+      reset();
+    } catch {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-lg rounded-[14px] bg-card border border-line p-6 shadow-2xl">
-        <div className="flex items-center justify-between border-b border-line pb-4 mb-4">
-          <h2 className="text-[18px] font-bold text-title">
-            Nova Pessoa / Colaborador
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            className="text-muted hover:text-title"
+    <Modal
+      open={open}
+      onCancel={reset}
+      maskClosable={false}
+      destroyOnHidden
+      width={540}
+      centered
+      title={
+        <Space size={10} align="start">
+          <Flex
+            align="center"
+            justify="center"
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: token.borderRadiusLG,
+              background: token.colorFillTertiary,
+              color: token.colorText,
+              flexShrink: 0,
+            }}
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M18 6L6 18M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
+            <UserAddOutlined />
+          </Flex>
+          <Typography.Title level={5} style={{ margin: 0 }}>
+            Nova Pessoa / Colaborador
+          </Typography.Title>
+        </Space>
+      }
+      footer={
+        <Space>
+          <Button onClick={reset}>Cancelar</Button>
+          <Button type="primary" loading={submitting} onClick={() => form.submit()}>
+            {submitting ? "Salvando..." : "Cadastrar Pessoa"}
+          </Button>
+        </Space>
+      }
+    >
+      <Form<CamposDoFormulario>
+        form={form}
+        layout="vertical"
+        onFinish={handleFinish}
+        initialValues={{
+          fullName: "",
+          email: "",
+          phone: "",
+          state: "DF",
+          primaryRole: "Consultor Regional",
+          collaboratorType: "consultor_parceiro",
+          defaultCommissionPercent: 10,
+        }}
+      >
+        <Form.Item
+          label="Nome Completo"
+          name="fullName"
+          rules={[{ required: true, message: "Informe o nome completo." }]}
+        >
+          <Input placeholder="Ex: João da Silva" />
+        </Form.Item>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block font-mono text-[11px] font-semibold text-soft mb-1 uppercase">
-              Nome Completo *
-            </label>
-            <input
-              type="text"
-              required
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder="Ex: João da Silva"
-              className="w-full rounded-[8px] border border-line-input bg-card px-3 py-2 text-[13px] text-body focus:border-primary focus:outline-none"
-            />
-          </div>
+        <Row gutter={12}>
+          <Col span={12}>
+            <Form.Item
+              label="E-mail"
+              name="email"
+              rules={[{ type: "email", message: "E-mail inválido." }]}
+            >
+              <Input placeholder="joao@empresa.com" />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item label="Telefone / Whats" name="phone">
+              <Input placeholder="(61) 99999-9999" />
+            </Form.Item>
+          </Col>
+        </Row>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block font-mono text-[11px] font-semibold text-soft mb-1 uppercase">
-                E-mail
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="joao@empresa.com"
-                className="w-full rounded-[8px] border border-line-input bg-card px-3 py-2 text-[13px] text-body focus:border-primary focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block font-mono text-[11px] font-semibold text-soft mb-1 uppercase">
-                Telefone / Whats
-              </label>
-              <input
-                type="text"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="(61) 99999-9999"
-                className="w-full rounded-[8px] border border-line-input bg-card px-3 py-2 text-[13px] text-body focus:border-primary focus:outline-none"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="block font-mono text-[11px] font-semibold text-soft mb-1 uppercase">
-                UF
-              </label>
-              <input
-                type="text"
+        <Row gutter={12}>
+          <Col span={6}>
+            <Form.Item label="UF" name="state">
+              <Input
                 maxLength={2}
-                value={state}
-                onChange={(e) => setState(e.target.value.toUpperCase())}
-                className="w-full rounded-[8px] border border-line-input bg-card px-3 py-2 text-[13px] text-body focus:border-primary focus:outline-none font-mono uppercase"
+                style={{ textTransform: "uppercase", fontFamily: "var(--font-sync-mono)" }}
+                onChange={(event) =>
+                  form.setFieldValue("state", event.target.value.toUpperCase())
+                }
               />
-            </div>
-            <div className="col-span-2">
-              <label className="block font-mono text-[11px] font-semibold text-soft mb-1 uppercase">
-                Função Principal
-              </label>
-              <input
-                type="text"
-                value={primaryRole}
-                onChange={(e) => setPrimaryRole(e.target.value)}
-                placeholder="Ex: Consultor Regional"
-                className="w-full rounded-[8px] border border-line-input bg-card px-3 py-2 text-[13px] text-body focus:border-primary focus:outline-none"
-              />
-            </div>
-          </div>
+            </Form.Item>
+          </Col>
+          <Col span={18}>
+            <Form.Item label="Função Principal" name="primaryRole">
+              <Input placeholder="Ex: Consultor Regional" />
+            </Form.Item>
+          </Col>
+        </Row>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block font-mono text-[11px] font-semibold text-soft mb-1 uppercase">
-                Tipo de Vínculo
-              </label>
-              <select
-                value={collaboratorType}
-                onChange={(e) => setCollaboratorType(e.target.value)}
-                className="w-full rounded-[8px] border border-line-input bg-card px-3 py-2 text-[13px] text-body focus:border-primary focus:outline-none font-mono"
-              >
-                <option value="consultor_parceiro">Consultor Parceiro</option>
-                <option value="articulador_politico">Articulador Político</option>
-                <option value="socio_executivo">Sócio Executivo</option>
-                <option value="equipe_interna">Equipe Interna</option>
-                <option value="suporte_tecnico">Suporte Técnico</option>
-              </select>
-            </div>
-            <div>
-              <label className="block font-mono text-[11px] font-semibold text-soft mb-1 uppercase">
-                Comissão (%)
-              </label>
-              <input
-                type="number"
+        <Row gutter={12}>
+          <Col span={12}>
+            <Form.Item label="Tipo de Vínculo" name="collaboratorType">
+              <Select options={TIPOS_DE_VINCULO} />
+            </Form.Item>
+          </Col>
+          <Col span={12}>
+            <Form.Item label="Comissão (%)" name="defaultCommissionPercent">
+              <InputNumber<number>
                 min={0}
                 max={100}
-                value={defaultCommissionPercent}
-                onChange={(e) => setDefaultCommissionPercent(Number(e.target.value))}
-                className="w-full rounded-[8px] border border-line-input bg-card px-3 py-2 text-[13px] text-body focus:border-primary focus:outline-none font-mono"
+                style={{ width: "100%", fontFamily: "var(--font-sync-mono)" }}
               />
-            </div>
-          </div>
-
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-line mt-6">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-[8px] border border-line px-4 py-2 text-[13px] font-medium text-body hover:bg-surface-subtle"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              disabled={submitting}
-              className="rounded-[8px] bg-primary px-4 py-2 text-[13px] font-semibold text-white hover:bg-primary-strong transition-colors disabled:opacity-50"
-            >
-              {submitting ? 'Salvando...' : 'Cadastrar Pessoa'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+            </Form.Item>
+          </Col>
+        </Row>
+      </Form>
+    </Modal>
   );
 }

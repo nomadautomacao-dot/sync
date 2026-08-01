@@ -1,5 +1,9 @@
+"use client";
+
 import Link from "next/link";
-import { ChevronRightIcon } from "lucide-react";
+import { RightOutlined } from "@ant-design/icons";
+import { ProCard } from "@ant-design/pro-components";
+import { Avatar, List, Tag, Typography, theme } from "antd";
 
 import {
   STAGE_LABELS,
@@ -43,74 +47,92 @@ function atividadeRelativa(iso?: string): string | null {
  * some da tela em vez de virar um bloco vazio.
  */
 export function RetomarStrip({ cidades, limite = 6 }: RetomarStripProps) {
+  const { token } = theme.useToken();
   const recentes = [...cidades].sort(porAtividadeRecente).slice(0, limite);
   if (recentes.length === 0) return null;
 
   return (
-    <section className="rounded-[16px] border border-white/95 bg-white/88 p-[18px] shadow-[0_10px_26px_rgba(22,24,29,.05)]">
-      <div className="flex items-baseline justify-between gap-4">
-        <h2 className="text-[15px] font-bold tracking-[-0.3px] text-[#16181D]">
-          Retomar de onde parou
-        </h2>
+    <ProCard
+      title="Retomar de onde parou"
+      subTitle="Abre o levantamento com o município já carregado."
+      extra={
         <Link
           href="/pipeline"
-          className="font-mono text-[10.5px] text-[#767A86] transition-colors hover:text-[#16181D]"
+          style={{ fontFamily: "var(--font-sync-mono)", fontSize: 10.5, color: token.colorTextSecondary }}
         >
           ver carteira
         </Link>
-      </div>
-
-      <p className="mt-[3px] text-[12px] text-[#767A86]">
-        Abre o levantamento com o município já carregado.
-      </p>
-
-      <ul className="mt-[14px] space-y-[2px]">
-        {recentes.map((cidade) => {
+      }
+    >
+      <List
+        split={false}
+        dataSource={recentes}
+        renderItem={(cidade) => {
           const tom = stagePastelTone(cidade.stage);
           const atividade = atividadeRelativa(cidade.lastActivityAt);
 
           return (
-            <li key={cidade.id}>
+            <List.Item style={{ padding: 0, border: "none" }}>
               <Link
                 href={`/modulos/levantamento-fundeb?ibge=${cidade.codigoIbge}`}
-                className="flex items-center gap-3 rounded-[12px] px-[10px] py-[9px] transition-colors hover:bg-[#F7F6FA]"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 12,
+                  width: "100%",
+                  padding: "9px 10px",
+                  borderRadius: 12,
+                }}
               >
-                <span className="flex size-[30px] shrink-0 items-center justify-center rounded-full bg-[#F2F1F7] font-mono text-[10.5px] font-semibold text-[#3B3F4A]">
+                <Avatar
+                  size={30}
+                  style={{
+                    background: token.colorFillTertiary,
+                    color: token.colorText,
+                    fontFamily: "var(--font-sync-mono)",
+                    fontSize: 10.5,
+                    fontWeight: 600,
+                  }}
+                >
                   {cidade.uf}
-                </span>
+                </Avatar>
 
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[13px] font-semibold tracking-[-0.2px] text-[#16181D]">
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <Typography.Text strong ellipsis style={{ display: "block", fontSize: 13 }}>
                     {cidade.name}
-                  </span>
+                  </Typography.Text>
                   {atividade && (
-                    <span className="block font-mono text-[10.5px] text-[#A2A6B2]">
+                    <Typography.Text
+                      type="secondary"
+                      style={{ display: "block", fontFamily: "var(--font-sync-mono)", fontSize: 10.5 }}
+                    >
                       {atividade}
-                    </span>
+                    </Typography.Text>
                   )}
-                </span>
+                </div>
+
+                <Tag style={{ background: tom.bg, color: tom.text, border: "none", borderRadius: 999 }}>
+                  {STAGE_LABELS[cidade.stage]}
+                </Tag>
 
                 <span
-                  className="hidden shrink-0 items-center gap-[6px] rounded-[14px] px-[9px] py-[4px] text-[10.5px] font-semibold sm:inline-flex"
-                  style={{ background: tom.bg, color: tom.text }}
+                  style={{
+                    width: 92,
+                    textAlign: "right",
+                    fontFamily: "var(--font-sync-mono)",
+                    fontSize: 12,
+                    color: token.colorTextSecondary,
+                  }}
                 >
-                  <span
-                    className="size-[6px] shrink-0 rounded-full"
-                    style={{ background: tom.dot }}
-                  />
-                  {STAGE_LABELS[cidade.stage]}
-                </span>
-
-                <span className="hidden w-[92px] shrink-0 text-right font-mono text-[12px] text-[#3B3F4A] md:block">
                   {formatCurrencyCompact(cidade.estimatedAnnualRevenue)}
                 </span>
 
-                <ChevronRightIcon className="size-[15px] shrink-0 text-[#A2A6B2]" />
+                <RightOutlined style={{ fontSize: 15, color: token.colorTextQuaternary }} />
               </Link>
-            </li>
+            </List.Item>
           );
-        })}
-      </ul>
-    </section>
+        }}
+      />
+    </ProCard>
   );
 }

@@ -1,150 +1,185 @@
 "use client";
 
-import React, { useState } from 'react';
-import type { CompanyItem } from '@/core/lib/company-types';
+import { CheckCircleFilled } from "@ant-design/icons";
 import {
-  formatCnpj,
-  companyStatusTone,
-  companyInitials,
-} from '@/core/lib/company-types';
+  Avatar,
+  Descriptions,
+  Drawer,
+  List,
+  Space,
+  Tabs,
+  Tag,
+  Typography,
+  theme,
+} from "antd";
+
+import type { CompanyItem } from "@/core/lib/company-types";
+import { companyInitials, formatCnpj } from "@/core/lib/company-types";
 
 interface CompanyDetailPanelProps {
-  company: CompanyItem;
+  /* `null` fecha a gaveta — a página mantém sempre montado o mesmo componente
+     em vez de montar/desmontar condicionalmente, como o resto do app faz com
+     `Drawer` do Ant. */
+  company: CompanyItem | null;
   onClose: () => void;
 }
 
-const TABS = ['Dados Cadastrais', 'Módulos', 'Quadro'] as const;
+function tonalidadeDoStatus(status: string): "success" | "warning" | "default" {
+  const s = status.toLowerCase();
+  if (s.includes("inativ")) return "default";
+  if (s.includes("ativ")) return "success";
+  if (s.includes("pend")) return "warning";
+  return "default";
+}
 
-export function CompanyDetailPanel({
-  company,
-  onClose,
-}: CompanyDetailPanelProps) {
-  const [activeTab, setActiveTab] = useState(0);
-  const initials = companyInitials(company.nomeFantasia || company.razaoSocial);
-  const tone = companyStatusTone(company.status);
+export function CompanyDetailPanel({ company, onClose }: CompanyDetailPanelProps) {
+  const { token } = theme.useToken();
 
   return (
-    <div className="flex h-full w-[450px] flex-col border-l border-line bg-card shadow-xl">
-      {/* Header */}
-      <div className="flex items-start justify-between border-b border-line p-5">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-[8px] bg-primary-light border border-line flex items-center justify-center font-mono font-bold text-[12px] text-primary-strong">
-            {initials}
-          </div>
-          <div>
-            <h2 className="text-[16px] font-bold tracking-[-0.3px] text-title leading-tight">
-              {company.nomeFantasia || company.razaoSocial}
-            </h2>
-            <p className="font-mono text-[11px] text-soft">
-              {formatCnpj(company.cnpj)}
-            </p>
-            <span
-              className={`mt-1.5 inline-block rounded-[6px] px-2 py-[2px] font-mono text-[10px] font-medium capitalize ${tone.bg} ${tone.fg}`}
+    <Drawer
+      open={Boolean(company)}
+      onClose={onClose}
+      width={450}
+      destroyOnHidden
+      title={
+        company && (
+          <Space size={12} align="start">
+            <Avatar
+              shape="square"
+              size={40}
+              style={{
+                background: token.colorFillTertiary,
+                color: token.colorText,
+                fontWeight: 700,
+                fontFamily: "var(--font-sync-mono)",
+              }}
             >
-              {company.status}
-            </span>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className="p-1 text-muted transition-colors hover:text-title"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M18 6L6 18M6 6l12 12" />
-          </svg>
-        </button>
-      </div>
-
-      {/* Tab bar */}
-      <div className="flex border-b border-line bg-surface-subtle">
-        {TABS.map((tab, index) => (
-          <button
-            key={tab}
-            type="button"
-            onClick={() => setActiveTab(index)}
-            className={`flex-1 py-[10px] text-center font-mono text-[11px] font-semibold uppercase tracking-[0.5px] transition-colors ${
-              activeTab === index
-                ? 'border-b-2 border-primary text-primary-strong'
-                : 'border-b-2 border-transparent text-muted hover:text-body'
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
-
-      {/* Tab Content */}
-      <div className="flex-1 overflow-y-auto p-5 font-mono text-[11px] space-y-4">
-        {activeTab === 0 && (
-          <div className="space-y-4">
-            <Section title="IDENTIFICAÇÃO">
-              <Row label="Razão Social" value={company.razaoSocial} />
-              <Row label="Nome Fantasia" value={company.nomeFantasia || '—'} />
-              <Row label="CNPJ" value={formatCnpj(company.cnpj)} />
-              <Row label="UF / Cidade" value={`${company.cidade || '—'} / ${company.uf || '—'}`} />
-            </Section>
-
-            <Section title="CONTATO / RESPONSÁVEL">
-              <Row label="Nome" value={company.responsavelNome || '—'} />
-              <Row label="E-mail" value={company.responsavelEmail || '—'} />
-            </Section>
-          </div>
-        )}
-
-        {activeTab === 1 && (
-          <div className="space-y-4">
-            <Section title="MÓDULOS CONTRATADOS E AUTORIZADOS">
-              <div className="space-y-2 mt-2">
-                {company.activeModules.length > 0 ? (
-                  company.activeModules.map((mod) => (
-                    <div
-                      key={mod}
-                      className="flex items-center justify-between p-3 rounded-[8px] bg-surface-subtle border border-line"
-                    >
-                      <span className="font-semibold text-title uppercase">{mod.replace('_', ' ')}</span>
-                      <span className="text-success-dark font-semibold">● Ativo</span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-muted italic">Nenhum módulo ativo.</p>
-                )}
+              {companyInitials(company.nomeFantasia || company.razaoSocial)}
+            </Avatar>
+            <div>
+              <Typography.Title level={5} style={{ margin: 0 }}>
+                {company.nomeFantasia || company.razaoSocial}
+              </Typography.Title>
+              <Typography.Text
+                type="secondary"
+                style={{ fontFamily: "var(--font-sync-mono)", fontSize: 11 }}
+              >
+                {formatCnpj(company.cnpj)}
+              </Typography.Text>
+              <div style={{ marginTop: 4 }}>
+                <Tag color={tonalidadeDoStatus(company.status)} style={{ textTransform: "capitalize" }}>
+                  {company.status}
+                </Tag>
               </div>
-            </Section>
-          </div>
-        )}
-
-        {activeTab === 2 && (
-          <div className="space-y-4">
-            <Section title="QUADRO DE PESSOAL">
-              <Row label="Total Posições Alocadas" value={`${company.employeeCount || 0} pessoas`} />
-            </Section>
-            <div className="p-4 rounded-[8px] bg-surface-subtle border border-line text-center text-muted">
-              Quadro de colaboradores alocados para atendimento desta empresa.
             </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <h3 className="mb-2 font-mono text-[10px] font-semibold uppercase tracking-[1px] text-soft">
-        {title}
-      </h3>
-      <div className="space-y-0">{children}</div>
-    </div>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-baseline justify-between border-b border-line py-[6px]">
-      <span className="text-muted">{label}</span>
-      <span className="text-right font-medium text-body">{value}</span>
-    </div>
+          </Space>
+        )
+      }
+    >
+      {company && (
+        <Tabs
+          items={[
+            {
+              key: "cadastrais",
+              label: "Dados Cadastrais",
+              children: (
+                <Space direction="vertical" size={20} style={{ width: "100%" }}>
+                  <Descriptions
+                    title="Identificação"
+                    column={1}
+                    size="small"
+                    items={[
+                      { key: "razao", label: "Razão Social", children: company.razaoSocial },
+                      {
+                        key: "fantasia",
+                        label: "Nome Fantasia",
+                        children: company.nomeFantasia || "—",
+                      },
+                      { key: "cnpj", label: "CNPJ", children: formatCnpj(company.cnpj) },
+                      {
+                        key: "local",
+                        label: "UF / Cidade",
+                        children: `${company.cidade || "—"} / ${company.uf || "—"}`,
+                      },
+                    ]}
+                  />
+                  <Descriptions
+                    title="Contato / Responsável"
+                    column={1}
+                    size="small"
+                    items={[
+                      {
+                        key: "nome",
+                        label: "Nome",
+                        children: company.responsavelNome || "—",
+                      },
+                      {
+                        key: "email",
+                        label: "E-mail",
+                        children: company.responsavelEmail || "—",
+                      },
+                    ]}
+                  />
+                </Space>
+              ),
+            },
+            {
+              key: "modulos",
+              label: "Módulos",
+              children: (
+                <div>
+                  <Typography.Title level={5} style={{ fontSize: 12 }}>
+                    Módulos Contratados e Autorizados
+                  </Typography.Title>
+                  {company.activeModules.length > 0 ? (
+                    <List
+                      size="small"
+                      dataSource={company.activeModules}
+                      renderItem={(mod) => (
+                        <List.Item>
+                          <Typography.Text strong style={{ textTransform: "uppercase" }}>
+                            {mod.replace("_", " ")}
+                          </Typography.Text>
+                          <Tag color="success" icon={<CheckCircleFilled />}>
+                            Ativo
+                          </Tag>
+                        </List.Item>
+                      )}
+                    />
+                  ) : (
+                    <Typography.Text type="secondary" italic>
+                      Nenhum módulo ativo.
+                    </Typography.Text>
+                  )}
+                </div>
+              ),
+            },
+            {
+              key: "quadro",
+              label: "Quadro",
+              children: (
+                <Space direction="vertical" size={16} style={{ width: "100%" }}>
+                  <Descriptions
+                    title="Quadro de Pessoal"
+                    column={1}
+                    size="small"
+                    items={[
+                      {
+                        key: "total",
+                        label: "Total Posições Alocadas",
+                        children: `${company.employeeCount || 0} pessoas`,
+                      },
+                    ]}
+                  />
+                  <Typography.Text type="secondary">
+                    Quadro de colaboradores alocados para atendimento desta empresa.
+                  </Typography.Text>
+                </Space>
+              ),
+            },
+          ]}
+        />
+      )}
+    </Drawer>
   );
 }

@@ -1,19 +1,53 @@
 "use client";
 
+/**
+ * Assistente de novo levantamento FUNDEB.
+ *
+ * ATENÇÃO — problema conhecido e pendente, não resolvido nesta migração:
+ * a barra de progresso da etapa "Gerar" é SIMULADA. `iniciarGeracao` avança
+ * por `setInterval` em intervalos fixos de 850ms, sem consultar FNDE/INEP de
+ * verdade. A lista de municípios sugeridos (`MUNICIPIOS_SUGESTOES`) e os
+ * números da tela de conclusão (R$ 8,41M / R$ 9,24M / +R$ 828,7K) são valores
+ * fixos no código, não vêm de nenhuma fonte oficial. Mesmo assim, ao fim do
+ * progresso simulado o componente GRAVA a cidade de verdade no Firestore via
+ * `ensureCity`, com `estimatedAnnualRevenue` chumbado em R$ 8.410.000. Esta
+ * tarefa troca só a aparência (Tailwind → Ant Design com `Steps` e `Modal`) e
+ * não altera nada desse comportamento.
+ */
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeftIcon,
-  ArrowRightIcon,
-  SearchIcon,
-  CheckCircle2Icon,
-  BoltIcon,
-  DownloadIcon,
-  FileTextIcon,
-  FileSpreadsheetIcon,
-  Loader2Icon,
-  XIcon,
-} from "lucide-react";
+  ArrowLeftOutlined,
+  ArrowRightOutlined,
+  CheckCircleFilled,
+  DownloadOutlined,
+  FileExcelOutlined,
+  FileTextOutlined,
+  LoadingOutlined,
+  SearchOutlined,
+  ThunderboltOutlined,
+} from "@ant-design/icons";
+import { ProCard } from "@ant-design/pro-components";
+import {
+  Avatar,
+  Button,
+  Col,
+  Descriptions,
+  Flex,
+  Input,
+  List,
+  Modal,
+  Radio,
+  Row,
+  Segmented,
+  Statistic,
+  Steps,
+  Switch,
+  Tag,
+  Typography,
+  theme,
+} from "antd";
 
 import { useAuth } from "@/core/providers/auth-provider";
 import { getFirebaseDb } from "@/core/lib/firebase-client";
@@ -30,21 +64,10 @@ interface Municipio {
   matriculas: string;
   escolas: string;
   chip: string;
-  chipTexto: string;
-  chipFundo: string;
 }
 
 const MUNICIPIOS_SUGESTOES: Municipio[] = [
-  {
-    nome: "Senhor do Bonfim",
-    uf: "BA",
-    ibge: "2930105",
-    matriculas: "14.203",
-    escolas: "58",
-    chip: "novo",
-    chipTexto: "#5A5E6A",
-    chipFundo: "#EFEFF4",
-  },
+  { nome: "Senhor do Bonfim", uf: "BA", ibge: "2930105", matriculas: "14.203", escolas: "58", chip: "novo" },
   {
     nome: "Cristalina",
     uf: "GO",
@@ -52,8 +75,6 @@ const MUNICIPIOS_SUGESTOES: Municipio[] = [
     matriculas: "11.688",
     escolas: "42",
     chip: "na carteira",
-    chipTexto: "#8A3A50",
-    chipFundo: "#FBE9EE",
   },
   {
     nome: "Águas Lindas de Goiás",
@@ -62,8 +83,6 @@ const MUNICIPIOS_SUGESTOES: Municipio[] = [
     matriculas: "10.914",
     escolas: "39",
     chip: "na carteira",
-    chipTexto: "#8A3A50",
-    chipFundo: "#FBE9EE",
   },
   {
     nome: "Senador José Porfírio",
@@ -72,20 +91,23 @@ const MUNICIPIOS_SUGESTOES: Municipio[] = [
     matriculas: "8.442",
     escolas: "31",
     chip: "proposta",
-    chipTexto: "#8A5A00",
-    chipFundo: "#FBF0D9",
   },
-  {
-    nome: "Miradouro",
-    uf: "MG",
-    ibge: "3142304",
-    matriculas: "4.170",
-    escolas: "17",
-    chip: "estudo",
-    chipTexto: "#1F6A47",
-    chipFundo: "#E4F4EC",
-  },
+  { nome: "Miradouro", uf: "MG", ibge: "3142304", matriculas: "4.170", escolas: "17", chip: "estudo" },
 ];
+
+/** Cor nomeada do Ant para o chip de status da sugestão — sem hex solto. */
+function corDoChip(chip: string): string {
+  switch (chip) {
+    case "na carteira":
+      return "magenta";
+    case "proposta":
+      return "gold";
+    case "estudo":
+      return "green";
+    default:
+      return "default";
+  }
+}
 
 const METODOLOGIAS = [
   {
@@ -112,8 +134,13 @@ const PASSOS_GERACAO = [
   "Formatando relatório dirigido",
 ];
 
+const EXERCICIOS = ["2025", "2026"];
+const RECORTES = ["Municipal", "Pública", "Total"];
+const FONTE_NUMERO = "var(--font-sync-mono)";
+
 export function NovoLevantamentoWizard({ onClose }: NovoLevantamentoWizardProps) {
   const router = useRouter();
+  const { token } = theme.useToken();
   const [etapa, setEtapa] = useState<1 | 2 | 3>(1);
   const [munSel, setMunSel] = useState<number>(0);
   const [busca, setBusca] = useState("");
@@ -158,499 +185,392 @@ export function NovoLevantamentoWizard({ onClose }: NovoLevantamentoWizardProps)
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#16181D]/40 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-[820px] max-w-full overflow-hidden rounded-[18px] border border-white/95 bg-white/95 p-[22px] shadow-[0_14px_36px_rgba(22,24,29,.12)] backdrop-blur-xl">
-        {/* Close Button */}
-        <button
-          type="button"
-          onClick={onClose}
-          className="absolute right-4 top-4 flex size-8 items-center justify-center rounded-full text-[#767A86] transition-colors hover:bg-[#F2F1F7] hover:text-[#16181D]"
-        >
-          <XIcon className="size-4" />
-        </button>
+    <Modal
+      open
+      onCancel={onClose}
+      footer={null}
+      width={820}
+      destroyOnHidden
+      title={
+        <div>
+          <Flex align="center" gap={12}>
+            <Button
+              shape="circle"
+              icon={<ArrowLeftOutlined />}
+              onClick={etapa > 1 ? () => setEtapa((etapa - 1) as 1 | 2) : onClose}
+            />
+            <div>
+              <Typography.Title level={4} style={{ margin: 0 }}>
+                Novo levantamento FUNDEB
+              </Typography.Title>
+              <Typography.Text type="secondary" style={{ fontFamily: FONTE_NUMERO, fontSize: 10.5 }}>
+                exercício 2026 · bases oficiais FNDE · INEP · SICONFI
+              </Typography.Text>
+            </div>
+          </Flex>
 
-        {/* Wizard Header */}
-        <div className="flex items-center gap-[14px]">
-          <button
-            type="button"
-            onClick={etapa > 1 ? () => setEtapa((etapa - 1) as 1 | 2) : onClose}
-            className="flex size-[38px] items-center justify-center rounded-full border border-white/95 bg-white/88 shadow-[0_6px_16px_rgba(22,24,29,.07)] transition-colors hover:bg-white"
+          <Steps
+            size="small"
+            current={etapa - 1}
+            style={{ marginTop: 16 }}
+            items={[{ title: "Município" }, { title: "Parâmetros" }, { title: "Gerar" }]}
+          />
+        </div>
+      }
+    >
+      {/* ── ETAPA 1: ESCOLHA O MUNICÍPIO ────────────────────────────────── */}
+      {etapa === 1 && (
+        <div>
+          <Typography.Title level={5} style={{ marginBottom: 3 }}>
+            Escolha o município
+          </Typography.Title>
+          <Typography.Text type="secondary" style={{ fontSize: 12.5 }}>
+            Qualquer um dos 5.570 municípios. Os dados são consultados nas bases oficiais na hora.
+          </Typography.Text>
+
+          <Input
+            size="large"
+            allowClear
+            prefix={<SearchOutlined style={{ color: token.colorTextTertiary }} />}
+            placeholder="Nome do município ou código IBGE…"
+            value={busca}
+            onChange={(e) => setBusca(e.target.value)}
+            style={{ borderRadius: 24, marginTop: 16, marginBottom: 16 }}
+          />
+
+          <Typography.Text
+            type="secondary"
+            style={{
+              display: "block",
+              fontFamily: FONTE_NUMERO,
+              fontSize: 9.5,
+              fontWeight: 600,
+              letterSpacing: 1.3,
+              textTransform: "uppercase",
+            }}
           >
-            <ArrowLeftIcon className="size-[18px] text-[#16181D]" />
-          </button>
+            Sugestões · região da carteira
+          </Typography.Text>
 
-          <div>
-            <h2 className="text-[21px] font-bold tracking-[-0.7px] text-[#16181D]">
-              Novo levantamento FUNDEB
-            </h2>
-            <p className="font-mono text-[10.5px] text-[#767A86]">
-              exercício 2026 · bases oficiais FNDE · INEP · SICONFI
-            </p>
-          </div>
-
-          <div className="flex-1" />
-
-          {/* Stepper pills */}
-          <div className="flex gap-[6px]">
-            {["Município", "Parâmetros", "Gerar"].map((nome, i) => {
-              const numEtapa = i + 1;
-              const ativa = etapa === numEtapa;
-              const feita = etapa > numEtapa;
+          <List
+            style={{ marginTop: 8 }}
+            split={false}
+            dataSource={MUNICIPIOS_SUGESTOES.filter(
+              (m) => m.nome.toLowerCase().includes(busca.toLowerCase()) || m.ibge.includes(busca)
+            )}
+            renderItem={(m) => {
+              const indexReal = MUNICIPIOS_SUGESTOES.indexOf(m);
+              const selecionado = munSel === indexReal;
 
               return (
-                <div
-                  key={nome}
-                  className={`flex items-center gap-[7px] rounded-[18px] border border-white/90 p-[6px_13px_6px_7px] ${
-                    ativa ? "bg-white" : "bg-white/50"
-                  }`}
+                <List.Item
+                  onClick={() => setMunSel(indexReal)}
+                  style={{
+                    cursor: "pointer",
+                    borderRadius: 12,
+                    padding: "11px 14px",
+                    marginBottom: 4,
+                    background: selecionado ? token.colorFillTertiary : "transparent",
+                    border: `1px solid ${selecionado ? token.colorBorderSecondary : "transparent"}`,
+                  }}
                 >
-                  <div
-                    className={`flex size-[20px] items-center justify-center rounded-full font-mono text-[10px] font-semibold ${
-                      ativa || feita ? "bg-[#16181D] text-white" : "bg-[#ECEBF2] text-[#767A86]"
-                    }`}
-                  >
-                    {feita ? "✓" : numEtapa}
-                  </div>
-                  <span
-                    className={`text-[12px] font-semibold ${
-                      ativa ? "text-[#16181D]" : "text-[#767A86]"
-                    }`}
-                  >
-                    {nome}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="h-5" />
-
-        {/* ── ETAPA 1: ESCOLHA O MUNICÍPIO ────────────────────────────────── */}
-        {etapa === 1 && (
-          <div className="rounded-[18px] border border-white/95 bg-white/88 p-[22px] shadow-[0_14px_36px_rgba(22,24,29,.06)]">
-            <h3 className="text-[15px] font-bold tracking-[-0.3px] text-[#16181D]">
-              Escolha o município
-            </h3>
-            <p className="mt-[3px] text-[12.5px] text-[#767A86]">
-              Qualquer um dos 5.570 municípios. Os dados são consultados nas bases oficiais na hora.
-            </p>
-
-            <div className="h-4" />
-
-            <div className="flex h-[46px] items-center gap-[10px] rounded-[24px] border border-white/90 bg-[#F2F1F7] px-[16px]">
-              <SearchIcon className="size-[18px] text-[#A2A6B2]" />
-              <input
-                type="text"
-                value={busca}
-                onChange={(e) => setBusca(e.target.value)}
-                placeholder="Nome do município ou código IBGE…"
-                className="flex-1 bg-transparent text-[13.5px] text-[#16181D] outline-none placeholder:text-[#A2A6B2]"
-              />
-            </div>
-
-            <div className="h-4" />
-
-            <div className="px-[4px] font-mono text-[9.5px] font-semibold tracking-[1.3px] text-[#A2A6B2]">
-              SUGESTÕES · REGIÃO DA CARTEIRA
-            </div>
-
-            <div className="h-2" />
-
-            <div className="flex flex-col gap-[4px]">
-              {MUNICIPIOS_SUGESTOES.filter((m) =>
-                m.nome.toLowerCase().includes(busca.toLowerCase()) || m.ibge.includes(busca)
-              ).map((m) => {
-                const indexReal = MUNICIPIOS_SUGESTOES.indexOf(m);
-                const selecionado = munSel === indexReal;
-
-                return (
-                  <div
-                    key={m.ibge}
-                    onClick={() => setMunSel(indexReal)}
-                    className={`flex items-center gap-[12px] rounded-[12px] border p-[11px_14px] cursor-pointer transition-all ${
-                      selecionado
-                        ? "border-[#D9D7E2] bg-[#F2F1F7]"
-                        : "border-transparent bg-transparent hover:bg-[#F7F6FA]"
-                    }`}
-                  >
-                    <div
-                      className={`flex size-[30px] items-center justify-center rounded-[10px] font-mono text-[11px] font-semibold ${
-                        selecionado ? "bg-[#16181D] text-white" : "bg-[#F2F1F7] text-[#5A5E6A]"
-                      }`}
+                  <Flex align="center" gap={12} style={{ width: "100%" }}>
+                    <Avatar
+                      shape="square"
+                      size={30}
+                      style={{
+                        background: selecionado ? token.colorPrimary : token.colorFillTertiary,
+                        color: selecionado ? token.colorWhite : token.colorTextSecondary,
+                        fontFamily: FONTE_NUMERO,
+                        fontSize: 11,
+                        fontWeight: 600,
+                      }}
                     >
                       {m.uf}
-                    </div>
+                    </Avatar>
 
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[13.5px] font-semibold text-[#16181D]">{m.nome}</p>
-                      <p className="mt-[1px] font-mono text-[10px] text-[#767A86]">
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <Typography.Text strong style={{ fontSize: 13.5 }}>
+                        {m.nome}
+                      </Typography.Text>
+                      <div style={{ fontFamily: FONTE_NUMERO, fontSize: 10, color: token.colorTextSecondary }}>
                         IBGE {m.ibge} · {m.matriculas} matrículas · {m.escolas} escolas
-                      </p>
+                      </div>
                     </div>
 
-                    <span
-                      className="rounded-[12px] px-[9px] py-[3px] font-mono text-[10px] font-semibold whitespace-nowrap"
-                      style={{ color: m.chipTexto, backgroundColor: m.chipFundo }}
-                    >
-                      {m.chip}
-                    </span>
+                    <Tag color={corDoChip(m.chip)}>{m.chip}</Tag>
 
-                    {selecionado && <CheckCircle2Icon className="size-[18px] text-[#16181D]" />}
-                  </div>
-                );
-              })}
-            </div>
+                    {selecionado && <CheckCircleFilled style={{ color: token.colorPrimary, fontSize: 18 }} />}
+                  </Flex>
+                </List.Item>
+              );
+            }}
+          />
 
-            <div className="h-[18px]" />
+          <Flex justify="flex-end" style={{ marginTop: 18 }}>
+            <Button type="primary" size="large" onClick={() => setEtapa(2)} iconPosition="end" icon={<ArrowRightOutlined />}>
+              Continuar
+            </Button>
+          </Flex>
+        </div>
+      )}
 
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={() => setEtapa(2)}
-                className="flex h-[44px] items-center gap-[8px] rounded-[24px] bg-[#16181D] px-[22px] text-white transition-colors hover:bg-[#2C2F38]"
+      {/* ── ETAPA 2: PARÂMETROS ────────────────────────────────────────── */}
+      {etapa === 2 && (
+        <div>
+          <Typography.Title level={5} style={{ marginBottom: 3 }}>
+            Parâmetros da projeção
+          </Typography.Title>
+          <Typography.Text type="secondary" style={{ fontSize: 12.5 }}>
+            {mun.nome} · {mun.uf} · os padrões abaixo seguem a metodologia da consultoria.
+          </Typography.Text>
+
+          <Row gutter={22} style={{ marginTop: 20 }}>
+            <Col span={12}>
+              <Typography.Text
+                type="secondary"
+                style={{ display: "block", fontFamily: FONTE_NUMERO, fontSize: 9.5, fontWeight: 600, letterSpacing: 1.3 }}
               >
-                <span className="text-[13.5px] font-semibold text-white">Continuar</span>
-                <ArrowRightIcon className="size-[17px] text-white" />
-              </button>
-            </div>
-          </div>
-        )}
+                EXERCÍCIO
+              </Typography.Text>
+              <Segmented
+                style={{ marginTop: 8 }}
+                value={EXERCICIOS[exercicioSel]}
+                onChange={(v) => setExercicioSel(EXERCICIOS.indexOf(v as string))}
+                options={EXERCICIOS}
+              />
 
-        {/* ── ETAPA 2: PARÂMETROS ────────────────────────────────────────── */}
-        {etapa === 2 && (
-          <div className="rounded-[18px] border border-white/95 bg-white/88 p-[22px] shadow-[0_14px_36px_rgba(22,24,29,.06)]">
-            <h3 className="text-[15px] font-bold tracking-[-0.3px] text-[#16181D]">
-              Parâmetros da projeção
-            </h3>
-            <p className="mt-[3px] text-[12.5px] text-[#767A86]">
-              {mun.nome} · {mun.uf} · os padrões abaixo seguem a metodologia da consultoria.
-            </p>
+              <Typography.Text
+                type="secondary"
+                style={{
+                  display: "block",
+                  marginTop: 20,
+                  fontFamily: FONTE_NUMERO,
+                  fontSize: 9.5,
+                  fontWeight: 600,
+                  letterSpacing: 1.3,
+                }}
+              >
+                RECORTE DO CENSO
+              </Typography.Text>
+              <Segmented
+                style={{ marginTop: 8 }}
+                value={RECORTES[recorteSel]}
+                onChange={(v) => setRecorteSel(RECORTES.indexOf(v as string))}
+                options={RECORTES}
+              />
 
-            <div className="h-5" />
-
-            <div className="grid grid-cols-2 gap-[22px]">
-              {/* Coluna Esquerda */}
-              <div>
-                <div className="font-mono text-[9.5px] font-semibold tracking-[1.3px] text-[#A2A6B2]">
-                  EXERCÍCIO
-                </div>
-                <div className="h-2" />
-                <div className="flex w-fit rounded-[20px] bg-[#F2F1F7] p-[3px]">
-                  {["2025", "2026"].map((ano, i) => (
-                    <button
-                      key={ano}
-                      type="button"
-                      onClick={() => setExercicioSel(i)}
-                      className={`rounded-[17px] px-[18px] py-[7px] font-mono text-[12px] transition-all ${
-                        exercicioSel === i
-                          ? "bg-white font-semibold text-[#16181D] shadow-[0_3px_8px_rgba(22,24,29,.1)]"
-                          : "font-normal text-[#767A86]"
-                      }`}
-                    >
-                      {ano}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="h-5" />
-
-                <div className="font-mono text-[9.5px] font-semibold tracking-[1.3px] text-[#A2A6B2]">
-                  RECORTE DO CENSO
-                </div>
-                <div className="h-2" />
-                <div className="flex flex-wrap gap-[6px]">
-                  {["Municipal", "Pública", "Total"].map((nome, i) => (
-                    <button
-                      key={nome}
-                      type="button"
-                      onClick={() => setRecorteSel(i)}
-                      className={`rounded-[18px] px-[14px] py-[8px] text-[12.5px] font-semibold transition-all ${
-                        recorteSel === i
-                          ? "border border-[#16181D] bg-white text-[#16181D]"
-                          : "border border-[#ECEDF2] bg-transparent text-[#767A86]"
-                      }`}
-                    >
-                      {nome}
-                    </button>
-                  ))}
-                </div>
-
-                <div className="h-5" />
-
-                <div className="font-mono text-[9.5px] font-semibold tracking-[1.3px] text-[#A2A6B2]">
-                  METODOLOGIA
-                </div>
-                <div className="h-2" />
-                <div className="flex flex-col gap-[6px]">
+              <Typography.Text
+                type="secondary"
+                style={{
+                  display: "block",
+                  marginTop: 20,
+                  fontFamily: FONTE_NUMERO,
+                  fontSize: 9.5,
+                  fontWeight: 600,
+                  letterSpacing: 1.3,
+                }}
+              >
+                METODOLOGIA
+              </Typography.Text>
+              <Radio.Group
+                style={{ marginTop: 8, width: "100%" }}
+                value={metodoSel}
+                onChange={(e) => setMetodoSel(e.target.value)}
+              >
+                <Flex vertical gap={6}>
                   {METODOLOGIAS.map((mt, i) => (
-                    <div
+                    <Radio
                       key={mt.nome}
-                      onClick={() => setMetodoSel(i)}
-                      className={`flex items-start gap-[10px] rounded-[12px] border p-[12px_14px] cursor-pointer transition-all ${
-                        metodoSel === i
-                          ? "border-[#D9D7E2] bg-[#F2F1F7]"
-                          : "border-[#ECEDF2] bg-transparent"
-                      }`}
+                      value={i}
+                      style={{
+                        width: "100%",
+                        margin: 0,
+                        padding: "12px 14px",
+                        borderRadius: 12,
+                        alignItems: "flex-start",
+                        border: `1px solid ${metodoSel === i ? token.colorBorderSecondary : token.colorBorder}`,
+                        background: metodoSel === i ? token.colorFillTertiary : "transparent",
+                      }}
                     >
-                      <div
-                        className={`mt-[1px] size-[16px] shrink-0 rounded-full border ${
-                          metodoSel === i
-                            ? "border-[5px] border-[#16181D] bg-white"
-                            : "border-[2px] border-[#C9CBD4] bg-white"
-                        }`}
-                      />
+                      <Typography.Text strong style={{ fontSize: 13 }}>
+                        {mt.nome}
+                      </Typography.Text>
+                      <div style={{ fontSize: 11.5, color: token.colorTextSecondary, marginTop: 2 }}>{mt.desc}</div>
+                    </Radio>
+                  ))}
+                </Flex>
+              </Radio.Group>
+            </Col>
+
+            <Col span={12}>
+              <Typography.Text
+                type="secondary"
+                style={{ display: "block", fontFamily: FONTE_NUMERO, fontSize: 9.5, fontWeight: 600, letterSpacing: 1.3 }}
+              >
+                SEÇÕES DO RELATÓRIO
+              </Typography.Text>
+
+              <List
+                style={{ marginTop: 8 }}
+                split
+                dataSource={SECOES}
+                renderItem={(sec, i) => (
+                  <List.Item
+                    style={{ padding: "12px 4px" }}
+                    actions={[<Switch key="switch" checked={secoesOn[i]} onChange={() => toggleSecao(i)} />]}
+                  >
+                    <Flex align="center" gap={11}>
+                      <FileExcelOutlined style={{ fontSize: 17, color: token.colorTextSecondary }} />
                       <div>
-                        <p className="text-[13px] font-semibold text-[#16181D]">{mt.nome}</p>
-                        <p className="mt-[2px] text-[11.5px] leading-[1.4] text-[#767A86]">
-                          {mt.desc}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Coluna Direita: Seções */}
-              <div>
-                <div className="font-mono text-[9.5px] font-semibold tracking-[1.3px] text-[#A2A6B2]">
-                  SEÇÕES DO RELATÓRIO
-                </div>
-                <div className="h-2" />
-                <div className="flex flex-col">
-                  {SECOES.map((sec, i) => (
-                    <div
-                      key={sec.nome}
-                      onClick={() => toggleSecao(i)}
-                      className="flex items-center gap-[11px] border-b border-[#F0F1F5] p-[12px_4px] cursor-pointer"
-                    >
-                      <FileSpreadsheetIcon className="size-[17px] text-[#767A86]" />
-                      <div className="flex-1">
-                        <p className="text-[13px] font-semibold text-[#16181D]">{sec.nome}</p>
-                        <p className="mt-[1px] font-mono text-[9.5px] text-[#A2A6B2]">{sec.fonte}</p>
-                      </div>
-                      {/* Custom Switch */}
-                      <div
-                        className={`relative h-[21px] w-[36px] shrink-0 rounded-[20px] transition-colors duration-150 ${
-                          secoesOn[i] ? "bg-[#16181D]" : "bg-[#C9CBD4]"
-                        }`}
-                      >
-                        <span
-                          className={`absolute top-[2px] size-[17px] rounded-full bg-white shadow-[0_1px_3px_rgba(22,24,29,.2)] transition-all duration-150 ${
-                            secoesOn[i] ? "left-[17px]" : "left-[2px]"
-                          }`}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="h-5" />
-
-            <div className="flex justify-between">
-              <button
-                type="button"
-                onClick={() => setEtapa(1)}
-                className="flex h-[44px] items-center gap-[7px] rounded-[24px] bg-[#F2F1F7] px-[18px] transition-colors hover:bg-[#ECEBF2]"
-              >
-                <ArrowLeftIcon className="size-[17px] text-[#3B3F4A]" />
-                <span className="text-[13.5px] font-semibold text-[#3B3F4A]">Voltar</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setEtapa(3)}
-                className="flex h-[44px] items-center gap-[8px] rounded-[24px] bg-[#16181D] px-[22px] text-white transition-colors hover:bg-[#2C2F38]"
-              >
-                <span className="text-[13.5px] font-semibold text-white">Revisar e gerar</span>
-                <ArrowRightIcon className="size-[17px] text-white" />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ── ETAPA 3: REVISÃO & GERAR ───────────────────────────────────── */}
-        {etapa === 3 && (
-          <div className="rounded-[18px] border border-white/95 bg-white/88 p-[22px] shadow-[0_14px_36px_rgba(22,24,29,.06)]">
-            {progresso < 4 ? (
-              <>
-                <h3 className="text-[15px] font-bold tracking-[-0.3px] text-[#16181D]">Revisão</h3>
-                <div className="h-[14px]" />
-
-                <div className="rounded-[14px] bg-[#F7F6FA] p-[6px_16px]">
-                  {[
-                    { rotulo: "MUNICÍPIO", valor: `${mun.nome} · ${mun.uf} · IBGE ${mun.ibge}` },
-                    { rotulo: "EXERCÍCIO", valor: ["2025", "2026"][exercicioSel] },
-                    { rotulo: "RECORTE DO CENSO", valor: ["Municipal", "Pública", "Total"][recorteSel] },
-                    { rotulo: "METODOLOGIA", valor: METODOLOGIAS[metodoSel].nome },
-                    { rotulo: "SEÇÕES", valor: `${secoesOn.filter(Boolean).length} de 4 incluídas` },
-                  ].map((rs) => (
-                    <div
-                      key={rs.rotulo}
-                      className="flex items-baseline justify-between border-b border-[#EFEFF4] py-[10px] last:border-none"
-                    >
-                      <span className="font-mono text-[10px] font-semibold tracking-[1px] text-[#A2A6B2]">
-                        {rs.rotulo}
-                      </span>
-                      <span className="text-[13px] font-semibold text-[#16181D]">{rs.valor}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="h-[18px]" />
-
-                {progresso < 0 ? (
-                  <div className="flex justify-between">
-                    <button
-                      type="button"
-                      onClick={() => setEtapa(2)}
-                      className="flex h-[44px] items-center gap-[7px] rounded-[24px] bg-[#F2F1F7] px-[18px] transition-colors hover:bg-[#ECEBF2]"
-                    >
-                      <ArrowLeftIcon className="size-[17px] text-[#3B3F4A]" />
-                      <span className="text-[13.5px] font-semibold text-[#3B3F4A]">Voltar</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={iniciarGeracao}
-                      className="flex h-[46px] items-center gap-[9px] rounded-[26px] bg-[#16181D] px-[26px] text-white shadow-[0_12px_26px_rgba(22,24,29,.2)] transition-colors hover:bg-[#2C2F38]"
-                    >
-                      <BoltIcon className="size-[18px] text-white" />
-                      <span className="text-[14px] font-semibold text-white">Gerar levantamento</span>
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex flex-col gap-[4px]">
-                    {PASSOS_GERACAO.map((nome, i) => {
-                      const feito = progresso > i;
-                      const ativo = progresso === i;
-
-                      return (
-                        <div
-                          key={nome}
-                          className={`flex items-center gap-[11px] py-[9px] px-[4px] transition-opacity ${
-                            feito || ativo ? "opacity-100" : "opacity-45"
-                          }`}
-                        >
-                          {feito ? (
-                            <CheckCircle2Icon className="size-[17px] text-[#1F6A47]" />
-                          ) : ativo ? (
-                            <Loader2Icon className="size-[17px] animate-spin text-[#16181D]" />
-                          ) : (
-                            <span className="size-[17px] rounded-full border border-[#C9CBD4]" />
-                          )}
-                          <span
-                            className={`flex-1 text-[13px] ${
-                              ativo ? "font-semibold text-[#16181D]" : "font-normal text-[#16181D]"
-                            }`}
-                          >
-                            {nome}
-                          </span>
-                          <span className="font-mono text-[10px] text-[#A2A6B2]">
-                            {feito ? "ok" : ativo ? "…" : ""}
-                          </span>
+                        <Typography.Text strong style={{ fontSize: 13 }}>
+                          {sec.nome}
+                        </Typography.Text>
+                        <div style={{ fontFamily: FONTE_NUMERO, fontSize: 9.5, color: token.colorTextTertiary }}>
+                          {sec.fonte}
                         </div>
-                      );
-                    })}
-                  </div>
+                      </div>
+                    </Flex>
+                  </List.Item>
                 )}
-              </>
-            ) : (
-              /* CONCLUÍDO */
-              <div>
-                <div className="flex flex-col items-center p-[10px_0_6px] text-center">
-                  <div className="flex size-[52px] items-center justify-center rounded-full bg-gradient-to-br from-[#E4F4EC] to-[#E9F5E4]">
-                    <CheckCircle2Icon className="size-[26px] text-[#1F6A47]" />
-                  </div>
-                  <div className="h-3" />
-                  <h3 className="text-[18px] font-bold tracking-[-0.5px] text-[#16181D]">
-                    Levantamento pronto
-                  </h3>
-                  <p className="mt-[3px] font-mono text-[10.5px] text-[#767A86]">
-                    {mun.nome} · lote 2026-07 · v1 · 4 min 12 s
-                  </p>
-                </div>
+              />
+            </Col>
+          </Row>
 
-                <div className="h-[18px]" />
+          <Flex justify="space-between" style={{ marginTop: 20 }}>
+            <Button icon={<ArrowLeftOutlined />} onClick={() => setEtapa(1)}>
+              Voltar
+            </Button>
+            <Button type="primary" onClick={() => setEtapa(3)} iconPosition="end" icon={<ArrowRightOutlined />}>
+              Revisar e gerar
+            </Button>
+          </Flex>
+        </div>
+      )}
 
-                <div className="grid grid-cols-3 gap-[12px]">
-                  <div className="rounded-[14px] bg-[#F7F6FA] p-[15px_16px]">
-                    <div className="font-mono text-[9.5px] font-semibold tracking-[1.1px] text-[#A2A6B2]">
-                      TOTAL ATUAL
-                    </div>
-                    <div className="h-2" />
-                    <div className="font-mono text-[24px] font-semibold tracking-[-1.2px] text-[#16181D] tabular-nums">
-                      R$ 8,41M
-                    </div>
-                  </div>
+      {/* ── ETAPA 3: REVISÃO & GERAR ───────────────────────────────────── */}
+      {etapa === 3 && (
+        <div>
+          {progresso < 4 ? (
+            <>
+              <Typography.Title level={5} style={{ marginBottom: 14 }}>
+                Revisão
+              </Typography.Title>
 
-                  <div className="rounded-[14px] bg-gradient-to-br from-[#EEE7F9] to-[#E2EDFA] p-[15px_16px]">
-                    <div className="font-mono text-[9.5px] font-semibold tracking-[1.1px] text-[#5A5E6A]">
-                      TOTAL PROJETADO
-                    </div>
-                    <div className="h-2" />
-                    <div className="font-mono text-[24px] font-semibold tracking-[-1.2px] text-[#16181D] tabular-nums">
-                      R$ 9,24M
-                    </div>
-                  </div>
+              <Descriptions
+                column={1}
+                size="small"
+                bordered={false}
+                items={[
+                  { key: "municipio", label: "Município", children: `${mun.nome} · ${mun.uf} · IBGE ${mun.ibge}` },
+                  { key: "exercicio", label: "Exercício", children: EXERCICIOS[exercicioSel] },
+                  { key: "recorte", label: "Recorte do censo", children: RECORTES[recorteSel] },
+                  { key: "metodologia", label: "Metodologia", children: METODOLOGIAS[metodoSel].nome },
+                  { key: "secoes", label: "Seções", children: `${secoesOn.filter(Boolean).length} de 4 incluídas` },
+                ]}
+              />
 
-                  <div className="rounded-[14px] bg-gradient-to-br from-[#E4F4EC] to-[#E9F5E4] p-[15px_16px]">
-                    <div className="font-mono text-[9.5px] font-semibold tracking-[1.1px] text-[#1F6A47]">
-                      GANHO RECUPERÁVEL
-                    </div>
-                    <div className="h-2" />
-                    <div className="font-mono text-[24px] font-semibold tracking-[-1.2px] text-[#1F6A47] tabular-nums">
-                      +R$ 828,7K
-                    </div>
-                  </div>
-                </div>
+              <div style={{ height: 18 }} />
 
-                <div className="h-[18px]" />
+              {progresso < 0 ? (
+                <Flex justify="space-between">
+                  <Button icon={<ArrowLeftOutlined />} onClick={() => setEtapa(2)}>
+                    Voltar
+                  </Button>
+                  <Button type="primary" size="large" icon={<ThunderboltOutlined />} onClick={iniciarGeracao}>
+                    Gerar levantamento
+                  </Button>
+                </Flex>
+              ) : (
+                <Steps
+                  direction="vertical"
+                  size="small"
+                  current={progresso}
+                  items={PASSOS_GERACAO.map((nome, i) => ({
+                    title: nome,
+                    icon: i === progresso ? <LoadingOutlined /> : undefined,
+                  }))}
+                />
+              )}
+            </>
+          ) : (
+            /* CONCLUÍDO */
+            <div>
+              <Flex vertical align="center" style={{ textAlign: "center", padding: "10px 0 6px" }}>
+                <Avatar size={52} style={{ background: token.colorSuccessBg }}>
+                  <CheckCircleFilled style={{ color: token.colorSuccessText, fontSize: 26 }} />
+                </Avatar>
+                <Typography.Title level={4} style={{ marginTop: 12, marginBottom: 0 }}>
+                  Levantamento pronto
+                </Typography.Title>
+                <Typography.Text type="secondary" style={{ fontFamily: FONTE_NUMERO, fontSize: 10.5 }}>
+                  {mun.nome} · lote 2026-07 · v1 · 4 min 12 s
+                </Typography.Text>
+              </Flex>
 
-                <div className="flex justify-center gap-[10px]">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      onClose();
-                      router.push(
-                        `/modulos/levantamento-fundeb?ibge=${mun.ibge}`,
-                      );
-                    }}
-                    className="flex h-[44px] items-center gap-[8px] rounded-[24px] bg-[#16181D] px-[20px] text-white transition-colors hover:bg-[#2C2F38]"
+              <Row gutter={12} style={{ marginTop: 18 }}>
+                <Col span={8}>
+                  <ProCard size="small">
+                    <Statistic
+                      title="TOTAL ATUAL"
+                      value="R$ 8,41M"
+                      valueStyle={{ fontFamily: FONTE_NUMERO, fontSize: 22, fontWeight: 600 }}
+                    />
+                  </ProCard>
+                </Col>
+                <Col span={8}>
+                  <ProCard
+                    size="small"
+                    style={{ background: `linear-gradient(135deg, ${token.colorFillTertiary}, ${token.colorInfoBg})` }}
                   >
-                    <DownloadIcon className="size-[17px] text-white" />
-                    <span className="text-[13.5px] font-semibold text-white">
-                      Abrir e gerar PDF
-                    </span>
-                  </button>
+                    <Statistic
+                      title="TOTAL PROJETADO"
+                      value="R$ 9,24M"
+                      valueStyle={{ fontFamily: FONTE_NUMERO, fontSize: 22, fontWeight: 600 }}
+                    />
+                  </ProCard>
+                </Col>
+                <Col span={8}>
+                  <ProCard size="small" style={{ background: token.colorSuccessBg }}>
+                    <Statistic
+                      title="GANHO RECUPERÁVEL"
+                      value="+R$ 828,7K"
+                      valueStyle={{ fontFamily: FONTE_NUMERO, fontSize: 22, fontWeight: 600, color: token.colorSuccessText }}
+                    />
+                  </ProCard>
+                </Col>
+              </Row>
 
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    className="flex h-[44px] items-center gap-[8px] rounded-[24px] bg-[#F2F1F7] px-[20px] text-[#3B3F4A] transition-colors hover:bg-[#ECEBF2]"
-                  >
-                    <FileTextIcon className="size-[17px] text-[#3B3F4A]" />
-                    <span className="text-[13.5px] font-semibold text-[#3B3F4A]">Criar proposta</span>
-                  </button>
+              <Flex justify="center" gap={10} style={{ marginTop: 18 }}>
+                <Button
+                  type="primary"
+                  icon={<DownloadOutlined />}
+                  onClick={() => {
+                    onClose();
+                    router.push(`/modulos/levantamento-fundeb?ibge=${mun.ibge}`);
+                  }}
+                >
+                  Abrir e gerar PDF
+                </Button>
 
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setEtapa(1);
-                      setProgresso(-1);
-                    }}
-                    className="flex h-[44px] items-center rounded-[24px] px-[18px] text-[#767A86] transition-colors hover:bg-[#F2F1F7]"
-                  >
-                    <span className="text-[13.5px] font-semibold text-[#767A86]">Novo levantamento</span>
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
+                <Button icon={<FileTextOutlined />} onClick={onClose}>
+                  Criar proposta
+                </Button>
+
+                <Button
+                  type="text"
+                  onClick={() => {
+                    setEtapa(1);
+                    setProgresso(-1);
+                  }}
+                >
+                  Novo levantamento
+                </Button>
+              </Flex>
+            </div>
+          )}
+        </div>
+      )}
+    </Modal>
   );
 }

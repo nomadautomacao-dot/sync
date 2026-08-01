@@ -1,17 +1,40 @@
 "use client";
 
-import type { CityAccount } from '@/core/lib/city-types';
+import { Empty, Typography } from "antd";
+
+import type { CityAccount } from "@/core/lib/city-types";
 
 interface NotasTabProps {
   city: CityAccount;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- assinatura mantida para quando a aba ganhar conteúdo por cidade
 export function NotasTab({ city }: NotasTabProps) {
   return (
-    <div className="flex flex-col items-center justify-center h-full p-8 text-center text-gray-500">
-      <div className="text-4xl mb-4">📝</div>
-      <h3 className="font-semibold text-gray-700 mb-1">Notas e observações</h3>
-      <p className="text-sm">Em breve — notas internas sobre o município</p>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        height: "100%",
+        minHeight: 320,
+        padding: 32,
+        textAlign: "center",
+      }}
+    >
+      <Empty
+        image={Empty.PRESENTED_IMAGE_SIMPLE}
+        description={
+          <>
+            <Typography.Text strong>Notas e observações</Typography.Text>
+            <br />
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              Em breve — notas internas sobre o município
+            </Typography.Text>
+          </>
+        }
+      />
     </div>
   );
 }

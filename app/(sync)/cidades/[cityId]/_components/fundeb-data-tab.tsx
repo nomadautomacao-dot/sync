@@ -1,26 +1,38 @@
 "use client";
 
-import type { ReactNode } from "react";
 import Link from "next/link";
 import {
-  ArrowUpRightIcon,
-  DatabaseIcon,
-  FileTextIcon,
-  LandmarkIcon,
-  LoaderCircleIcon,
-  ShieldCheckIcon,
-  SparklesIcon,
-  TrendingUpIcon,
-} from "lucide-react";
+  ArrowUpOutlined,
+  BankOutlined,
+  RocketOutlined,
+  SafetyCertificateOutlined,
+} from "@ant-design/icons";
+import {
+  Button,
+  Card,
+  Col,
+  Collapse,
+  Descriptions,
+  Empty,
+  Flex,
+  List,
+  Row,
+  Select,
+  Skeleton,
+  Space,
+  Table,
+  theme,
+  Typography,
+} from "antd";
+import type { TableColumnsType } from "antd";
 
-import { Button } from "@/core/components/ui/button";
 import { formatCurrency, type CityAccount } from "@/core/lib/city-types";
 import type {
   CityReport,
   CityReportSnapshot,
 } from "@/modules/cidades/reports-types";
 
-import styles from "./fundeb-data-tab.module.css";
+const { Text, Title } = Typography;
 
 interface FundebDataTabProps {
   city: CityAccount;
@@ -103,6 +115,14 @@ const PAYLOAD_ORDER = [
   "metadata",
 ];
 
+/** Uma linha da tabela de composição VAAF/VAAT/VAAR. */
+interface SupplementRow {
+  label: string;
+  current: number | null;
+  projected: number | null;
+  gain: number | null;
+}
+
 export function FundebDataTab({
   city,
   reports,
@@ -110,11 +130,13 @@ export function FundebDataTab({
   selected,
   onSelect,
 }: FundebDataTabProps) {
+  const { token } = theme.useToken();
+
   if (pending) {
     return (
-      <div className={styles.loadingState}>
-        <LoaderCircleIcon className={styles.loadingIcon} />
-      </div>
+      <Card>
+        <Skeleton active paragraph={{ rows: 8 }} />
+      </Card>
     );
   }
 
@@ -124,26 +146,27 @@ export function FundebDataTab({
 
   if (!active?.snapshot) {
     return (
-      <div className={styles.emptyState}>
-        <span className={styles.emptyIcon}>
-          <DatabaseIcon aria-hidden="true" />
-        </span>
-        <h2>Ficha FUNDEB ainda não disponível</h2>
-        <p>
-          Gere o primeiro levantamento para preencher receitas, projeções,
-          VAAF, VAAT, VAAR, Censo Escolar, habilitação e parâmetros técnicos
-          desta cidade.
-        </p>
-        <Button
-          asChild
-          className={styles.emptyAction}
+      <Card>
+        <Empty
+          image={Empty.PRESENTED_IMAGE_DEFAULT}
+          description={
+            <Space direction="vertical" size={4} style={{ maxWidth: 460 }}>
+              <Text strong>Ficha FUNDEB ainda não disponível</Text>
+              <Text type="secondary">
+                Gere o primeiro levantamento para preencher receitas,
+                projeções, VAAF, VAAT, VAAR, Censo Escolar, habilitação e
+                parâmetros técnicos desta cidade.
+              </Text>
+            </Space>
+          }
         >
           <Link href={`/modulos/levantamento-fundeb?ibge=${city.codigoIbge}`}>
-            <SparklesIcon aria-hidden="true" />
-            Gerar levantamento FUNDEB
+            <Button type="primary" icon={<RocketOutlined />}>
+              Gerar levantamento FUNDEB
+            </Button>
           </Link>
-        </Button>
-      </div>
+        </Empty>
+      </Card>
     );
   }
 
@@ -183,7 +206,7 @@ export function FundebDataTab({
   );
   const censusYear = firstNumber(census?.anoReferencia);
 
-  const supplements = [
+  const supplements: SupplementRow[] = [
     {
       label: "VAAF",
       current: firstNumber(
@@ -213,240 +236,507 @@ export function FundebDataTab({
     },
   ];
 
-  return (
-    <div className={styles.workspace}>
-      <section className={styles.toolbar}>
-        <div className={styles.toolbarIdentity}>
-          <span className={styles.toolbarIcon}>
-            <LandmarkIcon aria-hidden="true" />
-          </span>
-          <div>
-            <h2>Ficha do levantamento FUNDEB</h2>
-            <p>
-              {city.name} · exercício {active.exercise} ·{" "}
-              {sections.length} blocos preservados
-            </p>
-          </div>
-        </div>
-        <div className={styles.toolbarActions}>
-          <label className={styles.versionField}>
-            <span>Versão consultada</span>
-            <select
-              value={active.id}
-              onChange={(event) => onSelect(event.target.value)}
-            >
-              {reportsWithData.map((report) => (
-                <option key={report.id} value={report.id}>
-                  {report.exercise} · {formatDate(report.generatedAt)}
-                </option>
-              ))}
-            </select>
-          </label>
-          {active.downloadUrl && (
-            <a
-              href={active.downloadUrl}
-              target="_blank"
-              rel="noreferrer"
-              className={styles.pdfButton}
-            >
-              Abrir PDF
-              <ArrowUpRightIcon aria-hidden="true" />
-            </a>
-          )}
-        </div>
-      </section>
+  const supplementColumns: TableColumnsType<SupplementRow> = [
+    { title: "Modalidade", dataIndex: "label", key: "label" },
+    {
+      title: "Atual",
+      dataIndex: "current",
+      key: "current",
+      align: "right",
+      render: (value: number | null) => (
+        <span style={{ fontFamily: "var(--font-sync-mono)" }}>
+          {formatOptionalCurrency(value)}
+        </span>
+      ),
+    },
+    {
+      title: "Projetado",
+      dataIndex: "projected",
+      key: "projected",
+      align: "right",
+      render: (value: number | null) => (
+        <span style={{ fontFamily: "var(--font-sync-mono)" }}>
+          {formatOptionalCurrency(value)}
+        </span>
+      ),
+    },
+    {
+      title: "Ganho",
+      dataIndex: "gain",
+      key: "gain",
+      align: "right",
+      render: (value: number | null) => (
+        <span
+          style={{
+            fontFamily: "var(--font-sync-mono)",
+            color: token.colorSuccess,
+            fontWeight: 600,
+          }}
+        >
+          {formatOptionalCurrency(value)}
+        </span>
+      ),
+    },
+  ];
 
-      <section className={styles.financialHero}>
-        <div className={styles.heroLead}>
-          <span className={styles.heroLeadIcon}>
-            <TrendingUpIcon aria-hidden="true" />
-          </span>
-          <div>
-            <p>Potencial recuperável identificado</p>
-            <strong>{formatOptionalCurrency(gain)}</strong>
-            <span>
+  return (
+    <Flex vertical gap={14}>
+      <Card size="small">
+        <Flex justify="space-between" align="center" wrap="wrap" gap={16}>
+          <Flex align="center" gap={12}>
+            <Flex
+              align="center"
+              justify="center"
+              style={{
+                width: 42,
+                height: 42,
+                flex: "0 0 auto",
+                borderRadius: token.borderRadiusLG,
+                background: token.colorSuccessBg,
+                color: token.colorSuccess,
+              }}
+            >
+              <BankOutlined style={{ fontSize: 19 }} />
+            </Flex>
+            <div>
+              <Title level={5} style={{ margin: 0 }}>
+                Ficha do levantamento FUNDEB
+              </Title>
+              <Text type="secondary" style={{ fontSize: 11 }}>
+                {city.name} · exercício {active.exercise} ·{" "}
+                {sections.length} blocos preservados
+              </Text>
+            </div>
+          </Flex>
+          <Flex align="flex-end" gap={10} wrap="wrap">
+            <Flex vertical gap={4}>
+              <Text
+                type="secondary"
+                style={{
+                  fontFamily: "var(--font-sync-mono)",
+                  fontSize: 9,
+                  fontWeight: 600,
+                  letterSpacing: 0.4,
+                  textTransform: "uppercase",
+                }}
+              >
+                Versão consultada
+              </Text>
+              <Select
+                value={active.id}
+                onChange={(value) => onSelect(value)}
+                style={{ minWidth: 220 }}
+                options={reportsWithData.map((report) => ({
+                  value: report.id,
+                  label: `${report.exercise} · ${formatDate(report.generatedAt)}`,
+                }))}
+              />
+            </Flex>
+            {active.downloadUrl && (
+              <Button
+                href={active.downloadUrl}
+                target="_blank"
+                rel="noreferrer"
+                icon={<ArrowUpOutlined />}
+              >
+                Abrir PDF
+              </Button>
+            )}
+          </Flex>
+        </Flex>
+      </Card>
+
+      <Card style={{ background: token.colorBgSpotlight, border: "none" }}>
+        <Row gutter={[24, 20]} align="middle">
+          <Col
+            xs={24}
+            md={9}
+            style={{
+              borderRight: "1px solid rgba(255,255,255,.1)",
+              paddingRight: 24,
+            }}
+          >
+            <Text
+              style={{
+                color: "rgba(255,255,255,.6)",
+                fontSize: 10,
+                fontWeight: 600,
+              }}
+            >
+              Potencial recuperável identificado
+            </Text>
+            <div
+              style={{
+                marginTop: 4,
+                color: token.colorTextLightSolid,
+                fontFamily: "var(--font-sync-mono)",
+                fontSize: 26,
+                fontWeight: 600,
+                letterSpacing: -1,
+              }}
+            >
+              {formatOptionalCurrency(gain)}
+            </div>
+            <Text style={{ color: token.colorSuccess, fontSize: 11 }}>
               {gainPercentage === null
                 ? "Percentual não informado"
                 : `+${formatNumber(gainPercentage)}% sobre a base atual`}
-            </span>
-          </div>
-        </div>
-        <div className={styles.heroMetrics}>
-          <FundebMetric
-            label="Receita atual"
-            value={formatOptionalCurrency(current)}
-          />
-          <FundebMetric
-            label="Receita projetada"
-            value={formatOptionalCurrency(projected)}
-          />
-          <FundebMetric
-            label="Matrículas consideradas"
-            value={formatOptionalInteger(enrollments)}
-          />
-        </div>
-      </section>
+            </Text>
+          </Col>
+          <Col xs={24} md={15}>
+            <Row gutter={16}>
+              <Col span={8}>
+                <HeroMetric
+                  label="Receita atual"
+                  value={formatOptionalCurrency(current)}
+                />
+              </Col>
+              <Col span={8}>
+                <HeroMetric
+                  label="Receita projetada"
+                  value={formatOptionalCurrency(projected)}
+                />
+              </Col>
+              <Col span={8}>
+                <HeroMetric
+                  label="Matrículas consideradas"
+                  value={formatOptionalInteger(enrollments)}
+                />
+              </Col>
+            </Row>
+          </Col>
+        </Row>
+      </Card>
 
-      <div className={styles.primaryGrid}>
-        <section className={styles.panel}>
-          <PanelHeader
-            icon={<LandmarkIcon aria-hidden="true" />}
+      <Row gutter={[14, 14]}>
+        <Col xs={24} xl={13}>
+          <Card
             title="Composição das complementações"
-            description="Valores atuais, projeção e ganho por modalidade."
-          />
-          <div className={styles.supplementTable}>
-            <div className={styles.supplementHeader}>
-              <span>Modalidade</span>
-              <span>Atual</span>
-              <span>Projetado</span>
-              <span>Ganho</span>
-            </div>
-            {supplements.map((supplement) => (
-              <div key={supplement.label} className={styles.supplementRow}>
-                <strong>{supplement.label}</strong>
-                <span data-label="Atual">
-                  {formatOptionalCurrency(supplement.current)}
-                </span>
-                <span data-label="Projetado">
-                  {formatOptionalCurrency(supplement.projected)}
-                </span>
-                <span data-label="Ganho" className={styles.positiveValue}>
-                  {formatOptionalCurrency(supplement.gain)}
-                </span>
-              </div>
-            ))}
-          </div>
-        </section>
+            size="small"
+            extra={
+              <Text type="secondary" style={{ fontSize: 10 }}>
+                Valores atuais, projeção e ganho por modalidade
+              </Text>
+            }
+          >
+            <Table<SupplementRow>
+              rowKey="label"
+              size="small"
+              pagination={false}
+              dataSource={supplements}
+              columns={supplementColumns}
+            />
+          </Card>
+        </Col>
 
-        <section className={styles.panel}>
-          <PanelHeader
-            icon={<FileTextIcon aria-hidden="true" />}
+        <Col xs={24} xl={11}>
+          <Card
             title="Identificação do levantamento"
-            description="Campos informados para esta versão do relatório."
-          />
-          <dl className={styles.fieldsGrid}>
-            <InfoField
-              label="Responsável técnico"
-              value={parameters?.responsavelTecnico}
+            size="small"
+            extra={
+              <Text type="secondary" style={{ fontSize: 10 }}>
+                Campos informados nesta versão
+              </Text>
+            }
+          >
+            <Descriptions
+              size="small"
+              column={1}
+              items={[
+                ["Responsável técnico", parameters?.responsavelTecnico],
+                ["Órgão demandante", parameters?.orgaoDemandante],
+                ["Secretário(a) de Educação", parameters?.secretarioEducacao],
+                ["Número do processo", parameters?.numeroProcesso],
+                ["Período de referência", parameters?.periodoReferencia],
+                ["Cenário da análise", parameters?.cenarioAnalise],
+              ].map(([label, value]) => ({
+                key: label as string,
+                label: label as string,
+                children: formatInfoValue(value),
+              }))}
             />
-            <InfoField
-              label="Órgão demandante"
-              value={parameters?.orgaoDemandante}
-            />
-            <InfoField
-              label="Secretário(a) de Educação"
-              value={parameters?.secretarioEducacao}
-            />
-            <InfoField
-              label="Número do processo"
-              value={parameters?.numeroProcesso}
-            />
-            <InfoField
-              label="Período de referência"
-              value={parameters?.periodoReferencia}
-            />
-            <InfoField
-              label="Cenário da análise"
-              value={parameters?.cenarioAnalise}
-            />
-          </dl>
-        </section>
-      </div>
+          </Card>
+        </Col>
+      </Row>
 
-      <div className={styles.secondaryGrid}>
-        <section className={styles.panel}>
-          <PanelHeader
-            icon={<DatabaseIcon aria-hidden="true" />}
+      <Row gutter={[14, 14]}>
+        <Col xs={24} xl={11}>
+          <Card
             title="Rede educacional considerada"
-            description={`Censo Escolar${censusYear ? ` · ${censusYear}` : ""}.`}
-          />
-          <div className={styles.networkMetrics}>
-            <FundebMetric
-              label="Matrículas municipais"
-              value={formatOptionalInteger(enrollments)}
-            />
-            <FundebMetric
-              label="Escolas municipais"
-              value={formatOptionalInteger(schools)}
-            />
-            <FundebMetric
-              label="Docentes municipais"
-              value={formatOptionalInteger(teachers)}
-            />
-          </div>
-        </section>
+            size="small"
+            extra={
+              <Text type="secondary" style={{ fontSize: 10 }}>
+                Censo Escolar{censusYear ? ` · ${censusYear}` : ""}
+              </Text>
+            }
+          >
+            <Row
+              style={{
+                background: token.colorFillTertiary,
+                borderRadius: token.borderRadiusLG,
+                padding: "14px 4px",
+              }}
+            >
+              <Col span={8}>
+                <HeroMetric
+                  dark={false}
+                  label="Matrículas municipais"
+                  value={formatOptionalInteger(enrollments)}
+                />
+              </Col>
+              <Col span={8}>
+                <HeroMetric
+                  dark={false}
+                  label="Escolas municipais"
+                  value={formatOptionalInteger(schools)}
+                />
+              </Col>
+              <Col span={8}>
+                <HeroMetric
+                  dark={false}
+                  label="Docentes municipais"
+                  value={formatOptionalInteger(teachers)}
+                />
+              </Col>
+            </Row>
+          </Card>
+        </Col>
 
-        <section className={styles.panel}>
-          <PanelHeader
-            icon={<ShieldCheckIcon aria-hidden="true" />}
+        <Col xs={24} xl={13}>
+          <Card
             title="Habilitação e perfil técnico"
-            description="Sinais operacionais preservados na geração."
-          />
-          <dl className={styles.statusList}>
-            <InfoField
-              label="Habilitação VAAT"
-              value={profile?.habilitacaoVaat}
+            size="small"
+            extra={
+              <SafetyCertificateOutlined
+                style={{ color: token.colorTextTertiary }}
+              />
+            }
+          >
+            <Descriptions
+              size="small"
+              column={2}
+              items={[
+                ["Habilitação VAAT", profile?.habilitacaoVaat],
+                ["Pendência identificada", profile?.pendenciaVaat],
+                [
+                  "Score de viabilidade",
+                  firstNumber(profile?.score) === null
+                    ? null
+                    : `${formatNumber(firstNumber(profile?.score)!)} pontos`,
+                ],
+                [
+                  "Confiança da análise",
+                  firstNumber(profile?.confianca) === null
+                    ? null
+                    : `${formatNumber(firstNumber(profile?.confianca)!)}%`,
+                ],
+              ].map(([label, value]) => ({
+                key: label as string,
+                label: label as string,
+                children: formatInfoValue(value),
+              }))}
             />
-            <InfoField
-              label="Pendência identificada"
-              value={profile?.pendenciaVaat}
-            />
-            <InfoField
-              label="Score de viabilidade"
-              value={
-                firstNumber(profile?.score) === null
-                  ? null
-                  : `${formatNumber(firstNumber(profile?.score)!)} pontos`
-              }
-            />
-            <InfoField
-              label="Confiança da análise"
-              value={
-                firstNumber(profile?.confianca) === null
-                  ? null
-                  : `${formatNumber(firstNumber(profile?.confianca)!)}%`
-              }
-            />
-          </dl>
-        </section>
-      </div>
+          </Card>
+        </Col>
+      </Row>
 
-      <section className={styles.dataArchive}>
-        <div className={styles.archiveHeader}>
-          <div>
-            <h3>Base completa e auditável</h3>
-            <p>
-              Todos os campos do JSON original permanecem disponíveis por
-              bloco.
-            </p>
-          </div>
-          <span>
+      <Card
+        title="Base completa e auditável"
+        size="small"
+        extra={
+          <Text
+            type="secondary"
+            style={{ fontFamily: "var(--font-sync-mono)", fontSize: 10 }}
+          >
             {active.snapshot.schemaVersion
               ? `JSON v${active.snapshot.schemaVersion}`
               : "JSON legado"}{" "}
             · {formatDate(active.generatedAt)}
-          </span>
-        </div>
-        <div className={styles.archiveSections}>
-          {sections.map((section, index) => (
-            <details key={section.id} open={index === 0}>
-              <summary>
-                <div>
-                  <strong>{section.title}</strong>
-                  <span>
-                    {section.source} · {describeValue(section.value)}
-                  </span>
-                </div>
-                <i aria-hidden="true">+</i>
-              </summary>
-              <div className={styles.archiveContent}>
-                <DataNode value={section.value} />
-              </div>
-            </details>
-          ))}
-        </div>
-      </section>
+          </Text>
+        }
+      >
+        <Text type="secondary" style={{ fontSize: 10.5 }}>
+          Todos os campos do JSON original permanecem disponíveis por bloco.
+        </Text>
+        <Collapse
+          style={{ marginTop: 12 }}
+          size="small"
+          defaultActiveKey={sections[0] ? [sections[0].id] : []}
+          items={sections.map((section) => ({
+            key: section.id,
+            label: (
+              <Space direction="vertical" size={0}>
+                <Text strong style={{ fontSize: 11 }}>
+                  {section.title}
+                </Text>
+                <Text
+                  type="secondary"
+                  style={{ fontFamily: "var(--font-sync-mono)", fontSize: 9 }}
+                >
+                  {section.source} · {describeValue(section.value)}
+                </Text>
+              </Space>
+            ),
+            children: <DataNode value={section.value} />,
+          }))}
+        />
+      </Card>
+    </Flex>
+  );
+}
+
+/** Métrica curta, reaproveitada no card escuro e no bloco de rede
+ * educacional. Usa os tokens do tema — nunca cor solta — para se adaptar aos
+ * dois fundos (claro e o `colorBgSpotlight` escuro do card de destaque). */
+function HeroMetric({
+  label,
+  value,
+  dark = true,
+}: {
+  label: string;
+  value: string;
+  dark?: boolean;
+}) {
+  const { token } = theme.useToken();
+  return (
+    <div>
+      <Text
+        style={{
+          display: "block",
+          fontSize: 9,
+          fontWeight: 600,
+          color: dark ? "rgba(255,255,255,.5)" : token.colorTextTertiary,
+        }}
+      >
+        {label}
+      </Text>
+      <Text
+        style={{
+          display: "block",
+          marginTop: 4,
+          fontFamily: "var(--font-sync-mono)",
+          fontSize: 15,
+          fontWeight: 600,
+          color: dark ? token.colorTextLightSolid : token.colorText,
+        }}
+      >
+        {value}
+      </Text>
     </div>
+  );
+}
+
+/**
+ * Nó recursivo do JSON auditável. Troca o antigo `<details>` aninhado por
+ * `Descriptions` para os campos-folha de um bloco e `Collapse` (`ghost`) para
+ * os campos que ainda têm objeto dentro — mesma navegação, sem CSS próprio.
+ */
+function DataNode({ value, field = "" }: { value: unknown; field?: string }) {
+  if (!value || typeof value !== "object") {
+    return (
+      <Text style={{ fontFamily: "var(--font-sync-mono)", fontSize: 11.5 }}>
+        {formatDataValue(value, field)}
+      </Text>
+    );
+  }
+
+  if (Array.isArray(value)) {
+    if (!value.length) {
+      return (
+        <Text type="secondary" style={{ fontSize: 11 }}>
+          Sem registros
+        </Text>
+      );
+    }
+    if (value.every((item) => !item || typeof item !== "object")) {
+      return (
+        <List
+          size="small"
+          dataSource={value}
+          renderItem={(item, index) => (
+            <List.Item key={index} style={{ padding: "4px 0", border: "none" }}>
+              <Text style={{ fontFamily: "var(--font-sync-mono)", fontSize: 11.5 }}>
+                {formatDataValue(item, field)}
+              </Text>
+            </List.Item>
+          )}
+        />
+      );
+    }
+    return (
+      <Collapse
+        ghost
+        size="small"
+        items={value.map((item, index) => ({
+          key: index,
+          label: (
+            <Text strong style={{ fontSize: 11 }}>
+              {`Item ${index + 1}`}
+            </Text>
+          ),
+          children: <DataNode value={item} field={field} />,
+        }))}
+      />
+    );
+  }
+
+  const entries = Object.entries(value as Record<string, unknown>);
+  if (!entries.length) {
+    return (
+      <Text type="secondary" style={{ fontSize: 11 }}>
+        Sem registros
+      </Text>
+    );
+  }
+
+  const leafEntries = entries.filter(
+    ([, nested]) => !nested || typeof nested !== "object",
+  );
+  const nestedEntries = entries.filter(
+    ([, nested]) => nested && typeof nested === "object",
+  );
+
+  return (
+    <Space direction="vertical" size={10} style={{ width: "100%" }}>
+      {leafEntries.length > 0 && (
+        <Descriptions
+          size="small"
+          column={1}
+          items={leafEntries.map(([key, nested]) => ({
+            key,
+            label: humanizeKey(key),
+            children: (
+              <Text style={{ fontFamily: "var(--font-sync-mono)", fontSize: 11.5 }}>
+                {formatDataValue(nested, key)}
+              </Text>
+            ),
+          }))}
+        />
+      )}
+      {nestedEntries.length > 0 && (
+        <Collapse
+          ghost
+          size="small"
+          items={nestedEntries.map(([key, nested]) => ({
+            key,
+            label: (
+              <Space size={6}>
+                <Text strong style={{ fontSize: 11 }}>
+                  {humanizeKey(key)}
+                </Text>
+                <Text
+                  type="secondary"
+                  style={{ fontFamily: "var(--font-sync-mono)", fontSize: 10 }}
+                >
+                  · {describeValue(nested)}
+                </Text>
+              </Space>
+            ),
+            children: <DataNode value={nested} field={key} />,
+          }))}
+        />
+      )}
+    </Space>
   );
 }
 
@@ -504,9 +794,7 @@ function snapshotSections(snapshot: CityReportSnapshot): SnapshotSection[] {
     });
   }
 
-  for (const [key, value] of Object.entries(
-    snapshot.additionalData ?? {},
-  )) {
+  for (const [key, value] of Object.entries(snapshot.additionalData ?? {})) {
     if (!hasData(value)) continue;
     sections.push({
       id: `additional-${key}`,
@@ -535,150 +823,6 @@ function snapshotSections(snapshot: CityReportSnapshot): SnapshotSection[] {
   }
 
   return sections;
-}
-
-function DataNode({
-  value,
-  field = "",
-  depth = 0,
-}: {
-  value: unknown;
-  field?: string;
-  depth?: number;
-}) {
-  if (!value || typeof value !== "object") {
-    return (
-      <span className="font-mono text-[10px] font-semibold text-[#3B3F4A]">
-        {formatDataValue(value, field)}
-      </span>
-    );
-  }
-
-  if (Array.isArray(value)) {
-    if (!value.length) {
-      return <span className="text-[10px] text-[#A2A6B2]">Sem registros</span>;
-    }
-    if (value.every((item) => !item || typeof item !== "object")) {
-      return (
-        <ul className="space-y-1.5">
-          {value.map((item, index) => (
-            <li
-              key={`${String(item)}-${index}`}
-              className="flex gap-2 text-[10px] text-[#3B3F4A]"
-            >
-              <span className="mt-1.5 size-1 shrink-0 rounded-full bg-[#93B8F2]" />
-              <span>{formatDataValue(item, field)}</span>
-            </li>
-          ))}
-        </ul>
-      );
-    }
-    return (
-      <div className="space-y-2">
-        {value.map((item, index) => (
-          <details
-            key={index}
-            className="rounded-[11px] border border-[#ECEEF3] bg-white"
-          >
-            <summary className="cursor-pointer px-3 py-2 text-[9.5px] font-bold text-[#5A5E6A]">
-              Item {index + 1}
-            </summary>
-            <div className="border-t border-[#F0F1F5] p-3">
-              <DataNode value={item} field={field} depth={depth + 1} />
-            </div>
-          </details>
-        ))}
-      </div>
-    );
-  }
-
-  const entries = Object.entries(value as Record<string, unknown>);
-  if (!entries.length) {
-    return <span className="text-[10px] text-[#A2A6B2]">Sem registros</span>;
-  }
-
-  return (
-    <dl className="divide-y divide-[#ECEEF3]">
-      {entries.map(([key, nested]) => {
-        const nestedObject = nested && typeof nested === "object";
-        return (
-          <div
-            key={key}
-            className={`${nestedObject ? "block py-2.5" : "grid grid-cols-[minmax(120px,.8fr)_minmax(0,1.2fr)] gap-4 py-2"} ${
-              depth > 0 ? "px-2" : ""
-            }`}
-          >
-            {nestedObject ? (
-              <details>
-                <summary className="cursor-pointer text-[9.5px] font-bold text-[#5A5E6A]">
-                  {humanizeKey(key)}{" "}
-                  <span className="font-mono font-normal text-[#A2A6B2]">
-                    · {describeValue(nested)}
-                  </span>
-                </summary>
-                <div className="mt-2 border-l border-[#DCDDE4] pl-3">
-                  <DataNode value={nested} field={key} depth={depth + 1} />
-                </div>
-              </details>
-            ) : (
-              <>
-                <dt className="text-[9.5px] text-[#767A86]">
-                  {humanizeKey(key)}
-                </dt>
-                <dd className="min-w-0 break-words text-right font-mono text-[9.5px] font-semibold text-[#3B3F4A]">
-                  {formatDataValue(nested, key)}
-                </dd>
-              </>
-            )}
-          </div>
-        );
-      })}
-    </dl>
-  );
-}
-
-function PanelHeader({
-  icon,
-  title,
-  description,
-}: {
-  icon: ReactNode;
-  title: string;
-  description: string;
-}) {
-  return (
-    <header className={styles.panelHeader}>
-      <span>{icon}</span>
-      <div>
-        <h3>{title}</h3>
-        <p>{description}</p>
-      </div>
-    </header>
-  );
-}
-
-function FundebMetric({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className={styles.metric}>
-      <span>{label}</span>
-      <strong>{value}</strong>
-    </div>
-  );
-}
-
-function InfoField({ label, value }: { label: string; value: unknown }) {
-  return (
-    <div className={styles.infoField}>
-      <dt>{label}</dt>
-      <dd>{formatInfoValue(value)}</dd>
-    </div>
-  );
 }
 
 function orderedEntries(
@@ -760,10 +904,7 @@ function formatDataValue(value: unknown, field: string): string {
   }
   if (typeof value === "string") {
     const date = new Date(value);
-    if (
-      /^\d{4}-\d{2}-\d{2}T/.test(value) &&
-      !Number.isNaN(date.getTime())
-    ) {
+    if (/^\d{4}-\d{2}-\d{2}T/.test(value) && !Number.isNaN(date.getTime())) {
       return new Intl.DateTimeFormat("pt-BR", {
         dateStyle: "short",
         timeStyle: "short",

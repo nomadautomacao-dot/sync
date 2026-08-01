@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { PlusIcon, RefreshCwIcon } from "lucide-react";
+import { PlusOutlined, ReloadOutlined } from "@ant-design/icons";
+import { Avatar, Button, Card, Flex, Space, Tag, Typography, theme } from "antd";
 
 interface CabecalhoMunicipioProps {
   nome: string;
@@ -38,6 +39,8 @@ export function CabecalhoMunicipio({
   partido,
   onTrocar,
 }: CabecalhoMunicipioProps) {
+  const { token } = theme.useToken();
+
   const localizacao = [
     informado(mesorregiao) ? mesorregiao : null,
     informado(regiao) ? `Região ${regiao}` : null,
@@ -46,53 +49,56 @@ export function CabecalhoMunicipio({
     .join(" · ");
 
   return (
-    <section className="rounded-[16px] border border-white/95 bg-white/88 p-[18px] shadow-[0_10px_26px_rgba(22,24,29,.05)]">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 items-center gap-[12px]">
-          <span className="flex size-[44px] shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#16181D] to-[#3B3F4A] font-mono text-[13px] font-semibold text-white">
+    <Card size="small">
+      <Flex align="center" justify="space-between" gap={16} wrap="wrap">
+        <Flex align="center" gap={12} style={{ minWidth: 0 }}>
+          <Avatar
+            size={44}
+            style={{
+              flexShrink: 0,
+              backgroundColor: token.colorPrimary,
+              color: token.colorTextLightSolid,
+              fontFamily: "var(--font-sync-mono)",
+              fontWeight: 600,
+              fontSize: 13,
+            }}
+          >
             {uf}
-          </span>
+          </Avatar>
 
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-[8px]">
-              <h1 className="text-[19px] font-bold tracking-[-0.5px] text-[#16181D]">{nome}</h1>
-              <span className="rounded-[14px] bg-[#F2F1F7] px-[8px] py-[3px] font-mono text-[10.5px] font-semibold text-[#5A5E6A]">
+          <div style={{ minWidth: 0 }}>
+            <Flex align="center" gap={8} wrap="wrap">
+              <Typography.Title level={4} style={{ margin: 0 }}>
+                {nome}
+              </Typography.Title>
+              <Tag style={{ fontFamily: "var(--font-sync-mono)", fontSize: 10.5, fontWeight: 600 }}>
                 IBGE {codigoIbge}
-              </span>
-            </div>
+              </Tag>
+            </Flex>
 
-            <p className="mt-[3px] text-[12px] text-[#767A86]">
+            <Typography.Text type="secondary" style={{ fontSize: 12, display: "block", marginTop: 3 }}>
               {localizacao || "Localização não informada"}
               {informado(prefeito) && (
                 <>
                   {" · "}
-                  <span className="text-[#3B3F4A]">{prefeito}</span>
+                  <Typography.Text style={{ fontSize: 12 }}>{prefeito}</Typography.Text>
                   {informado(partido) && ` (${partido})`}
                 </>
               )}
-            </p>
+            </Typography.Text>
           </div>
-        </div>
+        </Flex>
 
-        <div className="flex shrink-0 items-center gap-[8px]">
-          <button
-            type="button"
-            onClick={onTrocar}
-            className="inline-flex h-[38px] items-center gap-[7px] rounded-[20px] px-[14px] text-[12.5px] font-semibold text-[#3B3F4A] transition-colors hover:bg-[#F7F6FA]"
-          >
-            <RefreshCwIcon className="size-[14px] text-[#A2A6B2]" />
+        <Space size={8}>
+          <Button type="text" icon={<ReloadOutlined />} onClick={onTrocar}>
             Trocar município
-          </button>
+          </Button>
 
-          <Link
-            href="/pipeline"
-            className="inline-flex h-[38px] items-center gap-[7px] rounded-[20px] bg-[#F2F1F7] px-[14px] text-[12.5px] font-semibold text-[#3B3F4A] transition-colors hover:bg-[#ECEBF2]"
-          >
-            <PlusIcon className="size-[14px]" />
-            Enviar ao pipeline
+          <Link href="/pipeline">
+            <Button icon={<PlusOutlined />}>Enviar ao pipeline</Button>
           </Link>
-        </div>
-      </div>
-    </section>
+        </Space>
+      </Flex>
+    </Card>
   );
 }

@@ -2,21 +2,38 @@
 
 import { useMemo, useState } from "react";
 import {
-  AlertTriangleIcon,
-  BotIcon,
-  CheckCircle2Icon,
-  ChevronRightIcon,
-  DownloadIcon,
-  FileCheck2Icon,
-  FileTextIcon,
-  LoaderCircleIcon,
-  ScaleIcon,
-  SparklesIcon,
-} from "lucide-react";
+  AuditOutlined,
+  CheckCircleOutlined,
+  DownloadOutlined,
+  FileDoneOutlined,
+  FileTextOutlined,
+  RightOutlined,
+  RobotOutlined,
+  ThunderboltOutlined,
+  WarningOutlined,
+} from "@ant-design/icons";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  Checkbox,
+  Col,
+  Empty,
+  Flex,
+  Form,
+  Input,
+  InputNumber,
+  Row,
+  Select,
+  Space,
+  Statistic,
+  Tag,
+  Typography,
+  theme,
+} from "antd";
 import { toast } from "sonner";
 
-import { Button } from "@/core/components/ui/button";
-import { Input } from "@/core/components/ui/input";
 import type { CityAccount } from "@/core/lib/city-types";
 import type {
   ContratoFundebCampoMeta,
@@ -64,6 +81,7 @@ export function ContractGenerator({
   cities,
   onArchive,
 }: ContractGeneratorProps) {
+  const { token } = theme.useToken();
   const [cityId, setCityId] = useState("");
   const [monthlyValue, setMonthlyValue] = useState("27500");
   const [months, setMonths] = useState("12");
@@ -187,285 +205,274 @@ export function ContractGenerator({
     }
   };
 
+  const camposLocalizados =
+    result ? result.stats.preenchidoAutomatico + result.stats.preenchidoIA : 0;
+
   return (
-    <div className="grid min-h-[560px] gap-4 xl:grid-cols-[minmax(320px,0.8fr)_minmax(520px,1.2fr)]">
-      <section className="glass-card flex flex-col p-5">
-        <div className="flex items-start gap-3">
-          <div className="flex size-10 shrink-0 items-center justify-center rounded-[14px] bg-gradient-to-br from-[#EEE7F9] to-[#E2EDFA]">
-            <SparklesIcon className="size-5 text-[#3B3F4A]" />
-          </div>
-          <div>
-            <h2 className="text-[15px] font-bold tracking-[-0.3px] text-[#16181D]">
-              Novo contrato inteligente
-            </h2>
-            <p className="mt-1 text-[11.5px] leading-relaxed text-[#767A86]">
-              Escolha o município. O sistema consulta as bases disponíveis,
-              preenche o modelo e separa o que precisa de revisão humana.
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-5 space-y-4">
-          <Field label="Modelo documental">
-            <div className="rounded-[14px] border border-[#D7E4F4] bg-[#F3F7FC] p-3.5">
-              <div className="flex items-center gap-2.5">
-                <FileCheck2Icon className="size-[18px] text-[#2C4E82]" />
-                <div className="min-w-0 flex-1">
-                  <div className="text-[12px] font-bold text-[#16181D]">
-                    Inexigibilidade · Consultoria FUNDEB
-                  </div>
-                  <div className="mt-0.5 font-mono text-[9.5px] text-[#5A5E6A]">
-                    14 documentos DOCX · modelo ativo
-                  </div>
-                </div>
-                <CheckCircle2Icon className="size-4 text-[#1F6A47]" />
-              </div>
-            </div>
-          </Field>
-
-          <Field label="Município">
-            <select
-              value={cityId}
-              onChange={(event) => {
-                setCityId(event.target.value);
-                setResult(null);
+    <Row gutter={16}>
+      <Col xs={24} xl={9}>
+        <Card style={{ height: "100%" }}>
+          <Flex align="flex-start" gap={12}>
+            <Flex
+              align="center"
+              justify="center"
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: token.borderRadiusLG,
+                background: token.colorInfoBg,
+                flexShrink: 0,
               }}
-              className="h-10 w-full rounded-[12px] border border-[#E2E3E9] bg-white px-3 text-[12.5px] font-medium text-[#16181D] outline-none focus:border-[#16181D] focus:ring-2 focus:ring-[#16181D]/10"
             >
-              <option value="">Selecione o município</option>
-              {cities.map((city) => (
-                <option key={city.id} value={city.id}>
-                  {city.name} · {city.uf}
-                </option>
-              ))}
-            </select>
-          </Field>
-
-          <div className="grid grid-cols-3 gap-2.5">
-            <Field label="Exercício">
-              <Input
-                type="number"
-                min="2024"
-                max="2100"
-                value={year}
-                onChange={(event) => setYear(event.target.value)}
-                className="h-10 rounded-[12px] text-[12px]"
-              />
-            </Field>
-            <Field label="Valor mensal">
-              <Input
-                type="number"
-                min="0"
-                step="100"
-                value={monthlyValue}
-                onChange={(event) => setMonthlyValue(event.target.value)}
-                className="h-10 rounded-[12px] text-[12px]"
-              />
-            </Field>
-            <Field label="Meses">
-              <Input
-                type="number"
-                min="1"
-                max="60"
-                value={months}
-                onChange={(event) => setMonths(event.target.value)}
-                className="h-10 rounded-[12px] text-[12px]"
-              />
-            </Field>
-          </div>
-
-          <div className="rounded-[14px] border border-[#F0F1F5] bg-[#FAFAFC] p-3.5">
-            <div className="flex items-center gap-2 text-[11px] font-bold text-[#3B3F4A]">
-              <ScaleIcon className="size-4" />
-              Base legal do modelo
+              <ThunderboltOutlined style={{ fontSize: 18, color: token.colorInfoText }} />
+            </Flex>
+            <div>
+              <Typography.Title level={5} style={{ margin: 0 }}>
+                Novo contrato inteligente
+              </Typography.Title>
+              <Typography.Paragraph type="secondary" style={{ marginTop: 4, marginBottom: 0, fontSize: 12 }}>
+                Escolha o município. O sistema consulta as bases disponíveis,
+                preenche o modelo e separa o que precisa de revisão humana.
+              </Typography.Paragraph>
             </div>
-            <p className="mt-2 text-[10.5px] leading-relaxed text-[#767A86]">
-              Lei Federal nº 14.133/2021, com estrutura de DFD, ETP, Termo de
-              Referência, pareceres, ratificação, homologação e minuta.
-            </p>
-          </div>
-        </div>
+          </Flex>
 
-        <div className="mt-auto pt-5">
-          <Button
-            type="button"
-            onClick={analyze}
-            disabled={analyzing || !cityId}
-            className="h-11 w-full rounded-full bg-[#16181D] text-[12.5px] font-bold text-white hover:bg-[#2C2F38]"
-          >
-            {analyzing ? (
-              <>
-                <LoaderCircleIcon className="size-4 animate-spin" />
-                Consultando bases e preparando…
-              </>
-            ) : (
-              <>
-                <BotIcon className="size-4" />
-                Preparar minuta para revisão
-                <ChevronRightIcon className="ml-auto size-4" />
-              </>
-            )}
-          </Button>
-        </div>
-      </section>
-
-      <section className="glass-card min-w-0 overflow-hidden">
-        {!result ? (
-          <div className="flex h-full min-h-[560px] flex-col items-center justify-center px-8 text-center">
-            <div className="relative flex size-[76px] items-center justify-center rounded-[24px] bg-[#F2F1F7]">
-              <FileTextIcon className="size-8 text-[#767A86]" />
-              <span className="absolute -right-1 -top-1 flex size-7 items-center justify-center rounded-[10px] border-4 border-white bg-[#E2EDFA]">
-                <SparklesIcon className="size-3 text-[#2C4E82]" />
-              </span>
-            </div>
-            <h3 className="mt-5 text-[15px] font-bold text-[#16181D]">
-              A revisão aparecerá aqui
-            </h3>
-            <p className="mt-2 max-w-[380px] text-[11.5px] leading-relaxed text-[#767A86]">
-              Antes de gerar o arquivo, você verá os dados encontrados, as
-              fontes utilizadas e os campos que ainda precisam ser confirmados.
-            </p>
-            <div className="mt-6 flex items-center gap-2 font-mono text-[9.5px] text-[#A2A6B2]">
-              <span className="rounded-full bg-[#E2EDFA] px-2.5 py-1">IBGE</span>
-              <span className="rounded-full bg-[#DFF2E7] px-2.5 py-1">TSE</span>
-              <span className="rounded-full bg-[#FBF0D9] px-2.5 py-1">
-                CNPJ
-              </span>
-              <span className="rounded-full bg-[#EEE7F9] px-2.5 py-1">
-                Dados públicos
-              </span>
-            </div>
-          </div>
-        ) : (
-          <div className="flex h-full max-h-[calc(100vh-190px)] min-h-[560px] flex-col">
-            <div className="flex items-start justify-between border-b border-[#F0F1F5] px-5 py-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-[14px] font-bold text-[#16181D]">
-                    Revisão da minuta
-                  </h2>
-                  <span className="rounded-full bg-[#DFF2E7] px-2 py-0.5 font-mono text-[9px] font-bold text-[#1F6A47]">
-                    {result.stats.percentualPreenchido}% preenchido
-                  </span>
-                </div>
-                <p className="mt-1 text-[10.5px] text-[#767A86]">
-                  {selectedCity?.name} · {selectedCity?.uf} · exercício {year}
-                </p>
-              </div>
-              <div className="text-right">
-                <div className="font-mono text-[16px] font-bold text-[#16181D]">
-                  {result.stats.preenchidoAutomatico +
-                    result.stats.preenchidoIA}
-                  <span className="text-[10px] font-medium text-[#A2A6B2]">
-                    /{result.stats.total}
-                  </span>
-                </div>
-                <div className="text-[9px] text-[#A2A6B2]">
-                  campos localizados
-                </div>
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-5 py-4">
-              {result.warnings.length > 0 && (
-                <div className="mb-4 rounded-[14px] border border-[#F2DEAF] bg-[#FFF9EC] p-3">
-                  <div className="flex items-center gap-2 text-[10.5px] font-bold text-[#8A5A00]">
-                    <AlertTriangleIcon className="size-3.5" />
-                    Confira os campos não localizados
+          <Form layout="vertical" style={{ marginTop: 20 }}>
+            <Form.Item label="Modelo documental">
+              <Card size="small" style={{ background: token.colorInfoBg, borderColor: token.colorInfoBorder }}>
+                <Flex align="center" gap={10}>
+                  <FileDoneOutlined style={{ fontSize: 18, color: token.colorInfoText }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <Typography.Text strong style={{ fontSize: 12 }}>
+                      Inexigibilidade · Consultoria FUNDEB
+                    </Typography.Text>
+                    <div
+                      style={{
+                        fontFamily: "var(--font-sync-mono)",
+                        fontSize: 10,
+                        color: token.colorTextSecondary,
+                      }}
+                    >
+                      14 documentos DOCX · modelo ativo
+                    </div>
                   </div>
-                  <ul className="mt-2 space-y-1 pl-5 text-[10px] leading-relaxed text-[#7A642E]">
-                    {result.warnings.slice(0, 3).map((warning) => (
-                      <li key={warning} className="list-disc">
-                        {warning}
-                      </li>
-                    ))}
-                  </ul>
+                  <CheckCircleOutlined style={{ color: token.colorSuccessText }} />
+                </Flex>
+              </Card>
+            </Form.Item>
+
+            <Form.Item label="Município">
+              <Select
+                value={cityId || undefined}
+                placeholder="Selecione o município"
+                showSearch
+                optionFilterProp="label"
+                onChange={(value) => {
+                  setCityId(value);
+                  setResult(null);
+                }}
+                options={cities.map((city) => ({
+                  value: city.id,
+                  label: `${city.name} · ${city.uf}`,
+                }))}
+              />
+            </Form.Item>
+
+            <Flex gap={10}>
+              <Form.Item label="Exercício" style={{ flex: 1 }}>
+                <InputNumber
+                  min={2024}
+                  max={2100}
+                  value={year ? Number(year) : undefined}
+                  onChange={(value) => setYear(value == null ? "" : String(value))}
+                  style={{ width: "100%" }}
+                />
+              </Form.Item>
+              <Form.Item label="Valor mensal" style={{ flex: 1 }}>
+                <InputNumber
+                  min={0}
+                  step={100}
+                  value={monthlyValue ? Number(monthlyValue) : undefined}
+                  onChange={(value) => setMonthlyValue(value == null ? "" : String(value))}
+                  style={{ width: "100%" }}
+                />
+              </Form.Item>
+              <Form.Item label="Meses" style={{ flex: 1 }}>
+                <InputNumber
+                  min={1}
+                  max={60}
+                  value={months ? Number(months) : undefined}
+                  onChange={(value) => setMonths(value == null ? "" : String(value))}
+                  style={{ width: "100%" }}
+                />
+              </Form.Item>
+            </Flex>
+
+            <Card size="small" style={{ background: token.colorFillQuaternary }}>
+              <Flex align="center" gap={8}>
+                <AuditOutlined style={{ color: token.colorTextSecondary }} />
+                <Typography.Text strong style={{ fontSize: 11 }}>
+                  Base legal do modelo
+                </Typography.Text>
+              </Flex>
+              <Typography.Paragraph
+                type="secondary"
+                style={{ marginTop: 8, marginBottom: 0, fontSize: 11 }}
+              >
+                Lei Federal nº 14.133/2021, com estrutura de DFD, ETP, Termo de
+                Referência, pareceres, ratificação, homologação e minuta.
+              </Typography.Paragraph>
+            </Card>
+          </Form>
+
+          <Button
+            type="primary"
+            block
+            size="large"
+            style={{ marginTop: 20 }}
+            icon={analyzing ? undefined : <RobotOutlined />}
+            loading={analyzing}
+            disabled={!cityId}
+            onClick={analyze}
+          >
+            {analyzing ? "Consultando bases e preparando…" : "Preparar minuta para revisão"}
+            {!analyzing && <RightOutlined style={{ marginLeft: 8 }} />}
+          </Button>
+        </Card>
+      </Col>
+
+      <Col xs={24} xl={15}>
+        <Card style={{ height: "100%" }} styles={{ body: { padding: result ? 0 : 24 } }}>
+          {!result ? (
+            <Flex vertical align="center" justify="center" style={{ minHeight: 480, textAlign: "center" }}>
+              <Empty
+                image={<FileTextOutlined style={{ fontSize: 64, color: token.colorTextTertiary }} />}
+                description={
+                  <>
+                    <Typography.Title level={5} style={{ marginBottom: 8 }}>
+                      A revisão aparecerá aqui
+                    </Typography.Title>
+                    <Typography.Paragraph type="secondary" style={{ maxWidth: 380, fontSize: 12 }}>
+                      Antes de gerar o arquivo, você verá os dados encontrados, as
+                      fontes utilizadas e os campos que ainda precisam ser confirmados.
+                    </Typography.Paragraph>
+                  </>
+                }
+              />
+              <Space wrap style={{ marginTop: 8 }}>
+                <Tag color="blue">IBGE</Tag>
+                <Tag color="green">TSE</Tag>
+                <Tag color="gold">CNPJ</Tag>
+                <Tag color="purple">Dados públicos</Tag>
+              </Space>
+            </Flex>
+          ) : (
+            <Flex vertical style={{ maxHeight: "calc(100vh - 190px)", minHeight: 560 }}>
+              <Flex
+                align="flex-start"
+                justify="space-between"
+                style={{ borderBottom: `1px solid ${token.colorBorderSecondary}`, padding: "16px 20px" }}
+              >
+                <div>
+                  <Flex align="center" gap={8}>
+                    <Typography.Title level={5} style={{ margin: 0 }}>
+                      Revisão da minuta
+                    </Typography.Title>
+                    <Tag color="success">
+                      {result.stats.percentualPreenchido}% preenchido
+                    </Tag>
+                  </Flex>
+                  <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                    {selectedCity?.name} · {selectedCity?.uf} · exercício {year}
+                  </Typography.Text>
                 </div>
-              )}
+                <Statistic
+                  value={camposLocalizados}
+                  suffix={<span style={{ fontSize: 11, color: token.colorTextTertiary }}>/{result.stats.total}</span>}
+                  valueStyle={{ fontFamily: "var(--font-sync-mono)", fontSize: 18, textAlign: "right" }}
+                />
+              </Flex>
 
-              <div className="grid gap-3 sm:grid-cols-2">
-                {REVIEW_FIELDS.map((field) => {
-                  const value = String(result.contrato[field.key] ?? "");
-                  const meta = result.metas.find(
-                    (item) => item.campo === field.key,
-                  );
-                  return (
-                    <Field key={field.key} label={field.label}>
-                      <Input
-                        value={value}
-                        onChange={(event) =>
-                          updateContractField(field.key, event.target.value)
-                        }
-                        placeholder={field.placeholder || "Não localizado"}
-                        className={`h-9 rounded-[10px] bg-white text-[11.5px] ${
-                          value
-                            ? "border-[#E2E3E9]"
-                            : "border-[#E7C2CB] bg-[#FFF9FA]"
-                        }`}
-                      />
-                      <div className="mt-1 flex items-center gap-1.5 font-mono text-[8.5px] text-[#A2A6B2]">
-                        <span
-                          className={`size-1.5 rounded-full ${
-                            value ? "bg-[#8FD3B6]" : "bg-[#F5A3B5]"
-                          }`}
+              <div style={{ flex: 1, overflowY: "auto", padding: "16px 20px" }}>
+                {result.warnings.length > 0 && (
+                  <Alert
+                    type="warning"
+                    showIcon
+                    icon={<WarningOutlined />}
+                    message="Confira os campos não localizados"
+                    description={
+                      <ul style={{ margin: "4px 0 0", paddingLeft: 18 }}>
+                        {result.warnings.slice(0, 3).map((warning) => (
+                          <li key={warning} style={{ fontSize: 11 }}>
+                            {warning}
+                          </li>
+                        ))}
+                      </ul>
+                    }
+                    style={{ marginBottom: 16 }}
+                  />
+                )}
+
+                <Row gutter={[12, 12]}>
+                  {REVIEW_FIELDS.map((field) => {
+                    const value = String(result.contrato[field.key] ?? "");
+                    const meta = result.metas.find(
+                      (item) => item.campo === field.key,
+                    );
+                    return (
+                      <Col key={field.key} xs={24} sm={12}>
+                        <Typography.Text style={{ fontSize: 10, fontWeight: 700, color: token.colorTextSecondary }}>
+                          {field.label}
+                        </Typography.Text>
+                        <Input
+                          value={value}
+                          onChange={(event) =>
+                            updateContractField(field.key, event.target.value)
+                          }
+                          placeholder={field.placeholder || "Não localizado"}
+                          status={value ? undefined : "warning"}
+                          style={{ marginTop: 4 }}
                         />
-                        {value ? meta?.fonte || "revisado manualmente" : "revisão necessária"}
-                      </div>
-                    </Field>
-                  );
-                })}
+                        <Badge
+                          status={value ? "success" : "error"}
+                          text={value ? meta?.fonte || "revisado manualmente" : "revisão necessária"}
+                          style={{ marginTop: 4, fontSize: 10 }}
+                        />
+                      </Col>
+                    );
+                  })}
+                </Row>
               </div>
-            </div>
 
-            <div className="border-t border-[#F0F1F5] bg-[#FAFAFC] px-5 py-4">
-              <label className="mb-3 flex cursor-pointer items-center gap-2.5 text-[10.5px] font-medium text-[#5A5E6A]">
-                <input
-                  type="checkbox"
+              <div
+                style={{
+                  borderTop: `1px solid ${token.colorBorderSecondary}`,
+                  background: token.colorFillQuaternary,
+                  padding: "16px 20px",
+                }}
+              >
+                <Checkbox
                   checked={archive}
                   onChange={(event) => setArchive(event.target.checked)}
-                  className="size-4 rounded accent-[#16181D]"
-                />
-                Salvar uma cópia do ZIP no acervo de {selectedCity?.name}
-              </label>
-              <Button
-                type="button"
-                onClick={generate}
-                disabled={generating}
-                className="h-11 w-full rounded-full bg-[#16181D] text-[12.5px] font-bold text-white hover:bg-[#2C2F38]"
-              >
-                {generating ? (
-                  <>
-                    <LoaderCircleIcon className="size-4 animate-spin" />
-                    Montando os documentos…
-                  </>
-                ) : (
-                  <>
-                    <DownloadIcon className="size-4" />
-                    Gerar e baixar kit contratual
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        )}
-      </section>
-    </div>
-  );
-}
-
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="block">
-      <span className="mb-1.5 block text-[10px] font-bold text-[#5A5E6A]">
-        {label}
-      </span>
-      {children}
-    </label>
+                  style={{ marginBottom: 12, fontSize: 11 }}
+                >
+                  Salvar uma cópia do ZIP no acervo de {selectedCity?.name}
+                </Checkbox>
+                <Button
+                  type="primary"
+                  block
+                  size="large"
+                  icon={generating ? undefined : <DownloadOutlined />}
+                  loading={generating}
+                  onClick={generate}
+                >
+                  {generating ? "Montando os documentos…" : "Gerar e baixar kit contratual"}
+                </Button>
+              </div>
+            </Flex>
+          )}
+        </Card>
+      </Col>
+    </Row>
   );
 }

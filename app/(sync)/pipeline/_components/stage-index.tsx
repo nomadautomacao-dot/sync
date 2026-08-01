@@ -1,9 +1,10 @@
 "use client";
 
-import React from 'react';
-import { useDroppable } from '@dnd-kit/core';
-import type { CityAccount, StageKey } from '@/core/lib/city-types';
-import { STAGE_LABELS } from '@/core/lib/city-types';
+import { useDroppable } from "@dnd-kit/core";
+import { Card, Typography, theme } from "antd";
+
+import type { CityAccount, StageKey } from "@/core/lib/city-types";
+import { STAGE_LABELS } from "@/core/lib/city-types";
 
 interface StageIndexProps {
   stages: StageKey[];
@@ -11,43 +12,75 @@ interface StageIndexProps {
   onDrop: (cityId: string, targetStage: string) => void;
 }
 
-function StageRow({ stage, count }: { stage: StageKey, count: number }) {
+function StageRow({ stage, count }: { stage: StageKey; count: number }) {
+  const { token } = theme.useToken();
   const { isOver, setNodeRef } = useDroppable({
     id: `index-${stage}`,
-    data: { stage }
+    data: { stage },
   });
 
+  // Continua `div` própria, e não um item de lista do Ant: o `useDroppable`
+  // precisa do `ref` no mesmo nó que recebe o "solte aqui" — envolver em
+  // camada própria quebra o arrasto do mesmo jeito que em `city-card.tsx`.
   return (
     <div
       ref={setNodeRef}
-      className={`px-2 py-1.5 rounded-[6px] flex justify-between items-center transition-colors ${isOver ? 'bg-primary-light' : ''}`}
+      style={{
+        padding: "6px 8px",
+        borderRadius: token.borderRadiusSM,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        backgroundColor: isOver ? token.colorPrimaryBg : "transparent",
+        transition: "background-color .15s",
+      }}
     >
-      <div className="text-[12px] font-medium truncate text-title">
+      <Typography.Text ellipsis style={{ fontSize: 12, fontWeight: 500 }}>
         {STAGE_LABELS[stage] || stage}
-      </div>
-      <div className="font-mono text-[10px] text-soft tabular-nums ml-2">
+      </Typography.Text>
+      <Typography.Text
+        type="secondary"
+        style={{ fontFamily: "var(--font-sync-mono)", fontSize: 10, marginInlineStart: 8 }}
+      >
         {count}
-      </div>
+      </Typography.Text>
     </div>
   );
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars -- `onDrop` fica na assinatura por simetria com o kanban; o drop real é resolvido pelo `DndContext` em page.tsx via os ids `index-<estágio>`
 export function StageIndex({ stages, cities, onDrop }: StageIndexProps) {
-  const counts = stages.reduce((acc, stage) => {
-    acc[stage] = cities.filter(c => c.stage === stage).length;
-    return acc;
-  }, {} as Record<StageKey, number>);
+  const counts = stages.reduce(
+    (acc, stage) => {
+      acc[stage] = cities.filter((c) => c.stage === stage).length;
+      return acc;
+    },
+    {} as Record<StageKey, number>,
+  );
 
   return (
-    <div className="w-[130px] flex-shrink-0 bg-surface-subtle rounded-[14px] p-2.5 border border-dashed border-line flex flex-col">
-      <div className="font-mono text-[10px] font-semibold uppercase tracking-[1.1px] text-soft mb-3 px-1">
-        +{stages.length} Estágios
-      </div>
-      <div className="flex flex-col gap-1">
-        {stages.map(stage => (
-          <StageRow key={stage} stage={stage} count={counts[stage] || 0} />
-        ))}
-      </div>
-    </div>
+    <Card
+      size="small"
+      style={{ width: 130, flexShrink: 0 }}
+      styles={{ body: { padding: 10, display: "flex", flexDirection: "column", gap: 2 } }}
+      title={
+        <Typography.Text
+          type="secondary"
+          style={{
+            fontFamily: "var(--font-sync-mono)",
+            fontSize: 10,
+            fontWeight: 600,
+            textTransform: "uppercase",
+            letterSpacing: 0.5,
+          }}
+        >
+          +{stages.length} Estágios
+        </Typography.Text>
+      }
+    >
+      {stages.map((stage) => (
+        <StageRow key={stage} stage={stage} count={counts[stage] || 0} />
+      ))}
+    </Card>
   );
 }

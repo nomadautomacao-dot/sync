@@ -11,12 +11,13 @@ import {
 } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
-  AlertCircleIcon,
-  CheckCircle2Icon,
-  ChevronDownIcon,
-  ChevronUpIcon,
-  LoaderIcon,
-} from "lucide-react";
+  CaretDownOutlined,
+  CaretUpOutlined,
+  CheckCircleFilled,
+  ExclamationCircleFilled,
+  LoadingOutlined,
+} from "@ant-design/icons";
+import { Badge, Button, Card, Flex, List, Typography, theme } from "antd";
 
 import { getCity } from "@/core/lib/cities-firestore";
 import {
@@ -47,6 +48,8 @@ import { DOCUMENTOS } from "@/app/(sync)/modulos/levantamento-fundeb/_components
  * consulta uma dúzia de fontes públicas; dois em paralelo competem por memória
  * e multiplicam a chance de a fonte responder com bloqueio por excesso.
  */
+
+const { Text } = Typography;
 
 interface FilaDeEmissao {
   jobs: JobDeEmissao[];
@@ -240,6 +243,7 @@ function PainelDaFila({
   processando: JobDeEmissao | null;
   repetir: (jobId: string) => Promise<void>;
 }) {
+  const { token } = theme.useToken();
   const [aberto, setAberto] = useState(false);
   const pendentes = jobs.filter((job) => job.status === "pendente").length;
   const comErro = jobs.filter((job) => job.status === "erro").length;
@@ -248,83 +252,107 @@ function PainelDaFila({
   if (!total) return null;
 
   return (
-    <div className="fixed bottom-4 right-4 z-[70] w-[320px] overflow-hidden rounded-[16px] border border-white/95 bg-white/95 shadow-[0_18px_44px_rgba(22,24,29,.18)] backdrop-blur-xl">
-      <button
-        type="button"
+    <Card
+      size="small"
+      style={{
+        position: "fixed",
+        bottom: 16,
+        right: 16,
+        zIndex: 1000,
+        width: 320,
+        boxShadow: token.boxShadowSecondary,
+      }}
+      styles={{ body: { padding: 0 } }}
+    >
+      <Button
+        type="text"
+        block
         onClick={() => setAberto((estava) => !estava)}
         aria-expanded={aberto}
-        className="flex w-full items-center gap-2.5 px-3.5 py-2.5 text-left transition-colors hover:bg-[#FAFAFC]"
+        style={{ height: "auto", padding: "10px 14px", textAlign: "left" }}
       >
-        {processando ? (
-          <LoaderIcon className="size-4 shrink-0 animate-spin text-[#16181D]" />
-        ) : comErro ? (
-          <AlertCircleIcon className="size-4 shrink-0 text-[#E5484D]" />
-        ) : (
-          <CheckCircle2Icon className="size-4 shrink-0 text-[#1F6A47]" />
-        )}
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-[11.5px] font-bold text-[#16181D]">
-            {processando
-              ? `Gerando ${processando.documentoNome}`
-              : comErro
-                ? `${comErro} emissão(ões) falharam`
-                : "Fila de emissão"}
+        <Flex align="center" gap={10} style={{ width: "100%" }}>
+          {processando ? (
+            <LoadingOutlined spin style={{ color: token.colorText }} />
+          ) : comErro ? (
+            <ExclamationCircleFilled style={{ color: token.colorError }} />
+          ) : (
+            <CheckCircleFilled style={{ color: token.colorSuccess }} />
+          )}
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <Text strong ellipsis style={{ display: "block", fontSize: 11.5 }}>
+              {processando
+                ? `Gerando ${processando.documentoNome}`
+                : comErro
+                  ? `${comErro} emissão(ões) falharam`
+                  : "Fila de emissão"}
+            </Text>
+            <Text
+              type="secondary"
+              ellipsis
+              style={{ display: "block", fontFamily: "var(--font-sync-mono)", fontSize: 9.5 }}
+            >
+              {processando
+                ? `${processando.cityName} · ${pendentes} na fila`
+                : `${total} pedido(s)`}
+            </Text>
           </div>
-          <div className="truncate font-mono text-[9.5px] text-[#A2A6B2]">
-            {processando
-              ? `${processando.cityName} · ${pendentes} na fila`
-              : `${total} pedido(s)`}
-          </div>
-        </div>
-        {aberto ? (
-          <ChevronDownIcon className="size-3.5 shrink-0 text-[#A2A6B2]" />
-        ) : (
-          <ChevronUpIcon className="size-3.5 shrink-0 text-[#A2A6B2]" />
-        )}
-      </button>
+          {aberto ? (
+            <CaretUpOutlined style={{ color: token.colorTextTertiary }} />
+          ) : (
+            <CaretDownOutlined style={{ color: token.colorTextTertiary }} />
+          )}
+        </Flex>
+      </Button>
 
       {aberto && (
-        <div className="max-h-[260px] overflow-y-auto border-t border-[#F0F1F5]">
-          {jobs.map((job) => (
-            <div
-              key={job.id}
-              className="flex items-center gap-2 border-b border-[#F4F4F8] px-3.5 py-2 last:border-0"
+        <List
+          size="small"
+          style={{
+            maxHeight: 260,
+            overflowY: "auto",
+            borderTop: `1px solid ${token.colorBorderSecondary}`,
+          }}
+          dataSource={jobs}
+          renderItem={(job) => (
+            <List.Item
+              style={{ paddingInline: 14 }}
+              actions={
+                job.status === "erro"
+                  ? [
+                      <Button key="repetir" size="small" onClick={() => void repetir(job.id)}>
+                        Repetir
+                      </Button>,
+                    ]
+                  : undefined
+              }
             >
-              {job.status === "gerando" ? (
-                <LoaderIcon className="size-3 shrink-0 animate-spin text-[#16181D]" />
-              ) : job.status === "erro" ? (
-                <AlertCircleIcon className="size-3 shrink-0 text-[#E5484D]" />
-              ) : (
-                <span className="size-1.5 shrink-0 rounded-full bg-[#D6D7DE]" />
-              )}
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-[10.5px] font-semibold text-[#3B3F4A]">
-                  {job.documentoNome}
+              <Flex align="center" gap={8} style={{ minWidth: 0, flex: 1 }}>
+                {job.status === "gerando" ? (
+                  <LoadingOutlined spin style={{ fontSize: 11, color: token.colorText }} />
+                ) : job.status === "erro" ? (
+                  <ExclamationCircleFilled style={{ fontSize: 11, color: token.colorError }} />
+                ) : (
+                  <Badge status="default" />
+                )}
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <Text strong ellipsis style={{ display: "block", fontSize: 10.5 }}>
+                    {job.documentoNome}
+                  </Text>
+                  <Text
+                    type={job.status === "erro" ? "danger" : "secondary"}
+                    ellipsis
+                    title={job.erro}
+                    style={{ display: "block", fontFamily: "var(--font-sync-mono)", fontSize: 9 }}
+                  >
+                    {job.status === "erro" ? job.erro || "falhou" : `${job.cityName} · ${job.cityUf}`}
+                  </Text>
                 </div>
-                <div
-                  className={`truncate font-mono text-[9px] ${
-                    job.status === "erro" ? "text-[#991B1B]" : "text-[#A2A6B2]"
-                  }`}
-                  title={job.erro}
-                >
-                  {job.status === "erro"
-                    ? job.erro || "falhou"
-                    : `${job.cityName} · ${job.cityUf}`}
-                </div>
-              </div>
-              {job.status === "erro" && (
-                <button
-                  type="button"
-                  onClick={() => void repetir(job.id)}
-                  className="shrink-0 rounded-full bg-[#F2F1F7] px-2.5 py-1 text-[9.5px] font-bold text-[#3B3F4A] transition-colors hover:bg-[#ECEBF2]"
-                >
-                  Repetir
-                </button>
-              )}
-            </div>
-          ))}
-        </div>
+              </Flex>
+            </List.Item>
+          )}
+        />
       )}
-    </div>
+    </Card>
   );
 }

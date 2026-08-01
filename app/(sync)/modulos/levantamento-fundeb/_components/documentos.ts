@@ -1,17 +1,17 @@
 import {
-  BabyIcon,
-  BarChart3Icon,
-  ClipboardCheckIcon,
-  FileTextIcon,
-  GlobeIcon,
-  GraduationCapIcon,
-  HistoryIcon,
-  LandmarkIcon,
-  ScaleIcon,
-  SchoolIcon,
-  SendIcon,
-  ZapIcon,
-} from "lucide-react";
+  AuditOutlined,
+  BankOutlined,
+  BarChartOutlined,
+  CalculatorOutlined,
+  FileTextOutlined,
+  GlobalOutlined,
+  HistoryOutlined,
+  ReadOutlined,
+  SendOutlined,
+  TeamOutlined,
+  ThunderboltOutlined,
+  TrophyOutlined,
+} from "@ant-design/icons";
 
 import type { CityReportType } from "@/modules/cidades/reports-types";
 
@@ -55,7 +55,7 @@ export const DOCUMENTOS = [
   {
     id: "raio-x" as const,
     reportType: "raio_x" as CityReportType,
-    icone: ZapIcon,
+    icone: ThunderboltOutlined,
     nome: "Raio-X Municipal",
     paginas: 42,
     variante: "secundario" as const,
@@ -74,7 +74,7 @@ export const DOCUMENTOS = [
   {
     id: "levantamento" as const,
     reportType: "diagnostico_fundeb" as CityReportType,
-    icone: FileTextIcon,
+    icone: FileTextOutlined,
     nome: "Diagnóstico FUNDEB",
     paginas: 10,
     variante: "primario" as const,
@@ -94,7 +94,7 @@ export const DOCUMENTOS = [
   {
     id: "historico-censo" as const,
     reportType: "historico_censo" as CityReportType,
-    icone: HistoryIcon,
+    icone: HistoryOutlined,
     nome: "Histórico do Censo Escolar",
     paginas: 11,
     variante: "secundario" as const,
@@ -115,7 +115,7 @@ export const DOCUMENTOS = [
   {
     id: "oficio-documentos" as const,
     reportType: "oficio_documentos" as CityReportType,
-    icone: SendIcon,
+    icone: SendOutlined,
     nome: "Ofício de solicitação de documentos",
     paginas: 4,
     variante: "secundario" as const,
@@ -134,7 +134,7 @@ export const DOCUMENTOS = [
   {
     id: "dossie-escolas" as const,
     reportType: "dossie_escolas" as CityReportType,
-    icone: SchoolIcon,
+    icone: ReadOutlined,
     nome: "Dossiê das Escolas",
     // O tamanho é função do município; a medida real vem da prévia da rota.
     paginas: 0,
@@ -155,7 +155,7 @@ export const DOCUMENTOS = [
   {
     id: "dossie-conformidade" as const,
     reportType: "dossie_conformidade" as CityReportType,
-    icone: ClipboardCheckIcon,
+    icone: AuditOutlined,
     nome: "Dossiê da Conformidade",
     paginas: 0,
     variante: "secundario" as const,
@@ -175,7 +175,7 @@ export const DOCUMENTOS = [
   {
     id: "dossie-matricula" as const,
     reportType: "dossie_matricula" as CityReportType,
-    icone: ScaleIcon,
+    icone: CalculatorOutlined,
     nome: "Dossiê da Matrícula Ponderada",
     paginas: 0,
     variante: "secundario" as const,
@@ -195,7 +195,7 @@ export const DOCUMENTOS = [
   {
     id: "dossie-dinheiro" as const,
     reportType: "dossie_dinheiro" as CityReportType,
-    icone: LandmarkIcon,
+    icone: BankOutlined,
     nome: "Dossiê do Dinheiro Federal",
     paginas: 0,
     variante: "secundario" as const,
@@ -215,7 +215,7 @@ export const DOCUMENTOS = [
   {
     id: "dossie-aprendizagem" as const,
     reportType: "dossie_aprendizagem" as CityReportType,
-    icone: GraduationCapIcon,
+    icone: TrophyOutlined,
     nome: "Dossiê da Aprendizagem",
     paginas: 0,
     variante: "secundario" as const,
@@ -235,7 +235,7 @@ export const DOCUMENTOS = [
   {
     id: "dossie-demanda" as const,
     reportType: "dossie_demanda" as CityReportType,
-    icone: BabyIcon,
+    icone: TeamOutlined,
     nome: "Dossiê da Demanda",
     paginas: 0,
     variante: "secundario" as const,
@@ -255,7 +255,7 @@ export const DOCUMENTOS = [
   {
     id: "dossie-equidade" as const,
     reportType: "dossie_equidade" as CityReportType,
-    icone: GlobeIcon,
+    icone: GlobalOutlined,
     nome: "Dossiê da Equidade e dos Territórios",
     paginas: 0,
     variante: "secundario" as const,
@@ -275,7 +275,7 @@ export const DOCUMENTOS = [
   {
     id: "dossie-comparativo" as const,
     reportType: "dossie_comparativo" as CityReportType,
-    icone: BarChart3Icon,
+    icone: BarChartOutlined,
     nome: "Dossiê Comparativo",
     paginas: 0,
     variante: "secundario" as const,

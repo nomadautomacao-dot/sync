@@ -2,16 +2,33 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, type FormEvent } from "react";
-import { EyeIcon, EyeOffIcon, LoaderIcon, LockKeyholeIcon, MailIcon, ShieldAlertIcon, AlertTriangleIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import { LockOutlined, MailOutlined } from "@ant-design/icons";
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  Checkbox,
+  Divider,
+  Flex,
+  Form,
+  Grid,
+  Input,
+  Layout,
+  Space,
+  Spin,
+  Tag,
+  theme,
+  Typography,
+} from "antd";
 
 import packageJson from "@/package.json";
 import { useAuth } from "@/core/providers/auth-provider";
-import { Button } from "@/core/components/ui/button";
-import { Input } from "@/core/components/ui/input";
-import { Label } from "@/core/components/ui/label";
 
 import { DialogoRedefinirSenha } from "./dialogo-redefinir-senha";
+
+const { Text, Title } = Typography;
 
 const ROTA_POS_LOGIN = "/painel";
 const VERSAO_APP = `v${packageJson.version}`;
@@ -37,27 +54,33 @@ function mensagemDeErro(erro: unknown): string {
   );
 }
 
+interface ValoresLogin {
+  email: string;
+  senha: string;
+  manterConectado: boolean;
+}
+
 export default function EntrarPage() {
   const router = useRouter();
   const { user, loading, signIn } = useAuth();
+  const { token } = theme.useToken();
+  const telas = Grid.useBreakpoint();
+  const [form] = Form.useForm<ValoresLogin>();
 
-  const [email, setEmail] = useState("");
-  const [senha, setSenha] = useState("");
-  const [manterConectado, setManterConectado] = useState(false);
-  const [senhaVisivel, setSenhaVisivel] = useState(false);
+  // O e-mail já digitado alimenta o diálogo de redefinição de senha, para não
+  // pedir o mesmo dado duas vezes. `Form.useWatch` mantém isso reativo sem
+  // duplicar o valor num `useState` próprio — o `Form` já é a fonte da verdade.
+  const emailDigitado = Form.useWatch("email", form) ?? "";
+
   const [enviando, setEnviando] = useState(false);
   const [erroAuth, setErroAuth] = useState<string | null>(null);
   const [redefinindo, setRedefinindo] = useState(false);
-  const [validou, setValidou] = useState(false);
 
   // Status dinâmico da API
   const [statusApi, setStatusApi] = useState<{ ok: boolean; carregando: boolean }>({
     ok: true,
     carregando: true,
   });
-
-  const refEmail = useRef<HTMLInputElement>(null);
-  const refSenha = useRef<HTMLInputElement>(null);
 
   // Checagem de saúde da API
   useEffect(() => {
@@ -83,33 +106,18 @@ export default function EntrarPage() {
     };
   }, []);
 
-  const erroEmail = (() => {
-    const texto = email.trim();
-    if (!texto) return "Informe o e-mail institucional.";
-    if (!texto.includes("@") || !texto.includes(".") || texto.length < 6) {
-      return "E-mail incompleto — confira o endereço.";
-    }
-    return null;
-  })();
-  const erroSenha = senha.length === 0 ? "Informe a senha." : null;
-
   useEffect(() => {
     if (!loading && user) router.replace(ROTA_POS_LOGIN);
   }, [loading, user, router]);
 
-  const aoEnviar = async (evento: FormEvent<HTMLFormElement>) => {
-    evento.preventDefault();
-    if (enviando) return;
-
-    setValidou(true);
-    if (erroEmail) { refEmail.current?.focus(); return; }
-    if (erroSenha) { refSenha.current?.focus(); return; }
-
+  // `onFinish` só dispara depois que o `Form` valida os dois campos — a
+  // checagem manual de e-mail/senha que existia antes vira regra declarativa
+  // em cada `Form.Item`, e o foco no campo com erro é comportamento do Ant.
+  const aoEnviar = async (valores: ValoresLogin) => {
     setEnviando(true);
     setErroAuth(null);
-    setSenhaVisivel(false);
     try {
-      await signIn(email.trim(), senha, manterConectado);
+      await signIn(valores.email.trim(), valores.senha, valores.manterConectado);
     } catch (erro) {
       setErroAuth(mensagemDeErro(erro));
       setEnviando(false);
@@ -118,249 +126,196 @@ export default function EntrarPage() {
 
   if (loading || user) {
     return (
-      <main className="flex h-screen w-screen items-center justify-center overflow-hidden font-sans">
-        <div className="flex items-center gap-3 rounded-[18px] border border-white/95 bg-white/[.88] px-5 py-3.5 shadow-[0_14px_36px_rgba(22,24,29,.07)] backdrop-blur-xl">
-          <LoaderIcon className="size-4 animate-spin text-[#16181D]" />
-          <span className="font-mono text-xs font-semibold text-[#5A5E6A]">Verificando sessão…</span>
-        </div>
-      </main>
+      <Flex align="center" justify="center" style={{ height: "100vh", width: "100vw" }}>
+        <Space>
+          <Spin size="small" />
+          <Text
+            type="secondary"
+            style={{ fontFamily: "var(--font-sync-mono)", fontSize: 12, fontWeight: 600 }}
+          >
+            Verificando sessão…
+          </Text>
+        </Space>
+      </Flex>
     );
   }
 
   return (
-    <main className="flex h-screen w-screen flex-col justify-between overflow-hidden font-sans text-[#16181D] selection:bg-[#F2F1F7] selection:text-[#16181D]">
-      {/* ── Topbar estilo Apple Frosted Glass ───────────────────────────── */}
-      <header className="shrink-0 h-16 border border-white/90 bg-white/[.82] backdrop-blur-[14px] rounded-[40px] mx-4 mt-4 px-6 lg:px-12 z-20 flex items-center">
-        <div className="mx-auto flex w-full max-w-6xl items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="relative flex items-center justify-center rounded-control bg-white p-1 border border-[#F0F1F5]/60 shadow-2xs">
-              <Image
-                src="/global-sync-icon.png"
-                alt="Global Sync"
-                width={28}
-                height={28}
-                priority
-                className="size-7 shrink-0 rounded-md"
-              />
+    <Layout style={{ minHeight: "100vh", background: token.colorBgLayout }}>
+      <Layout.Header
+        style={{
+          height: 64,
+          lineHeight: "normal",
+          background: token.colorBgContainer,
+          borderBottom: `1px solid ${token.colorBorderSecondary}`,
+          paddingInline: 24,
+          display: "flex",
+          alignItems: "center",
+        }}
+      >
+        <Flex justify="space-between" align="center" style={{ width: "100%", maxWidth: 1152, margin: "0 auto" }}>
+          <Space size={12}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 36,
+                height: 36,
+                borderRadius: token.borderRadius,
+                border: `1px solid ${token.colorBorderSecondary}`,
+                background: token.colorBgContainer,
+              }}
+            >
+              <Image src="/global-sync-icon.png" alt="Global Sync" width={24} height={24} priority />
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-base font-bold tracking-tight text-[#16181D]">Global Sync</span>
-              <span className="rounded-full border border-white/90 bg-[#F2F1F7] px-2.5 py-0.5 font-mono text-[11px] font-bold text-[#767A86]">
+            <Space size={8}>
+              <Text strong>Global Sync</Text>
+              <Tag variant="filled" style={{ fontFamily: "var(--font-sync-mono)", fontSize: 11 }}>
                 {VERSAO_APP}
-              </span>
+              </Tag>
+            </Space>
+          </Space>
+
+          {/* Escondido no mobile, como antes: nesse tamanho de tela o par
+              status + razão social só disputa espaço com a marca. */}
+          {telas.sm && (
+            <Space separator={<Divider orientation="vertical" />} size="middle">
+              {statusApi.carregando ? (
+                <Badge status="processing" text="Checando sistema…" />
+              ) : statusApi.ok ? (
+                <Badge status="success" text="Sistemas Operacionais" />
+              ) : (
+                <Badge status="error" text="Instabilidade na Rede" />
+              )}
+              <Text strong>Global Company Consultorias</Text>
+            </Space>
+          )}
+        </Flex>
+      </Layout.Header>
+
+      <Layout.Content style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+        <Card style={{ width: "100%", maxWidth: 420 }} styles={{ body: { padding: 32 } }}>
+          <Flex vertical align="center" style={{ textAlign: "center" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 56,
+                height: 56,
+                borderRadius: token.borderRadiusLG,
+                border: `1px solid ${token.colorBorderSecondary}`,
+                background: token.colorBgContainer,
+              }}
+            >
+              <Image src="/global-sync-icon.png" alt="Global Sync" width={36} height={36} priority />
             </div>
-          </div>
-
-          {/* Badge Dinâmico de Status (Versão dinâmica + status limpo) */}
-          <div className="hidden items-center gap-4 text-xs font-medium text-[#767A86] sm:flex">
-            {statusApi.carregando ? (
-              <span className="flex items-center gap-2 rounded-full border border-white/90 bg-[#F2F1F7] px-3 py-1 text-[#767A86] font-semibold">
-                <LoaderIcon className="size-3 animate-spin text-[#A2A6B2]" />
-                Checando sistema…
-              </span>
-            ) : statusApi.ok ? (
-              <span className="flex items-center gap-2 rounded-full border border-white/90 bg-[#F2F1F7] px-3 py-1 text-[#5A5E6A] font-semibold">
-                <span className="relative flex size-2">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#34C388] opacity-75" />
-                  <span className="relative inline-flex size-2 rounded-full bg-[#34C388]" />
-                </span>
-                Sistemas Operacionais
-              </span>
-            ) : (
-              <span className="flex items-center gap-2 rounded-full border border-white/90 bg-[#FFE5E5] px-3 py-1 text-[#991B1B] font-semibold">
-                <AlertTriangleIcon className="size-3.5 text-[#991B1B]" />
-                Instabilidade na Rede
-              </span>
-            )}
-
-            <span className="text-[#A2A6B2]">|</span>
-            <span className="font-semibold text-[#16181D]">Global Company Consultorias</span>
-          </div>
-        </div>
-      </header>
-
-      {/* ── Conteúdo Central: Card de Login Suave & Elegante ────────────── */}
-      <div className="flex flex-1 items-center justify-center p-6">
-        <div className="w-full max-w-[420px] bg-white/[.88] backdrop-blur-xl border border-white/95 rounded-[18px] shadow-[0_14px_36px_rgba(22,24,29,.07)] p-8 transition-all">
-          {/* Logo & Título */}
-          <div className="flex flex-col items-center text-center">
-            {/* `p-1.5` e não `p-2`: com 56px de caixa, 8px de padding e 1px de
-                borda de cada lado sobram 38px de conteúdo para um ícone de 40px
-                — o flex esmagava só a largura, e é isso que o Next reporta como
-                "width modified, but not the other". Com 6px sobram 42px. */}
-            <div className="relative flex size-14 items-center justify-center rounded-[18px] bg-white/[.82] p-1.5 border border-white/90 shadow-[0_14px_36px_rgba(22,24,29,.07)]">
-              <Image
-                src="/global-sync-icon.png"
-                alt="Global Sync"
-                width={40}
-                height={40}
-                priority
-                className="size-10 shrink-0 rounded-control"
-              />
-            </div>
-
-            <h1 className="mt-4 text-2xl font-bold tracking-tight text-[#16181D]">
+            <Title level={4} style={{ marginTop: 16, marginBottom: 0 }}>
               Acessar o Global Sync
-            </h1>
-            <p className="mt-1 text-xs font-medium text-[#767A86]">
+            </Title>
+            <Text type="secondary" style={{ fontSize: 12 }}>
               Global Company Consultorias
-            </p>
-          </div>
+            </Text>
+          </Flex>
 
           {erroAuth && (
-            <div
-              role="alert"
-              className="mt-6 flex items-start gap-3 rounded-[24px] border border-white/90 bg-[#FFE5E5] p-3.5"
-            >
-              <ShieldAlertIcon className="mt-0.5 size-4 shrink-0 text-[#991B1B]" />
-              <div className="flex-1">
-                <p className="text-xs font-semibold leading-snug text-[#991B1B]">{erroAuth}</p>
-                <button
-                  type="button"
+            <Alert
+              type="error"
+              showIcon
+              message={erroAuth}
+              description={
+                <Button
+                  type="link"
+                  size="small"
+                  style={{ padding: 0, height: "auto" }}
                   onClick={() => setRedefinindo(true)}
-                  className="mt-1 text-[11px] font-bold text-[#991B1B] underline underline-offset-2 hover:opacity-80"
                 >
                   Esqueci minha senha
-                </button>
-              </div>
-            </div>
+                </Button>
+              }
+              style={{ marginTop: 24 }}
+            />
           )}
 
-          <form className="mt-6 space-y-4" onSubmit={aoEnviar} noValidate>
-            {/* Campo E-mail */}
-            <div className="space-y-1.5">
-              <Label
-                htmlFor="email"
-                className="font-mono text-[10px] font-semibold uppercase tracking-[0.9px] text-[#767A86]"
-              >
-                E-mail institucional
-              </Label>
-              <div className="relative">
-                <MailIcon className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-[#A2A6B2]" />
-                <Input
-                  ref={refEmail}
-                  id="email"
-                  name="email"
-                  type="email"
-                  autoComplete="username"
-                  autoFocus
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  aria-invalid={validou && erroEmail !== null}
-                  aria-describedby="erro-email"
-                  placeholder="usuario@globalcompany.com.br"
-                  className={`h-11 bg-[#F2F1F7] border border-white/90 rounded-[24px] pl-10 text-xs font-semibold text-[#16181D] placeholder:text-[#A2A6B2] placeholder:font-normal focus:bg-white focus:ring-2 focus:ring-[#16181D] focus:border-[#16181D] transition-all ${
-                    validou && erroEmail ? "border-[#991B1B] focus:border-[#991B1B] focus:ring-[#991B1B]/20 bg-[#FFE5E5]" : ""
-                  }`}
-                />
-              </div>
-              {validou && erroEmail && (
-                <p id="erro-email" className="text-[11px] font-semibold text-[#991B1B]">
-                  {erroEmail}
-                </p>
-              )}
-            </div>
-
-            {/* Campo Senha */}
-            <div className="space-y-1.5">
-              <div className="flex items-center justify-between">
-                <Label
-                  htmlFor="senha"
-                  className="font-mono text-[10px] font-semibold uppercase tracking-[0.9px] text-[#767A86]"
-                >
-                  Senha
-                </Label>
-                <button
-                  type="button"
-                  onClick={() => setRedefinindo(true)}
-                  className="text-xs font-semibold text-[#16181D] hover:underline focus:outline-hidden focus:ring-2 focus:ring-[#16181D]/30 rounded-full"
-                >
-                  Esqueceu?
-                </button>
-              </div>
-              <div className="relative">
-                <LockKeyholeIcon className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-[#A2A6B2]" />
-                <Input
-                  ref={refSenha}
-                  id="senha"
-                  name="senha"
-                  type={senhaVisivel ? "text" : "password"}
-                  autoComplete="current-password"
-                  value={senha}
-                  onChange={(e) => setSenha(e.target.value)}
-                  aria-invalid={validou && erroSenha !== null}
-                  aria-describedby="erro-senha"
-                  className={`h-11 bg-[#F2F1F7] border border-white/90 rounded-[24px] pl-10 pr-11 text-xs font-semibold text-[#16181D] focus:bg-white focus:ring-2 focus:ring-[#16181D] focus:border-[#16181D] transition-all ${
-                    validou && erroSenha ? "border-[#991B1B] focus:border-[#991B1B] focus:ring-[#991B1B]/20 bg-[#FFE5E5]" : ""
-                  }`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setSenhaVisivel((v) => !v)}
-                  tabIndex={-1}
-                  aria-pressed={senhaVisivel}
-                  className="absolute right-3 top-1/2 flex size-9 -translate-y-1/2 items-center justify-center rounded-full text-[#767A86] transition-colors hover:text-[#16181D]"
-                >
-                  {senhaVisivel ? <EyeOffIcon className="size-4" /> : <EyeIcon className="size-4" />}
-                  <span className="sr-only">{senhaVisivel ? "Ocultar senha" : "Mostrar senha"}</span>
-                </button>
-              </div>
-              {validou && erroSenha && (
-                <p id="erro-senha" className="text-[11px] font-semibold text-[#991B1B]">
-                  {erroSenha}
-                </p>
-              )}
-            </div>
-
-            {/* Checkbox Manter Conectado */}
-            <div className="pt-1">
-              <label className="flex cursor-pointer items-center justify-center gap-2.5 text-xs font-semibold text-[#5A5E6A]">
-                <input
-                  type="checkbox"
-                  checked={manterConectado}
-                  onChange={(e) => setManterConectado(e.target.checked)}
-                  className="size-4 rounded-sm border-[#A2A6B2] accent-[#16181D]"
-                />
-                Manter sessão ativa neste dispositivo
-              </label>
-            </div>
-
-            {/* Botão de Submit */}
-            <Button
-              type="submit"
-              disabled={enviando}
-              aria-busy={enviando}
-              className="mt-2 h-11 w-full bg-[#16181D] text-white rounded-[24px] text-xs font-semibold tracking-tight shadow-[0_12px_26px_rgba(22,24,29,.2)] transition-all hover:bg-[#2C2F38] disabled:bg-[#4A4E5A]"
+          <Form<ValoresLogin>
+            form={form}
+            layout="vertical"
+            requiredMark={false}
+            initialValues={{ manterConectado: false }}
+            onFinish={aoEnviar}
+            scrollToFirstError
+            style={{ marginTop: 24 }}
+          >
+            <Form.Item
+              name="email"
+              label="E-mail institucional"
+              rules={[
+                { required: true, message: "Informe o e-mail institucional." },
+                { type: "email", message: "E-mail em formato inválido." },
+              ]}
             >
-              {enviando ? (
-                <span className="flex items-center gap-2">
-                  <LoaderIcon className="size-4 animate-spin" />
-                  Autenticando…
-                </span>
-              ) : (
-                "Acessar Console"
-              )}
-            </Button>
-          </form>
+              <Input
+                prefix={<MailOutlined style={{ color: token.colorTextQuaternary }} />}
+                placeholder="usuario@globalcompany.com.br"
+                autoComplete="username"
+                autoFocus
+              />
+            </Form.Item>
 
-          <div className="mt-6 border-t border-[#F2F1F7] pt-4 text-center">
-            <p className="font-mono text-[11px] text-[#A2A6B2]">
-              Uso exclusivo de colaboradores autorizados.
-            </p>
-          </div>
-        </div>
-      </div>
+            {/* O `label` do `Form.Item` é `inline-flex` e ignora `width: 100%`
+                do filho — por isso o cabeçalho "Senha / Esqueceu?" vem fora
+                do prop `label`, como uma linha própria acima do campo. */}
+            <Flex justify="space-between" align="center" style={{ marginBottom: 8 }}>
+              <label htmlFor="senha" style={{ color: token.colorText }}>
+                Senha
+              </label>
+              <Button
+                type="link"
+                size="small"
+                style={{ padding: 0, height: "auto", fontWeight: 600 }}
+                onClick={() => setRedefinindo(true)}
+              >
+                Esqueceu?
+              </Button>
+            </Flex>
+            <Form.Item name="senha" rules={[{ required: true, message: "Informe a senha." }]}>
+              <Input.Password
+                id="senha"
+                prefix={<LockOutlined style={{ color: token.colorTextQuaternary }} />}
+                autoComplete="current-password"
+              />
+            </Form.Item>
 
-      {/* ── Rodapé Limpo & Centralizado ─────────────────────────────────── */}
-      <footer className="shrink-0 h-12 px-6 text-xs font-medium text-[#767A86] flex items-center justify-center">
-        <p>© {new Date().getFullYear()} Global Company Consultorias. Todos os direitos reservados.</p>
-      </footer>
+            <Form.Item name="manterConectado" valuePropName="checked">
+              <Checkbox>Manter sessão ativa neste dispositivo</Checkbox>
+            </Form.Item>
+
+            <Form.Item style={{ marginBottom: 0 }}>
+              <Button type="primary" htmlType="submit" block loading={enviando}>
+                {enviando ? "Autenticando…" : "Acessar console"}
+              </Button>
+            </Form.Item>
+          </Form>
+
+          <Divider style={{ margin: "24px 0 16px" }} />
+          <Text type="secondary" style={{ display: "block", textAlign: "center", fontSize: 11, fontFamily: "var(--font-sync-mono)" }}>
+            Uso exclusivo de colaboradores autorizados.
+          </Text>
+        </Card>
+      </Layout.Content>
+
+      <Layout.Footer style={{ textAlign: "center", background: "transparent" }}>
+        <Text type="secondary" style={{ fontSize: 12 }}>
+          © {new Date().getFullYear()} Global Company Consultorias. Todos os direitos reservados.
+        </Text>
+      </Layout.Footer>
 
       <DialogoRedefinirSenha
         aberto={redefinindo}
-        emailInicial={email.trim()}
+        emailInicial={emailDigitado.trim()}
         aoFechar={() => setRedefinindo(false)}
       />
-    </main>
+    </Layout>
   );
 }

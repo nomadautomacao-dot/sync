@@ -1,5 +1,8 @@
 "use client";
 
+import type { ReactNode } from "react";
+import { Select, Typography, theme } from "antd";
+
 import type { CityAccount } from "@/core/lib/city-types";
 import { STAGE_LABELS, formatCurrency } from "@/core/lib/city-types";
 import { daysIdle } from "../stage-helpers";
@@ -9,11 +12,9 @@ interface ResumoTabProps {
   onSave: (cityId: string, data: Record<string, unknown>) => void;
 }
 
-export function ResumoTab({ city, onSave }: ResumoTabProps) {
-  const handleStageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    onSave(city.id, { stage: e.target.value });
-  };
+const FONTE_NUMERO = "var(--font-sync-mono)";
 
+export function ResumoTab({ city, onSave }: ResumoTabProps) {
   const idle = daysIdle(city);
 
   const formatDate = (dateString?: string) => {
@@ -23,54 +24,31 @@ export function ResumoTab({ city, onSave }: ResumoTabProps) {
   };
 
   return (
-    <div className="space-y-5 p-5 font-mono text-[11px]">
-      {/* Informações Gerais */}
-      <Section title="INFORMAÇÕES GERAIS">
+    <div style={{ padding: 20 }}>
+      <Section title="Informações gerais">
         <Row label="Nome" value={city.name} />
         <Row label="UF" value={city.uf} />
         <Row label="Código IBGE" value={city.codigoIbge || "—"} />
         <Row label="Status" value={city.status} />
       </Section>
 
-      {/* Pipeline */}
-      <Section title="PIPELINE">
-        <div className="flex items-center justify-between border-b border-line py-[6px]">
-          <span className="text-muted">Estágio</span>
-          <select
-            value={city.stage}
-            onChange={handleStageChange}
-            className="rounded-[6px] border border-line-input bg-card px-2 py-1 text-right text-[11px] font-medium text-body outline-none focus:border-primary-strong"
-          >
-            {Object.entries(STAGE_LABELS).map(([key, label]) => (
-              <option key={key} value={key}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </div>
+      <Section title="Pipeline">
+        <StageRow city={city} onSave={onSave} />
         <Row label="Probabilidade" value={`${city.probability}%`} />
-        <Row
-          label="Receita Estimada"
-          value={formatCurrency(city.estimatedAnnualRevenue)}
-        />
-        <Row label="Próximo Passo" value={city.nextStepDescription || "—"} />
-        <Row
-          label="Data Próx. Passo"
-          value={formatDate(city.nextStepDueDate)}
-        />
+        <Row label="Receita estimada" value={formatCurrency(city.estimatedAnnualRevenue)} />
+        <Row label="Próximo passo" value={city.nextStepDescription || "—"} />
+        <Row label="Data próx. passo" value={formatDate(city.nextStepDueDate)} />
       </Section>
 
-      {/* Responsável */}
-      <Section title="RESPONSÁVEL">
+      <Section title="Responsável">
         <Row label="Nome" value={city.collaboratorName || "—"} />
         <Row label="ID" value={city.collaboratorId || "—"} />
       </Section>
 
-      {/* Última Atividade */}
-      <Section title="ÚLTIMA ATIVIDADE">
+      <Section title="Última atividade" last>
         <Row label="Data" value={formatDate(city.lastActivityAt)} />
         <Row
-          label="Dias Inativo"
+          label="Dias inativo"
           value={idle !== null ? `${idle} dias` : "—"}
           warn={idle !== null && idle > 7}
         />
@@ -82,39 +60,89 @@ export function ResumoTab({ city, onSave }: ResumoTabProps) {
 function Section({
   title,
   children,
+  last,
 }: {
   title: string;
-  children: React.ReactNode;
+  children: ReactNode;
+  last?: boolean;
 }) {
   return (
-    <div>
-      <h3 className="mb-2 font-mono text-[10px] font-semibold uppercase tracking-[1px] text-soft">
+    <div style={{ marginBottom: last ? 0 : 20 }}>
+      <Typography.Text
+        type="secondary"
+        style={{
+          display: "block",
+          marginBottom: 6,
+          fontFamily: FONTE_NUMERO,
+          fontSize: 10,
+          fontWeight: 600,
+          textTransform: "uppercase",
+          letterSpacing: 0.5,
+        }}
+      >
         {title}
-      </h3>
-      <div className="space-y-0">{children}</div>
+      </Typography.Text>
+      {children}
     </div>
   );
 }
 
-function Row({
-  label,
-  value,
-  warn,
-}: {
-  label: string;
-  value: string;
-  warn?: boolean;
-}) {
+function Row({ label, value, warn }: { label: string; value: string; warn?: boolean }) {
+  const { token } = theme.useToken();
   return (
-    <div className="flex items-baseline justify-between border-b border-line py-[6px]">
-      <span className="text-muted">{label}</span>
-      <span
-        className={`text-right font-medium ${
-          warn ? "text-warning-dark" : "text-body"
-        }`}
+    <div
+      style={{
+        display: "flex",
+        alignItems: "baseline",
+        justifyContent: "space-between",
+        borderBottom: `1px solid ${token.colorBorderSecondary}`,
+        padding: "6px 0",
+      }}
+    >
+      <Typography.Text type="secondary" style={{ fontFamily: FONTE_NUMERO, fontSize: 11 }}>
+        {label}
+      </Typography.Text>
+      <Typography.Text
+        style={{
+          fontFamily: FONTE_NUMERO,
+          fontSize: 11,
+          fontWeight: 500,
+          textAlign: "right",
+          color: warn ? token.colorWarningText : token.colorText,
+        }}
       >
         {value}
-      </span>
+      </Typography.Text>
+    </div>
+  );
+}
+
+/** Único campo editável da aba — muda o estágio direto no pipeline. */
+function StageRow({ city, onSave }: ResumoTabProps) {
+  const { token } = theme.useToken();
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        borderBottom: `1px solid ${token.colorBorderSecondary}`,
+        padding: "6px 0",
+      }}
+    >
+      <Typography.Text type="secondary" style={{ fontFamily: FONTE_NUMERO, fontSize: 11 }}>
+        Estágio
+      </Typography.Text>
+      <Select
+        size="small"
+        value={city.stage}
+        style={{ minWidth: 170 }}
+        onChange={(value) => onSave(city.id, { stage: value })}
+        options={Object.entries(STAGE_LABELS).map(([key, label]) => ({
+          value: key,
+          label,
+        }))}
+      />
     </div>
   );
 }

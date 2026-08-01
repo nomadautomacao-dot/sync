@@ -1,7 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { DownloadIcon, ExternalLinkIcon, LoaderIcon, XIcon } from "lucide-react";
+import { useState } from "react";
+import { DownloadOutlined, ExportOutlined } from "@ant-design/icons";
+import { Button, Flex, Modal, Typography, theme } from "antd";
+
+const { Text } = Typography;
 
 /**
  * Abre um PDF arquivado dentro do app.
@@ -14,6 +17,11 @@ import { DownloadIcon, ExternalLinkIcon, LoaderIcon, XIcon } from "lucide-react"
  * O visor é o do próprio Chromium, via `iframe`. No app empacotado isso exige
  * `plugins: true` no `webPreferences` da janela (`desktop/main.js`) — sem essa
  * opção o Electron não carrega o leitor de PDF e o quadro fica em branco.
+ *
+ * O componente só é montado pelo pai enquanto deve aparecer — por isso `open`
+ * é constante: não há transição fechado→aberto para animar, e `keyboard` /
+ * `maskClosable` (ambos padrão do `Modal`) já cobrem Esc e clique fora, sem
+ * precisar de listener de teclado próprio.
  */
 interface VisualizadorPdfProps {
   url: string;
@@ -32,15 +40,8 @@ export function VisualizadorPdf({
   detalhe,
   onFechar,
 }: VisualizadorPdfProps) {
+  const { token } = theme.useToken();
   const [baixando, setBaixando] = useState(false);
-
-  useEffect(() => {
-    const aoTeclar = (evento: KeyboardEvent) => {
-      if (evento.key === "Escape") onFechar();
-    };
-    window.addEventListener("keydown", aoTeclar);
-    return () => window.removeEventListener("keydown", aoTeclar);
-  }, [onFechar]);
 
   /* O atributo `download` de um link é ignorado quando o arquivo vem de outra
      origem — e o Storage é outra origem. Buscar o blob e salvar a partir dele é
@@ -68,70 +69,43 @@ export function VisualizadorPdf({
   };
 
   return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label={titulo}
-      onClick={onFechar}
-      className="fixed inset-0 z-[80] flex bg-[#16181D]/45 p-3 backdrop-blur-[2px] md:p-5"
-    >
-      <div
-        onClick={(evento) => evento.stopPropagation()}
-        className="mx-auto flex h-full w-full max-w-[1180px] flex-col overflow-hidden rounded-[18px] border border-white/95 bg-white shadow-[0_30px_80px_rgba(22,24,29,.35)]"
-      >
-        <div className="flex shrink-0 items-center gap-3 border-b border-[#F0F1F5] px-4 py-2.5">
-          <div className="min-w-0 flex-1">
-            <h2 className="truncate text-[12.5px] font-bold text-[#16181D]">
-              {titulo}
-            </h2>
-            {detalhe && (
-              <p className="truncate font-mono text-[9.5px] text-[#A2A6B2]">
-                {detalhe}
-              </p>
-            )}
-          </div>
-
-          <button
-            type="button"
-            onClick={baixar}
-            disabled={baixando}
-            className="flex h-8 items-center gap-1.5 rounded-full bg-[#16181D] px-3 text-[10.5px] font-bold text-white transition-colors hover:bg-[#2C2F38] disabled:opacity-50"
-          >
-            {baixando ? (
-              <LoaderIcon className="size-3.5 animate-spin" />
-            ) : (
-              <DownloadIcon className="size-3.5" />
-            )}
+    <Modal
+      open
+      onCancel={onFechar}
+      width={1200}
+      styles={{ body: { height: "min(80vh, 900px)", padding: 0 } }}
+      title={
+        <Flex vertical style={{ minWidth: 0 }}>
+          <Text strong ellipsis style={{ fontSize: 14 }}>
+            {titulo}
+          </Text>
+          {detalhe && (
+            <Text
+              type="secondary"
+              ellipsis
+              style={{ fontFamily: "var(--font-sync-mono)", fontSize: 11, fontWeight: 400 }}
+            >
+              {detalhe}
+            </Text>
+          )}
+        </Flex>
+      }
+      footer={
+        <Flex justify="space-between" align="center">
+          <Button type="link" href={url} target="_blank" rel="noreferrer" icon={<ExportOutlined />}>
+            Abrir fora do app
+          </Button>
+          <Button type="primary" icon={<DownloadOutlined />} loading={baixando} onClick={baixar}>
             Baixar
-          </button>
-
-          <a
-            href={url}
-            target="_blank"
-            rel="noreferrer"
-            title="Abrir fora do app"
-            aria-label="Abrir fora do app"
-            className="flex size-8 items-center justify-center rounded-full text-[#767A86] transition-colors hover:bg-[#F2F1F7] hover:text-[#16181D]"
-          >
-            <ExternalLinkIcon className="size-3.5" />
-          </a>
-
-          <button
-            type="button"
-            onClick={onFechar}
-            aria-label="Fechar"
-            className="flex size-8 items-center justify-center rounded-full text-[#767A86] transition-colors hover:bg-[#F2F1F7] hover:text-[#16181D]"
-          >
-            <XIcon className="size-4" />
-          </button>
-        </div>
-
-        <iframe
-          src={url}
-          title={titulo}
-          className="min-h-0 w-full flex-1 border-0 bg-[#ECEAF1]"
-        />
-      </div>
-    </div>
+          </Button>
+        </Flex>
+      }
+    >
+      <iframe
+        src={url}
+        title={titulo}
+        style={{ width: "100%", height: "100%", border: 0, background: token.colorFillTertiary }}
+      />
+    </Modal>
   );
 }

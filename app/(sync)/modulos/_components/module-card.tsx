@@ -1,5 +1,9 @@
+"use client";
+
 import Link from "next/link";
-import { ArrowRightIcon } from "lucide-react";
+import { ArrowRightOutlined } from "@ant-design/icons";
+import { ProCard } from "@ant-design/pro-components";
+import { Avatar, List, Typography, theme } from "antd";
 
 export interface DocumentoDoModulo {
   nome: string;
@@ -26,50 +30,90 @@ interface ModuleCardProps {
  * Essa é a diferença entre um card e um botão inflado: com um módulo só na
  * grade, é o conteúdo do rodapé que impede o card de parecer órfão.
  */
-export function ModuleCard({
-  href,
-  icone: Icone,
-  nome,
-  descricao,
-  fontes,
-  documentos,
-}: ModuleCardProps) {
+export function ModuleCard({ href, icone: Icone, nome, descricao, fontes, documentos }: ModuleCardProps) {
+  const { token } = theme.useToken();
+
   return (
-    <Link
-      href={href}
-      className="group flex flex-col rounded-[16px] border border-white/95 bg-white/88 p-[20px] shadow-[0_10px_26px_rgba(22,24,29,.05)] transition-all duration-200 hover:-translate-y-[1px] hover:border-white hover:shadow-[0_18px_40px_rgba(22,24,29,.09)]"
-    >
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex size-[40px] shrink-0 items-center justify-center rounded-[14px] border border-white/90 bg-gradient-to-br from-[#EEE7F9] to-[#E2EDFA]">
-          <Icone className="size-[19px] text-[#16181D]" />
+    <Link href={href} style={{ display: "block", height: "100%" }}>
+      <ProCard hoverable style={{ height: "100%" }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 16 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              width: 40,
+              height: 40,
+              borderRadius: 14,
+              background: token.colorFillTertiary,
+              flexShrink: 0,
+            }}
+          >
+            <Icone style={{ fontSize: 19, color: token.colorText }} />
+          </div>
+
+          <Avatar
+            size={28}
+            icon={<ArrowRightOutlined style={{ fontSize: 12 }} />}
+            style={{ background: token.colorFillTertiary, color: token.colorTextTertiary, flexShrink: 0 }}
+          />
         </div>
 
-        <span className="flex size-[28px] shrink-0 items-center justify-center rounded-full bg-[#F2F1F7] text-[#A2A6B2] transition-colors group-hover:bg-[#16181D] group-hover:text-white">
-          <ArrowRightIcon className="size-[14px]" />
-        </span>
-      </div>
+        <Typography.Title level={5} style={{ marginTop: 14, marginBottom: 0 }}>
+          {nome}
+        </Typography.Title>
+        <Typography.Paragraph type="secondary" style={{ marginTop: 5, marginBottom: 0, fontSize: 12 }}>
+          {descricao}
+        </Typography.Paragraph>
 
-      <h2 className="mt-[14px] text-[15px] font-bold tracking-[-0.3px] text-[#16181D]">
-        {nome}
-      </h2>
-      <p className="mt-[5px] text-[12px] leading-relaxed text-[#767A86]">{descricao}</p>
+        <div
+          style={{
+            marginTop: 16,
+            paddingTop: 14,
+            borderTop: `1px solid ${token.colorBorderSecondary}`,
+          }}
+        >
+          <Typography.Text
+            type="secondary"
+            style={{ fontSize: 9.5, fontWeight: 600, letterSpacing: 1.3, textTransform: "uppercase" }}
+          >
+            Entrega
+          </Typography.Text>
 
-      <div className="mt-[16px] border-t border-[#F0F1F5] pt-[14px]">
-        <p className="font-mono text-[9.5px] font-semibold uppercase tracking-[1.3px] text-[#A2A6B2]">
-          Entrega
-        </p>
+          <List
+            size="small"
+            split={false}
+            dataSource={documentos}
+            renderItem={(doc) => (
+              <List.Item style={{ padding: "4px 0", border: "none" }}>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "baseline",
+                    justifyContent: "space-between",
+                    width: "100%",
+                    gap: 12,
+                  }}
+                >
+                  <Typography.Text strong style={{ fontSize: 12.5 }}>
+                    {doc.nome}
+                  </Typography.Text>
+                  <Typography.Text
+                    type="secondary"
+                    style={{ fontFamily: "var(--font-sync-mono)", fontSize: 10.5 }}
+                  >
+                    {doc.paginas} pg
+                  </Typography.Text>
+                </div>
+              </List.Item>
+            )}
+          />
+        </div>
 
-        <ul className="mt-[9px] space-y-[7px]">
-          {documentos.map((doc) => (
-            <li key={doc.nome} className="flex items-baseline justify-between gap-3">
-              <span className="text-[12.5px] font-semibold text-[#3B3F4A]">{doc.nome}</span>
-              <span className="font-mono text-[10.5px] text-[#A2A6B2]">{doc.paginas} pg</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <p className="mt-[14px] text-[11px] leading-relaxed text-[#A2A6B2]">{fontes}</p>
+        <Typography.Text type="secondary" style={{ marginTop: 14, fontSize: 11, display: "block" }}>
+          {fontes}
+        </Typography.Text>
+      </ProCard>
     </Link>
   );
 }

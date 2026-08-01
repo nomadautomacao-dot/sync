@@ -21,7 +21,7 @@ import {
   SearchOutlined,
   UnorderedListOutlined,
 } from "@ant-design/icons";
-import { Button, Input, Result, Segmented, Space, Spin, Tag, Typography } from "antd";
+import { Button, Flex, Input, Result, Segmented, Space, Spin, Tag, Typography } from "antd";
 
 import { getFirebaseDb } from "@/core/lib/firebase-client";
 import { useAuth } from "@/core/providers/auth-provider";
@@ -188,9 +188,9 @@ function PipelineContent({ groupId }: { groupId: string }) {
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex h-full flex-col space-y-5">
+      <Flex vertical gap={20} style={{ height: "100%" }}>
         {/* Header & Controls Toolbar */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <Flex wrap gap={16} align="center" justify="space-between">
           <div>
             <Space align="center">
               <Typography.Title level={3} style={{ margin: 0 }}>
@@ -229,7 +229,7 @@ function PipelineContent({ groupId }: { groupId: string }) {
               Novo município
             </Button>
           </Space>
-        </div>
+        </Flex>
 
         {/* KPIs */}
         <PipelineKpis
@@ -247,48 +247,48 @@ function PipelineContent({ groupId }: { groupId: string }) {
           suffix={isFetching ? <LoadingOutlined /> : null}
         />
 
-        {/* Conteúdo Principal (Kanban ou Tabela) + Painel Lateral */}
-        <div className="flex flex-1 min-h-0 gap-4 overflow-hidden">
-          <div className="flex-1 min-h-0 overflow-hidden">
-            {isPending ? (
-              <Spin style={{ display: "block", marginTop: 96 }} />
-            ) : error ? (
-              <Result
-                status="warning"
-                title="Não foi possível carregar o pipeline"
-                subTitle={error.message}
-              />
-            ) : isKanbanView ? (
-              <PipelineKanban
-                cities={cities}
-                selectedCityId={selectedCity?.id}
-                onSelectCity={handleSelectCity}
-                onStageDrop={handleStageDrop}
-              />
-            ) : (
-              <PipelineTable
-                cities={cities}
-                selectedCityId={selectedCity?.id}
-                onSelectCity={handleSelectCity}
-              />
-            )}
-          </div>
-
-          {/* Painel lateral de detalhes */}
-          {selectedCity && (
-            <CityDetailPanel
-              city={selectedCity}
-              onClose={() => setSelectedCity(null)}
-              onSave={handleSave}
+        {/* Conteúdo principal — Kanban ou lista. O detalhe da cidade agora é
+            `Drawer` (sobreposto), então não reserva espaço aqui como o painel
+            fixo de antes. */}
+        <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
+          {isPending ? (
+            <Spin style={{ display: "block", marginTop: 96 }} />
+          ) : error ? (
+            <Result
+              status="warning"
+              title="Não foi possível carregar o pipeline"
+              subTitle={error.message}
+            />
+          ) : isKanbanView ? (
+            <PipelineKanban
+              cities={cities}
+              selectedCityId={selectedCity?.id}
+              onSelectCity={handleSelectCity}
+              onStageDrop={handleStageDrop}
+            />
+          ) : (
+            <PipelineTable
+              cities={cities}
+              selectedCityId={selectedCity?.id}
+              onSelectCity={handleSelectCity}
             />
           )}
         </div>
-      </div>
+
+        {/* Painel de detalhes da cidade selecionada */}
+        {selectedCity && (
+          <CityDetailPanel
+            city={selectedCity}
+            onClose={() => setSelectedCity(null)}
+            onSave={handleSave}
+          />
+        )}
+      </Flex>
 
       {/* Drag overlay */}
       <DragOverlay dropAnimation={null}>
         {activeDrag && (
-          <div className="w-[240px] opacity-90">
+          <div style={{ width: 240, opacity: 0.9 }}>
             <CityCard
               city={activeDrag}
               isSelected={false}

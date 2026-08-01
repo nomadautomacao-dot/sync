@@ -298,7 +298,9 @@ a regra correspondente em `firestore.rules` — sem regra, o acesso é negado.
   a enxergam — por isso o catch-all manda para `/entrar`, não para `/painel`.
 - **Shell:** `core/components/sync-shell/{header,sidebar}.tsx`, sidebar fixa em
   desktop e gaveta no mobile.
-- **Componentes:** `core/components/ui/` (base), `velora/`, `ajustes/`.
+- **Componentes: Ant Design.** Não há biblioteca de componentes própria. O que
+  o Ant resolve, o Ant resolve — `core/components/` guarda só o que é do
+  domínio (visualizador de PDF, wizard, painel do CAGED).
 - **Providers:** `core/providers/{app-providers,auth-provider}.tsx`.
 
 ### 4.2 Telas implementadas
@@ -318,17 +320,30 @@ a regra correspondente em `firestore.rules` — sem regra, o acesso é negado.
 | `/caixa` | `app/(sync)/caixa/page.tsx` | Inbox / auditoria |
 | `/ajustes` | `app/(sync)/ajustes/page.tsx` | Configurações do workspace |
 
-### 4.3 Design System
+### 4.3 Interface — Ant Design
 
-**A fonte de verdade é `DESIGN.md`, na raiz** — tokens de cor, tipografia e
-espaçamento em frontmatter estruturado. Não duplicar valores aqui: ler de lá.
+**A interface roda sobre Ant Design 6.** Shadcn/ui, Tailwind e lucide-react
+saíram do projeto inteiro em 2026-08-01, com as dependências desinstaladas.
 
-Direção atual: **"Console Soft"** — glassmorphism, neutros lavanda, accent
-quase-preto (`#16181D`), cards glass flutuantes, gradientes pastel no pipeline.
+- **Tema:** `core/design/tema-ant.ts` — parte do padrão do Ant e sobrescreve
+  pouco (quase-preto da marca, as duas famílias tipográficas, raio de 8px,
+  tabela com cabeçalho claro). Cada valor sobrescrito é aparência que volta a
+  ser nossa para manter, e a razão de adotar o Ant foi parar de manter
+  aparência. **Nunca escrever hexadecimal em componente**: use os tokens de
+  `theme.useToken()`.
+- **Regras de interface:** `.claude/skills/interface-ant/SKILL.md`. Ela carrega
+  sozinha em qualquer pedido visual e é a fonte de verdade de qual componente
+  usar para quê, dos cinco estados obrigatórios (incluindo *dado parcial*) e da
+  separação entre os dois perfis de usuário.
+- **Tabela é `ProTable`** (`@ant-design/pro-components`), padrão em
+  `app/(sync)/cidades/page.tsx`.
 
-O hook de design (`impeccable`) valida aderência e está configurado para
-**ignorar `core/lib/*-template.ts`** (`.impeccable/config.json`): templates de
-impressão seguem regra de papel, não o design system da web.
+> **Sobre a versão:** o Pro Components estável exige antd 5; a versão para a 6
+> é beta (`3.1.14-6`). O projeto está na 6 por decisão do dono, ciente disso.
+>
+> `DESIGN.md` descreve a direção anterior ("Console Soft") e vale só como
+> registro histórico. `DESIGNER.md`, na raiz, é o brief para redesenhar sobre o
+> Ant.
 
 ---
 
