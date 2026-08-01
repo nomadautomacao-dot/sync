@@ -14,13 +14,14 @@ import {
 } from "@dnd-kit/core";
 import { toast } from "sonner";
 import {
-  SearchIcon,
-  PlusIcon,
-  LayoutGridIcon,
-  ListIcon,
-  RefreshCwIcon,
-  MapPinnedIcon,
-} from "lucide-react";
+  AppstoreOutlined,
+  EnvironmentOutlined,
+  LoadingOutlined,
+  PlusOutlined,
+  SearchOutlined,
+  UnorderedListOutlined,
+} from "@ant-design/icons";
+import { Button, Input, Result, Segmented, Space, Spin, Tag, Typography } from "antd";
 
 import { getFirebaseDb } from "@/core/lib/firebase-client";
 import { useAuth } from "@/core/providers/auth-provider";
@@ -40,9 +41,6 @@ import { CityCard } from "./_components/city-card";
 import { CityDetailPanel } from "./_components/city-detail-panel";
 import { NewCityDialog } from "./_components/new-city-dialog";
 import { daysIdle } from "./_components/stage-helpers";
-import { Button } from "@/core/components/ui/button";
-import { Input } from "@/core/components/ui/input";
-import { Badge } from "@/core/components/ui/badge";
 
 export default function PipelinePage() {
   const { user } = useAuth();
@@ -194,70 +192,43 @@ function PipelineContent({ groupId }: { groupId: string }) {
         {/* Header & Controls Toolbar */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <div className="flex items-center gap-2.5">
-              <h1 className="text-2xl font-extrabold tracking-tight text-[#16181D]">
+            <Space align="center">
+              <Typography.Title level={3} style={{ margin: 0 }}>
                 Plano de Ação Comercial
-              </h1>
-              <Badge variant="outline" className="border-[#F0F1F5] bg-[#F2F1F7] text-[#16181D] font-mono text-[10px] font-bold rounded-[20px]">
-                {cities.length} {cities.length === 1 ? "Município" : "Municípios"}
-              </Badge>
-            </div>
-            <p className="mt-1 text-xs font-medium text-[#5A5E6A]">
-              Gerencie a prospecção e avanço de estágios das contas municipais do grupo
-            </p>
+              </Typography.Title>
+              <Tag style={{ fontFamily: "var(--font-sync-mono)" }}>
+                {cities.length} {cities.length === 1 ? "município" : "municípios"}
+              </Tag>
+            </Space>
+            <Typography.Paragraph type="secondary" style={{ margin: 0, fontSize: 12 }}>
+              Prospecção e avanço de estágio das contas municipais do grupo
+            </Typography.Paragraph>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button
-              asChild
-              variant="outline"
-              size="sm"
-              className="h-9 gap-1.5 rounded-full border-[#E2E3E9] bg-white text-xs font-bold text-[#5A5E6A]"
-            >
-              <Link href="/cidades">
-                <MapPinnedIcon className="size-4" />
-                Fichas das cidades
-              </Link>
-            </Button>
-            {/* Toggle Kanban vs Lista */}
-            <div className="flex rounded-[20px] border border-[#F0F1F5] bg-[#F2F1F7] p-1 shadow-2xs">
-              <button
-                type="button"
-                onClick={() => setIsKanbanView(true)}
-                className={`flex h-8 items-center gap-1.5 rounded-[20px] px-3 text-xs font-semibold transition-all ${
-                  isKanbanView
-                    ? "bg-[#16181D] text-white shadow-2xs"
-                    : "text-[#5A5E6A] hover:text-[#16181D]"
-                }`}
-              >
-                <LayoutGridIcon className="size-3.5" />
-                Kanban
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsKanbanView(false)}
-                className={`flex h-8 items-center gap-1.5 rounded-[20px] px-3 text-xs font-semibold transition-all ${
-                  !isKanbanView
-                    ? "bg-[#16181D] text-white shadow-2xs"
-                    : "text-[#5A5E6A] hover:text-[#16181D]"
-                }`}
-              >
-                <ListIcon className="size-3.5" />
-                Lista
-              </button>
-            </div>
+          <Space>
+            <Link href="/cidades">
+              <Button icon={<EnvironmentOutlined />}>Fichas das cidades</Button>
+            </Link>
 
-            {/* Novo município */}
+            {/* `Segmented` é o componente para alternar entre modos de ver a
+                mesma coisa — dois botões fingindo de abas era o que existia. */}
+            <Segmented
+              value={isKanbanView ? "kanban" : "lista"}
+              onChange={(valor) => setIsKanbanView(valor === "kanban")}
+              options={[
+                { label: "Kanban", value: "kanban", icon: <AppstoreOutlined /> },
+                { label: "Lista", value: "lista", icon: <UnorderedListOutlined /> },
+              ]}
+            />
+
             <Button
-              type="button"
+              type="primary"
+              icon={<PlusOutlined />}
               onClick={() => setDialogOpen(true)}
-              size="sm"
-              className="h-9 gap-1.5 rounded-full bg-[#16181D] text-xs font-bold text-white shadow-2xs hover:bg-[#2C2F38]"
             >
-              <PlusIcon className="size-4" />
-              Novo Município
+              Novo município
             </Button>
-          </div>
+          </Space>
         </div>
 
         {/* KPIs */}
@@ -267,36 +238,26 @@ function PipelineContent({ groupId }: { groupId: string }) {
           inactiveCities={inactiveCities}
         />
 
-        {/* Barra de Pesquisa e Filtros */}
-        <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
-          <div className="relative flex-1">
-            <SearchIcon className="pointer-events-none absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-[#A2A6B2]" />
-            <Input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Buscar por município, UF ou código IBGE…"
-              className="h-10 rounded-full border-[#F0F1F5]/90 bg-white pl-10 text-xs font-medium placeholder:text-[#A2A6B2] focus:border-[#16181D] focus:ring-2 focus:ring-[#16181D]/20"
-            />
-            {isFetching && (
-              <RefreshCwIcon className="absolute right-3.5 top-1/2 size-4 -translate-y-1/2 animate-spin text-[#16181D]" />
-            )}
-          </div>
-        </div>
+        <Input
+          allowClear
+          value={searchQuery}
+          onChange={(evento) => setSearchQuery(evento.target.value)}
+          placeholder="Buscar por município, UF ou código IBGE…"
+          prefix={<SearchOutlined />}
+          suffix={isFetching ? <LoadingOutlined /> : null}
+        />
 
         {/* Conteúdo Principal (Kanban ou Tabela) + Painel Lateral */}
         <div className="flex flex-1 min-h-0 gap-4 overflow-hidden">
           <div className="flex-1 min-h-0 overflow-hidden">
             {isPending ? (
-              <div className="flex h-64 items-center justify-center rounded-2xl border border-white/95 bg-white/[.88] shadow-[0_10px_26px_rgba(22,24,29,.05)]">
-                <RefreshCwIcon className="size-6 animate-spin text-[#16181D]" />
-              </div>
+              <Spin style={{ display: "block", marginTop: 96 }} />
             ) : error ? (
-              <div className="flex h-64 items-center justify-center rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
-                <p className="text-xs font-bold text-red-900">
-                  Falha ao carregar o pipeline: {error.message}
-                </p>
-              </div>
+              <Result
+                status="warning"
+                title="Não foi possível carregar o pipeline"
+                subTitle={error.message}
+              />
             ) : isKanbanView ? (
               <PipelineKanban
                 cities={cities}
