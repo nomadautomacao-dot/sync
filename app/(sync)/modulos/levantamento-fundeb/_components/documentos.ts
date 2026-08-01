@@ -35,6 +35,22 @@ import type { CityReportType } from "@/modules/cidades/reports-types";
  *   Neles a contagem de páginas não é contrato — o volume é função do
  *   município, e o card anuncia o tamanho antes de gerar.
  */
+/**
+ * O que entra na fila quando um município é adicionado à carteira.
+ *
+ * São os quatro que vão para toda reunião. Os oito dossiês ficam de fora de
+ * propósito: cada um consulta as fontes vivas por conta própria, e enfileirar
+ * doze por cidade transformaria "adicionei um município" em meia hora de
+ * chamadas a APIs de governo — para material que só se usa quando a conversa
+ * pede aquele tópico.
+ */
+export const RELATORIOS_PADRAO = [
+  "raio-x",
+  "levantamento",
+  "historico-censo",
+  "oficio-documentos",
+] as const;
+
 export const DOCUMENTOS = [
   {
     id: "raio-x" as const,

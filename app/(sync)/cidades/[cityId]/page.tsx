@@ -12,6 +12,7 @@ import {
   CheckCircle2Icon,
   DatabaseIcon,
   DownloadIcon,
+  EyeIcon,
   FileIcon,
   FileTextIcon,
   FolderArchiveIcon,
@@ -27,6 +28,7 @@ import {
 import { toast } from "sonner";
 
 import { Button } from "@/core/components/ui/button";
+import { VisualizadorPdf } from "@/core/components/visualizador-pdf";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -780,6 +782,7 @@ function ReportsTab({
 }
 
 function ReportPreview({ report }: { report: CityReport }) {
+  const [pdfAberto, setPdfAberto] = useState(false);
   const snapshot = report.snapshot;
   const identification = snapshot?.identificacao;
   const projection =
@@ -813,17 +816,26 @@ function ReportPreview({ report }: { report: CityReport }) {
           </div>
         </div>
         {report.downloadUrl && (
-          <a
-            href={report.downloadUrl}
-            target="_blank"
-            rel="noreferrer"
+          <button
+            type="button"
+            onClick={() => setPdfAberto(true)}
             className="flex h-9 items-center justify-center gap-2 rounded-full bg-[#16181D] px-4 text-[10.5px] font-bold text-white hover:bg-[#2C2F38]"
           >
-            <DownloadIcon className="size-3.5" />
+            <EyeIcon className="size-3.5" />
             Abrir PDF exato
-          </a>
+          </button>
         )}
       </div>
+
+      {pdfAberto && report.downloadUrl && (
+        <VisualizadorPdf
+          url={report.downloadUrl}
+          titulo={CITY_REPORT_TYPE_LABELS[report.type] ?? report.title}
+          nomeArquivo={report.fileName}
+          detalhe={`${municipality} · ${report.cityUf} · exercício ${report.exercise}`}
+          onFechar={() => setPdfAberto(false)}
+        />
+      )}
 
       <div className="p-5">
         <div className="rounded-[17px] bg-gradient-to-br from-[#252832] to-[#3B3F4A] p-5 text-white">
@@ -909,6 +921,10 @@ function DocumentsTab({
   pending: boolean;
   onUpload: () => void;
 }) {
+  /* Só PDF abre por dentro: o visor embutido é o do Chromium, e DOCX ou XLSX
+     nele viram tela em branco. Para esses, baixar continua sendo o caminho. */
+  const [aberto, setAberto] = useState<CityDocument | null>(null);
+
   return (
     <section className="glass-card min-h-[460px] overflow-hidden">
       <div className="flex items-center justify-between border-b border-[#F0F1F5] p-4">
@@ -960,12 +976,24 @@ function DocumentsTab({
               <span className="rounded-full bg-[#F2F1F7] px-2.5 py-1 text-[8.5px] font-bold text-[#5A5E6A]">
                 {document.category.replaceAll("_", " ")}
               </span>
+              {ehPdf(document) && (
+                <button
+                  type="button"
+                  onClick={() => setAberto(document)}
+                  className="flex h-8 items-center gap-1.5 rounded-full bg-[#F2F1F7] px-3 text-[10px] font-bold text-[#3B3F4A] transition-colors hover:bg-[#ECEBF2]"
+                  aria-label={`Abrir ${document.title} no app`}
+                >
+                  <EyeIcon className="size-3.5" />
+                  Abrir
+                </button>
+              )}
               <a
                 href={document.downloadUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="flex size-8 items-center justify-center rounded-full text-[#767A86] hover:bg-[#E2EDFA] hover:text-[#2C4E82]"
-                aria-label={`Abrir ${document.title}`}
+                aria-label={`Baixar ${document.title}`}
+                title="Baixar"
               >
                 <DownloadIcon className="size-3.5" />
               </a>
@@ -983,7 +1011,25 @@ function DocumentsTab({
           </p>
         </div>
       )}
+
+      {aberto && (
+        <VisualizadorPdf
+          url={aberto.downloadUrl}
+          titulo={aberto.title}
+          nomeArquivo={aberto.fileName}
+          detalhe={`${aberto.cityName} · ${aberto.fileName} · ${formatFileSize(aberto.fileSize)}`}
+          onFechar={() => setAberto(null)}
+        />
+      )}
     </section>
+  );
+}
+
+/** O visor embutido só entende PDF — o resto continua sendo download. */
+function ehPdf(documento: CityDocument): boolean {
+  return (
+    documento.mimeType === "application/pdf" ||
+    documento.fileName.toLowerCase().endsWith(".pdf")
   );
 }
 

@@ -114,7 +114,19 @@ service cloud.firestore {
                     && request.resource.data.cityId is string
                     && request.resource.data.codigoIbge is string
                     && request.resource.data.title is string
-                    && request.resource.data.type in ['raio_x', 'diagnostico_fundeb', 'historico_censo']
+                    // A lista precisa acompanhar CITY_REPORT_TYPES
+                    // (modules/cidades/reports-types.ts). Ela ficou com os três
+                    // tipos originais enquanto o catálogo cresceu para doze, e
+                    // o efeito era silencioso: o PDF era gerado, o upload ia ao
+                    // Storage e só a gravação do JSON era negada aqui.
+                    && request.resource.data.type in [
+                         'raio_x', 'diagnostico_fundeb', 'historico_censo',
+                         'oficio_documentos', 'dossie_escolas',
+                         'dossie_conformidade', 'dossie_matricula',
+                         'dossie_dinheiro', 'dossie_aprendizagem',
+                         'dossie_demanda', 'dossie_equidade',
+                         'dossie_comparativo'
+                       ]
                     && request.resource.data.generationId is string
                     && request.resource.data.snapshot is map
                     && request.resource.data.snapshotBytes is int
@@ -122,6 +134,24 @@ service cloud.firestore {
                     && request.resource.data.snapshotBytes < 900000;
       allow delete: if isAdmin() && resource.data.groupId == myGroupId();
       allow update: if false;
+    }
+
+    // Fila de emissão: um pedido de relatório por documento, processado pela
+    // janela aberta (core/providers/fila-emissao-provider.tsx). Diferente de
+    // cityReports, aqui update é permitido — o ciclo de vida do pedido é
+    // exatamente uma sequência de updates de status.
+    match /reportJobs/{id} {
+      allow read: if isSignedIn() && resource.data.groupId == myGroupId();
+      allow create: if isSignedIn()
+                    && request.resource.data.groupId == myGroupId()
+                    && request.resource.data.cityId is string
+                    && request.resource.data.documentoId is string
+                    && request.resource.data.status in ['pendente', 'gerando', 'concluido', 'erro'];
+      allow update: if isSignedIn()
+                    && resource.data.groupId == myGroupId()
+                    && request.resource.data.groupId == resource.data.groupId
+                    && request.resource.data.status in ['pendente', 'gerando', 'concluido', 'erro'];
+      allow delete: if isSignedIn() && resource.data.groupId == myGroupId();
     }
   }
 }

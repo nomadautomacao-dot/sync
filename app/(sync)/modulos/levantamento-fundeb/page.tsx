@@ -3,21 +3,27 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  CheckCircle2Icon,
   ChevronRightIcon,
+  FolderPlusIcon,
   LoaderIcon,
+  PaperclipIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import type { IbgeMunicipio } from "@/core/lib/ibge-client";
-import { ensureCity, updateCityPipeline } from "@/core/lib/cities-firestore";
+import {
+  ensureCity,
+  listCities,
+  updateCityPipeline,
+} from "@/core/lib/cities-firestore";
 import {
   getFirebaseDb,
   getFirebaseStorage,
 } from "@/core/lib/firebase-client";
 import { useAuth } from "@/core/providers/auth-provider";
+import { useFilaDeEmissao } from "@/core/providers/fila-emissao-provider";
 import {
   createCityReport,
   cityReportSnapshotFromUnknown,
@@ -27,10 +33,10 @@ import { uploadCityDocument } from "@/modules/documentos/documentos-firestore";
 
 import { BuscaMunicipio } from "./_components/busca-municipio";
 import { CabecalhoMunicipio } from "./_components/cabecalho-municipio";
-import { DocumentoCard } from "./_components/documento-card";
+import { LinhaDocumento } from "./_components/linha-documento";
 import { PainelCenso } from "./_components/painel-censo";
 import { PainelProjecao } from "./_components/painel-projecao";
-import { DOCUMENTOS } from "./_components/documentos";
+import { DOCUMENTOS, RELATORIOS_PADRAO } from "./_components/documentos";
 import type { RespostaLevantamento } from "./_components/tipos";
 
 type Documento =
@@ -71,6 +77,7 @@ function Bancada() {
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { enfileirar } = useFilaDeEmissao();
 
   /* O município ativo mora na URL: é o que faz a faixa "retomar" do hub abrir a
      bancada já carregada, e o que deixa a tela sobreviver a um refresh. */
@@ -306,6 +313,75 @@ function Bancada() {
     return undefined;
   };
 
+  /* A carteira é consultada para saber se este município já é cliente. Gerar
+     relatório deixou de criar cidade sozinho: emitir um PDF é pesquisa, entrar
+     na carteira é decisão comercial, e misturar as duas enchia o pipeline de
+     município que só se quis olhar uma vez. */
+  const { data: cidadesDaCarteira = [] } = useQuery({
+    queryKey: ["cities", user?.groupId],
+    queryFn: () => listCities(getFirebaseDb(), user!.groupId),
+    enabled: Boolean(user?.groupId),
+  });
+
+  const cidadeNaCarteira =
+    municipio
+      ? (cidadesDaCarteira.find(
+          (cidade) =>
+            cidade.codigoIbge.replace(/\D/g, "") ===
+            municipio.codigoIbge.replace(/\D/g, ""),
+        ) ?? null)
+      : null;
+
+  const adicionarNaCarteira = useMutation({
+    mutationFn: async () => {
+      if (!municipio) throw new Error("Escolha um município primeiro.");
+      if (!user?.groupId) throw new Error("Sessão sem grupo definido.");
+      return ensureCity(getFirebaseDb(), user.groupId, {
+        name: municipio.nome,
+        uf: municipio.uf,
+        codigoIbge: municipio.codigoIbge,
+        region: identificacao?.regiao ?? municipio.regiao,
+        stage: "technical_diagnostic",
+      });
+    },
+    onSuccess: async (cidade) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["cities"] }),
+        queryClient.invalidateQueries({ queryKey: ["pipeline-cities"] }),
+      ]);
+
+      /* Entrar na carteira já enfileira os quatro relatórios de reunião. A
+         emissão roda no shell, então trocar de tela — ou fechar e reabrir o
+         app — não interrompe o que ficou pendente. */
+      const enfileirados = await enfileirar(
+        {
+          cityId: cidade.id,
+          cityName: cidade.name,
+          cityUf: cidade.uf,
+          codigoIbge: cidade.codigoIbge,
+          regiao: identificacao?.regiao ?? municipio?.regiao,
+        },
+        RELATORIOS_PADRAO,
+      );
+
+      toast.success(`${cidade.name} entrou na carteira.`, {
+        description: enfileirados
+          ? `${enfileirados} relatórios entraram na fila e serão anexados à ficha.`
+          : undefined,
+        action: {
+          label: "Abrir ficha",
+          onClick: () => router.push(`/cidades/${cidade.id}`),
+        },
+      });
+    },
+    onError: (erro) =>
+      toast.error(
+        erro instanceof Error
+          ? erro.message
+          : "Não foi possível adicionar o município à carteira.",
+      ),
+  });
+
   const selecionarMunicipio = (selecionado: IbgeMunicipio) => {
     setEscolhido(selecionado);
     router.replace(`${pathname}?ibge=${selecionado.codigoIbge}`, { scroll: false });
@@ -374,16 +450,14 @@ function Bancada() {
       let pdfArchived = false;
       let linkingFailed = false;
       let linkedCityId: string | undefined;
-      if (user?.groupId) {
+      /* Arquiva só em cidade que já está na carteira. Fora dela o PDF é gerado
+         e baixado, e nada é escrito no Firestore — quem decide se aquele
+         município vira cliente é o botão "Adicionar à carteira", não o ato de
+         emitir um relatório. */
+      if (user?.groupId && cidadeNaCarteira) {
         try {
           const db = getFirebaseDb();
-          const city = await ensureCity(db, user.groupId, {
-            name: bundle.archive.municipality.name,
-            uf: bundle.archive.municipality.uf,
-            codigoIbge: bundle.archive.municipality.codigoIbge,
-            region: municipio.regiao,
-            stage: "technical_diagnostic",
-          });
+          const city = cidadeNaCarteira;
           linkedCityId = city.id;
 
           const file = new File([blob], fileName, {
@@ -498,11 +572,17 @@ function Bancada() {
           `${documento.nome} baixado, mas o JSON não foi salvo na cidade. Tente gerar novamente.`,
           toastOptions,
         );
+      } else if (!cidadeNaCarteira) {
+        toast.success(`${documento.nome} gerado e baixado.`, {
+          description: `${municipio.nome} não está na carteira, então nada foi arquivado.`,
+          action: {
+            label: "Adicionar à carteira",
+            onClick: () => adicionarNaCarteira.mutate(),
+          },
+        });
       } else {
         toast.success(
-          dataArchived
-            ? `${documento.nome} gerado e anexado a ${municipio.nome}.`
-            : `${documento.nome} gerado.`,
+          `${documento.nome} gerado e anexado a ${municipio.nome}.`,
           toastOptions,
         );
       }
@@ -515,21 +595,20 @@ function Bancada() {
 
   return (
     <div className="flex flex-col gap-[14px] px-[4px] pt-[4px] pb-[14px]">
-      <header>
-        <nav className="flex items-center gap-[5px] text-[11.5px] text-[#A2A6B2]">
+      {/* Cabeçalho em uma linha: o título ocupava três, com um parágrafo que
+          listava as fontes — informação de folheto numa tela de trabalho. */}
+      <header className="flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+        <nav className="flex items-center gap-[4px] text-[11px] text-[#A2A6B2]">
           <Link href="/modulos" className="transition-colors hover:text-[#16181D]">
             Módulos
           </Link>
-          <ChevronRightIcon className="size-[12px]" />
-          <span className="text-[#767A86]">Levantamento FUNDEB</span>
+          <ChevronRightIcon className="size-[11px]" />
         </nav>
-
-        <h1 className="mt-[6px] text-[21px] font-bold tracking-[-0.7px] text-[#16181D]">
-          Central de Relatórios &amp; Levantamentos FUNDEB
+        <h1 className="text-[16px] font-bold tracking-[-0.45px] text-[#16181D]">
+          Relatórios &amp; Levantamentos FUNDEB
         </h1>
-        <p className="mt-[3px] text-[13px] text-[#767A86]">
-          Raio-X da cidade inteira e diagnóstico técnico de repasses, a partir de IBGE, FNDE, INEP,
-          DATASUS, CAGED, CadÚnico e SICONFI.
+        <p className="font-mono text-[10px] text-[#A2A6B2]">
+          IBGE · FNDE · INEP · DATASUS · CAGED · CadÚnico · SICONFI
         </p>
       </header>
 
@@ -556,44 +635,85 @@ function Bancada() {
             />
           )}
 
-          {municipio && (
-            <div className="flex items-center gap-2 rounded-[12px] border border-[#CFE8DB] bg-[#F2FAF6] px-3.5 py-2.5 text-[10.5px] font-semibold text-[#1F6A47]">
-              <CheckCircle2Icon className="size-3.5 shrink-0" />
-              Todo relatório gerado será baixado e também anexado automaticamente
-              à ficha de {municipio.nome}.
-              <Link
-                href="/cidades"
-                className="ml-auto shrink-0 font-bold underline underline-offset-2"
-              >
-                Ver cidades
-              </Link>
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 gap-[14px] lg:grid-cols-2 xl:grid-cols-3">
-            {DOCUMENTOS.map((documento) => (
-              <DocumentoCard
-                key={documento.id}
-                icone={documento.icone}
-                nome={documento.nome}
-                paginas={documento.paginas}
-                medida={medidaDoCard(documento.id)}
-                descricao={documento.descricao}
-                conteudo={documento.conteudo}
-                variante={documento.variante}
-                gerando={gerando === documento.id}
-                desabilitado={
-                  !municipio ||
-                  isLoading ||
-                  Boolean(error) ||
-                  !resposta ||
-                  !relatorio ||
-                  gerando !== null
-                }
-                onGerar={() => gerarDocumento(documento)}
-              />
+          {municipio &&
+            (cidadeNaCarteira ? (
+              <div className="flex items-center gap-2 rounded-[12px] border border-[#CFE8DB] bg-[#F2FAF6] px-3.5 py-2 text-[11px] font-semibold text-[#1F6A47]">
+                <PaperclipIcon className="size-3.5 shrink-0" />
+                {municipio.nome} está na carteira — cada relatório gerado fica
+                anexado à ficha.
+                <Link
+                  href={`/cidades/${cidadeNaCarteira.id}`}
+                  className="ml-auto shrink-0 font-bold underline underline-offset-2"
+                >
+                  Abrir ficha
+                </Link>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 rounded-[12px] border border-[#ECEDF2] bg-white/80 px-3.5 py-2 text-[11px] font-semibold text-[#5A5E6A]">
+                <FolderPlusIcon className="size-3.5 shrink-0 text-[#A2A6B2]" />
+                {municipio.nome} não está na carteira. Os relatórios são apenas
+                baixados; nada é arquivado.
+                <button
+                  type="button"
+                  onClick={() => adicionarNaCarteira.mutate()}
+                  disabled={adicionarNaCarteira.isPending}
+                  className="ml-auto inline-flex h-[28px] shrink-0 items-center gap-1.5 rounded-full bg-[#16181D] px-3 text-[10.5px] font-bold text-white transition-colors hover:bg-[#2C2F38] disabled:opacity-50"
+                >
+                  {adicionarNaCarteira.isPending ? (
+                    <LoaderIcon className="size-3 animate-spin" />
+                  ) : (
+                    <FolderPlusIcon className="size-3" />
+                  )}
+                  Adicionar à carteira
+                </button>
+              </div>
             ))}
-          </div>
+
+          <section className="glass-card overflow-hidden">
+            {(
+              [
+                { titulo: "Relatórios", prefixo: false },
+                { titulo: "Dossiês temáticos", prefixo: true },
+              ] as const
+            ).map((grupo) => {
+              const documentos = DOCUMENTOS.filter(
+                (documento) => documento.id.startsWith("dossie-") === grupo.prefixo,
+              );
+              return (
+                <div key={grupo.titulo}>
+                  <div className="flex items-center gap-2 border-b border-[#ECEDF2] bg-[#FAFAFC] px-3 py-1.5">
+                    <span className="font-mono text-[9px] font-semibold uppercase tracking-[1.1px] text-[#A2A6B2]">
+                      {grupo.titulo}
+                    </span>
+                    <span className="font-mono text-[9px] text-[#C1C3CB]">
+                      {documentos.length}
+                    </span>
+                  </div>
+                  {documentos.map((documento) => (
+                    <LinhaDocumento
+                      key={documento.id}
+                      icone={documento.icone}
+                      nome={documento.nome}
+                      paginas={documento.paginas}
+                      medida={medidaDoCard(documento.id)}
+                      descricao={documento.descricao}
+                      variante={documento.variante}
+                      gerando={gerando === documento.id}
+                      desabilitado={
+                        !municipio ||
+                        isLoading ||
+                        Boolean(error) ||
+                        !resposta ||
+                        !relatorio ||
+                        gerando !== null
+                      }
+                      onGerar={() => gerarDocumento(documento)}
+                    />
+                  ))}
+                </div>
+              );
+            })}
+          </section>
 
           {isLoading ? (
             <div className="flex items-center justify-center gap-[10px] rounded-[16px] border border-white/95 bg-white/88 py-[48px] shadow-[0_10px_26px_rgba(22,24,29,.05)]">
