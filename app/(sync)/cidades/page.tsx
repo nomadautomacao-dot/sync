@@ -4,21 +4,12 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  ChevronDownIcon,
-  ChevronRightIcon,
-  ChevronUpIcon,
-  ChevronsUpDownIcon,
-  LoaderCircleIcon,
-  MapPinIcon,
-  PlusIcon,
-  SearchIcon,
-  TrendingUpIcon,
-} from "lucide-react";
+import { PlusOutlined, RightOutlined, RiseOutlined } from "@ant-design/icons";
+import { ProTable } from "@ant-design/pro-components";
+import type { ProColumns } from "@ant-design/pro-components";
+import { Button, Result, Space, Statistic, Tag, theme } from "antd";
 import { toast } from "sonner";
 
-import { Button } from "@/core/components/ui/button";
-import { Input } from "@/core/components/ui/input";
 import {
   ensureCity,
   listCities,
@@ -36,36 +27,25 @@ import { listCityDocuments } from "@/modules/documentos/documentos-firestore";
 import { NewCityDialog } from "../pipeline/_components/new-city-dialog";
 
 /**
- * A carteira é uma tabela, não uma galeria.
+ * A carteira, primeira tela sobre o Ant Design.
  *
- * Cada município carrega seis fatos — UF, IBGE, estágio, probabilidade,
- * relatórios, documentos. Em card isso ocupava 300×250px e cabiam seis
- * municípios na tela; em linha ocupa 38px de altura e cabem todos, ordenáveis
- * por qualquer uma das seis colunas. O título da página saiu porque a barra de
- * cima já escreve "Cidades" — eram dois títulos para uma tela só.
+ * Serve de padrão para as outras: `ProTable` com busca embutida, ordenação por
+ * coluna e sem paginação — a carteira inteira à vista é o objetivo, e não um
+ * detalhe de configuração. O que era filtro escrito à mão (campo de texto,
+ * seletor de estágio, contador "12 de 17") agora é comportamento do componente.
  */
 
-type ChaveDeOrdem =
-  | "name"
-  | "uf"
-  | "stage"
-  | "probability"
-  | "reports"
-  | "documents";
-
-interface Ordem {
-  chave: ChaveDeOrdem;
-  direcao: "asc" | "desc";
+interface LinhaDaCarteira extends CityAccount {
+  relatorios: number;
+  documentos: number;
 }
 
 export default function CidadesPage() {
   const { user } = useAuth();
   const router = useRouter();
   const queryClient = useQueryClient();
-  const [search, setSearch] = useState("");
-  const [stage, setStage] = useState("all");
+  const { token } = theme.useToken();
   const [newCityOpen, setNewCityOpen] = useState(false);
-  const [ordem, setOrdem] = useState<Ordem>({ chave: "name", direcao: "asc" });
 
   const {
     data: cities = [],
@@ -107,307 +87,215 @@ export default function CidadesPage() {
       ),
   });
 
-  const countsByCity = useMemo(() => {
-    const result = new Map<string, { documents: number; reports: number }>();
+  const linhas: LinhaDaCarteira[] = useMemo(() => {
+    const contagem = new Map<string, { documentos: number; relatorios: number }>();
     for (const city of cities) {
-      result.set(city.id, { documents: 0, reports: 0 });
+      contagem.set(city.id, { documentos: 0, relatorios: 0 });
     }
-    for (const document of documents) {
-      const current = result.get(document.cityId);
-      if (current) current.documents += 1;
+    for (const documento of documents) {
+      const atual = contagem.get(documento.cityId);
+      if (atual) atual.documentos += 1;
     }
-    for (const report of reports) {
-      const current = result.get(report.cityId);
-      if (current) current.reports += 1;
+    for (const relatorio of reports) {
+      const atual = contagem.get(relatorio.cityId);
+      if (atual) atual.relatorios += 1;
     }
-    return result;
+    return cities.map((city) => ({
+      ...city,
+      relatorios: contagem.get(city.id)?.relatorios ?? 0,
+      documentos: contagem.get(city.id)?.documentos ?? 0,
+    }));
   }, [cities, documents, reports]);
 
-  const filteredCities = useMemo(() => {
-    const term = search.trim().toLocaleLowerCase("pt-BR");
-    const filtradas = cities.filter((city) => {
-      if (stage !== "all" && city.stage !== stage) return false;
-      if (!term) return true;
-      return `${city.name} ${city.uf} ${city.codigoIbge}`
-        .toLocaleLowerCase("pt-BR")
-        .includes(term);
-    });
-
-    const sinal = ordem.direcao === "asc" ? 1 : -1;
-    const contagem = (id: string) =>
-      countsByCity.get(id) ?? { documents: 0, reports: 0 };
-
-    return [...filtradas].sort((a, b) => {
-      switch (ordem.chave) {
-        case "uf":
-          return sinal * a.uf.localeCompare(b.uf, "pt-BR");
-        case "stage":
-          return (
-            sinal *
-            (STAGE_LABELS[a.stage] ?? a.stage).localeCompare(
-              STAGE_LABELS[b.stage] ?? b.stage,
-              "pt-BR",
-            )
-          );
-        case "probability":
-          return sinal * (a.probability - b.probability);
-        case "reports":
-          return sinal * (contagem(a.id).reports - contagem(b.id).reports);
-        case "documents":
-          return sinal * (contagem(a.id).documents - contagem(b.id).documents);
-        default:
-          return sinal * a.name.localeCompare(b.name, "pt-BR");
-      }
-    });
-  }, [cities, countsByCity, ordem, search, stage]);
-
-  const alternarOrdem = (chave: ChaveDeOrdem) =>
-    setOrdem((atual) =>
-      atual.chave === chave
-        ? { chave, direcao: atual.direcao === "asc" ? "desc" : "asc" }
-        : // Nome começa em A→Z; número começa no maior, que é o que se procura.
-          { chave, direcao: chave === "name" || chave === "uf" ? "asc" : "desc" },
-    );
-
-  const loading = citiesPending || documentsPending || reportsPending;
-  const withReport = new Set(reports.map((report) => report.cityId)).size;
-  const inContract = cities.filter((city) =>
+  const carregando = citiesPending || documentsPending || reportsPending;
+  const comRelatorio = new Set(reports.map((relatorio) => relatorio.cityId)).size;
+  const emContrato = cities.filter((city) =>
     ["contractual", "implementation", "assisted_operation", "fidelized"].includes(
       city.stage,
     ),
   ).length;
 
-  return (
-    <div className="flex min-h-full flex-col gap-2.5 px-1 pb-4 pt-1">
-      <section className="glass-card flex flex-wrap items-center gap-x-1 gap-y-2 px-4 py-2">
-        {/* Sem a barra de cima, o nome da tela mora aqui — na mesma faixa dos
-            números, sem gastar uma linha só para si. */}
-        <h1 className="pr-1 text-[15px] font-bold tracking-[-0.4px] text-[#16181D]">
-          Cidades
-        </h1>
-        <Divisor />
-        <Numero valor={cities.length} rotulo="municípios" />
-        <Divisor />
-        <Numero
-          valor={withReport}
-          rotulo="com relatório"
-          detalhe={`${reports.length} versões`}
-        />
-        <Divisor />
-        <Numero valor={documents.length} rotulo="documentos" />
-        <Divisor />
-        <Numero valor={inContract} rotulo="em contrato" />
+  /** Zero em cinza: dá para varrer a coluna e ver quem não tem nada. */
+  const colunaDeContagem = (
+    titulo: string,
+    campo: "relatorios" | "documentos",
+  ): ProColumns<LinhaDaCarteira> => ({
+    title: titulo,
+    dataIndex: campo,
+    width: 96,
+    align: "right",
+    search: false,
+    sorter: (a, b) => a[campo] - b[campo],
+    render: (_, linha) => (
+      <span
+        className="font-mono"
+        style={{
+          color: linha[campo] > 0 ? token.colorText : token.colorTextQuaternary,
+          fontWeight: linha[campo] > 0 ? 600 : 400,
+        }}
+      >
+        {linha[campo]}
+      </span>
+    ),
+  });
 
-        <div className="ml-auto flex items-center gap-2">
-          <Link
-            href="/pipeline"
-            className="flex h-9 items-center gap-1.5 rounded-full border border-[#E7E8ED] bg-white px-3.5 text-[11px] font-bold text-[#5A5E6A] transition-colors hover:bg-[#F7F6FA] hover:text-[#16181D]"
+  const colunas: ProColumns<LinhaDaCarteira>[] = [
+    {
+      title: "UF",
+      dataIndex: "uf",
+      width: 72,
+      search: false,
+      sorter: (a, b) => a.uf.localeCompare(b.uf, "pt-BR"),
+      render: (_, linha) => <span className="font-mono">{linha.uf}</span>,
+    },
+    {
+      title: "Município",
+      dataIndex: "name",
+      ellipsis: true,
+      sorter: (a, b) => a.name.localeCompare(b.name, "pt-BR"),
+      render: (_, linha) => (
+        <Link href={`/cidades/${linha.id}`} style={{ fontWeight: 600 }}>
+          {linha.name}
+        </Link>
+      ),
+    },
+    {
+      title: "IBGE",
+      dataIndex: "codigoIbge",
+      width: 110,
+      responsive: ["lg"],
+      render: (_, linha) => (
+        <span className="font-mono" style={{ color: token.colorTextTertiary }}>
+          {linha.codigoIbge || "—"}
+        </span>
+      ),
+    },
+    {
+      title: "Estágio",
+      dataIndex: "stage",
+      width: 170,
+      valueType: "select",
+      valueEnum: Object.fromEntries(
+        Object.entries(STAGE_LABELS).map(([chave, rotulo]) => [chave, { text: rotulo }]),
+      ),
+      sorter: (a, b) =>
+        (STAGE_LABELS[a.stage] ?? a.stage).localeCompare(
+          STAGE_LABELS[b.stage] ?? b.stage,
+          "pt-BR",
+        ),
+      render: (_, linha) => {
+        const tom = stagePastelTone(linha.stage);
+        return (
+          <Tag
+            style={{
+              backgroundColor: tom.bg,
+              color: tom.text,
+              border: "none",
+              borderRadius: 999,
+            }}
           >
-            <TrendingUpIcon className="size-3.5" />
-            Ver Kanban
-          </Link>
-          <Button
-            type="button"
-            onClick={() => setNewCityOpen(true)}
-            className="h-9 rounded-full bg-[#16181D] px-3.5 text-[11px] font-bold text-white hover:bg-[#2C2F38]"
-          >
-            <PlusIcon className="size-3.5" />
-            Novo município
+            {STAGE_LABELS[linha.stage] ?? linha.stage}
+          </Tag>
+        );
+      },
+    },
+    {
+      title: "Prob.",
+      dataIndex: "probability",
+      width: 88,
+      align: "right",
+      search: false,
+      sorter: (a, b) => a.probability - b.probability,
+      render: (_, linha) => (
+        <span className="font-mono">{linha.probability}%</span>
+      ),
+    },
+    colunaDeContagem("Relat.", "relatorios"),
+    colunaDeContagem("Docs", "documentos"),
+    {
+      title: "Próxima ação",
+      dataIndex: "nextStepDescription",
+      ellipsis: true,
+      search: false,
+      responsive: ["xl"],
+      render: (_, linha) => linha.nextStepDescription || "—",
+    },
+    {
+      title: "",
+      width: 44,
+      align: "right",
+      search: false,
+      render: (_, linha) => (
+        <Link href={`/cidades/${linha.id}`} aria-label={`Abrir ${linha.name}`}>
+          <RightOutlined style={{ color: token.colorTextQuaternary }} />
+        </Link>
+      ),
+    },
+  ];
+
+  if (citiesError) {
+    return (
+      <Result
+        status="warning"
+        title="Não foi possível carregar as cidades"
+        subTitle="Verifique a conexão e tente novamente."
+        extra={
+          <Button type="primary" onClick={() => refetchCities()}>
+            Tentar novamente
           </Button>
-        </div>
-      </section>
+        }
+      />
+    );
+  }
 
-      <section className="glass-card flex min-h-[420px] flex-1 flex-col overflow-hidden">
-        <div className="flex flex-col gap-2 border-b border-[#F0F1F5] p-2.5 sm:flex-row sm:items-center">
-          <div className="relative flex-1">
-            <SearchIcon className="pointer-events-none absolute left-3 top-1/2 size-[15px] -translate-y-1/2 text-[#A2A6B2]" />
-            <Input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Filtrar por município, UF ou código IBGE…"
-              className="h-9 rounded-full border-[#E7E8ED] bg-[#FAFAFC] pl-9 text-[12px]"
+  return (
+    <>
+      <ProTable<LinhaDaCarteira>
+        headerTitle="Cidades"
+        rowKey="id"
+        size="small"
+        cardBordered
+        loading={carregando}
+        dataSource={linhas}
+        columns={colunas}
+        /* A carteira inteira à vista é o ponto: rolar é melhor que paginar
+           quando a pergunta é "quais municípios eu tenho". */
+        pagination={false}
+        scroll={{ x: 900 }}
+        search={{ labelWidth: "auto" }}
+        options={{ density: false, fullScreen: false }}
+        dateFormatter="string"
+        toolBarRender={() => [
+          <Space key="numeros" size="large" style={{ marginRight: 8 }}>
+            <Statistic
+              title="Com relatório"
+              value={comRelatorio}
+              valueStyle={{ fontSize: 16, fontFamily: "var(--font-sync-mono)" }}
             />
-          </div>
-          <select
-            value={stage}
-            onChange={(event) => setStage(event.target.value)}
-            className="h-9 min-w-[180px] rounded-full border border-[#E7E8ED] bg-[#FAFAFC] px-3 text-[11px] font-semibold text-[#5A5E6A] outline-none focus:border-[#16181D]"
+            <Statistic
+              title="Documentos"
+              value={documents.length}
+              valueStyle={{ fontSize: 16, fontFamily: "var(--font-sync-mono)" }}
+            />
+            <Statistic
+              title="Em contrato"
+              value={emContrato}
+              valueStyle={{ fontSize: 16, fontFamily: "var(--font-sync-mono)" }}
+            />
+          </Space>,
+          <Link key="kanban" href="/pipeline">
+            <Button icon={<RiseOutlined />}>Ver Kanban</Button>
+          </Link>,
+          <Button
+            key="nova"
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => setNewCityOpen(true)}
           >
-            <option value="all">Todos os estágios</option>
-            {Object.entries(STAGE_LABELS).map(([key, label]) => (
-              <option key={key} value={key}>
-                {label}
-              </option>
-            ))}
-          </select>
-          {!loading && !citiesError && (
-            <span className="shrink-0 px-1 font-mono text-[10px] text-[#A2A6B2]">
-              {filteredCities.length === cities.length
-                ? `${cities.length} municípios`
-                : `${filteredCities.length} de ${cities.length}`}
-            </span>
-          )}
-        </div>
-
-        {loading ? (
-          <div className="flex flex-1 items-center justify-center py-20">
-            <LoaderCircleIcon className="size-6 animate-spin text-[#767A86]" />
-          </div>
-        ) : citiesError ? (
-          <div
-            role="alert"
-            className="flex flex-1 flex-col items-center justify-center py-20 text-center"
-          >
-            <div className="flex size-12 items-center justify-center rounded-[16px] bg-[#FBE9EE]">
-              <MapPinIcon className="size-5 text-[#8A3A50]" />
-            </div>
-            <h2 className="mt-3 text-[13px] font-bold text-[#16181D]">
-              Não foi possível carregar as cidades
-            </h2>
-            <p className="mt-1 text-[10.5px] text-[#767A86]">
-              Verifique a conexão e tente novamente.
-            </p>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => refetchCities()}
-              className="mt-3 h-9 rounded-full px-4 text-[11px] font-bold"
-            >
-              Tentar novamente
-            </Button>
-          </div>
-        ) : filteredCities.length === 0 ? (
-          <div className="flex flex-1 flex-col items-center justify-center py-20 text-center">
-            <div className="flex size-12 items-center justify-center rounded-[16px] bg-[#F2F1F7]">
-              <MapPinIcon className="size-5 text-[#767A86]" />
-            </div>
-            <h2 className="mt-3 text-[13px] font-bold text-[#16181D]">
-              Nenhuma cidade encontrada
-            </h2>
-            <p className="mt-1 text-[10.5px] text-[#767A86]">
-              Adicione um município ou altere os filtros.
-            </p>
-          </div>
-        ) : (
-          <div className="min-h-0 flex-1 overflow-auto">
-            <table className="w-full min-w-[880px] border-collapse text-left">
-              <thead className="sticky top-0 z-10 bg-white/95 backdrop-blur-sm">
-                <tr className="border-b border-[#ECEDF2]">
-                  <Cabecalho
-                    rotulo="UF"
-                    chave="uf"
-                    ordem={ordem}
-                    aoOrdenar={alternarOrdem}
-                    className="w-[62px] pl-4"
-                  />
-                  <Cabecalho
-                    rotulo="Município"
-                    chave="name"
-                    ordem={ordem}
-                    aoOrdenar={alternarOrdem}
-                  />
-                  <th className="hidden px-3 py-2 font-mono text-[9px] font-semibold uppercase tracking-[1.1px] text-[#A2A6B2] lg:table-cell">
-                    IBGE
-                  </th>
-                  <Cabecalho
-                    rotulo="Estágio"
-                    chave="stage"
-                    ordem={ordem}
-                    aoOrdenar={alternarOrdem}
-                    className="w-[150px]"
-                  />
-                  <Cabecalho
-                    rotulo="Prob."
-                    chave="probability"
-                    ordem={ordem}
-                    aoOrdenar={alternarOrdem}
-                    numerica
-                    className="w-[76px]"
-                  />
-                  <Cabecalho
-                    rotulo="Relat."
-                    chave="reports"
-                    ordem={ordem}
-                    aoOrdenar={alternarOrdem}
-                    numerica
-                    className="w-[72px]"
-                  />
-                  <Cabecalho
-                    rotulo="Docs"
-                    chave="documents"
-                    ordem={ordem}
-                    aoOrdenar={alternarOrdem}
-                    numerica
-                    className="w-[68px]"
-                  />
-                  <th className="hidden px-3 py-2 font-mono text-[9px] font-semibold uppercase tracking-[1.1px] text-[#A2A6B2] xl:table-cell">
-                    Próxima ação
-                  </th>
-                  <th className="w-[38px]" />
-                </tr>
-              </thead>
-
-              <tbody>
-                {filteredCities.map((city) => {
-                  const tone = stagePastelTone(city.stage);
-                  const counts = countsByCity.get(city.id) ?? {
-                    documents: 0,
-                    reports: 0,
-                  };
-                  return (
-                    <tr
-                      key={city.id}
-                      onClick={() => router.push(`/cidades/${city.id}`)}
-                      className="group cursor-pointer border-b border-[#F4F4F8] transition-colors last:border-0 hover:bg-[#F7F6FA]"
-                    >
-                      <td className="py-[9px] pl-4 pr-2 font-mono text-[10.5px] font-bold text-[#5A5E6A]">
-                        {city.uf}
-                      </td>
-                      <td className="px-3 py-[9px]">
-                        {/* O link real vive aqui: a linha inteira responde ao
-                            clique, mas quem navega por teclado precisa de foco. */}
-                        <Link
-                          href={`/cidades/${city.id}`}
-                          onClick={(event) => event.stopPropagation()}
-                          className="text-[12.5px] font-semibold text-[#16181D] outline-none hover:underline focus-visible:underline"
-                        >
-                          {city.name}
-                        </Link>
-                      </td>
-                      <td className="hidden px-3 py-[9px] font-mono text-[10.5px] text-[#A2A6B2] lg:table-cell">
-                        {city.codigoIbge || "—"}
-                      </td>
-                      <td className="px-3 py-[9px]">
-                        <span
-                          className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-[3px] text-[9.5px] font-bold"
-                          style={{ backgroundColor: tone.bg, color: tone.text }}
-                        >
-                          <span
-                            className="size-1.5 rounded-full"
-                            style={{ backgroundColor: tone.dot }}
-                          />
-                          {STAGE_LABELS[city.stage] ?? city.stage}
-                        </span>
-                      </td>
-                      <td className="px-3 py-[9px] text-right font-mono text-[11px] text-[#5A5E6A]">
-                        {city.probability}%
-                      </td>
-                      <NumeroDaLinha valor={counts.reports} />
-                      <NumeroDaLinha valor={counts.documents} />
-                      <td className="hidden max-w-[280px] truncate px-3 py-[9px] text-[11px] text-[#767A86] xl:table-cell">
-                        {city.nextStepDescription || "—"}
-                      </td>
-                      <td className="pr-3 text-right">
-                        <ChevronRightIcon className="inline size-4 text-[#D6D7DE] transition-colors group-hover:text-[#16181D]" />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </section>
+            Novo município
+          </Button>,
+        ]}
+      />
 
       <NewCityDialog
         open={newCityOpen}
@@ -417,96 +305,6 @@ export default function CidadesPage() {
           await createMutation.mutateAsync(input);
         }}
       />
-    </div>
-  );
-}
-
-/** Zero em cinza claro: distingue "nenhum" de "um" sem precisar ler o número. */
-function NumeroDaLinha({ valor }: { valor: number }) {
-  return (
-    <td
-      className={`px-3 py-[9px] text-right font-mono text-[11px] ${
-        valor > 0 ? "font-semibold text-[#16181D]" : "text-[#C1C3CB]"
-      }`}
-    >
-      {valor}
-    </td>
-  );
-}
-
-function Numero({
-  valor,
-  rotulo,
-  detalhe,
-}: {
-  valor: number;
-  rotulo: string;
-  detalhe?: string;
-}) {
-  return (
-    <div className="flex items-baseline gap-1.5 px-2.5">
-      <span className="font-mono text-[17px] font-bold leading-none text-[#16181D]">
-        {valor}
-      </span>
-      <span className="text-[10.5px] font-semibold text-[#5A5E6A]">{rotulo}</span>
-      {detalhe && (
-        <span className="hidden font-mono text-[9.5px] text-[#A2A6B2] sm:inline">
-          {detalhe}
-        </span>
-      )}
-    </div>
-  );
-}
-
-function Divisor() {
-  return <span aria-hidden="true" className="h-5 w-px bg-[#ECEDF2]" />;
-}
-
-function Cabecalho({
-  rotulo,
-  chave,
-  ordem,
-  aoOrdenar,
-  numerica = false,
-  className = "",
-}: {
-  rotulo: string;
-  chave: ChaveDeOrdem;
-  ordem: Ordem;
-  aoOrdenar: (chave: ChaveDeOrdem) => void;
-  numerica?: boolean;
-  className?: string;
-}) {
-  const ativa = ordem.chave === chave;
-  const Icone = !ativa
-    ? ChevronsUpDownIcon
-    : ordem.direcao === "asc"
-      ? ChevronUpIcon
-      : ChevronDownIcon;
-
-  return (
-    <th
-      scope="col"
-      aria-sort={
-        ativa ? (ordem.direcao === "asc" ? "ascending" : "descending") : "none"
-      }
-      className={`px-3 py-2 ${className}`}
-    >
-      <button
-        type="button"
-        onClick={() => aoOrdenar(chave)}
-        className={`group/ord flex items-center gap-1 font-mono text-[9px] font-semibold uppercase tracking-[1.1px] transition-colors hover:text-[#16181D] ${
-          numerica ? "ml-auto" : ""
-        } ${ativa ? "text-[#16181D]" : "text-[#A2A6B2]"}`}
-      >
-        {rotulo}
-        <Icone
-          aria-hidden="true"
-          className={`size-3 transition-opacity ${
-            ativa ? "opacity-100" : "opacity-0 group-hover/ord:opacity-60"
-          }`}
-        />
-      </button>
-    </th>
+    </>
   );
 }

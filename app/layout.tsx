@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Instrument_Sans, IBM_Plex_Mono } from "next/font/google";
+import { AntdRegistry } from "@ant-design/nextjs-registry";
 import { AppProviders } from "@/core/providers/app-providers";
 import "./globals.css";
 
@@ -34,7 +35,12 @@ export default function RootLayout({
   return (
     <html lang="pt-BR">
       <body className={`${instrumentSans.variable} ${ibmPlexMono.variable} antialiased font-sans`}>
-        <AppProviders>{children}</AppProviders>
+        {/* O Ant gera estilo em tempo de execução. Sem este registro, o
+            servidor manda HTML sem CSS e a primeira tela pisca sem estilo
+            antes de o JavaScript assumir. */}
+        <AntdRegistry>
+          <AppProviders>{children}</AppProviders>
+        </AntdRegistry>
       </body>
     </html>
   );
