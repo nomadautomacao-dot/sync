@@ -65,6 +65,15 @@ export interface ConformidadeSiope {
   indicadores: IndicadorSiope[];
   /** Só as vinculações com parâmetro legal descumprido. */
   descumpridas: IndicadorSiope[];
+  /**
+   * Indicadores do catálogo que este município **não declarou**.
+   *
+   * Antes eles simplesmente não viravam linha, e a tabela passava a impressão
+   * de estar completa. Não está: numa emissão real do Recife, 5 dos 14
+   * indicadores faltaram, e o leitor não tinha como saber. Ausência de
+   * declaração é achado — o registro é obrigatório (art. 38, §1º).
+   */
+  naoDeclarados: { cod: string; rotulo: string }[];
 }
 
 interface MetaIndicador {
@@ -75,6 +84,20 @@ interface MetaIndicador {
   limite?: number | null;
   sentido?: "min" | "max" | null;
   base?: string | null;
+  /**
+   * `"estadual"` marca indicador que **não se aplica a município**.
+   *
+   * O 1.8 ("Destinação de impostos ao FUNDEB") entrou no catálogo como se
+   * fosse vinculação municipal, com mín. 20% e base na CF art. 212-A, II.
+   * Consultando a API: ele vem com `TIPO: "Estadual"` e `COD_MUNI: null`, e o
+   * próprio nome do FNDE diz "mínimo de 20% **para estados e DF**". Resultado:
+   * presente em 0 dos 5.564 municípios — metadado morto carregando um
+   * parâmetro legal que ninguém iria cumprir.
+   *
+   * Marcado em vez de removido porque a posição no array **é** a chave dos
+   * valores de cada município; tirar do meio deslocaria todo o resto.
+   */
+  escopo?: "estadual" | "municipal";
 }
 
 interface ArquivoSiope {
@@ -111,9 +134,13 @@ export function getConformidadeSiope(codigoIBGE: string): ConformidadeSiope | nu
   const meta = arquivo.indicadores ?? [];
   const indicadores: IndicadorSiope[] = [];
 
+  const declarados = new Set<number>();
+
   for (const [posicao, valor] of Object.entries(registro.v ?? {})) {
     const definicao = meta[Number(posicao)];
     if (!definicao || typeof valor !== "number") continue;
+    if (definicao.escopo === "estadual") continue;
+    declarados.add(Number(posicao));
 
     const limite = definicao.limite ?? null;
     const sentido = definicao.sentido ?? null;
@@ -154,7 +181,35 @@ export function getConformidadeSiope(codigoIBGE: string): ConformidadeSiope | nu
     aplicadoInfantil.folga = Math.round((aplicadoInfantil.valor - iei.valor) * 100) / 100;
   }
 
+  // A mesma ideia, na outra ponta: o 1.3 é o **complemento aritmético** do 1.2.
+  // O FUNDEB se reparte entre remuneração (1.2), outras despesas de MDE (1.3) e
+  // o que sobrou sem aplicar (1.4) — as três somam 100%. Se a lei exige no
+  // mínimo 70% em remuneração, o 1.3 tem teto de 30% pelo mesmo artigo.
+  //
+  // Sem isto ele saía como "sem parâmetro" ao lado de uma linha que traz
+  // mín. 70% — duas leituras da mesma regra, uma delas mostrando régua e a
+  // outra não. O teto é derivado do piso do 1.2, e não escrito à mão, para que
+  // acompanhe a lei se o percentual mudar.
+  const remuneracao = indicadores.find((i) => i.chave === "remuneracao");
+  const outrasMde = indicadores.find((i) => i.chave === "fundebOutrasMde");
+
+  if (remuneracao?.limite !== null && remuneracao?.limite !== undefined && remuneracao.sentido === "min" && outrasMde && outrasMde.limite === null) {
+    const teto = Math.round((100 - remuneracao.limite) * 100) / 100;
+    outrasMde.limite = teto;
+    outrasMde.sentido = "max";
+    outrasMde.conforme = outrasMde.valor <= teto;
+    outrasMde.folga = Math.round((teto - outrasMde.valor) * 100) / 100;
+  }
+
   indicadores.sort((a, b) => a.cod.localeCompare(b.cod, undefined, { numeric: true }));
+
+  // O que o catálogo prevê e o município não declarou. Só indicadores
+  // municipais entram: cobrar de uma prefeitura um indicador estadual seria
+  // inventar achado.
+  const naoDeclarados = meta
+    .map((definicao, posicao) => ({ definicao, posicao }))
+    .filter(({ definicao, posicao }) => definicao && definicao.escopo !== "estadual" && !declarados.has(posicao))
+    .map(({ definicao }) => ({ cod: definicao.cod ?? "", rotulo: definicao.rotulo ?? "" }));
 
   const ano = registro.ano ?? arquivo.anoReferencia ?? 0;
 
@@ -166,5 +221,6 @@ export function getConformidadeSiope(codigoIBGE: string): ConformidadeSiope | nu
     nome: registro.nome ?? "",
     indicadores,
     descumpridas: indicadores.filter((i) => i.conforme === false),
+    naoDeclarados,
   };
 }

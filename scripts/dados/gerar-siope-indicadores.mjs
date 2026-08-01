@@ -67,7 +67,12 @@ const INDICADORES = [
   { cod: "1.5", unidade: "percentual", chave: "capitalVaat", rotulo: "Complementação VAAT em despesas de capital", limite: 15, sentido: "min", base: "Lei 14.113/2020, art. 27" },
   { cod: "1.6", unidade: "percentual", chave: "infantilVaat", rotulo: "Complementação VAAT em educação infantil", limite: null, sentido: "min", base: "Lei 14.113/2020, art. 28" },
   { cod: "1.7", unidade: "percentual", chave: "iei", rotulo: "IEI — mínimo do VAAT para educação infantil", limite: null, sentido: null, base: "Lei 14.113/2020, art. 16, VII" },
-  { cod: "1.8", unidade: "percentual", chave: "destinacaoFundeb", rotulo: "Destinação de impostos ao FUNDEB", limite: 20, sentido: "min", base: "CF art. 212-A, II" },
+  // Indicador **estadual**, mantido na lista só para não deslocar as posições
+  // — que são a chave dos valores de cada município no arquivo gerado.
+  // A API o devolve com `TIPO: "Estadual"` e `COD_MUNI: null`, e o nome que o
+  // próprio FNDE dá diz "mínimo de 20% para estados e DF". Entrou aqui como se
+  // fosse vinculação municipal e ficou presente em 0 dos 5.564 municípios.
+  { cod: "1.8", unidade: "percentual", chave: "destinacaoFundeb", rotulo: "Destinação de impostos ao FUNDEB", limite: 20, sentido: "min", base: "CF art. 212-A, II", escopo: "estadual" },
   { cod: "2.1", unidade: "percentual", chave: "fundebInfantil", rotulo: "FUNDEB aplicado na educação infantil", limite: null, sentido: null, base: null },
   { cod: "2.2", unidade: "percentual", chave: "fundebFundamental", rotulo: "FUNDEB aplicado no ensino fundamental", limite: null, sentido: null, base: null },
   { cod: "3.2", unidade: "percentual", chave: "pessoalEducacao", rotulo: "Pessoal e encargos da educação sobre a despesa em MDE", limite: null, sentido: null, base: null },

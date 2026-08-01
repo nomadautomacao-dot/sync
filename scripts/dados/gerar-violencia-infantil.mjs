@@ -115,7 +115,17 @@ function linhasTabela(html) {
     if (celulas.length < 2) continue;
     const codigo = /^(\d{6})\s/.exec(celulas[0])?.[1];
     if (!codigo) continue;
-    const valor = Number(celulas[1].replace(/\./g, "").replace(",", "."));
+    // O TabNet imprime `-` na célula que vale **zero**, e `Number("-")` é NaN.
+    // A versão anterior caía no `continue` e descartava o município inteiro:
+    // o dataset saiu com 4.453 dos 5.570, e boa parte dos 1.117 que faltam não
+    // é ausência de dado — é ausência de notificação.
+    //
+    // A distinção é o assunto deste módulo. Zero notificação de violência
+    // contra criança não significa município sem violência; significa, quase
+    // sempre, município sem quem notifique. Sumir com a linha transforma o
+    // achado mais forte da fonte em "N/D" no relatório.
+    const bruto = celulas[1].trim();
+    const valor = bruto === "-" ? 0 : Number(bruto.replace(/\./g, "").replace(",", "."));
     if (!Number.isFinite(valor)) continue;
     linhas.push({ codigo, valor });
   }

@@ -1194,9 +1194,9 @@
       "uf": "PA",
       "regiao": "Norte",
       "created_at": "2026-06-17T14:24:40.533Z",
-      "updated_at": "2026-06-17T14:24:40.533Z",
-      "ultimo_acesso": "2026-06-17T14:24:40.533Z",
-      "acessos": 1,
+      "updated_at": "2026-07-31T14:43:45.114Z",
+      "ultimo_acesso": "2026-07-31T14:43:45.114Z",
+      "acessos": 2,
       "in_carteira": false
     },
     {
@@ -1293,9 +1293,9 @@
       "uf": "CE",
       "regiao": "Nordeste",
       "created_at": "2026-06-18T17:17:51.283Z",
-      "updated_at": "2026-06-18T17:17:51.283Z",
-      "ultimo_acesso": "2026-06-18T17:17:51.283Z",
-      "acessos": 1,
+      "updated_at": "2026-07-31T18:43:41.541Z",
+      "ultimo_acesso": "2026-07-31T18:43:41.541Z",
+      "acessos": 6,
       "in_carteira": false
     },
     {
@@ -1578,9 +1578,9 @@
       "uf": "PE",
       "regiao": "Nordeste",
       "created_at": "2026-06-24T15:10:09.136Z",
-      "updated_at": "2026-06-24T15:48:01.233Z",
-      "ultimo_acesso": "2026-06-24T15:48:01.233Z",
-      "acessos": 6,
+      "updated_at": "2026-07-31T22:06:56.732Z",
+      "ultimo_acesso": "2026-07-31T22:06:56.732Z",
+      "acessos": 10,
       "in_carteira": false
     },
     {
@@ -3151,9 +3151,9 @@
       "uf": "MG",
       "regiao": "Sudeste",
       "created_at": "2026-07-28T19:25:57.562Z",
-      "updated_at": "2026-07-28T21:58:25.025Z",
-      "ultimo_acesso": "2026-07-28T21:58:25.025Z",
-      "acessos": 5,
+      "updated_at": "2026-07-31T11:45:41.735Z",
+      "ultimo_acesso": "2026-07-31T11:45:41.735Z",
+      "acessos": 13,
       "in_carteira": false
     },
     {
@@ -3175,6 +3175,50 @@
       "created_at": "2026-07-29T18:25:51.098Z",
       "updated_at": "2026-07-30T10:58:27.245Z",
       "ultimo_acesso": "2026-07-30T10:58:27.245Z",
+      "acessos": 2,
+      "in_carteira": false
+    },
+    {
+      "codigo_ibge": "2924702",
+      "nome": "Piripá",
+      "uf": "BA",
+      "regiao": "Nordeste",
+      "created_at": "2026-07-30T21:29:32.337Z",
+      "updated_at": "2026-07-30T21:29:32.337Z",
+      "ultimo_acesso": "2026-07-30T21:29:32.337Z",
+      "acessos": 1,
+      "in_carteira": false
+    },
+    {
+      "codigo_ibge": "2924009",
+      "nome": "Paulo Afonso",
+      "uf": "BA",
+      "regiao": "Nordeste",
+      "created_at": "2026-07-30T21:43:26.129Z",
+      "updated_at": "2026-07-31T17:39:42.307Z",
+      "ultimo_acesso": "2026-07-31T17:39:42.307Z",
+      "acessos": 3,
+      "in_carteira": false
+    },
+    {
+      "codigo_ibge": "2703106",
+      "nome": "Igaci",
+      "uf": "AL",
+      "regiao": "Nordeste",
+      "created_at": "2026-07-31T21:37:54.302Z",
+      "updated_at": "2026-07-31T21:40:27.963Z",
+      "ultimo_acesso": "2026-07-31T21:40:27.963Z",
+      "acessos": 2,
+      "in_carteira": false
+    },
+    {
+      "codigo_ibge": "2903904",
+      "nome": "Bom Jesus da Lapa",
+      "uf": "BA",
+      "regiao": "Nordeste",
+      "created_at": "2026-08-01T10:58:04.982Z",
+      "updated_at": "2026-08-01T11:00:18.413Z",
+      "ultimo_acesso": "2026-08-01T11:00:18.413Z",
       "acessos": 2,
       "in_carteira": false
     }

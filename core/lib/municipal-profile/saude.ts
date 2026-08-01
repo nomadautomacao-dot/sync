@@ -14,6 +14,7 @@
  * DATASUS não pode zerar a cobertura de APS nem derrubar a geração do PDF.
  */
 
+import { numeroIbge } from "../notacao-ibge";
 import type { BlocoSaude, FalhaColeta, Indicador } from "./types";
 import { fetchJson, ibge6, indicador, semDado } from "./types";
 
@@ -344,7 +345,12 @@ async function buscarMortalidadeInfantil(codigoIbge: string): Promise<Mortalidad
       // A chave pode ser um ano ("2024") ou um triênio ("2012-2014"); o ano de
       // referência do indicador é o último do período.
       const fim = /(\d{4})\s*$/.exec(periodo);
-      const candidato = numero(bruto); // "-" e "..." caem fora aqui
+      // `numeroIbge`, e não o `numero` local: aqui o traço do IBGE é **zero**,
+      // e mortalidade infantil zero é resultado comum em município pequeno —
+      // triênio sem óbito infantil. Lendo como ausência, a folha de saúde
+      // imprimia "N/D" justamente onde o indicador está no melhor valor
+      // possível. Ver `core/lib/notacao-ibge.ts`.
+      const candidato = numeroIbge(bruto);
       if (!fim || candidato === null) continue;
 
       const anoFim = Number(fim[1]);

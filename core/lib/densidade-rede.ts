@@ -38,6 +38,8 @@
  * para satisfazer o compilador. `EscolaTerritorio` continua atribuível a este
  * tipo por estrutura, então o leitor do dataset serve sem conversão.
  */
+import { numeroIbge } from "./notacao-ibge";
+
 export interface EscolaGeo {
   codigo: string;
   lat: number | null;
@@ -232,10 +234,11 @@ export function lerPopulacaoRural(payload: unknown): PopulacaoRural | null {
       if (chave !== "1" && chave !== "2") continue;
 
       for (const serie of resultado.series ?? []) {
-        const bruto = Object.values(serie.serie ?? {})[0];
-        const valor = Number(bruto);
-        // O SIDRA usa "-" e "..." para sem-dado; Number("-") vira NaN.
-        if (!Number.isFinite(valor)) continue;
+        // `"-"` no SIDRA é **zero**, não ausência — é o que faz município
+        // 100% urbano ter população rural 0,0% em vez de "N/D".
+        // Ver `core/lib/notacao-ibge.ts`.
+        const valor = numeroIbge(Object.values(serie.serie ?? {})[0]);
+        if (valor === null) continue;
         if (chave === "1") urbana = valor;
         else rural = valor;
       }

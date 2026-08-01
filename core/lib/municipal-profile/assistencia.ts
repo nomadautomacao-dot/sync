@@ -337,7 +337,15 @@ interface SidraVariavel {
   resultados?: SidraResultado[];
 }
 
-/** O SIDRA usa "...", "-" e "X" para célula sem dado, e ponto decimal. */
+/**
+ * Lê célula do SIDRA. `"..."` e `"X"` são ausência de fato; `"-"` é **zero** na
+ * notação do IBGE, e aqui ele cai em `null` de propósito — as duas leituras
+ * dão no mesmo, porque este parser serve a renda domiciliar e a contagem de
+ * domicílios por sexo do chefe, que não são zero num município.
+ *
+ * Onde zero for plausível, use `numeroIbge` de `core/lib/notacao-ibge.ts`:
+ * confundir os dois já apagou a população rural de toda capital do relatório.
+ */
 function valorSidra(res: SidraResultado | undefined, ano: number): number | null {
   const bruto = res?.series?.[0]?.serie?.[String(ano)];
   if (!bruto || bruto === "..." || bruto === "-" || bruto === "X") return null;

@@ -149,6 +149,8 @@ export interface MunicipalXrayModel {
       slack: number | null;
       basis: string | null;
     }>;
+    /** O que o catálogo prevê e o município não declarou — ver `siope-indicadores.ts`. */
+    undeclared: Array<{ cod: string; label: string }>;
   } | null;
   /**
    * Gêmeos estatísticos — percentil entre municípios de rede do mesmo porte.
@@ -853,7 +855,12 @@ export function mapMunicipalXrayModel(params: {
           basis: typeof r.base === "string" && r.base ? r.base : null,
         }));
       if (indicators.length === 0) return null;
-      return { year: number(bruto.ano), stale: bruto.defasado === true, indicators };
+      const undeclared = array(bruto.naoDeclarados)
+        .map(asRecord)
+        .filter((r): r is JsonRecord => r !== null)
+        .map((r) => ({ cod: text(r.cod, ""), label: text(r.rotulo, "") }))
+        .filter((r) => r.label);
+      return { year: number(bruto.ano), stale: bruto.defasado === true, indicators, undeclared };
     })(),
     twins: (() => {
       const bruto = asRecord(at(currentPayload, "relatorio_dirigido_base.gemeos"));
@@ -1915,8 +1922,12 @@ function paginaResumoExecutivo(model: MunicipalXrayModel, pagina: number): strin
           `matrículas ${model.enrollmentYear ?? ""}`,
         )}${metric(int(model.schools), "escolas municipais")}</div>`
       : `<div class="grid-4 mt-3">${metric(String(achados.length), "achados nomeados")}${metric(
-          comValor.length > 0 ? compactMoney(somaNomeada) : "—",
-          comValor.length > 0 ? "com valor publicado na fonte" : "sem R$ publicado nas fontes",
+          // "nenhum", e não "—". O traço aparecia entre três números e lia-se
+          // como campo que falhou; o fato é o oposto — nós sabemos a resposta,
+          // e ela é que fonte nenhuma publicou valor. O template já usa
+          // "nenhum" com esse sentido no bloco do piso do magistério.
+          comValor.length > 0 ? compactMoney(somaNomeada) : "nenhum",
+          "com valor publicado na fonte",
         )}${metric(
           String(achados.filter((a) => a.tier <= TIERS.datado).length),
           "em dinheiro perdido ou datado",
@@ -1958,8 +1969,148 @@ function header(section: string) {
   return `<header class="page-header"><strong>Raio-X municipal</strong><span>${esc(section)}</span></header>`;
 }
 
+/**
+ * Fontes efetivamente usadas nesta emissão, recolhidas do rodapé de cada folha.
+ *
+ * ## Por que existe
+ *
+ * A página de rastreabilidade listava só `metadata.fontes`, que vem do payload
+ * legado. Todo módulo acrescentado depois — SIOPE, Portal da Transparência,
+ * TSE, FUNAI, PNI, SINAN, SIDRA, QEdu, CAGED — lê a fonte direto e se credita
+ * apenas no rodapé da própria página, sem nunca chegar naquela lista. Numa
+ * emissão do Recife a folha 42 declarava 17 fontes enquanto o corpo do
+ * documento usava pelo menos nove além delas.
+ *
+ * Numa página cujo título é "Rastreabilidade", subdeclarar é o pior defeito
+ * possível: ela existe para dizer de onde veio cada número.
+ *
+ * ## Por que estado de módulo é seguro aqui
+ *
+ * `generateMunicipalXrayHtml` monta o HTML inteiro de forma **síncrona** — é
+ * concatenação de string, sem `await` no meio. Duas emissões simultâneas no
+ * mesmo processo não conseguem intercalar, e o array é zerado no começo de
+ * cada uma. A folha de fontes é a última, então quando ela é avaliada todos os
+ * rodapés anteriores já se registraram.
+ */
+let fontesDaEmissao: string[] = [];
+
+/**
+ * Rodapés que são legenda, não procedência. "Gerado pelo Sync em 31/07/2026"
+ * não é fonte de dado nenhum.
+ */
+const RODAPES_SEM_PROCEDENCIA = [
+  "Bases oficiais integradas ao Sync",
+  "Síntese das fontes integradas ao Sync",
+  "Síntese técnica gerada pelo Sync",
+  "Metodologia Global Sync para leitura municipal",
+];
+
 function footer(page: number, source = "Bases oficiais integradas ao Sync") {
+  if (!RODAPES_SEM_PROCEDENCIA.includes(source) && !source.startsWith("Gerado pelo Sync")) {
+    fontesDaEmissao.push(source);
+  }
   return `<footer class="page-footer"><span>${esc(source)}</span><span>${page}</span></footer>`;
+}
+
+/**
+ * Instituição de origem de cada rodapé. Sem isto a lista viraria trinta e tantas
+ * linhas quase iguais — "SIOPE / FNDE", "SIOPE / FNDE — RREO Anexo 8", "SIOPE /
+ * FNDE — indicadores municipais" —, o que não cabe na folha e não informa mais.
+ * Agrupar por origem e somar os detalhes cabe, e diz mais.
+ */
+const ORIGENS: Array<[RegExp, string]> = [
+  [/SIOPE/i, "SIOPE / FNDE"],
+  [/Portal da Transparência|\bCGU\b/i, "Portal da Transparência / CGU"],
+  [/SICONFI|Tesouro Nacional|Siconfi/i, "SICONFI / Tesouro Nacional"],
+  [/CNES|e-Gestor|DATASUS|\bPNI\b|SINAN|Ministério da Saúde/i, "Ministério da Saúde / DATASUS"],
+  [/CadÚnico|Cadastro Único|\bMDS\b|SICON\b/i, "Cadastro Único / MDS"],
+  [/Atlas da Violência|IPEA\/FBSP|\bFBSP\b/i, "IPEA / FBSP"],
+  [/CAGED|Ipeadata/i, "Novo CAGED / MTE"],
+  [/\bINEP\b|Censo Escolar|\bIDEB\b|Saeb|Inep/i, "INEP"],
+  [/\bFNDE\b|PDDE|SIGARPWEB|SIGPC|Pacto de Retomada|VAAR|VAAT|FUNDEB/i, "FNDE"],
+  [/\bIBGE\b|Censo 2022|MUNIC|Registro Civil|malhas/i, "IBGE"],
+  [/\bTSE\b/i, "TSE"],
+  [/FUNAI/i, "FUNAI"],
+  [/QEdu/i, "QEdu"],
+];
+
+/**
+ * A origem é a que aparece **primeiro no texto**, não a primeira que casa na
+ * lista.
+ *
+ * A versão anterior percorria `ORIGENS` na ordem e devolvia o primeiro acerto.
+ * Como um rodapé costuma citar duas instituições — "IBGE — Censo 2022 × FNDE",
+ * "TSE — resultados das eleições" —, o resultado dependia da ordem em que eu
+ * escrevi a lista, não do que o rodapé diz: o TSE foi arquivado dentro do IBGE
+ * e cruzamentos IBGE×FNDE apareceram sob FNDE. Quem escreveu o rodapé pôs na
+ * frente a fonte principal; é essa que manda.
+ */
+function origemDe(fonte: string): string | null {
+  let melhor: { nome: string; posicao: number } | null = null;
+  for (const [padrao, nome] of ORIGENS) {
+    const encontro = fonte.match(padrao);
+    if (encontro?.index === undefined) continue;
+    if (!melhor || encontro.index < melhor.posicao) melhor = { nome, posicao: encontro.index };
+  }
+  return melhor?.nome ?? null;
+}
+
+/**
+ * Tira só o **prefixo** com o nome da instituição, deixando o que distingue
+ * aquela consulta: "SICONFI / Tesouro Nacional - DCA 2025" vira "DCA 2025".
+ *
+ * Antes isto apagava o token em qualquer posição, o que estraçalhava rodapés
+ * que citam a instituição no meio da frase — sobravam pedaços como
+ * "— e IBGE Censo 2022" e "— / , até 2022". Se a string não começa pela
+ * origem, ela fica inteira: é mais longo e é legível, que é o que a folha
+ * precisa ser.
+ */
+function detalheDe(fonte: string, origem: string): string | null {
+  const tokens = origem.split(/\s*\/\s*/).map((t) => t.trim()).filter(Boolean);
+  const escapado = tokens.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  const prefixo = new RegExp(`^(?:${escapado})(?:\\s*[/e]\\s*(?:${escapado}))*[\\s/\\-–—·,:]*`, "i");
+
+  const resto = fonte.replace(prefixo, "").replace(/^[\s/\-–—·,:]+|[\s/\-–—·,:]+$/g, "").replace(/\s{2,}/g, " ");
+  if (resto.length <= 2) return null;
+  // Nada foi retirado: o rodapé não começa pela origem. Devolve inteiro em vez
+  // de fingir que o texto é um detalhe daquela instituição.
+  return resto;
+}
+
+function linhasFontes(model: MunicipalXrayModel): string {
+  const agrupado = new Map<string, Set<string>>();
+  const soltas: string[] = [];
+
+  // `model.sources` (o `metadata.fontes` legado) e os rodapés entram no mesmo
+  // saco: são a mesma coisa vista de dois lugares, e a folha precisa da união.
+  for (const fonte of [...model.sources, ...fontesDaEmissao]) {
+    const limpa = fonte.trim();
+    if (!limpa) continue;
+    const origem = origemDe(limpa);
+    if (!origem) {
+      // Fonte que ainda não tem origem catalogada entra inteira, em vez de
+      // sumir. Perder uma linha aqui é o defeito que esta função conserta.
+      if (!soltas.includes(limpa)) soltas.push(limpa);
+      continue;
+    }
+    const detalhe = detalheDe(limpa, origem);
+    const conjunto = agrupado.get(origem) ?? new Set<string>();
+    if (detalhe) conjunto.add(detalhe);
+    agrupado.set(origem, conjunto);
+  }
+
+  if (agrupado.size === 0 && soltas.length === 0) {
+    return `<li>Fontes públicas integradas ao Sync, consultadas na data de geração.</li>`;
+  }
+
+  const linhas = [...agrupado.entries()]
+    .sort((a, b) => b[1].size - a[1].size || a[0].localeCompare(b[0]))
+    .map(([origem, detalhes]) => {
+      const lista = [...detalhes].sort((a, b) => a.localeCompare(b, "pt-BR"));
+      return `<li><b>${esc(origem)}</b>${lista.length ? ` — ${esc(lista.join(" · "))}` : ""}</li>`;
+    });
+
+  return [...linhas, ...soltas.map((f) => `<li>${esc(f)}</li>`)].join("");
 }
 
 /**
@@ -2397,14 +2548,37 @@ function paginaVinculacoes(model: MunicipalXrayModel, pagina: number): string {
 
   const linhas = s.indicators
     .map((ind) => {
-      const marca = ind.compliant === true ? `<b class="good">✓</b>` : ind.compliant === false ? `<b class="warn-text">✕</b>` : `<span class="neutral">—</span>`;
-      const parametro = ind.limit !== null && ind.direction ? `${ind.direction === "min" ? "mín." : "máx."} ${fmt(ind.limit, ind.unit)}` : "—";
-      const folga = ind.slack === null ? "—" : `${ind.slack < 0 ? "−" : "+"}${fmt(Math.abs(ind.slack), ind.unit)}`;
-      return `<tr><td class="num">${marca}</td><td>${esc(ind.label)}${ind.basis ? `<div class="micro">${esc(ind.basis)}</div>` : ""}</td><td class="num"><b>${esc(fmt(ind.value, ind.unit))}</b></td><td class="num">${esc(parametro)}</td><td class="num">${folga}</td></tr>`;
+      const marca = ind.compliant === true ? `<b class="good">✓</b>` : ind.compliant === false ? `<b class="warn-text">✕</b>` : `<span class="neutral">·</span>`;
+      // "—" dizia duas coisas incompatíveis: "não existe parâmetro legal" e
+      // "não conseguimos apurar". São opostos — a primeira é uma propriedade da
+      // norma, a segunda é uma falha nossa —, e o leitor não tinha como
+      // distinguir. Aqui só a primeira pode ocorrer: indicador não apurado não
+      // vira linha nenhuma, ele entra na lista de não declarados abaixo da
+      // tabela. Então a célula diz o que de fato é.
+      const parametro = ind.limit !== null && ind.direction ? `${ind.direction === "min" ? "mín." : "máx."} ${fmt(ind.limit, ind.unit)}` : `<span class="neutral">descritivo</span>`;
+      const folga = ind.slack === null ? `<span class="neutral">—</span>` : `${ind.slack < 0 ? "−" : "+"}${fmt(Math.abs(ind.slack), ind.unit)}`;
+      return `<tr><td class="num">${marca}</td><td>${esc(ind.label)}${ind.basis ? `<div class="micro">${esc(ind.basis)}</div>` : ""}</td><td class="num"><b>${esc(fmt(ind.value, ind.unit))}</b></td><td class="num">${parametro}</td><td class="num">${folga}</td></tr>`;
     })
     .join("");
 
   const descumpridas = s.indicators.filter((ind) => ind.compliant === false).length;
+  const descritivos = s.indicators.filter((ind) => ind.limit === null).length;
+
+  /**
+   * O que a tabela não mostra — e antes não dizia que não mostrava.
+   *
+   * Duas ausências convivem nesta página e precisam ficar separadas. Uma é
+   * "descritivo": indicador sem parâmetro legal, porque é grandeza em reais ou
+   * repartição por etapa — não há dever a cumprir. A outra é o município **não
+   * ter declarado** o indicador; aí a linha não existe, e a tabela passava a
+   * impressão de estar completa. Numa emissão do Recife faltaram 5 dos 13
+   * indicadores municipais sem que nada na folha dissesse isso.
+   */
+  const blocoLacunas = `${descritivos > 0 ? `<p class="small mt-2"><b>Descritivo</b> marca o indicador que a norma não sujeita a percentual — valor por aluno, saldo em reais, repartição por etapa. Não é dado faltante: toda vinculação com dever legal aparece com ✓ ou ✕.</p>` : ""}${
+    s.undeclared.length > 0
+      ? `<p class="small mt-1"><b class="warn-text">${int(s.undeclared.length)} indicador${s.undeclared.length === 1 ? "" : "es"} sem declaração:</b> ${s.undeclared.map((u) => esc(u.label)).join(" · ")}. O registro no SIOPE é obrigatório em até 30 dias do fim de cada bimestre (art. 38, §1º) — a lacuna é achado, não silêncio da fonte.</p>`
+      : `<p class="small mt-1">Os ${int(s.indicators.length)} indicadores municipais do catálogo foram declarados — não há lacuna de registro neste exercício.</p>`
+  }`;
 
   const blocoPiso = p
     ? `<div class="grid-4 mt-3">${metric(money(p.floor), "piso nacional · 40h")}${metric(
@@ -2416,7 +2590,7 @@ function paginaVinculacoes(model: MunicipalXrayModel, pagina: number): string {
       )}${metric(int(p.declared), `magistério declarado${p.year ? ` · ${p.year}` : ""}`)}</div><p class="small mt-1">Salários proporcionalizados à jornada de 40h (art. 2º, §3º da Lei nº 11.738/2008). A fórmula do piso mudou em 2026 (Lei nº 15.437/2026) e o art. 4º — a complementação da União a quem não tivesse caixa — foi <b>revogado</b>: o custo do piso é integralmente do município.</p>`
     : `<p class="small mt-3"><b>Piso do magistério:</b> declaração de remuneração não localizada no SIOPE para este município.</p>`;
 
-  return `<section class="page content-page">${header("Vinculações da educação")}<main class="page-body"><div class="kicker">FUNDEB · o que precisa ser cumprido para usar o recurso</div><h2>${descumpridas === 0 ? "Vinculações cumpridas na última declaração" : `${descumpridas} vinculaç${descumpridas === 1 ? "ão descumprida" : "ões descumpridas"} na última declaração`}</h2><p class="lede">Percentuais apurados pelo próprio SIOPE${s.year ? ` na declaração de ${s.year}` : ""}${s.stale ? " — o município não declarou o exercício de referência; os números são do anterior" : ""}. Descumprir <b>não trava o FUNDEB</b> (o repasse é automático, art. 21): trava convênio via CAUC e vicia a prestação de contas no tribunal.</p><table class="mt-3"><thead><tr><th></th><th>Vinculação</th><th class="num">Apurado</th><th class="num">Parâmetro</th><th class="num">Folga</th></tr></thead><tbody>${linhas}</tbody></table>${blocoPiso}</main>${footer(pagina, "SIOPE / FNDE — indicadores municipais e remuneração")}</section>`;
+  return `<section class="page content-page">${header("Vinculações da educação")}<main class="page-body"><div class="kicker">FUNDEB · o que precisa ser cumprido para usar o recurso</div><h2>${descumpridas === 0 ? "Vinculações cumpridas na última declaração" : `${descumpridas} vinculaç${descumpridas === 1 ? "ão descumprida" : "ões descumpridas"} na última declaração`}</h2><p class="lede">Percentuais apurados pelo próprio SIOPE${s.year ? ` na declaração de ${s.year}` : ""}${s.stale ? " — o município não declarou o exercício de referência; os números são do anterior" : ""}. Descumprir <b>não trava o FUNDEB</b> (o repasse é automático, art. 21): trava convênio via CAUC e vicia a prestação de contas no tribunal.</p><table class="mt-3"><thead><tr><th></th><th>Vinculação</th><th class="num">Apurado</th><th class="num">Parâmetro</th><th class="num">Folga</th></tr></thead><tbody>${linhas}</tbody></table>${blocoLacunas}${blocoPiso}</main>${footer(pagina, "SIOPE / FNDE — indicadores municipais e remuneração")}</section>`;
 }
 
 /**
@@ -3359,6 +3533,16 @@ function paginaDensidadeRede(model: MunicipalXrayModel, pagina: number): string 
 
   const semCoordenada = d.total - d.comCoordenada;
 
+  /**
+   * A rede não tem escola rural — fato do município, não falha de coleta.
+   *
+   * Vale só quando a contagem é conhecida e é zero: `null` continua sendo
+   * ausência de informação e segue tratado como tal.
+   */
+  const semEscolaRural = d.escolasRuraisPct === 0;
+  /** Município inteiramente urbano: as duas pontas do cruzamento são zero. */
+  const totalmenteUrbano = semEscolaRural && pop !== null && pop.ruralPct === 0;
+
   // A comparação que gera a pergunta: população rural × matrícula rural.
   //
   // Duas réguas, e as duas precisam concordar antes de o texto afirmar algo.
@@ -3383,7 +3567,13 @@ function paginaDensidadeRede(model: MunicipalXrayModel, pagina: number): string 
       : `<b>${decimal.format(Math.abs(lacuna ?? 0))} pontos</b> ${acima ? "acima" : "abaixo"} da população rural`;
 
   let leitura: string;
-  if (lacuna === null || razao === null) {
+  if (totalmenteUrbano) {
+    // Dois zeros conhecidos não são o mesmo que duas pontas ausentes. Sem este
+    // ramo o município inteiramente urbano caía no texto de baixo — "o
+    // cruzamento não se sustenta" — que descreve falta de dado, quando o dado
+    // existe e é conclusivo.
+    leitura = `O Censo 2022 não registra população em área rural e nenhuma escola da rede está declarada em zona rural — o cruzamento é entre dois zeros, e não há dispersão de campo a medir. O custo geográfico aqui, se houver, é de <b>deslocamento urbano</b>: distância entre bairro e vaga, não entre sítio e sede. E o fator do campo (+15%) não entra na ponderação deste município.`;
+  } else if (lacuna === null || razao === null) {
     leitura = `Sem uma das duas pontas (população por situação do domicílio ou matrícula por zona), o cruzamento não se sustenta e não é feito aqui.`;
   } else if (lacuna <= -LIMIAR_PP && razao <= RAZAO_BAIXA) {
     leitura = `A matrícula rural (${pct(d.matriculasRuraisPct)}) está ${magnitude(false)} (${pct(pop!.ruralPct)}). Só o campo separa as duas causas: a criança do campo é <b>transportada para a escola urbana</b> — rota que o valor-aluno não cobre — ou está na <b>rede estadual</b>. <b>Perguntar:</b> quantas rotas levam aluno do campo à sede, e a que custo anual?`;
@@ -3404,15 +3594,21 @@ function paginaDensidadeRede(model: MunicipalXrayModel, pagina: number): string 
     d.envergaduraKm === null ? "N/D" : `${decimal.format(d.envergaduraKm)} km`,
     "envergadura da rede",
   )}${metric(
-    d.mediaRuralKm === null ? "N/D" : `${decimal.format(d.mediaRuralKm)} km`,
-    "distância média das rurais ao núcleo",
+    // Três situações, e antes as três davam "N/D": a rede não tem escola
+    // rural; tem, mas nenhuma georreferenciada; ou a coleta falhou. A primeira
+    // é um fato sobre o município — e num relatório que existe para nomear o
+    // custo da dispersão, "não há escola rural" é resposta, não lacuna.
+    semEscolaRural ? "não há" : d.mediaRuralKm === null ? "N/D" : `${decimal.format(d.mediaRuralKm)} km`,
+    semEscolaRural ? "escola rural na rede" : "distância média das rurais ao núcleo",
   )}${metric(
     pop === null ? "N/D" : pct(pop.ruralPct),
     `população rural${pop ? ` · Censo ${pop.year}` : ""}`,
   )}</div><div class="grid-2 mt-3"><div class="card accent"><h3>O alcance da rede</h3><table><tbody><tr><td>Área territorial</td><td class="num">${model.area === null ? "N/D" : `${integer.format(model.area)} km²`}</td></tr><tr><td>Escolas municipais</td><td class="num"><b>${int(d.total)}</b></td></tr><tr><td>Com coordenada declarada</td><td class="num">${int(d.comCoordenada)}${semCoordenada > 0 ? ` <span class="micro">(${int(semCoordenada)} sem)</span>` : ""}</td></tr>${linhaMaisDistante}</tbody></table><div class="divider"></div><p class="small">O <b>núcleo</b> é a média das coordenadas das escolas urbanas — proxy da sede, de onde saem as rotas de transporte e a supervisão pedagógica. ${semCoordenada > 0 ? `As ${int(semCoordenada)} escolas sem coordenada não entram nas distâncias, mas contam nos totais e nos percentuais.` : "Todas as escolas da rede têm coordenada declarada."}</p></div><div class="card"><h3>Território × rede × matrícula</h3><table><tbody><tr><td>População em área rural</td><td class="num">${pop === null ? "N/D" : `<b>${pct(pop.ruralPct)}</b>`}</td></tr><tr><td>Escolas em zona rural</td><td class="num"><b>${pct(d.escolasRuraisPct)}</b></td></tr><tr><td>Matrículas em escolas rurais</td><td class="num">${d.matriculasRuraisPct === null ? "N/D" : `<b>${pct(d.matriculasRuraisPct)}</b>`}</td></tr></tbody></table><div class="divider"></div><p class="small">${leitura}</p></div></div>${
     d.mediaRuralKm !== null && d.maisDistante
       ? `<div class="insight mt-3"><b>O que a distância custa:</b> a escola rural média está a ${decimal.format(d.mediaRuralKm)} km do núcleo, e a mais afastada a ${decimal.format(d.maisDistante.km)} km — ida e volta, todo dia letivo, para aluno e para servidor, e também tempo de resposta da manutenção e da merenda. <b>Conferir:</b> o custo do transporte declarado no SIOPE bate com essa geografia? Rota longa com custo baixo costuma ser terceirização mal medida ou aluno em pé.</div>`
-      : `<div class="note mt-3"><b>Leitura limitada:</b> sem escolas rurais georreferenciadas, a distância ao núcleo não foi calculada. As contagens e percentuais acima seguem válidos.</div>`
+      : semEscolaRural
+        ? `<div class="insight mt-3"><b>Rede sem escola rural:</b> não há distância de campo a calcular, e o fator de +15% do campo não entra na ponderação deste município. A dispersão que resta é urbana — a envergadura de ${d.envergaduraKm !== null ? `${decimal.format(d.envergaduraKm)} km` : "ponta a ponta"} atravessa bairros, não estradas vicinais. <b>Conferir:</b> a demanda por vaga acompanha onde a escola está? Rede compacta com fila em um bairro e ociosidade em outro é problema de alocação, não de distância.</div>`
+        : `<div class="note mt-3"><b>Leitura limitada:</b> a rede tem escola em zona rural, mas nenhuma com coordenada declarada, então a distância ao núcleo não foi calculada. As contagens e percentuais acima seguem válidos.</div>`
   }<p class="micro mt-1">Fonte: coordenadas declaradas ao Censo Escolar${model.schoolMap?.year ? ` ${model.schoolMap.year}` : ""} (INEP, microdados); área territorial do IBGE; população por situação do domicílio no Censo Demográfico 2022 (IBGE, SIDRA tabela 10211), consultada na emissão. Distâncias em linha reta — a rodoviária é maior, nunca menor. Os denominadores diferem de propósito: a fatia da população é sobre todos os residentes, a da matrícula é sobre a rede municipal — a comparação vale como direção, não como identidade contábil.</p></main>${footer(pagina, FONTE)}</section>`;
 }
 
@@ -4023,6 +4219,8 @@ function coverTerritory(model: MunicipalXrayModel) {
 }
 
 export function generateMunicipalXrayHtml(model: MunicipalXrayModel) {
+  // Zera o coletor de fontes desta emissão — ver `footer()` e `linhasFontes()`.
+  fontesDaEmissao = [];
   const date = new Intl.DateTimeFormat("pt-BR", { dateStyle: "long" }).format(model.generatedAt);
   const shortDate = new Intl.DateTimeFormat("pt-BR").format(model.generatedAt);
   const fundebDelta = change(model.fundebBase, model.fundebCurrent);
@@ -4030,9 +4228,6 @@ export function generateMunicipalXrayHtml(model: MunicipalXrayModel) {
   const infraRows = model.infrastructure.length
     ? model.infrastructure.map((item) => `<div class="bar-row"><span>${esc(item.name)}</span><div class="bar-track"><div class="bar" style="width:${Math.max(0, Math.min(100, item.percent ?? 0))}%"></div></div><b>${esc(pct(item.percent))}</b></div>`).join("")
     : `<div class="empty">A base de infraestrutura escolar ainda não está disponível para este município.</div>`;
-  const sourceRows = model.sources.length
-    ? model.sources.map((source) => `<li>${esc(source)}</li>`).join("")
-    : `<li>Fontes públicas integradas ao Sync, consultadas na data de geração.</li>`;
   const noteRows = model.notes.slice(0, 6).map((note) => `<li>${esc(note)}</li>`).join("");
   const fundebClass = fundebDelta !== null && fundebDelta >= 0 ? "good" : "warn";
   const mayor = model.party ? `${model.mayor} (${model.party})` : model.mayor;
@@ -4056,7 +4251,7 @@ export function generateMunicipalXrayHtml(model: MunicipalXrayModel) {
 <style>
 @page{size:letter;margin:0}*{box-sizing:border-box}:root{--navy:#10263f;--blue:#176b87;--teal:#27a69a;--gold:#e6a23c;--red:#c75050;--ink:#19242e;--muted:#647380;--line:#d9e1e5;--paper:#fbfcfc;--wash:#eef4f5;--good:#22856f;--warn:#a66a10}
 html,body{margin:0;padding:0;background:#dfe6e9;color:var(--ink)}body{font-family:Arial,"Noto Sans",sans-serif;font-size:9pt;line-height:1.38}.page{width:8.5in;height:11in;margin:0 auto;background:var(--paper);overflow:hidden;page-break-after:always;position:relative}.page:last-child{page-break-after:auto}.content-page{display:grid;grid-template-rows:auto 1fr auto}.page-header{min-height:.48in;padding:.22in .62in .11in;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:end;color:var(--muted);font-size:7.4pt;letter-spacing:.07em;text-transform:uppercase}.page-header strong{color:var(--navy);font-weight:800}.page-body{padding:.25in .62in .18in;overflow:hidden}.page-footer{min-height:.39in;padding:.1in .62in .2in;border-top:1px solid var(--line);color:var(--muted);font-size:7pt;display:flex;justify-content:space-between;align-items:start}
-h1,h2,h3,.metric-value,.big{font-family:Arial,"Noto Sans",sans-serif}h1,h2,h3,p{margin:0}h2{color:var(--navy);font-size:23pt;line-height:1.04;letter-spacing:-.025em}h2:after{content:"";display:block;width:.9in;height:.06in;margin-top:.12in;background:var(--teal)}h3{color:var(--navy);font-size:11pt;line-height:1.15;margin-bottom:.07in}p+p{margin-top:.09in}.kicker{color:var(--teal);font-size:8pt;font-weight:800;letter-spacing:.12em;text-transform:uppercase;margin-bottom:.09in}.lede{margin-top:.15in;max-width:6.65in;color:#344551;font-size:10.2pt;line-height:1.45}.small{font-size:7.7pt;color:var(--muted)}.micro{font-size:6.8pt;color:var(--muted)}.strong{font-weight:800;color:var(--navy)}.divider{height:1px;background:var(--line);margin:.17in 0}.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:.18in}.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:.13in}.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:.11in}.mt-1{margin-top:.12in}.mt-2{margin-top:.2in}.mt-3{margin-top:.28in}.card{background:#fff;border:1px solid var(--line);border-radius:7px;padding:.15in}.card.accent{border-top:4px solid var(--teal)}.card.warn{border-top:4px solid var(--gold)}.card.bad{border-top:4px solid var(--red)}.metric{border-left:4px solid var(--teal);padding:.03in 0 .04in .13in;min-height:.65in}.metric-value{font-size:19pt;font-weight:800;color:var(--navy);line-height:.98;letter-spacing:-.025em}.metric-label{margin-top:.07in;color:var(--muted);font-size:7pt;font-weight:700;text-transform:uppercase;letter-spacing:.045em}.callout{background:var(--navy);color:#fff;padding:.16in .18in;border-radius:7px}.callout h3{color:#fff}.callout p{color:#dce8ee}.note{background:#fff8e7;border-left:4px solid var(--gold);padding:.12in .14in;color:#584416}.insight{background:#e8f4f2;border-left:4px solid var(--teal);padding:.12in .14in}.risk{background:#f9eaea;border-left:4px solid var(--red);padding:.12in .14in}ul{margin:.07in 0 0 .17in;padding:0}li{margin-bottom:.045in}table{width:100%;border-collapse:collapse;font-size:7.8pt}th{background:var(--navy);color:#fff;text-align:left;font-weight:700;padding:.07in .08in}td{padding:.065in .08in;border-bottom:1px solid var(--line);vertical-align:top}tbody tr:nth-child(even){background:#f3f6f7}td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}.good{color:var(--good);font-weight:800}.warn-text{color:var(--warn);font-weight:800}.neutral{color:var(--muted);font-weight:800}.bar-row{display:grid;grid-template-columns:1.45in 1fr .55in;align-items:center;gap:.08in;margin-bottom:.075in;font-size:7.5pt}.bar-track{background:#e4ebee;height:.12in;border-radius:99px;overflow:hidden}.bar{height:100%;background:var(--teal);border-radius:99px}.bar-row b{text-align:right;color:var(--navy)}.score-row{display:grid;grid-template-columns:1.45in 1fr 1fr;gap:.09in;padding:.09in 0;border-bottom:1px solid var(--line)}.score-row .area{font-weight:800;color:var(--navy)}.empty{padding:.28in;background:var(--wash);border:1px dashed #b8c6cc;border-radius:7px;color:var(--muted);text-align:center}.source-list{font-size:7.2pt;line-height:1.35}.brand{font-size:8pt;font-weight:800;letter-spacing:.18em;text-transform:uppercase}
+h1,h2,h3,.metric-value,.big{font-family:Arial,"Noto Sans",sans-serif}h1,h2,h3,p{margin:0}h2{color:var(--navy);font-size:23pt;line-height:1.04;letter-spacing:-.025em}h2:after{content:"";display:block;width:.9in;height:.06in;margin-top:.12in;background:var(--teal)}h3{color:var(--navy);font-size:11pt;line-height:1.15;margin-bottom:.07in}p+p{margin-top:.09in}.kicker{color:var(--teal);font-size:8pt;font-weight:800;letter-spacing:.12em;text-transform:uppercase;margin-bottom:.09in}.lede{margin-top:.15in;max-width:6.65in;color:#344551;font-size:10.2pt;line-height:1.45}.small{font-size:7.7pt;color:var(--muted)}.micro{font-size:6.8pt;color:var(--muted)}.strong{font-weight:800;color:var(--navy)}.divider{height:1px;background:var(--line);margin:.17in 0}.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:.18in}.grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:.13in}.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:.11in}.mt-1{margin-top:.12in}.mt-2{margin-top:.2in}.mt-3{margin-top:.28in}.card{background:#fff;border:1px solid var(--line);border-radius:7px;padding:.15in}.card.accent{border-top:4px solid var(--teal)}.card.warn{border-top:4px solid var(--gold)}.card.bad{border-top:4px solid var(--red)}.metric{border-left:4px solid var(--teal);padding:.03in 0 .04in .13in;min-height:.65in}.metric-value{font-size:19pt;font-weight:800;color:var(--navy);line-height:.98;letter-spacing:-.025em}.metric-label{margin-top:.07in;color:var(--muted);font-size:7pt;font-weight:700;text-transform:uppercase;letter-spacing:.045em}.callout{background:var(--navy);color:#fff;padding:.16in .18in;border-radius:7px}.callout h3{color:#fff}.callout p{color:#dce8ee}.note{background:#fff8e7;border-left:4px solid var(--gold);padding:.12in .14in;color:#584416}.insight{background:#e8f4f2;border-left:4px solid var(--teal);padding:.12in .14in}.risk{background:#f9eaea;border-left:4px solid var(--red);padding:.12in .14in}ul{margin:.07in 0 0 .17in;padding:0}li{margin-bottom:.045in}table{width:100%;border-collapse:collapse;font-size:7.8pt}th{background:var(--navy);color:#fff;text-align:left;font-weight:700;padding:.07in .08in}td{padding:.065in .08in;border-bottom:1px solid var(--line);vertical-align:top}tbody tr:nth-child(even){background:#f3f6f7}td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}.good{color:var(--good);font-weight:800}.warn-text{color:var(--warn);font-weight:800}.neutral{color:var(--muted);font-weight:800}.bar-row{display:grid;grid-template-columns:1.45in 1fr .55in;align-items:center;gap:.08in;margin-bottom:.075in;font-size:7.5pt}.bar-track{background:#e4ebee;height:.12in;border-radius:99px;overflow:hidden}.bar{height:100%;background:var(--teal);border-radius:99px}.bar-row b{text-align:right;color:var(--navy)}.score-row{display:grid;grid-template-columns:1.45in 1fr 1fr;gap:.09in;padding:.09in 0;border-bottom:1px solid var(--line)}.score-row .area{font-weight:800;color:var(--navy)}.empty{padding:.28in;background:var(--wash);border:1px dashed #b8c6cc;border-radius:7px;color:var(--muted);text-align:center}.source-list{font-size:7.2pt;line-height:1.35}.source-list--colunas{columns:2;column-gap:.24in}.source-list--colunas li{break-inside:avoid}.brand{font-size:8pt;font-weight:800;letter-spacing:.18em;text-transform:uppercase}
 .campo-secao{margin-bottom:.16in}.campo-secao h3{color:var(--teal);font-size:8.4pt;letter-spacing:.09em;text-transform:uppercase;margin-bottom:.08in;border-bottom:1px solid var(--line);padding-bottom:.04in}.campo-item{margin-bottom:.105in;break-inside:avoid}.campo-q{font-size:8.6pt;line-height:1.32;color:var(--ink)}.campo-ctx{font-size:7pt;line-height:1.3;color:var(--muted);font-style:italic;margin-top:.02in;padding-left:.09in;border-left:2px solid var(--wash)}.campo-linha{margin-top:.055in;border-bottom:1px dotted #b9c6cc;height:.13in}
 
 /* Grade editorial única: o mesmo eixo horizontal rege capa, miolo e rodapé. */
@@ -4197,6 +4392,6 @@ ${paginaConformidade(model, prox())}
 
 <section class="page content-page">${header("Plano de ação")}<main class="page-body"><div class="kicker">Próximo ciclo</div><h2>${priorities.length === 1 ? "O movimento que converte recurso em entrega" : `${priorities.length} movimentos que convertem recurso em entrega`}</h2><p class="lede">Cada linha responde a um achado da página 2, na mesma ordem de urgência, e traz o prazo que a norma ou o calendário da fonte impõe — não uma estimativa de esforço. A validação com a equipe local é o passo seguinte, não um substituto.</p><table class="mt-3"><thead><tr><th>#</th><th>Movimento</th><th>Responde a</th><th>Prazo</th></tr></thead><tbody>${priorities.map((item,index)=>`<tr><td>${index+1}</td><td><b>${esc(item.title)}</b></td><td>${esc(item.reason)}</td><td>${esc(item.horizon)}</td></tr>`).join("")}</tbody></table><div class="grid-2 mt-3"><div class="card accent"><h3>Ritual de acompanhamento</h3><ul><li>Painel mensal com responsáveis.</li><li>Evidência documental por ação.</li><li>Revisão trimestral de metas.</li><li>Comunicação executiva em uma página.</li></ul></div><div class="card"><h3>Critério de sucesso</h3><p>Cada real adicional deve estar conectado a uma entrega verificável e a um indicador de acesso, qualidade, eficiência ou equidade.</p></div></div></main>${footer(prox(),"Síntese técnica gerada pelo Sync")}</section>
 
-<section class="page content-page">${header("Fontes e conclusão")}<main class="page-body"><div class="kicker">Rastreabilidade</div><h2>Um raio-X útil é atualizado, verificável e acionável</h2><p class="lede">Este documento registra a posição disponível em ${esc(date)}. Novas publicações oficiais podem alterar valores e leituras.</p><div class="grid-2 mt-3"><div class="card accent"><h3>Fontes consultadas</h3><ul class="source-list">${sourceRows}</ul></div><div class="card"><h3>Observações automáticas</h3>${noteRows ? `<ul class="source-list">${noteRows}</ul>` : `<p class="small">Nenhuma observação operacional adicional foi registrada pelas integrações.</p>`}</div></div><div class="callout mt-3"><h3>Conclusão</h3><p>${esc(model.municipality)} dispõe agora de uma leitura comparativa replicável. O próximo passo é validar os dados com as áreas responsáveis e transformar as prioridades em plano de execução com dono, prazo, evidência e indicador.</p></div><div class="note mt-3"><b>Aviso técnico:</b> o relatório é informativo e não substitui demonstrações contábeis, parecer jurídico, auditoria ou validação dos órgãos oficiais.</div></main>${footer(prox(),`Gerado pelo Sync em ${shortDate}`)}</section>
+<section class="page content-page">${header("Fontes e conclusão")}<main class="page-body"><div class="kicker">Rastreabilidade</div><h2>Um raio-X útil é atualizado, verificável e acionável</h2><p class="lede">Este documento registra a posição disponível em ${esc(date)}. Novas publicações oficiais podem alterar valores e leituras.</p><div class="mt-3"><div class="card accent"><h3>Fontes consultadas</h3><ul class="source-list source-list--colunas">${linhasFontes(model)}</ul></div><div class="card mt-1"><h3>Observações automáticas</h3>${noteRows ? `<ul class="source-list">${noteRows}</ul>` : `<p class="small">Nenhuma observação operacional adicional foi registrada pelas integrações.</p>`}</div></div><div class="callout mt-3"><h3>Conclusão</h3><p>${esc(model.municipality)} dispõe agora de uma leitura comparativa replicável. O próximo passo é validar os dados com as áreas responsáveis e transformar as prioridades em plano de execução com dono, prazo, evidência e indicador.</p></div><div class="note mt-3"><b>Aviso técnico:</b> o relatório é informativo e não substitui demonstrações contábeis, parecer jurídico, auditoria ou validação dos órgãos oficiais.</div></main>${footer(prox(),`Gerado pelo Sync em ${shortDate}`)}</section>
 </body></html>`;
 }

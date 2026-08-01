@@ -65,6 +65,14 @@ export interface IbgeCidadeIndicators {
  * SIDRA API: returns JSON array where [0] is the header row and [1]+ are data rows.
  * Each data row has a `V` field with the value and `D2C` (period code like "2022").
  * Returns null if the value is "-", "...", "X", or missing.
+ *
+ * NOTE: "-" is *not* absence in IBGE notation — it means exactly zero (see
+ * `core/lib/notacao-ibge.ts`). Collapsing it into null is deliberate here and
+ * only here: this function reads population, GDP and territorial area, none of
+ * which can legitimately be zero for a municipality, so both readings coincide
+ * and swapping a tested behaviour would buy nothing. Do not copy this rule into
+ * a reader where zero is a plausible value — use `numeroIbge` instead. That
+ * mistake printed "N/D" for the rural population of every state capital.
  */
 async function fetchSidraValue(
   tableId: string,

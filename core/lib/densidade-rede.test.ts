@@ -173,10 +173,29 @@ describe("população rural (SIDRA 10211)", () => {
     expect(lerPopulacaoRural(soUrbana)).toBeNull();
   });
 
-  it("trata o marcador de sem-dado do SIDRA como ausência", () => {
-    const comTraco = structuredClone(RESPOSTA_SIDRA);
-    comTraco[0].resultados[1].series[0].serie["2022"] = "-";
-    expect(lerPopulacaoRural(comTraco)).toBeNull();
+  // A versão anterior deste teste exigia que `"-"` virasse ausência, e isso
+  // **fixava um defeito**: na notação do IBGE `"-"` é "dado numérico igual a
+  // zero não resultante de arredondamento". Quem tem população rural zero — toda
+  // capital, Recife entre elas — recebia `null` e a folha de densidade imprimia
+  // "N/D" onde o número existe e é zero.
+  it("lê o traço do SIDRA como zero, não como ausência", () => {
+    const semRural = structuredClone(RESPOSTA_SIDRA);
+    semRural[0].resultados[1].series[0].serie["2022"] = "-";
+
+    const lido = lerPopulacaoRural(semRural);
+    expect(lido).not.toBeNull();
+    expect(lido?.rural).toBe(0);
+    expect(lido?.urbana).toBe(11397);
+    expect(lido?.total).toBe(11397);
+    expect(lido?.pctRural).toBe(0);
+  });
+
+  it("trata os marcadores de indisponibilidade do SIDRA como ausência", () => {
+    for (const marcador of ["...", "..", "x", "X", ""]) {
+      const indisponivel = structuredClone(RESPOSTA_SIDRA);
+      indisponivel[0].resultados[1].series[0].serie["2022"] = marcador;
+      expect(lerPopulacaoRural(indisponivel), `marcador ${JSON.stringify(marcador)}`).toBeNull();
+    }
   });
 
   it("ignora payload que não é a lista esperada", () => {
