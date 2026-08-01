@@ -49,6 +49,12 @@ export async function POST(request: NextRequest) {
     if (requiresMunicipio && codigoIbge) {
       const exercicio = new Date().getFullYear();
 
+      /* O IBGE resolve município por nome e UF, não por código — então ele
+         depende do resultado das outras consultas e não pode entrar no mesmo
+         `Promise.all`. A versão anterior tentava: lia `receitasAtuais` dentro
+         do próprio array que a declarava, o que é ReferenceError na hora em
+         que este trecho roda. Duas etapas: o que é paralelo, e depois o que
+         depende do nome. */
       const [
         receitasAtuais,
         receitasHistoricas,
@@ -56,7 +62,6 @@ export async function POST(request: NextRequest) {
         censoRecord,
         idebRecord,
         prefeitoRecord,
-        ibgeIndicators,
         siconfiFiscal,
       ] = await Promise.all([
         getFundebReceitasOficiais(codigoIbge, exercicio),
@@ -65,23 +70,15 @@ export async function POST(request: NextRequest) {
         getInepCensoMunicipalRecord(codigoIbge),
         getIdebMunicipalRecord(codigoIbge),
         getTsePrefeitoRecord(codigoIbge),
-        receitasAtuais != null
-          ? getIbgeCidadeIndicators(
-              receitasAtuais?.municipio ?? "",
-              receitasAtuais?.uf ?? "",
-            )
-          : Promise.resolve(null),
         getSiconfiFiscalRecord(codigoIbge, exercicio),
       ]);
 
-      // Re-resolve IBGE indicators if receitasAtuais was null at promise creation
-      let resolvedIbgeIndicators = ibgeIndicators;
-      if (!resolvedIbgeIndicators && censoRecord) {
-        resolvedIbgeIndicators = await getIbgeCidadeIndicators(
-          censoRecord.municipio,
-          censoRecord.uf,
-        );
-      }
+      const nomeParaIbge = receitasAtuais?.municipio ?? censoRecord?.municipio;
+      const ufParaIbge = receitasAtuais?.uf ?? censoRecord?.uf;
+      const resolvedIbgeIndicators =
+        nomeParaIbge && ufParaIbge
+          ? await getIbgeCidadeIndicators(nomeParaIbge, ufParaIbge)
+          : null;
 
       municipioNome =
         receitasAtuais?.municipio ?? censoRecord?.municipio ?? prefeitoRecord?.municipio;

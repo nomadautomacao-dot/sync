@@ -3,7 +3,15 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   output: "standalone",
   allowedDevOrigins: ["localhost", "127.0.0.1", "192.168.100.170"],
-  typescript: { ignoreBuildErrors: true },
+  /* O compilador é gate, não sugestão.
+   *
+   * Isto esteve ligado, e o custo apareceu inteiro de uma vez: 59 erros
+   * acumulados, entre eles uma variável lida antes de existir na rota de slides
+   * — `ReferenceError` garantido em execução — e um recurso inteiro (o
+   * "relatório dirigido") que um refactor quebrou sem que nada avisasse, porque
+   * o build continuou passando. Se voltar a ficar vermelho, o conserto é o
+   * erro, não esta linha. */
+  typescript: { ignoreBuildErrors: false },
   serverExternalPackages: ["pdfjs-dist", "playwright", "playwright-core"],
   async headers() {
     return [

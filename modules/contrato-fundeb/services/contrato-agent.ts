@@ -272,7 +272,9 @@ export async function executeContratoAgent(
     processoNumero: computed.processoNumero,
     inexigibilidadeNumero: computed.inexigibilidadeNumero,
     contratoNumero: computed.contratoNumero,
-    exercicio,
+    // O contrato guarda o exercício como texto — é campo de documento, entra
+    // no DOCX como está. Aqui ele ainda é número, vindo do cálculo.
+    exercicio: String(exercicio),
     baseLegal: defaults.baseLegal,
     dataProcesso: computed.dataProcesso,
 

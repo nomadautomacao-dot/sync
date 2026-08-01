@@ -30,5 +30,11 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "projetoapi"]
+  "exclude": [
+    "node_modules",
+    "projetoapi",
+    "functions",
+    "dist-desktop",
+    "desktop/.chromium"
+  ]
 }

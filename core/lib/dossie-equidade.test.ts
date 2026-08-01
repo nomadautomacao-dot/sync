@@ -52,7 +52,7 @@ describe("série lida como cadastro antes de composição", () => {
   it("os percentuais de um ano somam 100", () => {
     const h = getCorRacaHistorico(MANAUS)!;
     for (const a of montarSerie(h.publica, "publica").anos) {
-      const soma = Object.values(a.pct).reduce((t, v) => t + (v ?? 0), 0);
+      const soma = Object.values(a.pct).reduce<number>((t, v) => t + (v ?? 0), 0);
       expect(soma).toBeGreaterThan(99);
       expect(soma).toBeLessThan(101);
     }

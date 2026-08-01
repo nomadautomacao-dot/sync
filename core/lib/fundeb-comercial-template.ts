@@ -97,10 +97,18 @@ interface ComercialPdfData {
     ensinoFundamental?: number;
     eja?: number;
     educacaoEspecial?: number;
+    /* Espelha `dadosPublicosTotal` do Censo (modules/levantamento-fundeb/
+       types.ts). A cópia local tinha só os três primeiros campos, e o template
+       já lia `fundamentalMedio` — o dado chegava em tempo de execução e só o
+       tipo não sabia. */
     dadosPublicosTotal?: {
       totalEscolas: number;
       totalMatriculas: number;
       totalDocentes: number;
+      infantil?: number;
+      fundamentalMedio?: number;
+      eja?: number;
+      especial?: number;
     };
   };
 

@@ -22,7 +22,9 @@ export async function POST(request: NextRequest) {
 
     const { buffer, filename } = await gerarPropostaDocx(data);
 
-    return new NextResponse(buffer, {
+    // `Buffer` do Node não é um corpo de resposta válido para a Web API; a
+    // view sobre os mesmos bytes é, e não copia nada.
+    return new NextResponse(new Uint8Array(buffer), {
       status: 200,
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",

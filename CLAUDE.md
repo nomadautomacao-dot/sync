@@ -174,10 +174,8 @@ cliente; as rotas apenas verificam o ID token. Ver seção 3.2.
 |------|--------|-----------|
 | `/api/modulos/levantamento-fundeb/[codigoIbge]` | GET | Dados FUNDEB por código IBGE |
 | `/api/modulos/levantamento-fundeb/autonomo` | GET | Levantamento autônomo |
-| `/api/modulos/levantamento-fundeb/batch` | POST | Levantamento em lote |
 | `/api/modulos/levantamento-fundeb/censo-inep` | GET | Dados do Censo INEP |
 | `/api/modulos/levantamento-fundeb/pdf` | POST | Geração de PDF (Python/ReportLab) |
-| `/api/modulos/levantamento-fundeb/relatorio-dirigido` | POST | Relatório dirigido com IA |
 | `/api/modulos/levantamento-fundeb/raio-x` | POST | Raio-X municipal em PDF (42 páginas) |
 | `/api/modulos/levantamento-fundeb/oficio-documentos` | POST | Ofício à prefeitura + questionário (4 páginas) |
 | `/api/modulos/dossies/escolas` | GET/POST | Dossiê das Escolas — um bloco por unidade da rede |
@@ -251,7 +249,6 @@ account fica em `FIREBASE_SERVICE_ACCOUNT` (`.env.local`), nunca versionada.
 | `fundeb-fnde.ts` (12KB) | Integração com dados FNDE (repasses FUNDEB) |
 | `fundeb-estimate.ts` (10KB) | Cálculos de estimativa FUNDEB |
 | `fundeb-comparative.ts` (19KB) | Análise comparativa entre municípios |
-| `fundeb-directed-report.ts` (26KB) | Geração de relatório dirigido com IA/Gemini |
 | `fnde-public.ts` (20KB) | Dados públicos do FNDE |
 | `fnde-obras.ts` (17KB) | Obras FNDE |
 | `ibge-cidade-indicators.ts` | Indicadores de cidade via API IBGE |
@@ -563,6 +560,11 @@ No fluxo normal não se usa nenhum dos dois.
 - **Código:** inglês | **Labels/dados:** português | **Docs:** português | **Commits:** inglês (Conventional Commits)
 
 ### Padrões
+- **O compilador é gate.** `next.config.ts` tem `ignoreBuildErrors: false`, e
+  build vermelho não sobe. Isso já esteve desligado: acumularam-se 59 erros, um
+  deles uma variável lida antes de existir (`ReferenceError` em execução) e um
+  recurso inteiro quebrado por um refactor sem que nada avisasse. Se voltar a
+  ficar vermelho, o conserto é o erro
 - Validação: Zod schemas em `core/domain/`
 - API routes: `getSessionUser()` obrigatório, Zod parse, audit log em writes
 - Estado de servidor: TanStack Query (`staleTime: 5min`). Estado de UI: `useState`
@@ -577,13 +579,103 @@ No fluxo normal não se usa nenhum dos dois.
 ### O que NÃO está implementado
 - Módulos: Terceirização, Formação, Atas, Tecnologia, RH, Financeiro — existem
   como chaves no `moduleCatalog` (a tela `/modulos` as exibe), sem rota nem tela
-- Testes de ponta a ponta na suíte (ela é de unidade/integração: 694 testes,
+- Testes de ponta a ponta na suíte (ela é de unidade/integração: 717 testes,
   Vitest). O caminho ponta a ponta existe fora dela, no smoke test — seção 7.1
 - **Staging separado de produção** — o deploy da `main` vai direto ao ar
 - Monitoramento de APM / tracing (Sentry, Axiom). O que existe é erro
   agrupado no Cloud Error Reporting — seção 7.2. Falta: alerta configurado
   (o Error Reporting captura, mas ninguém é notificado), métrica de latência,
   e o log estruturado nas rotas que não são de geração de relatório
+
+---
+
+## 10. App desktop (Electron)
+
+Uma janela sobre **o mesmo servidor** que roda no Cloud Run. Não há segunda
+interface nem segunda API: o `next.config.ts` já emite `output: "standalone"`,
+e o que muda é apenas quem hospeda o processo.
+
+### Por que existe
+
+Porque a máquina do consultor emite relatório melhor que o datacenter. Medido
+em 2026-07-31, mesmo município e mesmo código: **19 fontes vivas localmente
+contra 17 em produção**. O Portal da Transparência devolve 502/504 para o Cloud
+Run e responde a uma conexão comum. Somam-se o teto de 900s por requisição e o
+cold start de quem abre o app na frente do secretário.
+
+Os dois caminhos convivem: a nuvem continua sendo o deploy da `main`.
+
+### Arquitetura do pacote
+
+| Parte | Conteúdo |
+|---|---|
+| `app.asar` | Só `desktop/*.js` — o processo principal. `node_modules` fica de fora |
+| `Resources/servidor` | O `.next/standalone`, fora do asar: o servidor abre arquivos por caminho real |
+| `Resources/chromium` | O Chromium do Playwright, **nas duas variantes**. Sem ele o app abre e só quebra na primeira emissão |
+
+Sobre as duas variantes: `chromium.executablePath()` devolve o Chromium
+completo, mas `chromium.launch({ headless: true })` — o padrão, e o que os 14
+geradores usam — executa o `chromium_headless_shell`. Embarcar só o primeiro
+produz um app que abre, navega e falha na emissão com *"Executable doesn't
+exist"*. São 535 MB somadas; é o mesmo conjunto que `npx playwright install
+chromium` põe na imagem de produção, e igualar os dois evita diferença de
+renderização entre o PDF daqui e o da nuvem.
+
+| Arquivo | Papel |
+|---|---|
+| `desktop/main.js` | Janela, downloads, links externos, instância única |
+| `desktop/servidor.js` | Sobe o standalone em `127.0.0.1` numa **porta efêmera** e espera `/api/health` |
+
+O servidor sobe por `utilityProcess.fork`, **não** por `child_process.spawn`.
+Fazer `spawn(process.execPath, [server])` com `ELECTRON_RUN_AS_NODE=1` funciona,
+mas o macOS registra esse filho no LaunchServices e **um segundo ícone aparece
+no Dock** — com o nome "Global Sync" e a arte genérica de executável Unix, que
+mostra a palavra `exec`. Do lado do usuário parece que o app abriu duas vezes,
+uma delas quebrada. `utilityProcess` é a API feita para isso: filho Node, sem
+registro no Dock, mesmo V8 da janela, sem runtime separado embarcado.
+| `desktop/ambiente.js` | Monta o ambiente do filho a partir de uma **lista branca** |
+| `desktop/menu.js` | Menu nativo em português |
+| `scripts/desktop/preparar-servidor.mjs` | Completa o standalone e tira os segredos de dentro |
+| `scripts/desktop/gerar-icones.mjs` | `.icns`/`.ico` a partir de `public/global-sync-icon.png` |
+
+### Credenciais — fora do pacote, sempre
+
+`~/Library/Application Support/Global Sync/credenciais.env`. O menu
+**Global Sync → Credenciais…** cria o gabarito e abre.
+
+Ficam fora por dois motivos. O `next build` copia todo `.env*` para dentro do
+standalone, e um `.app` é um diretório que qualquer um descompacta — sairia com
+a service account do Firebase, que é acesso administrativo ao Firestore. E o
+`.env` local define `NODE_TLS_REJECT_UNAUTHORIZED=0`, que desliga a verificação
+de certificado do processo **inteiro**; o `preparar-servidor.mjs` apaga esses
+arquivos e o `ambiente.js` só deixa passar o que está na lista.
+
+### A lista que não pode divergir
+
+`COMPLEMENTOS` em `preparar-servidor.mjs` é **a mesma lista das linhas 68–99 do
+`Dockerfile`**: o que o rastreamento do Next não enxerga porque é aberto por
+caminho em tempo de execução. Item acrescentado num lugar e esquecido no outro
+faz o app divergir da nuvem numa funcionalidade só, em silêncio — foi assim que
+o `playwright-core` chegou sem `browsers.json` e nenhum PDF saía.
+
+### Comandos
+
+```bash
+npm run desktop:preparar    # build + completa o standalone + embarca o Chromium
+npm run desktop             # abre em desenvolvimento (usa o .env.local)
+npm run desktop:empacotar   # ícones + preparar + electron-builder → dist-desktop/
+```
+
+### O que falta
+
+- **Assinatura e notarização.** Construído e aberto nesta máquina, o app roda
+  sem atrito. Um `.dmg` enviado para outra pessoa esbarra no Gatekeeper
+- **Atualização automática.** Hoje uma versão nova exige reinstalar
+- **Python.** As 3 rotas que usam ReportLab (`levantamento-fundeb` pdf e
+  autônomo, e slides) dependem do Python do sistema; o pacote não o embarca. Não é
+  regressão — `reportlab` também não está instalado nesta máquina
+- **Ícone em alta.** A fonte tem 298×300. O dock fica nítido; a variante de
+  1024 sai interpolada. Um export maior da marca resolve sem tocar em código
 
 <!-- code-review-graph MCP tools -->
 ## MCP Tools: code-review-graph
