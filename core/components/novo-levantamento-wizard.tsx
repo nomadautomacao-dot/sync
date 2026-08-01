@@ -460,7 +460,6 @@ export function NovoLevantamentoWizard({ onClose }: NovoLevantamentoWizardProps)
               <Descriptions
                 column={1}
                 size="small"
-                bordered={false}
                 items={[
                   { key: "municipio", label: "Município", children: `${mun.nome} · ${mun.uf} · IBGE ${mun.ibge}` },
                   { key: "exercicio", label: "Exercício", children: EXERCICIOS[exercicioSel] },

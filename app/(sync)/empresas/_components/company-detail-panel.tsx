@@ -39,7 +39,7 @@ export function CompanyDetailPanel({ company, onClose }: CompanyDetailPanelProps
     <Drawer
       open={Boolean(company)}
       onClose={onClose}
-      width={450}
+      size={450}
       destroyOnHidden
       title={
         company && (

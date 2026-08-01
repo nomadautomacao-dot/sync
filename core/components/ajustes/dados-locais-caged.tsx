@@ -138,7 +138,7 @@ export function DadosLocaisCaged() {
     <Card
       title="Novo CAGED — dados locais"
       extra={
-        <Tag style={{ fontFamily: "var(--font-sync-mono)" }} bordered={false}>
+        <Tag style={{ fontFamily: "var(--font-sync-mono)" }} variant="filled">
           dev
         </Tag>
       }

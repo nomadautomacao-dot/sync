@@ -33,7 +33,7 @@ export function CityDetailPanel({ city, onClose, onSave }: CityDetailPanelProps)
     <Drawer
       open
       onClose={onClose}
-      width={450}
+      size={450}
       styles={{ body: { padding: 0 } }}
       title={
         <div>

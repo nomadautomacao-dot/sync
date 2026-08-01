@@ -263,7 +263,7 @@ export function SyncSidebar({ abertaNoMobile, aoFecharNoMobile }: SyncSidebarPro
         placement="left"
         open={abertaNoMobile}
         onClose={fecharNavegacaoMobile}
-        width={280}
+        size={280}
         aria-label="Barra lateral"
         styles={{ body: { padding: 0, display: "flex" } }}
       >

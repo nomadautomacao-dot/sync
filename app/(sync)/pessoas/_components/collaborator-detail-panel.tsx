@@ -34,7 +34,7 @@ export function CollaboratorDetailPanel({
     <Drawer
       open={Boolean(collaborator)}
       onClose={onClose}
-      width={450}
+      size={450}
       destroyOnHidden
       title={
         collaborator && (

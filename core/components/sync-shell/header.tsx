@@ -331,7 +331,7 @@ export function SyncHeader({
         {screens.xl && (
           <Tag
             icon={iconeStatus}
-            bordered={false}
+            variant="filled"
             onClick={() => {
               if (citiesError) return;
               setAlertasAbertos((open) => !open);
