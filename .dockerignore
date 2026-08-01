@@ -1,0 +1,44 @@
+# O que não entra no contexto de build da imagem.
+#
+# Não existia até 2026-07-31, e a falta apareceu ao empacotar o app desktop: o
+# `COPY . .` do `Dockerfile` leva o diretório inteiro, e o rastreamento do Next
+# ainda arrasta parte dele para dentro de `.next/standalone`. Resultado, num
+# `docker build` feito nesta máquina: `cloudrun.env.yaml` e `.env.local` dentro
+# da imagem — com `NEXTAUTH_SECRET`, `GOOGLE_CLIENT_SECRET` e a service account.
+#
+# As imagens de produção escapam porque o Cloud Build clona do git, e esses
+# arquivos são gitignorados. Mas "está seguro porque ninguém constrói local"
+# não é uma garantia, é uma coincidência — e o `CLAUDE.md` documenta o
+# `docker build` local como comando normal.
+#
+# Além da segurança, encurta o build: sem isto o daemon recebe `node_modules`,
+# `.next` e o histórico do git a cada execução.
+
+# Saídas de build e controle de versão
+node_modules
+.next
+.git
+.gitignore
+dist-desktop
+
+# Artefatos do app desktop — o Chromium sozinho tem 344 MB
+desktop/.chromium
+desktop/icones
+
+# Credenciais.
+#
+# `.env.production` fica de fora desta lista **de propósito**: ele é versionado
+# e o build precisa dele. As variáveis `NEXT_PUBLIC_FIREBASE_*` são embutidas
+# em tempo de `next build`, não lidas em execução — sem esse arquivo no
+# contexto, a imagem sobe e o login simplesmente não funciona, que foi o
+# defeito de produção corrigido em 2026-07-31.
+.env
+.env.local
+.env.*.local
+cloudrun.env.yaml
+
+# Ruído local
+*.log
+.DS_Store
+.claude
+.impeccable

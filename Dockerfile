@@ -13,6 +13,13 @@ COPY package.json package-lock.json* ./
 COPY kit_padrao_pdf_rocha_prime/requirements.txt ./kit_padrao_pdf_rocha_prime/requirements.txt
 
 # Install dependencies
+#
+# `electron` e `electron-builder` são devDependencies do app desktop (seção 10
+# do CLAUDE.md) e o `npm ci` as instala junto. O binário do Electron tem mais de
+# 100 MB e é baixado do GitHub no postinstall — no contêiner ele não serve para
+# nada, e um download que falha derrubaria o build, que aqui é o deploy de
+# produção. A variável pula só o binário; o pacote continua resolvendo.
+ENV ELECTRON_SKIP_BINARY_DOWNLOAD=1
 RUN npm ci
 RUN python3 -m pip install --no-cache-dir --break-system-packages \
     -r kit_padrao_pdf_rocha_prime/requirements.txt

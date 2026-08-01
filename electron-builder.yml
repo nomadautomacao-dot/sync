@@ -1,0 +1,68 @@
+# Empacotamento do app desktop — ver `desktop/main.js` para o porquê dele existir.
+#
+# O pacote tem três partes, e a separação entre elas é intencional:
+#
+#   app.asar          o processo principal do Electron. Só `desktop/*.js`.
+#   Resources/servidor  o `.next/standalone` — o mesmo servidor do Cloud Run.
+#   Resources/chromium  o Chromium do Playwright, sem o qual nenhum PDF sai.
+#
+# O que **não** está em lugar nenhum aqui: credencial. Elas ficam em
+# `~/Library/Application Support/Global Sync/credenciais.env`, fora do pacote,
+# e `scripts/desktop/preparar-servidor.mjs` apaga todo `.env` que o `next build`
+# tenha copiado para dentro do standalone.
+
+appId: br.com.globalcompany.sync
+productName: Global Sync
+copyright: Global Company Consultorias
+
+directories:
+  output: dist-desktop
+  buildResources: desktop/icones
+
+# Lista fechada, e `node_modules` fora. As dependências do `package.json` são
+# as do Next — `next`, `firebase`, `playwright`, `react`. O processo principal
+# não usa nenhuma delas (só módulos nativos do Electron e os arquivos ao lado),
+# e o servidor traz as suas próprias dentro do standalone. Sem esta exclusão o
+# asar levaria centenas de MB de cópia duplicada.
+# Lista fechada, e `node_modules` fora. As dependências do `package.json` são as
+# do Next — `next`, `firebase`, `playwright`, `react`. O processo principal não
+# usa nenhuma delas (só módulos nativos do Electron e os arquivos ao lado), e o
+# servidor traz as suas próprias. Sem esta exclusão o asar passa de 2 MB para
+# 499 MB de cópia duplicada — medido.
+files:
+  - desktop/**/*
+  - "!desktop/.chromium"
+  - package.json
+  - "!node_modules"
+
+# O servidor e o Chromium **não** entram por `extraResources`, e sim pelo gancho
+# abaixo. O `extraResources` descarta `node_modules` e diretórios que começam
+# com ponto — justo `node_modules/` e `.next/`, sem os quais o pacote abre e só
+# quebra na primeira emissão. `filter` não desfaz essa exclusão. Ver
+# `scripts/desktop/pos-empacotamento.js`.
+afterPack: scripts/desktop/pos-empacotamento.js
+
+# Não há dependência nativa no processo principal; reconstruir só gastaria
+# minutos de build.
+npmRebuild: false
+
+mac:
+  icon: desktop/icones/icon.icns
+  category: public.app-category.business
+  target:
+    - target: dmg
+      arch: [arm64]
+  # Sem certificado de desenvolvedor. Construído e aberto nesta máquina, o app
+  # roda sem atrito — o Gatekeeper só reclama do que veio com atributo de
+  # quarentena, isto é, baixado. No dia em que o instalador for para a equipe,
+  # assinar e notarizar deixa de ser opcional.
+  identity: null
+
+win:
+  icon: desktop/icones/icon.ico
+  target: nsis
+
+linux:
+  icon: desktop/icones/icon.png
+  target: AppImage
+  category: Office

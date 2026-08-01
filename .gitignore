@@ -96,3 +96,9 @@ firebase-debug.log
 opencode.jsonc
 .claude/skills/
 .impeccable/
+
+# App desktop — tudo derivado: o ícone sai de public/global-sync-icon.png,
+# o Chromium sai do cache do Playwright e o pacote sai dos dois.
+/dist-desktop/
+/desktop/icones/
+/desktop/.chromium/
