@@ -15,20 +15,22 @@ import {
   FolderArchiveIcon,
   SettingsIcon,
   PanelLeftCloseIcon,
+  PanelLeftOpenIcon,
   ChevronRightIcon,
-  CheckIcon,
-  AlertCircleIcon,
   HelpCircleIcon,
   XIcon,
 } from "lucide-react";
 
-import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/core/providers/auth-provider";
-import { getFirebaseDb } from "@/core/lib/firebase-client";
-import { listCities } from "@/core/lib/cities-firestore";
 
 interface ItemDeNavegacao {
   rotulo: string;
+  /**
+   * Nome que aparece sob o ícone com a barra recolhida. A faixa tem 68px:
+   * o rótulo inteiro ("Caixa de entrada") não cabe, e sem nenhum rótulo a
+   * barra vira nove ícones cinza indistinguíveis — que foi a queixa.
+   */
+  rotuloCurto?: string;
   rota: string;
   icone: React.ElementType;
   contador?: string;
@@ -41,11 +43,12 @@ interface SyncSidebarProps {
 
 const NAV_ITEMS: readonly ItemDeNavegacao[] = [
   { rotulo: "Painel", rota: "/painel", icone: LayoutDashboardIcon },
-  { rotulo: "Caixa de entrada", rota: "/caixa", icone: InboxIcon },
+  { rotulo: "Caixa de entrada", rotuloCurto: "Caixa", rota: "/caixa", icone: InboxIcon },
+  { rotulo: "Cidades", rota: "/cidades", icone: MapPinnedIcon },
   { rotulo: "Pipeline", rota: "/pipeline", icone: TrendingUpIcon },
   { rotulo: "Empresas", rota: "/empresas", icone: Building2Icon },
   { rotulo: "Pessoas", rota: "/pessoas", icone: UsersIcon },
-  { rotulo: "Documentos", rota: "/documentos", icone: FolderArchiveIcon },
+  { rotulo: "Documentos", rotuloCurto: "Docs", rota: "/documentos", icone: FolderArchiveIcon },
   { rotulo: "Módulos", rota: "/modulos", icone: BoxesIcon },
   { rotulo: "Ajustes", rota: "/ajustes", icone: SettingsIcon },
 ];
@@ -72,22 +75,6 @@ export function SyncSidebar({ abertaNoMobile, aoFecharNoMobile }: SyncSidebarPro
   const [recolhida, setRecolhida] = useState(false);
   const [ajudaAberta, setAjudaAberta] = useState(false);
 
-  const {
-    data: cities = [],
-    isPending: cidadesCarregando,
-    isError: cidadesComErro,
-    isFetching: cidadesAtualizando,
-    refetch: recarregarCidades,
-  } = useQuery({
-    queryKey: ["sidebar-cities-real", user?.groupId],
-    queryFn: async () => {
-      if (!user?.groupId) return [];
-      const db = getFirebaseDb();
-      return await listCities(db, user.groupId);
-    },
-    enabled: !!user?.groupId,
-  });
-
   useEffect(() => {
     const abrirAjudaPorAtalho = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -106,10 +93,6 @@ export function SyncSidebar({ abertaNoMobile, aoFecharNoMobile }: SyncSidebarPro
   }, []);
 
   const compacta = recolhida && !abertaNoMobile;
-  const cidadesAtivas = pathname === "/cidades" || pathname.startsWith("/cidades/");
-  const consultaCidadesPendente = Boolean(user?.groupId) && cidadesCarregando;
-  const cidadesCount = cities.length;
-  const cidadesCountLabel = `${cidadesCount} ${cidadesCount === 1 ? "cidade" : "cidades"}`;
   const fecharNavegacaoMobile = () => {
     aoFecharNoMobile();
     setAjudaAberta(false);
@@ -146,11 +129,14 @@ export function SyncSidebar({ abertaNoMobile, aoFecharNoMobile }: SyncSidebarPro
         {/* ── Topo: Marca / Logo ────────────────────────────────────────── */}
         <div className="flex shrink-0 items-center justify-between px-1">
           {compacta ? (
+            // Só o logo aqui não dizia que a barra volta a abrir. No passar do
+            // mouse ele cede lugar ao ícone de expandir, que diz.
             <button
               type="button"
               onClick={() => setRecolhida(false)}
+              title="Expandir barra lateral"
               aria-label="Expandir barra lateral"
-              className="mx-auto flex size-10 items-center justify-center rounded-xl border border-[#F0F1F5] bg-white p-0.5 shadow-2xs transition-transform hover:scale-105"
+              className="group/expandir mx-auto flex size-10 items-center justify-center rounded-xl border border-[#F0F1F5] bg-white p-0.5 shadow-2xs transition-transform hover:scale-105"
             >
               <Image
                 src="/global-sync-icon.png"
@@ -158,7 +144,11 @@ export function SyncSidebar({ abertaNoMobile, aoFecharNoMobile }: SyncSidebarPro
                 width={34}
                 height={34}
                 priority
-                className="size-8 shrink-0 rounded-md"
+                className="size-8 shrink-0 rounded-md group-hover/expandir:hidden"
+              />
+              <PanelLeftOpenIcon
+                aria-hidden="true"
+                className="hidden size-[18px] text-[#3B3F4A] group-hover/expandir:block"
               />
             </button>
           ) : (
@@ -226,14 +216,25 @@ export function SyncSidebar({ abertaNoMobile, aoFecharNoMobile }: SyncSidebarPro
                 title={compacta ? item.rotulo : undefined}
                 aria-label={compacta ? item.rotulo : undefined}
                 aria-current={ativo ? "page" : undefined}
-                className={`group flex h-11 items-center rounded-[12px] transition-colors duration-150 md:h-10 ${
-                  compacta ? "justify-center px-0" : "justify-between px-[10px]"
+                className={`group relative flex items-center rounded-[12px] transition-colors duration-150 ${
+                  compacta
+                    ? "flex-col justify-center gap-[3px] px-0.5 py-[7px]"
+                    : "h-11 justify-between px-[10px] md:h-10"
                 } ${
                   ativo
                     ? "bg-[#F2F1F7] text-[#16181D] font-semibold"
                     : "text-[#767A86] hover:bg-[#F2F1F7]"
                 }`}
               >
+                {/* Com a barra recolhida o fundo cinza sozinho é discreto demais
+                    para dizer onde se está; a marca na borda resolve de longe. */}
+                {compacta && ativo && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-[#16181D]"
+                  />
+                )}
+
                 <div className={`flex items-center ${compacta ? "justify-center" : "gap-[10px]"}`}>
                   <Icone
                     className={`size-[17px] shrink-0 transition-colors ${
@@ -245,6 +246,16 @@ export function SyncSidebar({ abertaNoMobile, aoFecharNoMobile }: SyncSidebarPro
                   )}
                 </div>
 
+                {compacta && (
+                  <span
+                    className={`max-w-full truncate text-[9px] leading-none tracking-[-0.1px] transition-colors ${
+                      ativo ? "font-semibold text-[#16181D]" : "text-[#8C909C] group-hover:text-[#16181D]"
+                    }`}
+                  >
+                    {item.rotuloCurto ?? item.rotulo}
+                  </span>
+                )}
+
                 {!compacta && item.contador && Number(item.contador) > 0 && (
                   <span className="rounded-[20px] bg-[#16181D] px-[7px] py-[2px] font-mono text-[10px] font-semibold text-white">
                     {item.contador}
@@ -254,134 +265,6 @@ export function SyncSidebar({ abertaNoMobile, aoFecharNoMobile }: SyncSidebarPro
             );
           })}
         </nav>
-
-        {/* ── Módulo Ativo Card ─────────────────────────────────────────── */}
-        {compacta && (
-          <Link
-            href="/cidades"
-            onClick={fecharNavegacaoMobile}
-            title={`Cidades · ${consultaCidadesPendente ? "carregando" : cidadesComErro ? "não foi possível atualizar" : cidadesCountLabel}`}
-            aria-label={`Abrir Cidades · ${consultaCidadesPendente ? "carregando quantidade" : cidadesComErro ? "quantidade indisponível" : cidadesCountLabel}`}
-            aria-current={cidadesAtivas ? "page" : undefined}
-            className={`relative mx-auto mt-2 flex size-11 shrink-0 items-center justify-center rounded-[14px] border border-white/95 bg-[linear-gradient(135deg,#EEE7F9_0%,#E2EDFA_100%)] text-[#3B3F4A] shadow-[0_8px_18px_rgba(67,71,96,.10)] transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-[0_10px_22px_rgba(67,71,96,.14)] ${
-              cidadesAtivas ? "ring-2 ring-[#16181D]/20 ring-offset-2" : ""
-            }`}
-          >
-            <MapPinnedIcon className="size-[18px]" />
-            <span
-              aria-hidden="true"
-              className={`absolute right-1.5 top-1.5 size-1.5 rounded-full ${
-                cidadesComErro
-                  ? "bg-[#E5484D]"
-                  : consultaCidadesPendente || cidadesAtualizando
-                    ? "animate-pulse bg-[#93B8F2]"
-                    : "bg-[#16181D]"
-              }`}
-            />
-          </Link>
-        )}
-
-        {!compacta && (
-          <div className="shrink-0 mt-2">
-            <div className="px-2 font-mono text-[9.5px] font-semibold tracking-[1.4px] text-[#A2A6B2] uppercase">
-              MÓDULO ATIVO
-            </div>
-            <div className="h-2" />
-
-            <div
-              style={{
-                padding: "12px",
-                boxShadow: cidadesAtivas
-                  ? "0 12px 26px rgba(67,71,96,.13)"
-                  : "0 8px 20px rgba(67,71,96,.08)",
-              }}
-              className={`rounded-[16px] border bg-[linear-gradient(135deg,rgba(238,231,249,.96)_0%,rgba(226,237,250,.96)_100%)] transition-shadow duration-200 ${
-                cidadesAtivas ? "border-white ring-1 ring-[#16181D]/10" : "border-white/95"
-              }`}
-            >
-              <div className="flex min-w-0 items-center gap-2.5">
-                <span className="relative flex size-8 shrink-0 items-center justify-center rounded-[11px] bg-white/75 shadow-[0_3px_10px_rgba(22,24,29,.06)]">
-                  <MapPinnedIcon className="size-4 text-[#3B3F4A]" />
-                  {cidadesAtivas && (
-                    <span
-                      aria-hidden="true"
-                      className="absolute -right-0.5 -top-0.5 size-2 rounded-full border-2 border-white bg-[#16181D]"
-                    />
-                  )}
-                </span>
-
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-[13px] font-bold tracking-[-0.2px] text-[#16181D]">
-                    Cidades
-                  </div>
-                  <div
-                    className={`mt-0.5 truncate text-[11px] ${
-                      cidadesComErro ? "font-medium text-[#991B1B]" : "text-[#5A5E6A]"
-                    }`}
-                  >
-                    {cidadesComErro
-                      ? "Não foi possível atualizar"
-                      : consultaCidadesPendente
-                        ? "Carregando carteira…"
-                        : cidadesAtivas
-                          ? "Carteira municipal em uso"
-                          : "Carteira municipal"}
-                  </div>
-                </div>
-
-                {cidadesComErro ? (
-                  <button
-                    type="button"
-                    onClick={() => void recarregarCidades()}
-                    aria-label="Tentar atualizar a quantidade de cidades novamente"
-                    title="Tentar novamente"
-                    className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#FFE5E5] text-[#991B1B] transition-colors hover:bg-[#F3C2C2]"
-                  >
-                    <AlertCircleIcon className="size-4" />
-                  </button>
-                ) : consultaCidadesPendente ? (
-                  <span
-                    role="status"
-                    aria-label="Carregando quantidade de cidades"
-                    className="flex h-7 w-[58px] shrink-0 items-center justify-center rounded-full bg-white/70"
-                  >
-                    <span className="h-2 w-7 animate-pulse rounded-full bg-[#D6D7DE]" />
-                  </span>
-                ) : (
-                  <span
-                    aria-live="polite"
-                    className="flex h-7 shrink-0 items-center justify-center rounded-full bg-white/70 px-2.5 font-mono text-[9px] font-semibold text-[#5A5E6A]"
-                  >
-                    {cidadesCountLabel}
-                  </span>
-                )}
-              </div>
-
-              {cidadesAtivas ? (
-                <div
-                  aria-current="page"
-                  className="mt-[11px] flex h-10 w-full items-center justify-between rounded-full bg-[#16181D] px-3.5 text-white shadow-[0_6px_16px_rgba(22,24,29,.14)]"
-                >
-                  <span className="truncate text-[11.5px] font-semibold">
-                    Você está em Cidades
-                  </span>
-                  <CheckIcon className="size-3.5 shrink-0 text-white/70" />
-                </div>
-              ) : (
-                <Link
-                  href="/cidades"
-                  onClick={fecharNavegacaoMobile}
-                  className="mt-[11px] flex h-10 w-full items-center justify-between rounded-full bg-[#16181D] px-3.5 text-white shadow-[0_6px_16px_rgba(22,24,29,.14)] transition-colors hover:bg-[#2C2F38] focus-visible:ring-2 focus-visible:ring-[#16181D]/30 focus-visible:ring-offset-2"
-                >
-                  <span className="truncate text-[11.5px] font-semibold">
-                    Abrir cidades
-                  </span>
-                  <ChevronRightIcon className="size-3.5 shrink-0 text-white/60" />
-                </Link>
-              )}
-            </div>
-          </div>
-        )}
 
         <div className={`shrink-0 ${compacta ? "h-3" : "h-4"}`} />
 
