@@ -34,7 +34,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR">
-      <body className={`${instrumentSans.variable} ${ibmPlexMono.variable} antialiased font-sans`}>
+      {/* As classes daqui eram do Tailwind. O que elas faziam — suavizar a
+          fonte e aplicar a família de interface — passou para `globals.css`;
+          o `className` continua só para expor as variáveis do `next/font`. */}
+      <body className={`${instrumentSans.variable} ${ibmPlexMono.variable}`}>
         {/* O Ant gera estilo em tempo de execução. Sem este registro, o
             servidor manda HTML sem CSS e a primeira tela pisca sem estilo
             antes de o JavaScript assumir. */}

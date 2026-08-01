@@ -1,349 +1,39 @@
-@import "tailwindcss";
-@import "tw-animate-css";
-
 /*
- * Tokens do "Console Soft" — direção glassmorphism com accent quase-preto,
- * neutros lavanda e cards glass. Fonte: `Console Soft.dc.html`.
+ * Base do documento — e só isso.
+ *
+ * Este arquivo tinha 349 linhas: o Tailwind inteiro, os tokens semânticos do
+ * shadcn, a paleta do "Console Soft" e as animações dos componentes
+ * decorativos. Nada disso existe mais. A aparência do produto vive em
+ * `core/design/tema-ant.ts`, aplicada pelo `ConfigProvider`, e o Ant injeta o
+ * próprio CSS em tempo de execução.
+ *
+ * O que sobra aqui é o que nenhum componente resolve: as duas famílias
+ * tipográficas, que o `next/font` expõe como variáveis no layout raiz, e a
+ * higiene mínima do documento.
+ *
+ * Se você veio acrescentar classe utilitária, pare: o lugar é o tema, ou o
+ * `style` do componente com token de `theme.useToken()`.
  */
 
-@custom-variant dark (&:is(.dark *));
-
-@theme inline {
-  --font-sans: var(--font-sync-sans);
-  --font-mono: var(--font-sync-mono);
-  --font-heading: var(--font-sync-sans);
-
-  /* shadcn semantic colors */
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-
-  /* shadcn sidebar */
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
-
-  /* shadcn charts — pastel gradients */
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
-
-  /* Velora animations */
-  --animate-marquee: marquee var(--duration, 40s) linear infinite;
-  --animate-marquee-vertical: marquee-vertical var(--duration, 40s) linear infinite;
-  --animate-shimmer: shimmer 2.5s linear infinite;
-  --animate-gradient: gradient 6s ease infinite;
-  --animate-orbit: orbit calc(var(--duration) * 1s) linear infinite;
-  --animate-aurora-1: aurora-1 14s ease-in-out infinite alternate;
-  --animate-aurora-2: aurora-2 18s ease-in-out infinite alternate;
-  --animate-aurora-3: aurora-3 22s ease-in-out infinite alternate;
-  --animate-meteor: meteor 5s linear infinite;
-  --animate-retro-grid: retro-grid 18s linear infinite;
-}
-
-/* ── Console Soft — Superfícies e tokens próprios ──────────────────────── */
-@theme {
-  /* Fundo — gradiente lavanda (fallback sólido para Tailwind) */
-  --color-scaffold: #ECEAF1;
-  --color-scaffold-from: #F0EEF5;
-  --color-scaffold-via: #E9E6F0;
-  --color-scaffold-to: #ECEAF1;
-
-  /* Superfícies glass */
-  --color-surface-subtle: #F7F6FA;
-  --color-surface-alt: #F2F1F7;
-  --color-surface-hover: #ECEBF2;
-
-  /* Glass tokens */
-  --color-glass-bg: rgba(255, 255, 255, 0.85);
-  --color-glass-bg-strong: rgba(255, 255, 255, 0.88);
-  --color-glass-border: rgba(255, 255, 255, 0.95);
-  --color-glass-shadow: rgba(22, 24, 29, 0.07);
-  --color-glass-shadow-strong: rgba(22, 24, 29, 0.16);
-
-  /* Bordas — mais suaves, quase invisíveis */
-  --color-line: #F0F1F5;
-  --color-line-strong: #ECEDF2;
-  --color-line-stronger: #D6D7DE;
-  --color-line-input: #ECEDF2;
-
-  /* Texto — neutros quentes-lavanda */
-  --color-title: #16181D;
-  --color-body: #3B3F4A;
-  --color-soft: #5A5E6A;
-  --color-muted: #767A86;
-  --color-dim: #A2A6B2;
-
-  /* Accent único — quase-preto */
-  --color-primary-strong: #16181D;
-  --color-primary-deep: #2C2F38;
-  --color-primary-light: #F2F1F7;
-  --color-primary-dim: #4A4E5A;
-
-  /* Semânticas — tons pastel suaves */
-  --color-success: #34C388;
-  --color-success-dot: #1F6A47;
-  --color-success-light: #DFF2E7;
-  --color-success-dark: #1F6A47;
-  --color-warning: #F0913F;
-  --color-warning-light: #FBF0D9;
-  --color-warning-border: #F5DDB5;
-  --color-warning-dark: #8A5A00;
-  --color-error: #E5484D;
-  --color-error-light: #FFE5E5;
-  --color-error-border: #F3C2C2;
-  --color-error-dark: #991B1B;
-
-  /* Gradientes pastel para pipeline/charts */
-  --color-stage-contrato: #F5A3B5;
-  --color-stage-contrato-to: #F7B99B;
-  --color-stage-proposta: #F7C77E;
-  --color-stage-proposta-to: #F5D89B;
-  --color-stage-estudo: #8FD3B6;
-  --color-stage-estudo-to: #A9DFC6;
-  --color-stage-contato: #93B8F2;
-  --color-stage-contato-to: #B5CDF6;
-  --color-stage-modulo: #C9A6EF;
-  --color-stage-modulo-to: #D9BFF5;
-
-  /* Geometria — Console Soft usa raios maiores */
-  --radius-control: 12px;
-  --radius-card: 16px;
-  --radius-card-lg: 18px;
-  --radius-chip: 14px;
-  --radius-pill: 20px;
-  --radius-pill-lg: 24px;
-  --radius-pill-xl: 28px;
-}
-
-/* ── :root — Console Soft light theme ───────────────────────────────────── */
 :root {
-  --radius: 0.75rem;
-
-  --background: #ECEAF1;
-  --foreground: #16181D;
-  --card: rgba(255, 255, 255, 0.88);
-  --card-foreground: #16181D;
-  --popover: rgba(255, 255, 255, 0.97);
-  --popover-foreground: #16181D;
-
-  --primary: #16181D;
-  --primary-foreground: #FFFFFF;
-
-  --brand: #16181D;
-  --brand-foreground: #FFFFFF;
-  --brand-from: #16181D;
-  --brand-via: #2C2F38;
-  --brand-to: #3B3F4A;
-
-  --secondary: #F2F1F7;
-  --secondary-foreground: #16181D;
-  --muted: #F2F1F7;
-  --muted-foreground: #767A86;
-  --accent: #F2F1F7;
-  --accent-foreground: #16181D;
-
-  --destructive: #E5484D;
-
-  --border: rgba(255, 255, 255, 0.95);
-  --input: #ECEDF2;
-  --ring: #16181D;
-
-  /* Charts — pastel gradients */
-  --chart-1: #F5A3B5;
-  --chart-2: #F7C77E;
-  --chart-3: #8FD3B6;
-  --chart-4: #93B8F2;
-  --chart-5: #C9A6EF;
-
-  --sidebar: rgba(255, 255, 255, 0.85);
-  --sidebar-foreground: #3B3F4A;
-  --sidebar-primary: #16181D;
-  --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #F2F1F7;
-  --sidebar-accent-foreground: #16181D;
-  --sidebar-border: rgba(255, 255, 255, 0.95);
-  --sidebar-ring: #16181D;
+  --font-sans: var(--font-sync-sans), system-ui, sans-serif;
+  --font-mono: var(--font-sync-mono), ui-monospace, monospace;
 }
 
-/* Dark theme removido — Console Soft é light-only. */
-
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply text-foreground;
-    margin: 0;
-    background: linear-gradient(170deg, #F0EEF5 0%, #E9E6F0 45%, #ECEAF1 100%);
-    min-height: 100vh;
-  }
+html,
+body {
+  margin: 0;
+  padding: 0;
 }
 
-:focus-visible {
-  outline: 2px solid var(--color-primary-strong);
-  outline-offset: 2px;
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-input::-ms-reveal,
-input::-webkit-credentials-auto-fill-button {
-  display: none;
-}
-
-/* ── Console Soft utilities ─────────────────────────────────────────────── */
-.glass-card {
-  background: rgba(255, 255, 255, 0.88);
-  border: 1px solid rgba(255, 255, 255, 0.95);
-  border-radius: 16px;
-  box-shadow: 0 10px 26px rgba(22, 24, 29, 0.05);
-}
-
-.glass-card-lg {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.95);
-  border-radius: 18px;
-  box-shadow: 0 14px 36px rgba(22, 24, 29, 0.07);
-}
-
-.glass-popover {
-  background: rgba(255, 255, 255, 0.97);
-  backdrop-filter: blur(14px);
-  border: 1px solid rgba(255, 255, 255, 1);
-  border-radius: 18px;
-  box-shadow: 0 24px 60px rgba(22, 24, 29, 0.18);
-}
-
-.btn-pill-primary {
-  background: #16181D;
-  color: #FFFFFF;
-  border-radius: 20px;
-  transition: background 0.18s ease;
-}
-.btn-pill-primary:hover {
-  background: #2C2F38;
-}
-
-.btn-pill-secondary {
-  background: #F2F1F7;
-  color: #3B3F4A;
-  border-radius: 20px;
-  transition: background 0.15s ease;
-}
-.btn-pill-secondary:hover {
-  background: #ECEBF2;
-}
-
-/* ── Keyframes ──────────────────────────────────────────────────────────── */
-@keyframes entrada {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-}
-
-@keyframes gsPulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: .35; transform: scale(.8); }
-}
-
-@keyframes gsRise {
-  from { opacity: 0; transform: translateY(14px); }
-  to { opacity: 1; transform: none; }
-}
-
-@keyframes gsGlow {
-  0%, 100% { opacity: .55; }
-  50% { opacity: .9; }
-}
-
-@keyframes marquee {
-  from { transform: translateX(0); }
-  to { transform: translateX(calc(-100% - var(--gap))); }
-}
-
-@keyframes marquee-vertical {
-  from { transform: translateY(0); }
-  to { transform: translateY(calc(-100% - var(--gap))); }
-}
-
-@keyframes shimmer {
-  from { background-position: 200% 0; }
-  to { background-position: -200% 0; }
-}
-
-@keyframes gradient {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-}
-
-@keyframes orbit {
-  0% { transform: rotate(calc(var(--angle) * 1deg)) translateY(calc(var(--radius) * -1px)) rotate(calc(var(--angle) * -1deg)); }
-  100% { transform: rotate(calc(var(--angle) * 1deg + 360deg)) translateY(calc(var(--radius) * -1px)) rotate(calc((var(--angle) * 1deg + 360deg) * -1)); }
-}
-
-@keyframes aurora-1 {
-  0% { transform: translate(-10%, -12%) scale(1); }
-  50% { transform: translate(12%, 8%) scale(1.25); }
-  100% { transform: translate(-6%, 14%) scale(0.95); }
-}
-
-@keyframes aurora-2 {
-  0% { transform: translate(12%, 10%) scale(1.1); }
-  50% { transform: translate(-14%, -6%) scale(0.9); }
-  100% { transform: translate(8%, -12%) scale(1.2); }
-}
-
-@keyframes aurora-3 {
-  0% { transform: translate(0%, 16%) scale(0.95); }
-  50% { transform: translate(10%, -10%) scale(1.15); }
-  100% { transform: translate(-12%, 4%) scale(1); }
-}
-
-@keyframes meteor {
-  0% { transform: rotate(var(--meteor-angle, 215deg)) translateX(0); opacity: 1; }
-  70% { opacity: 1; }
-  100% { transform: rotate(var(--meteor-angle, 215deg)) translateX(-600px); opacity: 0; }
-}
-
-@keyframes retro-grid {
-  from { transform: translateY(-50%); }
-  to { transform: translateY(0); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .animate-meteor,
-  .animate-retro-grid,
-  .animate-marquee,
-  .animate-marquee-vertical,
-  .animate-shimmer,
-  .animate-gradient,
-  .animate-orbit,
-  .animate-aurora-1,
-  .animate-aurora-2,
-  .animate-aurora-3 {
-    animation: none;
-  }
+/* O `sonner` monta os avisos fora da árvore do Ant, então eles não herdam a
+   tipografia do tema. É a única regra que restou por causa disso. */
+.sync-toast {
+  font-family: var(--font-sans);
 }

@@ -29,7 +29,7 @@ export function CompanyKpis({
             </>
           }
           value={totalCompanies}
-          valueStyle={{ fontFamily: FONTE_NUMERO, fontWeight: 700 }}
+          styles={{ content: { fontFamily: FONTE_NUMERO, fontWeight: 700 } }}
         />
         <Typography.Text type="secondary" style={{ fontSize: 11 }}>
           Entidades do grupo
@@ -44,7 +44,7 @@ export function CompanyKpis({
             </>
           }
           value={totalEmployees}
-          valueStyle={{ fontFamily: FONTE_NUMERO, fontWeight: 700 }}
+          styles={{ content: { fontFamily: FONTE_NUMERO, fontWeight: 700 } }}
         />
         <Typography.Text type="secondary" style={{ fontSize: 11 }}>
           Total de posições vinculadas
@@ -59,7 +59,7 @@ export function CompanyKpis({
             </>
           }
           value={totalActiveModules}
-          valueStyle={{ fontFamily: FONTE_NUMERO, fontWeight: 700, color: token.colorPrimary }}
+          styles={{ content: { fontFamily: FONTE_NUMERO, fontWeight: 700, color: token.colorPrimary } }}
         />
         <Typography.Text type="secondary" style={{ fontSize: 11 }}>
           Acessos autorizados

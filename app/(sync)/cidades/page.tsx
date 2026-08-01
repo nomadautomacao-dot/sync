@@ -35,6 +35,9 @@ import { NewCityDialog } from "../pipeline/_components/new-city-dialog";
  * seletor de estágio, contador "12 de 17") agora é comportamento do componente.
  */
 
+/** A família monoespaçada carregada em `app/layout.tsx`. */
+const FONTE_MONO = "var(--font-sync-mono)";
+
 interface LinhaDaCarteira extends CityAccount {
   relatorios: number;
   documentos: number;
@@ -128,8 +131,8 @@ export default function CidadesPage() {
     sorter: (a, b) => a[campo] - b[campo],
     render: (_, linha) => (
       <span
-        className="font-mono"
         style={{
+          fontFamily: FONTE_MONO,
           color: linha[campo] > 0 ? token.colorText : token.colorTextQuaternary,
           fontWeight: linha[campo] > 0 ? 600 : 400,
         }}
@@ -146,7 +149,7 @@ export default function CidadesPage() {
       width: 72,
       search: false,
       sorter: (a, b) => a.uf.localeCompare(b.uf, "pt-BR"),
-      render: (_, linha) => <span className="font-mono">{linha.uf}</span>,
+      render: (_, linha) => <span style={{ fontFamily: FONTE_MONO }}>{linha.uf}</span>,
     },
     {
       title: "Município",
@@ -165,7 +168,7 @@ export default function CidadesPage() {
       width: 110,
       responsive: ["lg"],
       render: (_, linha) => (
-        <span className="font-mono" style={{ color: token.colorTextTertiary }}>
+        <span style={{ fontFamily: FONTE_MONO, color: token.colorTextTertiary }}>
           {linha.codigoIbge || "—"}
         </span>
       ),
@@ -207,7 +210,7 @@ export default function CidadesPage() {
       search: false,
       sorter: (a, b) => a.probability - b.probability,
       render: (_, linha) => (
-        <span className="font-mono">{linha.probability}%</span>
+        <span style={{ fontFamily: FONTE_MONO }}>{linha.probability}%</span>
       ),
     },
     colunaDeContagem("Relat.", "relatorios"),
@@ -270,17 +273,17 @@ export default function CidadesPage() {
             <Statistic
               title="Com relatório"
               value={comRelatorio}
-              valueStyle={{ fontSize: 16, fontFamily: "var(--font-sync-mono)" }}
+              styles={{ content: { fontSize: 16, fontFamily: "var(--font-sync-mono)" } }}
             />
             <Statistic
               title="Documentos"
               value={documents.length}
-              valueStyle={{ fontSize: 16, fontFamily: "var(--font-sync-mono)" }}
+              styles={{ content: { fontSize: 16, fontFamily: "var(--font-sync-mono)" } }}
             />
             <Statistic
               title="Em contrato"
               value={emContrato}
-              valueStyle={{ fontSize: 16, fontFamily: "var(--font-sync-mono)" }}
+              styles={{ content: { fontSize: 16, fontFamily: "var(--font-sync-mono)" } }}
             />
           </Space>,
           <Link key="kanban" href="/pipeline">

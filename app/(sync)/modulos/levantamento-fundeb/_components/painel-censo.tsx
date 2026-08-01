@@ -47,13 +47,13 @@ export function PainelCenso({ censo, perfil, projecao }: PainelCensoProps) {
                 <Statistic
                   title={<span style={{ fontSize: 11.5 }}>{indicador.rotulo}</span>}
                   value={indicador.valor}
-                  valueStyle={{
+                  styles={{ content: {
                     fontFamily: "var(--font-sync-mono)",
                     fontWeight: 600,
                     lineHeight: 1,
                     fontSize: indicador.destaque ? 24 : 15,
                     color: token.colorText,
-                  }}
+                  } }}
                 />
               </Col>
             ))}

@@ -31,7 +31,7 @@ export function PeopleKpis({
             </>
           }
           value={totalPeople}
-          valueStyle={{ fontFamily: FONTE_NUMERO, fontWeight: 700 }}
+          styles={{ content: { fontFamily: FONTE_NUMERO, fontWeight: 700 } }}
         />
         <Typography.Text type="secondary" style={{ fontSize: 11 }}>
           Cadastrados no sistema
@@ -46,7 +46,7 @@ export function PeopleKpis({
             </>
           }
           value={activeCount}
-          valueStyle={{ fontFamily: FONTE_NUMERO, fontWeight: 700 }}
+          styles={{ content: { fontFamily: FONTE_NUMERO, fontWeight: 700 } }}
         />
         <Typography.Text type="secondary" style={{ fontSize: 11 }}>
           Com auxílio/parceria ativa
@@ -61,7 +61,7 @@ export function PeopleKpis({
             </>
           }
           value={formatCompactCurrency(totalCommissionsYtd)}
-          valueStyle={{ fontFamily: FONTE_NUMERO, fontWeight: 700, color: token.colorPrimary }}
+          styles={{ content: { fontFamily: FONTE_NUMERO, fontWeight: 700, color: token.colorPrimary } }}
         />
         <Typography.Text type="secondary" style={{ fontSize: 11 }}>
           Acumulado do ano

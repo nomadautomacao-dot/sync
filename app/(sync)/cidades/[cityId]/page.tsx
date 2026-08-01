@@ -589,30 +589,30 @@ function OverviewTab({
                 <Statistic
                   title="relatórios"
                   value={reports.length}
-                  valueStyle={{
+                  styles={{ content: {
                     fontFamily: "var(--font-sync-mono)",
                     fontSize: 16,
-                  }}
+                  } }}
                 />
               </Col>
               <Col span={8}>
                 <Statistic
                   title="documentos"
                   value={documents.length}
-                  valueStyle={{
+                  styles={{ content: {
                     fontFamily: "var(--font-sync-mono)",
                     fontSize: 16,
-                  }}
+                  } }}
                 />
               </Col>
               <Col span={8}>
                 <Statistic
                   title="probabilidade"
                   value={`${city.probability}%`}
-                  valueStyle={{
+                  styles={{ content: {
                     fontFamily: "var(--font-sync-mono)",
                     fontSize: 16,
-                  }}
+                  } }}
                 />
               </Col>
             </Row>
@@ -966,11 +966,11 @@ function ReportPreview({ report }: { report: CityReport }) {
                 </Text>
               }
               value={formatCurrency(current)}
-              valueStyle={{
+              styles={{ content: {
                 color: token.colorTextLightSolid,
                 fontFamily: "var(--font-sync-mono)",
                 fontSize: 15,
-              }}
+              } }}
             />
           </Col>
           <Col span={8}>
@@ -981,11 +981,11 @@ function ReportPreview({ report }: { report: CityReport }) {
                 </Text>
               }
               value={formatCurrency(projected)}
-              valueStyle={{
+              styles={{ content: {
                 color: token.colorTextLightSolid,
                 fontFamily: "var(--font-sync-mono)",
                 fontSize: 15,
-              }}
+              } }}
             />
           </Col>
           <Col span={8}>
@@ -996,11 +996,11 @@ function ReportPreview({ report }: { report: CityReport }) {
                 </Text>
               }
               value={`+${formatCurrency(gain)}`}
-              valueStyle={{
+              styles={{ content: {
                 color: token.colorSuccess,
                 fontFamily: "var(--font-sync-mono)",
                 fontSize: 15,
-              }}
+              } }}
             />
           </Col>
         </Row>

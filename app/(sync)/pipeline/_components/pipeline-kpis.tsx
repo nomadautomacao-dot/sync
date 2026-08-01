@@ -52,11 +52,11 @@ export function PipelineKpis({
             </span>
           }
           value={formatCurrencyCompact(totalRevenue)}
-          valueStyle={{
+          styles={{ content: {
             color: "#FFFFFF",
             fontFamily: FONTE_NUMERO,
             fontWeight: 700,
-          }}
+          } }}
         />
         <Typography.Text style={{ color: "rgba(255,255,255,.6)", fontSize: 11 }}>
           Estimativa anual total ({formatCurrency(totalRevenue)})
@@ -71,7 +71,7 @@ export function PipelineKpis({
             </>
           }
           value={formatCurrencyCompact(weightedRevenue)}
-          valueStyle={{ fontFamily: FONTE_NUMERO, fontWeight: 700 }}
+          styles={{ content: { fontFamily: FONTE_NUMERO, fontWeight: 700 } }}
         />
         <Typography.Text type="secondary" style={{ fontSize: 11 }}>
           Ajustado pela probabilidade de cada estágio
@@ -86,11 +86,11 @@ export function PipelineKpis({
             </>
           }
           value={inactiveCities}
-          valueStyle={{
+          styles={{ content: {
             fontFamily: FONTE_NUMERO,
             fontWeight: 700,
             color: emDia ? token.colorText : token.colorWarningText,
-          }}
+          } }}
           suffix={
             <Tag color={emDia ? "success" : "warning"} style={{ marginLeft: 8 }}>
               {emDia ? "Em dia" : "Requer ação"}

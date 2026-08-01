@@ -519,10 +519,10 @@ export default function DocumentosPage() {
                         </Space>
                       }
                       value={metrics.total}
-                      valueStyle={{
+                      styles={{ content: {
                         fontFamily: "var(--font-sync-mono)",
                         fontWeight: 700,
-                      }}
+                      } }}
                     />
                     <Typography.Text type="secondary" style={{ fontSize: 11 }}>
                       no acervo
@@ -542,10 +542,10 @@ export default function DocumentosPage() {
                         </Space>
                       }
                       value={metrics.cities}
-                      valueStyle={{
+                      styles={{ content: {
                         fontFamily: "var(--font-sync-mono)",
                         fontWeight: 700,
-                      }}
+                      } }}
                     />
                     <Typography.Text type="secondary" style={{ fontSize: 11 }}>
                       de {cities.length} na carteira
@@ -563,10 +563,10 @@ export default function DocumentosPage() {
                         </Space>
                       }
                       value={metrics.contracts}
-                      valueStyle={{
+                      styles={{ content: {
                         fontFamily: "var(--font-sync-mono)",
                         fontWeight: 700,
-                      }}
+                      } }}
                     />
                     <Typography.Text type="secondary" style={{ fontSize: 11 }}>
                       anexados e gerados
@@ -584,12 +584,12 @@ export default function DocumentosPage() {
                         </Space>
                       }
                       value={metrics.expiring}
-                      valueStyle={{
+                      styles={{ content: {
                         fontFamily: "var(--font-sync-mono)",
                         fontWeight: 700,
                         color:
                           metrics.expiring > 0 ? token.colorWarningText : token.colorText,
-                      }}
+                      } }}
                     />
                     <Typography.Text type="secondary" style={{ fontSize: 11 }}>
                       nos próximos 90 dias

@@ -389,7 +389,7 @@ export function ContractGenerator({
                 <Statistic
                   value={camposLocalizados}
                   suffix={<span style={{ fontSize: 11, color: token.colorTextTertiary }}>/{result.stats.total}</span>}
-                  valueStyle={{ fontFamily: "var(--font-sync-mono)", fontSize: 18, textAlign: "right" }}
+                  styles={{ content: { fontFamily: "var(--font-sync-mono)", fontSize: 18, textAlign: "right" } }}
                 />
               </Flex>
 

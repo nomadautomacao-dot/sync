@@ -249,7 +249,7 @@ export default function PainelPage() {
               suffix={
                 <span style={{ fontSize: 11.5, color: token.colorTextTertiary }}>na carteira</span>
               }
-              valueStyle={{ fontFamily: FONTE_NUMERO, fontWeight: 600 }}
+              styles={{ content: { fontFamily: FONTE_NUMERO, fontWeight: 600 } }}
             />
             <Typography.Text type="secondary" style={{ fontSize: 11.5 }}>
               {contratoCount} com contrato vigente
@@ -315,7 +315,7 @@ export default function PainelPage() {
             <Statistic
               title="Lucro projetado"
               value={formatCurrencyCompact(totalLucro)}
-              valueStyle={{ fontFamily: FONTE_NUMERO, fontWeight: 600 }}
+              styles={{ content: { fontFamily: FONTE_NUMERO, fontWeight: 600 } }}
             />
             <Flex align="center" gap={5}>
               <RiseOutlined style={{ color: token.colorSuccessText, fontSize: 13 }} />
@@ -337,7 +337,7 @@ export default function PainelPage() {
             <Statistic
               title="Pendências"
               value={pendenciasCount}
-              valueStyle={{ fontFamily: FONTE_NUMERO, fontWeight: 600 }}
+              styles={{ content: { fontFamily: FONTE_NUMERO, fontWeight: 600 } }}
             />
             <Tag color={pendenciasCount > 0 ? "warning" : "success"} icon={<ClockCircleOutlined />}>
               {pendenciasCount > 0 ? `${pendenciasCount} em atenção` : "Nenhuma pendência"}

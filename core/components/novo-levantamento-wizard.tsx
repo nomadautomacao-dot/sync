@@ -513,7 +513,7 @@ export function NovoLevantamentoWizard({ onClose }: NovoLevantamentoWizardProps)
                     <Statistic
                       title="TOTAL ATUAL"
                       value="R$ 8,41M"
-                      valueStyle={{ fontFamily: FONTE_NUMERO, fontSize: 22, fontWeight: 600 }}
+                      styles={{ content: { fontFamily: FONTE_NUMERO, fontSize: 22, fontWeight: 600 } }}
                     />
                   </ProCard>
                 </Col>
@@ -525,7 +525,7 @@ export function NovoLevantamentoWizard({ onClose }: NovoLevantamentoWizardProps)
                     <Statistic
                       title="TOTAL PROJETADO"
                       value="R$ 9,24M"
-                      valueStyle={{ fontFamily: FONTE_NUMERO, fontSize: 22, fontWeight: 600 }}
+                      styles={{ content: { fontFamily: FONTE_NUMERO, fontSize: 22, fontWeight: 600 } }}
                     />
                   </ProCard>
                 </Col>
@@ -534,7 +534,7 @@ export function NovoLevantamentoWizard({ onClose }: NovoLevantamentoWizardProps)
                     <Statistic
                       title="GANHO RECUPERÁVEL"
                       value="+R$ 828,7K"
-                      valueStyle={{ fontFamily: FONTE_NUMERO, fontSize: 22, fontWeight: 600, color: token.colorSuccessText }}
+                      styles={{ content: { fontFamily: FONTE_NUMERO, fontSize: 22, fontWeight: 600, color: token.colorSuccessText } }}
                     />
                   </ProCard>
                 </Col>
