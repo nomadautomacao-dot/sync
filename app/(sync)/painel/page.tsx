@@ -1,23 +1,43 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import {
+  CalendarOutlined,
   CheckCircleOutlined,
   ClockCircleOutlined,
+  EnvironmentOutlined,
   FileTextOutlined,
+  HistoryOutlined,
   PlusOutlined,
   RightOutlined,
   RiseOutlined,
+  SafetyCertificateOutlined,
+  WarningOutlined,
 } from "@ant-design/icons";
 import { ProCard, ProTable } from "@ant-design/pro-components";
 import type { ProColumns } from "@ant-design/pro-components";
-import { Button, Empty, Flex, Segmented, Statistic, Tag, Typography, theme } from "antd";
+import {
+  Avatar,
+  Button,
+  Card,
+  Col,
+  Empty,
+  Flex,
+  Row,
+  Segmented,
+  Statistic,
+  Tag,
+  Typography,
+  theme,
+} from "antd";
 
 import { getFirebaseDb } from "@/core/lib/firebase-client";
 import { useAuth } from "@/core/providers/auth-provider";
 import { listCities } from "@/core/lib/cities-firestore";
+import { listCityReports } from "@/modules/cidades/city-reports-firestore";
 import {
   STAGE_LABELS,
   formatCurrency,
@@ -29,39 +49,25 @@ import { NovoLevantamentoWizard } from "@/core/components/novo-levantamento-wiza
 
 const FONTE_NUMERO = "var(--font-sync-mono)";
 
-/**
- * Meses do gráfico "Receita no ano".
- *
- * É decoração — nenhuma consulta alimenta essas alturas. O `tier` só marca
- * qual trimestre recebe a cor de destaque; a régua de valor real não existe
- * ainda nesta tela.
- */
-const MESES: { nome: string; altura: string; tier: 0 | 1 | 2 }[] = [
-  { nome: "JAN", altura: "44%", tier: 0 },
-  { nome: "FEV", altura: "52%", tier: 0 },
-  { nome: "MAR", altura: "47%", tier: 0 },
-  { nome: "ABR", altura: "63%", tier: 0 },
-  { nome: "MAI", altura: "58%", tier: 0 },
-  { nome: "JUN", altura: "74%", tier: 0 },
-  { nome: "JUL", altura: "69%", tier: 1 },
-  { nome: "AGO", altura: "88%", tier: 1 },
-  { nome: "SET", altura: "100%", tier: 1 },
-  { nome: "OUT", altura: "34%", tier: 2 },
-  { nome: "NOV", altura: "30%", tier: 2 },
-  { nome: "DEZ", altura: "26%", tier: 2 },
-];
-
 interface LinhaDoPainel extends CityAccount {
   lucroProjetado: number;
+  isQualificado: boolean;
 }
 
 export default function PainelPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const { token } = theme.useToken();
-  const [periodo, setPeriodo] = useState<string>("Trimestre");
+  const [periodoView, setPeriodoView] = useState<string>("Estágios");
+  const [filtroEstagio, setFiltroEstagio] = useState<string>("qualificados");
   const [wizardAberto, setWizardAberto] = useState(false);
 
-  const { data: cities = [], isLoading, refetch } = useQuery({
+  // 1. Consulta real de cidades no Firestore
+  const {
+    data: cities = [],
+    isLoading: loadingCities,
+    refetch: refetchCities,
+  } = useQuery({
     queryKey: ["dashboard-cities-real", user?.groupId],
     queryFn: async () => {
       if (!user?.groupId) return [];
@@ -71,81 +77,169 @@ export default function PainelPage() {
     enabled: !!user?.groupId,
   });
 
+  // 2. Consulta real de relatórios emitidos no Firestore
+  const {
+    data: reports = [],
+    isLoading: loadingReports,
+    refetch: refetchReports,
+  } = useQuery({
+    queryKey: ["dashboard-reports-real", user?.groupId],
+    queryFn: async () => {
+      if (!user?.groupId) return [];
+      const db = getFirebaseDb();
+      return await listCityReports(db, user.groupId);
+    },
+    enabled: !!user?.groupId,
+  });
+
+  const isLoading = loadingCities || loadingReports;
   const totalCidades = cities.length;
   const nomeUsuario = user?.name || user?.email?.split("@")[0] || "Usuário";
 
-  // Métricas reais
-  const contratoCount = cities.filter((c) =>
-    ["contractual", "implementation", "assisted_operation", "fidelized"].includes(c.stage)
-  ).length;
+  // Agrupamento entre PIPELINE QUALIFICADO (Contratos e Negociações/Reuniões) e EXPLORATÓRIO (Diagnósticos Técnicos com baixa conversão ~10%)
+  const contratadas = useMemo(
+    () => cities.filter((c) => ["contractual", "implementation", "assisted_operation", "fidelized"].includes(c.stage)),
+    [cities]
+  );
 
-  const propostaCount = cities.filter((c) =>
-    ["proposal_presented", "negotiation", "verbal_approval"].includes(c.stage)
-  ).length;
+  const emProposta = useMemo(
+    () => cities.filter((c) => ["proposal_presented", "negotiation", "verbal_approval"].includes(c.stage)),
+    [cities]
+  );
 
-  const estudoCount = cities.filter((c) =>
-    ["technical_diagnostic", "institutional_validation"].includes(c.stage)
-  ).length;
+  const emDiagnosticoExploratorio = useMemo(
+    () => cities.filter((c) => ["technical_diagnostic", "institutional_validation"].includes(c.stage)),
+    [cities]
+  );
 
-  const contatoCount = cities.filter((c) => ["mapping", "first_contact"].includes(c.stage)).length;
+  const emMapeamento = useMemo(
+    () => cities.filter((c) => ["mapping", "first_contact"].includes(c.stage)),
+    [cities]
+  );
 
-  const totalReceita = cities.reduce((sum, c) => sum + (c.estimatedAnnualRevenue || 0), 0);
-  const totalLucro = totalReceita * 0.35;
+  // Receita QUALIFICADA (Somente cidades com contrato ou reuniões/propostas avançadas)
+  const receitaQualificada = useMemo(() => {
+    return [...contratadas, ...emProposta].reduce((sum, c) => sum + (c.estimatedAnnualRevenue || 0), 0);
+  }, [contratadas, emProposta]);
 
-  const pendenciasCount = cities.filter(
-    (c) => c.stage === "paused" || (c.nextStepDueDate && new Date(c.nextStepDueDate) < new Date())
-  ).length;
+  // Receita EXPLORATÓRIA (Diagnósticos prévios em volume)
+  const receitaExploratoria = useMemo(() => {
+    return [...emDiagnosticoExploratorio, ...emMapeamento].reduce((sum, c) => sum + (c.estimatedAnnualRevenue || 0), 0);
+  }, [emDiagnosticoExploratorio, emMapeamento]);
 
-  const pctContrato = totalCidades > 0 ? Math.round((contratoCount / totalCidades) * 100) : 0;
-  const pctProposta = totalCidades > 0 ? Math.round((propostaCount / totalCidades) * 100) : 0;
-  const pctEstudo = totalCidades > 0 ? Math.round((estudoCount / totalCidades) * 100) : 0;
-  const pctContato = totalCidades > 0 ? Math.max(0, 100 - pctContrato - pctProposta - pctEstudo) : 0;
+  const lucroQualificadoEst = receitaQualificada * 0.35;
+
+  // Radar de Reuniões Marcadas e Próximos Passos Urgentes
+  const pendingActions = useMemo(() => {
+    const now = new Date();
+    return cities
+      .filter((c) => c.nextStepDueDate || c.nextStepDescription)
+      .map((c) => {
+        let status: "overdue" | "today" | "upcoming" = "upcoming";
+        let daysDiff = 999;
+        if (c.nextStepDueDate) {
+          const due = new Date(c.nextStepDueDate);
+          daysDiff = Math.ceil((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+          if (daysDiff < 0) status = "overdue";
+          else if (daysDiff === 0) status = "today";
+        }
+
+        const isQualificado = ["contractual", "implementation", "assisted_operation", "fidelized", "proposal_presented", "negotiation", "verbal_approval"].includes(c.stage);
+
+        return { city: c, status, daysDiff, isQualificado };
+      })
+      .sort((a, b) => {
+        // Prioriza qualificadas primeiro, depois prazos mais próximos
+        if (a.isQualificado !== b.isQualificado) return a.isQualificado ? -1 : 1;
+        return a.daysDiff - b.daysDiff;
+      });
+  }, [cities]);
+
+  // Quebra por estágios destacando o pipeline comercial qualificado
+  const stageBreakdown = useMemo(() => {
+    const stages = [
+      { key: "contractual", label: "Contratos Vigentes", color: token.colorSuccess, cities: contratadas, qualificado: true },
+      { key: "proposal_presented", label: "Reuniões / Propostas", color: token.colorPrimary, cities: emProposta, qualificado: true },
+      { key: "technical_diagnostic", label: "Diag. Exploratório (~10% conv.)", color: token.colorWarning, cities: emDiagnosticoExploratorio, qualificado: false },
+      { key: "mapping", label: "Prospecção Inicial", color: token.colorInfo, cities: emMapeamento, qualificado: false },
+    ];
+
+    const totalCalculo = receitaQualificada + receitaExploratoria;
+
+    return stages.map((s) => {
+      const revenue = s.cities.reduce((acc, c) => acc + (c.estimatedAnnualRevenue || 0), 0);
+      const count = s.cities.length;
+      return {
+        ...s,
+        revenue,
+        count,
+        pct: totalCalculo > 0 ? Math.round((revenue / totalCalculo) * 100) : 0,
+      };
+    });
+  }, [contratadas, emProposta, emDiagnosticoExploratorio, emMapeamento, receitaQualificada, receitaExploratoria, token]);
+
+  // Atividade mensal baseada em eventos reais de emissão ou atualização no ano atual
+  const monthlyActivity = useMemo(() => {
+    const months = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
+    const counts = new Array(12).fill(0);
+    const currentYear = new Date().getFullYear();
+
+    reports.forEach((r) => {
+      if (r.generatedAt) {
+        const d = new Date(r.generatedAt);
+        if (!isNaN(d.getTime()) && d.getFullYear() === currentYear) {
+          counts[d.getMonth()] += 1;
+        }
+      }
+    });
+
+    cities.forEach((c) => {
+      if (c.lastActivityAt) {
+        const d = new Date(c.lastActivityAt);
+        if (!isNaN(d.getTime()) && d.getFullYear() === currentYear) {
+          counts[d.getMonth()] += 1;
+        }
+      }
+    });
+
+    const maxCount = Math.max(...counts, 1);
+    const currentMonthIndex = new Date().getMonth();
+
+    return months.map((nome, i) => ({
+      nome,
+      count: counts[i],
+      altura: `${Math.max(10, Math.round((counts[i] / maxCount) * 100))}%`,
+      isCurrentMonth: i === currentMonthIndex,
+    }));
+  }, [reports, cities]);
+
+  // Filtragem da tabela priorizando os municípios qualificados por padrão
+  const cidadesFiltradas = useMemo(() => {
+    let result = cities;
+    if (filtroEstagio === "qualificados") {
+      result = result.filter((c) =>
+        ["contractual", "implementation", "assisted_operation", "fidelized", "proposal_presented", "negotiation", "verbal_approval"].includes(c.stage)
+      );
+    } else if (filtroEstagio === "contratos") {
+      result = result.filter((c) => ["contractual", "implementation", "assisted_operation", "fidelized"].includes(c.stage));
+    } else if (filtroEstagio === "propostas") {
+      result = result.filter((c) => ["proposal_presented", "negotiation", "verbal_approval"].includes(c.stage));
+    } else if (filtroEstagio === "exploratorios") {
+      result = result.filter((c) => ["technical_diagnostic", "institutional_validation", "mapping", "first_contact"].includes(c.stage));
+    }
+    return result.map((c) => ({
+      ...c,
+      lucroProjetado: (c.estimatedAnnualRevenue || 0) * 0.35,
+      isQualificado: ["contractual", "implementation", "assisted_operation", "fidelized", "proposal_presented", "negotiation", "verbal_approval"].includes(c.stage),
+    }));
+  }, [cities, filtroEstagio]);
 
   const dataAtualFormatada = new Date().toLocaleDateString("pt-BR", {
-    weekday: "short",
+    weekday: "long",
     day: "numeric",
-    month: "short",
+    month: "long",
     year: "numeric",
   });
-
-  /* As quatro famílias do pipeline reaproveitam `stagePastelTone`: é a mesma
-     paleta que já colore o estágio na carteira e no Kanban, então a barra
-     segmentada bate com o resto do produto em vez de inventar cor nova aqui. */
-  const familias = [
-    {
-      chave: "contrato",
-      rotulo: "Contrato",
-      contagem: contratoCount,
-      pct: pctContrato,
-      tom: stagePastelTone("contractual"),
-    },
-    {
-      chave: "proposta",
-      rotulo: "Proposta",
-      contagem: propostaCount,
-      pct: pctProposta,
-      tom: stagePastelTone("proposal_presented"),
-    },
-    {
-      chave: "estudo",
-      rotulo: "Estudo",
-      contagem: estudoCount,
-      pct: pctEstudo,
-      tom: stagePastelTone("technical_diagnostic"),
-    },
-    {
-      chave: "contato",
-      rotulo: "Contato",
-      contagem: contatoCount,
-      pct: pctContato,
-      tom: stagePastelTone("mapping"),
-    },
-  ];
-
-  const linhas: LinhaDoPainel[] = cities.map((c) => ({
-    ...c,
-    lucroProjetado: (c.estimatedAnnualRevenue || 0) * 0.35,
-  }));
 
   const colunas: ProColumns<LinhaDoPainel>[] = [
     {
@@ -155,22 +249,23 @@ export default function PainelPage() {
       search: false,
       sorter: (a, b) => a.name.localeCompare(b.name, "pt-BR"),
       render: (_, linha) => (
-        <Link href="/pipeline" style={{ fontWeight: 600 }}>
-          {linha.name}
-        </Link>
+        <Flex align="center" gap={8}>
+          <Link href={`/cidades/${linha.id}`} style={{ fontWeight: 600, color: token.colorText }}>
+            {linha.name}
+          </Link>
+          <Tag style={{ fontSize: 10, margin: 0, paddingInline: 6 }}>{linha.uf}</Tag>
+          {linha.isQualificado && (
+            <Tag color="purple" style={{ fontSize: 9.5, margin: 0, paddingInline: 6 }}>
+              Qualificado
+            </Tag>
+          )}
+        </Flex>
       ),
     },
     {
-      title: "UF",
-      dataIndex: "uf",
-      width: 64,
-      search: false,
-      render: (_, linha) => <span style={{ fontFamily: FONTE_NUMERO }}>{linha.uf}</span>,
-    },
-    {
-      title: "Estágio",
+      title: "Estágio no Pipeline",
       dataIndex: "stage",
-      width: 150,
+      width: 170,
       search: false,
       render: (_, linha) => {
         const tom = stagePastelTone(linha.stage);
@@ -182,316 +277,433 @@ export default function PainelPage() {
       },
     },
     {
-      title: "Receita Est.",
+      title: "Reunião / Próxima Ação",
+      dataIndex: "nextStepDescription",
+      ellipsis: true,
+      search: false,
+      render: (_, linha) => {
+        if (!linha.nextStepDescription && !linha.nextStepDueDate) {
+          return <Typography.Text type="secondary" style={{ fontSize: 12 }}>—</Typography.Text>;
+        }
+        const due = linha.nextStepDueDate ? new Date(linha.nextStepDueDate) : null;
+        const overdue = due && due < new Date();
+        return (
+          <Flex vertical gap={2}>
+            <Typography.Text ellipsis style={{ fontSize: 12, fontWeight: linha.isQualificado ? 600 : 400 }}>
+              {linha.nextStepDescription || "Reunião / acompanhamento comercial"}
+            </Typography.Text>
+            {linha.nextStepDueDate && (
+              <Typography.Text
+                style={{
+                  fontFamily: FONTE_NUMERO,
+                  fontSize: 10,
+                  color: overdue ? token.colorErrorText : token.colorTextDescription,
+                  fontWeight: overdue ? 600 : 400,
+                }}
+              >
+                {overdue ? "Atrasado desde " : "Data: "}
+                {new Date(linha.nextStepDueDate).toLocaleDateString("pt-BR")}
+              </Typography.Text>
+            )}
+          </Flex>
+        );
+      },
+    },
+    {
+      title: "Receita Est. Anual",
       dataIndex: "estimatedAnnualRevenue",
       align: "right",
-      width: 120,
+      width: 150,
       search: false,
       sorter: (a, b) => (a.estimatedAnnualRevenue || 0) - (b.estimatedAnnualRevenue || 0),
       render: (_, linha) => (
-        <span style={{ fontFamily: FONTE_NUMERO }}>
-          {formatCurrencyCompact(linha.estimatedAnnualRevenue || 0)}
+        <span style={{ fontFamily: FONTE_NUMERO, fontWeight: linha.isQualificado ? 700 : 400 }}>
+          {formatCurrency(linha.estimatedAnnualRevenue || 0)}
         </span>
       ),
     },
     {
-      title: "Lucro Proj.",
+      title: "Lucro Proj. (35%)",
       dataIndex: "lucroProjetado",
       align: "right",
-      width: 120,
+      width: 140,
       search: false,
       sorter: (a, b) => a.lucroProjetado - b.lucroProjetado,
       render: (_, linha) => (
-        <span style={{ fontFamily: FONTE_NUMERO, fontWeight: 600 }}>
+        <span style={{ fontFamily: FONTE_NUMERO, color: token.colorSuccessText, fontWeight: 600 }}>
           {formatCurrencyCompact(linha.lucroProjetado)}
         </span>
       ),
     },
     {
-      title: "Margem",
-      width: 90,
-      align: "right",
-      search: false,
-      render: () => <span style={{ fontFamily: FONTE_NUMERO, color: token.colorSuccessText }}>35,0%</span>,
-    },
-    {
       title: "",
-      width: 36,
-      align: "right",
+      width: 44,
+      align: "center",
       search: false,
       render: (_, linha) => (
-        <Link href="/pipeline" aria-label={`Abrir ${linha.name}`}>
-          <RightOutlined style={{ color: token.colorTextQuaternary }} />
-        </Link>
+        <Button
+          type="text"
+          size="small"
+          icon={<RightOutlined style={{ color: token.colorTextQuaternary }} />}
+          onClick={() => router.push(`/cidades/${linha.id}`)}
+          aria-label={`Ver ${linha.name}`}
+        />
       ),
     },
   ];
 
   return (
     <>
-      <Flex vertical gap={14}>
-        {/* ── Topo: boas-vindas ─────────────────────────────────────────── */}
-        <Flex justify="space-between" align="baseline">
-          <Typography.Title level={3} style={{ margin: 0 }}>
-            Olá, {nomeUsuario}!
-          </Typography.Title>
-          <Typography.Text type="secondary" style={{ fontFamily: FONTE_NUMERO, fontSize: 11 }}>
-            {dataAtualFormatada} · exercício 2026
-          </Typography.Text>
+      <Flex vertical gap={16}>
+        {/* ── Topo: boas-vindas e ações rápidas ──────────────────────────── */}
+        <Flex justify="space-between" align="center" wrap="wrap" gap={12}>
+          <div>
+            <Typography.Title level={3} style={{ margin: 0 }}>
+              Painel Executivo · {nomeUsuario}
+            </Typography.Title>
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              {dataAtualFormatada} · Foco em Municípios Qualificados & Reuniões
+            </Typography.Text>
+          </div>
+
+          <Flex align="center" gap={10}>
+            <Button icon={<HistoryOutlined />} onClick={() => router.push("/caixa")}>
+              Trilha de Caixa
+            </Button>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => setWizardAberto(true)}
+            >
+              Novo Município
+            </Button>
+          </Flex>
         </Flex>
 
-        {/* ── Linha 1: KPIs ────────────────────────────────────────────── */}
-        <ProCard gutter={16} wrap ghost>
+        {/* ── Linha 1: KPIs Focados no Pipeline Qualificado ──────────────── */}
+        <ProCard gutter={[16, 16]} wrap ghost>
           <ProCard colSpan={{ xs: 24, sm: 12, lg: 6 }}>
             <Statistic
-              title="Municípios ativos"
-              value={totalCidades}
-              suffix={
-                <span style={{ fontSize: 11.5, color: token.colorTextTertiary }}>na carteira</span>
-              }
-              styles={{ content: { fontFamily: FONTE_NUMERO, fontWeight: 600 } }}
+              title="Receita Qualificada"
+              value={formatCurrencyCompact(receitaQualificada)}
+              prefix={<RiseOutlined style={{ color: token.colorSuccessText }} />}
+              styles={{ content: { fontFamily: FONTE_NUMERO, fontWeight: 700 } }}
             />
-            <Typography.Text type="secondary" style={{ fontSize: 11.5 }}>
-              {contratoCount} com contrato vigente
+            <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+              {contratadas.length} contratos + {emProposta.length} em reunião/negociação
             </Typography.Text>
           </ProCard>
 
-          <ProCard colSpan={{ xs: 24, sm: 12, lg: 9 }}>
-            <Flex justify="space-between" align="baseline">
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                Distribuição do pipeline
-              </Typography.Text>
-              <Typography.Text type="secondary" style={{ fontFamily: FONTE_NUMERO, fontSize: 10.5 }}>
-                {totalCidades} municípios
-              </Typography.Text>
-            </Flex>
-
-            <div style={{ height: 16 }} />
-
-            {/* Barra segmentada dinâmica */}
-            <Flex
-              gap={3}
-              style={{
-                height: 14,
-                borderRadius: 8,
-                overflow: "hidden",
-                background: token.colorFillTertiary,
-              }}
-            >
-              {familias.map((f) =>
-                f.pct > 0 ? (
-                  <div
-                    key={f.chave}
-                    title={`${f.rotulo}: ${f.contagem}`}
-                    style={{ width: `${f.pct}%`, background: f.tom.dot, cursor: "pointer" }}
-                  />
-                ) : null
-              )}
-            </Flex>
-
-            <div style={{ height: 14 }} />
-
-            <Flex wrap gap={18}>
-              {familias.map((f) => (
-                <Flex key={f.chave} align="center" gap={6}>
-                  <span
-                    style={{ width: 8, height: 8, borderRadius: 3, background: f.tom.dot, display: "inline-block" }}
-                  />
-                  <span style={{ fontFamily: FONTE_NUMERO, fontWeight: 600, fontSize: 11.5 }}>
-                    {f.contagem}
-                  </span>
-                  <span style={{ fontSize: 11.5, color: token.colorTextSecondary }}>{f.rotulo}</span>
-                </Flex>
-              ))}
-            </Flex>
+          <ProCard colSpan={{ xs: 24, sm: 12, lg: 6 }}>
+            <Statistic
+              title="Lucro Projetado (Qualificado)"
+              value={formatCurrencyCompact(lucroQualificadoEst)}
+              prefix={<SafetyCertificateOutlined style={{ color: token.colorInfo }} />}
+              styles={{ content: { fontFamily: FONTE_NUMERO, fontWeight: 700 } }}
+            />
+            <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+              Estimativa de 35% de margem no pipeline real
+            </Typography.Text>
           </ProCard>
 
-          <ProCard
-            colSpan={{ xs: 24, sm: 12, lg: 4 }}
-            style={{
-              background: `linear-gradient(135deg, ${token.colorBgContainer} 0%, ${token.colorFillTertiary} 100%)`,
-            }}
-          >
+          <ProCard colSpan={{ xs: 24, sm: 12, lg: 6 }}>
             <Statistic
-              title="Lucro projetado"
-              value={formatCurrencyCompact(totalLucro)}
+              title="Reuniões & Propostas"
+              value={emProposta.length + contratadas.length}
+              prefix={<CalendarOutlined style={{ color: token.colorPrimary }} />}
+              suffix={<span style={{ fontSize: 11, color: token.colorTextTertiary }}>qualificadas</span>}
               styles={{ content: { fontFamily: FONTE_NUMERO, fontWeight: 600 } }}
             />
-            <Flex align="center" gap={5}>
-              <RiseOutlined style={{ color: token.colorSuccessText, fontSize: 13 }} />
-              <span
-                style={{
-                  fontFamily: FONTE_NUMERO,
-                  fontSize: 11.5,
-                  fontWeight: 600,
-                  color: token.colorSuccessText,
-                }}
-              >
-                Margem est. 35%
-              </span>
-              <span style={{ fontSize: 11.5, color: token.colorTextSecondary }}>da receita</span>
-            </Flex>
+            <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+              Cidades em negociação ativa ou fechadas
+            </Typography.Text>
           </ProCard>
 
-          <ProCard colSpan={{ xs: 24, sm: 12, lg: 5 }}>
+          <ProCard colSpan={{ xs: 24, sm: 12, lg: 6 }}>
             <Statistic
-              title="Pendências"
-              value={pendenciasCount}
+              title="Diagnósticos Exploratórios"
+              value={emDiagnosticoExploratorio.length}
+              prefix={<FileTextOutlined style={{ color: token.colorWarning }} />}
+              suffix={<span style={{ fontSize: 11, color: token.colorTextTertiary }}>estudos</span>}
               styles={{ content: { fontFamily: FONTE_NUMERO, fontWeight: 600 } }}
             />
-            <Tag color={pendenciasCount > 0 ? "warning" : "success"} icon={<ClockCircleOutlined />}>
-              {pendenciasCount > 0 ? `${pendenciasCount} em atenção` : "Nenhuma pendência"}
+            <Tag color="warning" style={{ fontSize: 10, margin: 0 }}>
+              Fase prévia (~10% conversão)
             </Tag>
           </ProCard>
         </ProCard>
 
-        {/* ── Linha 2: gráfico + radar ─────────────────────────────────── */}
-        <Flex gap={14} wrap align="stretch">
-          <ProCard style={{ flex: "1.7 1 480px" }}>
-            <Flex justify="space-between" align="center">
-              <div>
-                <Typography.Title level={5} style={{ margin: 0 }}>
-                  Receita no ano
-                </Typography.Title>
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                  Tendência mensal consolidada ·{" "}
-                  <span style={{ fontFamily: FONTE_NUMERO, fontSize: 11.5 }}>
-                    {formatCurrencyCompact(totalReceita)} acum.
-                  </span>
-                </Typography.Text>
-              </div>
-
-              <Segmented value={periodo} onChange={setPeriodo} options={["Mês", "Trimestre", "Ano"]} />
-            </Flex>
-
-            <div style={{ height: 20 }} />
-
-            <Flex align="flex-end" gap={9} style={{ height: 150 }}>
-              {MESES.map((m) => (
-                <Flex
-                  key={m.nome}
-                  vertical
-                  align="center"
-                  justify="flex-end"
-                  gap={6}
-                  style={{ height: "100%", flex: 1 }}
-                >
-                  <div
+        {/* ── Linha 2: Distribuição do Pipeline & Agenda de Reuniões ─────── */}
+        <Row gutter={[16, 16]}>
+          <Col xs={24} lg={14}>
+            <Card
+              size="small"
+              title="Distribuição do Pipeline Comercial"
+              extra={
+                <Segmented
+                  size="small"
+                  value={periodoView}
+                  onChange={setPeriodoView}
+                  options={["Estágios", "Atividade"]}
+                />
+              }
+            >
+              {periodoView === "Estágios" ? (
+                <Flex vertical gap={16} style={{ padding: "8px 0" }}>
+                  {/* Barra proporcional visual */}
+                  <Flex
+                    gap={3}
                     style={{
-                      width: "100%",
-                      height: m.altura,
-                      borderRadius: 7,
-                      background:
-                        m.tier === 1
-                          ? token.colorPrimary
-                          : m.tier === 2
-                            ? token.colorFillTertiary
-                            : token.colorFillSecondary,
-                      opacity: m.tier === 1 ? 0.85 : 1,
+                      height: 16,
+                      borderRadius: 8,
+                      overflow: "hidden",
+                      background: token.colorFillTertiary,
                     }}
-                  />
-                  <span style={{ fontFamily: FONTE_NUMERO, fontSize: 9.5, color: token.colorTextTertiary }}>
-                    {m.nome}
-                  </span>
+                  >
+                    {stageBreakdown.map(
+                      (s) =>
+                        s.pct > 0 && (
+                          <div
+                            key={s.key}
+                            title={`${s.label}: ${formatCurrency(s.revenue)} (${s.pct}%)`}
+                            style={{
+                              width: `${s.pct}%`,
+                              background: s.color,
+                              cursor: "pointer",
+                              opacity: s.qualificado ? 1 : 0.6,
+                            }}
+                          />
+                        )
+                    )}
+                  </Flex>
+
+                  {/* Detalhamento com destaque para o pipeline qualificado */}
+                  <Row gutter={[12, 12]}>
+                    {stageBreakdown.map((s) => (
+                      <Col key={s.key} xs={12} sm={6}>
+                        <Card
+                          size="small"
+                          style={{
+                            background: s.qualificado ? token.colorFillAlter : token.colorFillQuaternary,
+                            border: s.qualificado ? `1px solid ${token.colorBorderSecondary}` : "none",
+                            borderRadius: token.borderRadius,
+                          }}
+                        >
+                          <Flex align="center" gap={6} style={{ marginBottom: 4 }}>
+                            <span
+                              style={{
+                                width: 8,
+                                height: 8,
+                                borderRadius: "50%",
+                                background: s.color,
+                              }}
+                            />
+                            <Typography.Text strong={s.qualificado} style={{ fontSize: 11 }}>
+                              {s.label}
+                            </Typography.Text>
+                          </Flex>
+                          <Typography.Text
+                            style={{
+                              fontFamily: FONTE_NUMERO,
+                              fontSize: 13,
+                              fontWeight: s.qualificado ? 700 : 500,
+                              display: "block",
+                            }}
+                          >
+                            {formatCurrencyCompact(s.revenue)}
+                          </Typography.Text>
+                          <Typography.Text type="secondary" style={{ fontSize: 10 }}>
+                            {s.count} mun. ({s.pct}%)
+                          </Typography.Text>
+                        </Card>
+                      </Col>
+                    ))}
+                  </Row>
                 </Flex>
-              ))}
-            </Flex>
-          </ProCard>
-
-          <ProCard style={{ flex: "1 1 320px" }}>
-            <Flex justify="space-between" align="baseline">
-              <Typography.Title level={5} style={{ margin: 0 }}>
-                Radar executivo
-              </Typography.Title>
-              <Typography.Text type="secondary" style={{ fontFamily: FONTE_NUMERO, fontSize: 10.5 }}>
-                hoje
-              </Typography.Text>
-            </Flex>
-
-            <div style={{ height: 14 }} />
-
-            <Flex vertical gap={9}>
-              <Flex gap={10} style={{ borderRadius: 12, padding: 12, background: token.colorWarningBg }}>
-                <ClockCircleOutlined
-                  style={{ fontSize: 17, color: token.colorWarningText, flexShrink: 0, marginTop: 2 }}
-                />
-                <div>
-                  <Typography.Text strong style={{ fontSize: 12.5 }}>
-                    {totalCidades > 0
-                      ? `${totalCidades} municípios monitorados`
-                      : "Nenhum município monitorado"}
+              ) : (
+                <Flex vertical gap={12} style={{ padding: "8px 0" }}>
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    Volume de movimentações e emissões de dossiês em 2026 por mês:
                   </Typography.Text>
-                  <div style={{ fontFamily: FONTE_NUMERO, fontSize: 10.5, color: token.colorTextSecondary }}>
-                    bases FNDE · INEP · SICONFI sincronizadas
-                  </div>
-                </div>
-              </Flex>
 
-              <Flex gap={10} style={{ borderRadius: 12, padding: 12, background: token.colorInfoBg }}>
-                <FileTextOutlined
-                  style={{ fontSize: 17, color: token.colorInfoText, flexShrink: 0, marginTop: 2 }}
+                  <Flex align="flex-end" gap={8} style={{ height: 140, paddingTop: 10 }}>
+                    {monthlyActivity.map((m) => (
+                      <Flex
+                        key={m.nome}
+                        vertical
+                        align="center"
+                        justify="flex-end"
+                        gap={6}
+                        style={{ height: "100%", flex: 1 }}
+                      >
+                        <div
+                          title={`${m.nome}: ${m.count} atividades`}
+                          style={{
+                            width: "100%",
+                            height: m.altura,
+                            borderRadius: 6,
+                            background: m.isCurrentMonth
+                              ? token.colorPrimary
+                              : m.count > 0
+                                ? token.colorInfo
+                                : token.colorFillTertiary,
+                            opacity: m.count > 0 ? 0.9 : 0.4,
+                            transition: "all 0.3s",
+                          }}
+                        />
+                        <span
+                          style={{
+                            fontFamily: FONTE_NUMERO,
+                            fontSize: 9.5,
+                            fontWeight: m.isCurrentMonth ? 700 : 400,
+                            color: m.isCurrentMonth ? token.colorPrimary : token.colorTextTertiary,
+                          }}
+                        >
+                          {m.nome}
+                        </span>
+                      </Flex>
+                    ))}
+                  </Flex>
+                </Flex>
+              )}
+            </Card>
+          </Col>
+
+          {/* Agenda de Reuniões & Próximos Passos Reais */}
+          <Col xs={24} lg={10}>
+            <Card
+              size="small"
+              title="Agenda de Reuniões & Próximos Passos"
+              extra={
+                <Tag color="purple" style={{ fontSize: 10, margin: 0 }}>
+                  {pendingActions.filter((p) => p.isQualificado).length} qualificadas
+                </Tag>
+              }
+              style={{ height: "100%" }}
+            >
+              {pendingActions.length > 0 ? (
+                <Flex vertical gap={10}>
+                  {pendingActions.slice(0, 4).map(({ city, status, daysDiff, isQualificado }) => (
+                    <Flex
+                      key={city.id}
+                      align="center"
+                      justify="space-between"
+                      style={{
+                        padding: "9px 12px",
+                        borderRadius: token.borderRadiusLG,
+                        background:
+                          status === "overdue"
+                            ? token.colorErrorBg
+                            : status === "today"
+                              ? token.colorWarningBg
+                              : isQualificado
+                                ? token.colorFillSecondary
+                                : token.colorFillTertiary,
+                        border: isQualificado ? `1px solid ${token.colorPrimaryBorder}` : "none",
+                        cursor: "pointer",
+                      }}
+                      onClick={() => router.push(`/cidades/${city.id}`)}
+                    >
+                      <Flex align="center" gap={10} style={{ minWidth: 0, flex: 1 }}>
+                        {status === "overdue" ? (
+                          <WarningOutlined style={{ color: token.colorError, fontSize: 16 }} />
+                        ) : status === "today" ? (
+                          <ClockCircleOutlined style={{ color: token.colorWarning, fontSize: 16 }} />
+                        ) : (
+                          <CalendarOutlined style={{ color: token.colorPrimary, fontSize: 16 }} />
+                        )}
+
+                        <div style={{ minWidth: 0, flex: 1 }}>
+                          <Flex align="center" gap={6}>
+                            <Typography.Text strong ellipsis style={{ fontSize: 12.5 }}>
+                              {city.name} ({city.uf})
+                            </Typography.Text>
+                            {isQualificado && (
+                              <Tag color="purple" style={{ fontSize: 8.5, paddingInline: 4, margin: 0 }}>
+                                Reunião / Proposta
+                              </Tag>
+                            )}
+                          </Flex>
+                          <Typography.Text type="secondary" ellipsis style={{ fontSize: 11, display: "block" }}>
+                            {city.nextStepDescription || "Reunião de apresentação / negociação"}
+                          </Typography.Text>
+                        </div>
+                      </Flex>
+
+                      <Tag
+                        color={status === "overdue" ? "error" : status === "today" ? "warning" : "default"}
+                        style={{ fontFamily: FONTE_NUMERO, fontSize: 10, margin: 0 }}
+                      >
+                        {status === "overdue"
+                          ? `Atrasado ${Math.abs(daysDiff)}d`
+                          : status === "today"
+                            ? "Vence Hoje"
+                            : `em ${daysDiff}d`}
+                      </Tag>
+                    </Flex>
+                  ))}
+                </Flex>
+              ) : (
+                <Empty
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  description="Nenhuma reunião ou ação agendada."
+                  style={{ padding: "20px 0" }}
                 />
-                <div>
-                  <Typography.Text strong style={{ fontSize: 12.5 }}>
-                    Projeção anual de receita
-                  </Typography.Text>
-                  <div style={{ fontFamily: FONTE_NUMERO, fontSize: 10.5, color: token.colorTextSecondary }}>
-                    {formatCurrency(totalReceita)} em carteira
-                  </div>
-                </div>
-              </Flex>
+              )}
+            </Card>
+          </Col>
+        </Row>
 
-              <Flex gap={10} style={{ borderRadius: 12, padding: 12, background: token.colorSuccessBg }}>
-                <CheckCircleOutlined
-                  style={{ fontSize: 17, color: token.colorSuccessText, flexShrink: 0, marginTop: 2 }}
-                />
-                <div>
-                  <Typography.Text strong style={{ fontSize: 12.5 }}>
-                    Status das bases oficiais
-                  </Typography.Text>
-                  <div style={{ fontFamily: FONTE_NUMERO, fontSize: 10.5, color: token.colorTextSecondary }}>
-                    VAAT 2026 · dados atualizados
-                  </div>
-                </div>
-              </Flex>
-            </Flex>
-          </ProCard>
-        </Flex>
-
-        {/* ── Linha 3: cidades com maior projeção ──────────────────────── */}
+        {/* ── Linha 3: Tabela de Cidades da Carteira ────────────────────── */}
         <ProTable<LinhaDoPainel>
-          headerTitle="Cidades com maior projeção"
+          headerTitle="Municípios da Carteira"
           rowKey="id"
           size="small"
           cardBordered
           loading={isLoading}
-          dataSource={linhas}
+          dataSource={cidadesFiltradas}
           columns={colunas}
-          pagination={false}
+          pagination={{ pageSize: 8, showSizeChanger: false }}
           search={false}
-          options={false}
+          options={{ reload: () => { refetchCities(); refetchReports(); }, density: false, setting: false }}
           dateFormatter="string"
+          toolbar={{
+            menu: {
+              type: "tab",
+              activeKey: filtroEstagio,
+              onChange: (key) => setFiltroEstagio(key as string),
+              items: [
+                { key: "qualificados", label: `Qualificados & Reuniões (${contratadas.length + emProposta.length})` },
+                { key: "contratos", label: `Contratados (${contratadas.length})` },
+                { key: "propostas", label: `Reuniões / Propostas (${emProposta.length})` },
+                { key: "exploratorios", label: `Exploratórios / Estudos (${emDiagnosticoExploratorio.length + emMapeamento.length})` },
+                { key: "todos", label: `Todos os Municípios (${totalCidades})` },
+              ],
+            },
+            actions: [
+              <Button
+                key="nova"
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => setWizardAberto(true)}
+              >
+                Novo Município
+              </Button>,
+            ],
+          }}
           locale={{
             emptyText: (
               <Empty
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
                 description={
-                  <>
+                  <Flex vertical align="center" gap={4}>
                     <Typography.Text strong>
-                      Nenhum município cadastrado na carteira ainda
+                      Nenhum município cadastrado neste filtro
                     </Typography.Text>
-                    <div
-                      style={{
-                        color: token.colorTextSecondary,
-                        fontSize: 12,
-                        maxWidth: 380,
-                        margin: "4px auto 0",
-                      }}
-                    >
-                      Adicione o seu primeiro município para iniciar o levantamento financeiro e
-                      acompanhamento no pipeline.
-                    </div>
-                  </>
+                    <Typography.Text type="secondary" style={{ fontSize: 12, maxWidth: 400 }}>
+                      Adicione um município ou selecione outra aba de filtro para visualizar sua carteira.
+                    </Typography.Text>
+                  </Flex>
                 }
               >
                 <Button type="primary" icon={<PlusOutlined />} onClick={() => setWizardAberto(true)}>
@@ -500,16 +712,6 @@ export default function PainelPage() {
               </Empty>
             ),
           }}
-          toolBarRender={() => [
-            <Button
-              key="nova"
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => setWizardAberto(true)}
-            >
-              Novo Município
-            </Button>,
-          ]}
         />
       </Flex>
 
@@ -517,7 +719,8 @@ export default function PainelPage() {
         <NovoLevantamentoWizard
           onClose={() => {
             setWizardAberto(false);
-            refetch();
+            refetchCities();
+            refetchReports();
           }}
         />
       )}

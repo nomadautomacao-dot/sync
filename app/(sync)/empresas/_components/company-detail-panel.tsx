@@ -5,7 +5,7 @@ import {
   Avatar,
   Descriptions,
   Drawer,
-  List,
+  Flex,
   Space,
   Tabs,
   Tag,
@@ -83,7 +83,7 @@ export function CompanyDetailPanel({ company, onClose }: CompanyDetailPanelProps
               key: "cadastrais",
               label: "Dados Cadastrais",
               children: (
-                <Space direction="vertical" size={20} style={{ width: "100%" }}>
+                <Flex vertical gap={20} style={{ width: "100%" }}>
                   <Descriptions
                     title="Identificação"
                     column={1}
@@ -120,7 +120,7 @@ export function CompanyDetailPanel({ company, onClose }: CompanyDetailPanelProps
                       },
                     ]}
                   />
-                </Space>
+                </Flex>
               ),
             },
             {
@@ -132,20 +132,27 @@ export function CompanyDetailPanel({ company, onClose }: CompanyDetailPanelProps
                     Módulos Contratados e Autorizados
                   </Typography.Title>
                   {company.activeModules.length > 0 ? (
-                    <List
-                      size="small"
-                      dataSource={company.activeModules}
-                      renderItem={(mod) => (
-                        <List.Item>
+                    <Flex vertical gap={6} style={{ marginTop: 8 }}>
+                      {company.activeModules.map((mod) => (
+                        <Flex
+                          key={mod}
+                          align="center"
+                          justify="space-between"
+                          style={{
+                            padding: "8px 10px",
+                            borderRadius: token.borderRadius,
+                            border: `1px solid ${token.colorBorderSecondary}`,
+                          }}
+                        >
                           <Typography.Text strong style={{ textTransform: "uppercase" }}>
                             {mod.replace("_", " ")}
                           </Typography.Text>
                           <Tag color="success" icon={<CheckCircleFilled />}>
                             Ativo
                           </Tag>
-                        </List.Item>
-                      )}
-                    />
+                        </Flex>
+                      ))}
+                    </Flex>
                   ) : (
                     <Typography.Text type="secondary" italic>
                       Nenhum módulo ativo.
@@ -158,7 +165,7 @@ export function CompanyDetailPanel({ company, onClose }: CompanyDetailPanelProps
               key: "quadro",
               label: "Quadro",
               children: (
-                <Space direction="vertical" size={16} style={{ width: "100%" }}>
+                <Flex vertical gap={16} style={{ width: "100%" }}>
                   <Descriptions
                     title="Quadro de Pessoal"
                     column={1}
@@ -174,7 +181,7 @@ export function CompanyDetailPanel({ company, onClose }: CompanyDetailPanelProps
                   <Typography.Text type="secondary">
                     Quadro de colaboradores alocados para atendimento desta empresa.
                   </Typography.Text>
-                </Space>
+                </Flex>
               ),
             },
           ]}

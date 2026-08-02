@@ -129,7 +129,7 @@ export function BuscaMunicipio({ onSelecionar }: BuscaMunicipioProps) {
         </AutoComplete>
 
         {erroBusca && (
-          <Alert type="error" showIcon message={erroBusca} style={{ marginTop: 10 }} />
+          <Alert type="error" showIcon title={erroBusca} style={{ marginTop: 10 }} />
         )}
       </div>
     </Card>

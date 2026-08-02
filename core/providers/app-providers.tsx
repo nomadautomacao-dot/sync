@@ -2,8 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
-import { Toaster } from "sonner";
-import { ConfigProvider } from "antd";
+import { App, ConfigProvider } from "antd";
 import ptBR from "antd/locale/pt_BR";
 
 import { temaSync } from "@/core/design/tema-ant";
@@ -31,15 +30,10 @@ export function AppProviders({ children }: AppProvidersProps) {
       {/* `locale` em pt-BR não é detalhe: sem ele a tabela diz "No data",
           o seletor de data abre em inglês e a paginação escreve "items". */}
       <ConfigProvider theme={temaSync} locale={ptBR}>
-        <AuthProvider>{children}</AuthProvider>
+        <App>
+          <AuthProvider>{children}</AuthProvider>
+        </App>
       </ConfigProvider>
-      <Toaster
-        richColors
-        position="bottom-right"
-        toastOptions={{
-          className: "sync-toast",
-        }}
-      />
     </QueryClientProvider>
   );
 }

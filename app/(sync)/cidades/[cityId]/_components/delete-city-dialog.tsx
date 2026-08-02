@@ -32,7 +32,7 @@ export function DeleteCityDialog({
       open
       title={`Excluir ${cityName}?`}
       closable={!deleting}
-      maskClosable={!deleting}
+      mask={{ closable: !deleting }}
       keyboard={!deleting}
       onCancel={onClose}
       onOk={onConfirm}

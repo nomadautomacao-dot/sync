@@ -29,6 +29,7 @@ import { ProTable } from "@ant-design/pro-components";
 import type { ProColumns } from "@ant-design/pro-components";
 import {
   Alert,
+  App,
   Button,
   Card,
   Col,
@@ -39,7 +40,6 @@ import {
   Flex,
   Input,
   InputNumber,
-  List,
   Result,
   Row,
   Select,
@@ -52,7 +52,6 @@ import {
   Typography,
 } from "antd";
 import type { MenuProps } from "antd";
-import { toast } from "sonner";
 
 import { VisualizadorPdf } from "@/core/components/visualizador-pdf";
 import {
@@ -95,6 +94,7 @@ const { Text, Title } = Typography;
 type CityTab = "visao-geral" | "dados-fundeb" | "relatorios" | "documentos";
 
 export default function CidadeDetailPage() {
+  const { message } = App.useApp();
   const params = useParams<{ cityId: string }>();
   const cityId = params.cityId;
   const router = useRouter();
@@ -156,7 +156,7 @@ export default function CidadeDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["city-documents"] });
       setUploadOpen(false);
-      toast.success("Documento anexado à cidade.");
+      message.success("Documento anexado à cidade.");
     },
   });
 
@@ -174,11 +174,11 @@ export default function CidadeDetailPage() {
         queryClient.invalidateQueries({ queryKey: ["modulos-cities"] }),
       ]);
       queryClient.removeQueries({ queryKey: ["city", cityId] });
-      toast.success("Cidade excluída da carteira. O histórico foi preservado.");
+      message.success("Cidade excluída da carteira. O histórico foi preservado.");
       router.replace("/cidades");
     },
     onError: (error) => {
-      toast.error(
+      message.error(
         error instanceof Error
           ? error.message
           : "Não foi possível excluir a cidade.",
@@ -412,6 +412,7 @@ function OverviewTab({
   documents: CityDocument[];
   onOpenReports: () => void;
 }) {
+  const { message } = App.useApp();
   const queryClient = useQueryClient();
   const { token } = theme.useToken();
   const [stage, setStage] = useState<StageKey>(city.stage);
@@ -434,10 +435,10 @@ function OverviewTab({
       queryClient.invalidateQueries({ queryKey: ["city", city.id] });
       queryClient.invalidateQueries({ queryKey: ["cities"] });
       queryClient.invalidateQueries({ queryKey: ["pipeline-cities"] });
-      toast.success("Pipeline da cidade atualizado.");
+      message.success("Pipeline da cidade atualizado.");
     },
     onError: (error) =>
-      toast.error(
+      message.error(
         error instanceof Error
           ? error.message
           : "Não foi possível salvar o pipeline.",
@@ -666,42 +667,37 @@ function OverviewTab({
               Atividade recente
             </Title>
             {latestActivities.length ? (
-              <List
-                size="small"
-                style={{ marginTop: 8 }}
-                dataSource={latestActivities}
-                renderItem={(activity) => {
+              <Flex vertical gap={4} style={{ marginTop: 8 }}>
+                {latestActivities.map((activity, index) => {
                   const Icon = activity.icon;
                   return (
-                    <List.Item style={{ border: "none", padding: "8px 0" }}>
-                      <Flex align="center" gap={10} style={{ width: "100%" }}>
-                        <Flex
-                          align="center"
-                          justify="center"
-                          style={{
-                            width: 28,
-                            height: 28,
-                            flex: "0 0 auto",
-                            borderRadius: token.borderRadius,
-                            background: activity.background,
-                            color: activity.color,
-                          }}
-                        >
-                          <Icon style={{ fontSize: 13 }} />
-                        </Flex>
-                        <div style={{ minWidth: 0, flex: 1 }}>
-                          <Text strong ellipsis style={{ fontSize: 10, display: "block" }}>
-                            {activity.title}
-                          </Text>
-                          <Text type="secondary" style={{ fontSize: 8.5 }}>
-                            {activity.meta} · {formatDate(activity.date)}
-                          </Text>
-                        </div>
+                    <Flex key={index} align="center" gap={10} style={{ padding: "8px 0", width: "100%" }}>
+                      <Flex
+                        align="center"
+                        justify="center"
+                        style={{
+                          width: 28,
+                          height: 28,
+                          flex: "0 0 auto",
+                          borderRadius: token.borderRadius,
+                          background: activity.background,
+                          color: activity.color,
+                        }}
+                      >
+                        <Icon style={{ fontSize: 13 }} />
                       </Flex>
-                    </List.Item>
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <Text strong ellipsis style={{ fontSize: 10, display: "block" }}>
+                          {activity.title}
+                        </Text>
+                        <Text type="secondary" style={{ fontSize: 8.5 }}>
+                          {activity.meta} · {formatDate(activity.date)}
+                        </Text>
+                      </div>
+                    </Flex>
                   );
-                }}
-              />
+                })}
+              </Flex>
             ) : (
               <Empty
                 image={Empty.PRESENTED_IMAGE_SIMPLE}
@@ -758,13 +754,13 @@ function ReportsTab({
         <Empty
           image={Empty.PRESENTED_IMAGE_DEFAULT}
           description={
-            <Space direction="vertical" size={4} style={{ maxWidth: 380 }}>
+            <Flex vertical gap={4} style={{ maxWidth: 380 }}>
               <Text strong>Nenhum relatório gerado</Text>
               <Text type="secondary">
                 Gere o primeiro levantamento. O PDF e uma versão navegável
                 ficarão vinculados automaticamente a esta cidade.
               </Text>
-            </Space>
+            </Flex>
           }
         >
           <Link href={`/modulos/levantamento-fundeb?ibge=${city.codigoIbge}`}>
@@ -781,13 +777,11 @@ function ReportsTab({
     <Row gutter={[14, 14]}>
       <Col xs={24} xl={7}>
         <Card size="small" title="Histórico de versões">
-          <List
-            size="small"
-            dataSource={reports}
-            renderItem={(report) => {
+          <Flex vertical gap={6}>
+            {reports.map((report) => {
               const active = selected?.id === report.id;
               return (
-                <List.Item
+                <div
                   key={report.id}
                   onClick={() => onSelect(report.id)}
                   style={{
@@ -795,8 +789,6 @@ function ReportsTab({
                     borderRadius: token.borderRadiusLG,
                     background: active ? token.colorFillSecondary : "transparent",
                     padding: 12,
-                    marginBottom: 6,
-                    border: "none",
                   }}
                 >
                   <Flex gap={10} align="flex-start" style={{ width: "100%" }}>
@@ -846,10 +838,10 @@ function ReportsTab({
                       </Flex>
                     </div>
                   </Flex>
-                </List.Item>
+                </div>
               );
-            }}
-          />
+            })}
+          </Flex>
         </Card>
       </Col>
 
@@ -1040,7 +1032,7 @@ function ReportPreview({ report }: { report: CityReport }) {
           style={{ marginTop: 16 }}
           type="warning"
           showIcon
-          message="Esta versão possui apenas o arquivo PDF. Abra o documento exato pelo botão acima."
+          title="Esta versão possui apenas o arquivo PDF. Abra o documento exato pelo botão acima."
         />
       )}
 

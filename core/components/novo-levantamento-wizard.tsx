@@ -36,7 +36,6 @@ import {
   Descriptions,
   Flex,
   Input,
-  List,
   Modal,
   Radio,
   Row,
@@ -252,24 +251,21 @@ export function NovoLevantamentoWizard({ onClose }: NovoLevantamentoWizardProps)
             Sugestões · região da carteira
           </Typography.Text>
 
-          <List
-            style={{ marginTop: 8 }}
-            split={false}
-            dataSource={MUNICIPIOS_SUGESTOES.filter(
+          <Flex vertical gap={4} style={{ marginTop: 8 }}>
+            {MUNICIPIOS_SUGESTOES.filter(
               (m) => m.nome.toLowerCase().includes(busca.toLowerCase()) || m.ibge.includes(busca)
-            )}
-            renderItem={(m) => {
+            ).map((m) => {
               const indexReal = MUNICIPIOS_SUGESTOES.indexOf(m);
               const selecionado = munSel === indexReal;
 
               return (
-                <List.Item
+                <div
+                  key={m.ibge}
                   onClick={() => setMunSel(indexReal)}
                   style={{
                     cursor: "pointer",
                     borderRadius: 12,
                     padding: "11px 14px",
-                    marginBottom: 4,
                     background: selecionado ? token.colorFillTertiary : "transparent",
                     border: `1px solid ${selecionado ? token.colorBorderSecondary : "transparent"}`,
                   }}
@@ -279,33 +275,36 @@ export function NovoLevantamentoWizard({ onClose }: NovoLevantamentoWizardProps)
                       shape="square"
                       size={30}
                       style={{
-                        background: selecionado ? token.colorPrimary : token.colorFillTertiary,
-                        color: selecionado ? token.colorWhite : token.colorTextSecondary,
+                        background: token.colorFillSecondary,
+                        color: token.colorText,
                         fontFamily: FONTE_NUMERO,
-                        fontSize: 11,
+                        fontSize: 10.5,
                         fontWeight: 600,
                       }}
                     >
                       {m.uf}
                     </Avatar>
-
-                    <div style={{ minWidth: 0, flex: 1 }}>
-                      <Typography.Text strong style={{ fontSize: 13.5 }}>
+                    <div style={{ flex: 1 }}>
+                      <Typography.Text strong style={{ fontSize: 13, display: "block" }}>
                         {m.nome}
                       </Typography.Text>
-                      <div style={{ fontFamily: FONTE_NUMERO, fontSize: 10, color: token.colorTextSecondary }}>
+                      <Typography.Text
+                        type="secondary"
+                        style={{ fontFamily: FONTE_NUMERO, fontSize: 10.5, display: "block" }}
+                      >
+                        {/* Havia aqui uma receita por município que o tipo não
+                            tem — sairia "R$ undefinedM/ano" na tela. Matrículas
+                            e escolas existem na lista e dizem mais. */}
                         IBGE {m.ibge} · {m.matriculas} matrículas · {m.escolas} escolas
-                      </div>
+                      </Typography.Text>
                     </div>
-
                     <Tag color={corDoChip(m.chip)}>{m.chip}</Tag>
-
-                    {selecionado && <CheckCircleFilled style={{ color: token.colorPrimary, fontSize: 18 }} />}
+                    {selecionado && <CheckCircleFilled style={{ color: token.colorPrimary, fontSize: 16 }} />}
                   </Flex>
-                </List.Item>
+                </div>
               );
-            }}
-          />
+            })}
+          </Flex>
 
           <Flex justify="flex-end" style={{ marginTop: 18 }}>
             <Button type="primary" size="large" onClick={() => setEtapa(2)} iconPosition="end" icon={<ArrowRightOutlined />}>
@@ -411,14 +410,16 @@ export function NovoLevantamentoWizard({ onClose }: NovoLevantamentoWizardProps)
                 SEÇÕES DO RELATÓRIO
               </Typography.Text>
 
-              <List
-                style={{ marginTop: 8 }}
-                split
-                dataSource={SECOES}
-                renderItem={(sec, i) => (
-                  <List.Item
-                    style={{ padding: "12px 4px" }}
-                    actions={[<Switch key="switch" checked={secoesOn[i]} onChange={() => toggleSecao(i)} />]}
+              <Flex vertical gap={4} style={{ marginTop: 8 }}>
+                {SECOES.map((sec, i) => (
+                  <Flex
+                    key={sec.nome}
+                    align="center"
+                    justify="space-between"
+                    style={{
+                      padding: "12px 8px",
+                      borderBottom: i < SECOES.length - 1 ? `1px solid ${token.colorBorderSecondary}` : "none",
+                    }}
                   >
                     <Flex align="center" gap={11}>
                       <FileExcelOutlined style={{ fontSize: 17, color: token.colorTextSecondary }} />
@@ -431,9 +432,10 @@ export function NovoLevantamentoWizard({ onClose }: NovoLevantamentoWizardProps)
                         </div>
                       </div>
                     </Flex>
-                  </List.Item>
-                )}
-              />
+                    <Switch checked={secoesOn[i]} onChange={() => toggleSecao(i)} />
+                  </Flex>
+                ))}
+              </Flex>
             </Col>
           </Row>
 

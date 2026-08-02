@@ -15,7 +15,7 @@
 
 import { useState } from "react";
 import { CloudDownloadOutlined, ReloadOutlined } from "@ant-design/icons";
-import { Alert, Button, Card, Descriptions, Flex, List, Tag, Typography, theme } from "antd";
+import { Alert, Button, Card, Descriptions, Flex, Tag, Typography, theme } from "antd";
 
 const { Text, Paragraph } = Typography;
 
@@ -60,7 +60,7 @@ function Veredito({ estado }: { estado: EstadoSnapshot }) {
       <Alert
         type="error"
         showIcon
-        message="Snapshot ausente. O relatório cai no download de ~117 MB a cada reinício do servidor."
+        title="Snapshot ausente. O relatório cai no download de ~117 MB a cada reinício do servidor."
       />
     );
   }
@@ -69,7 +69,7 @@ function Veredito({ estado }: { estado: EstadoSnapshot }) {
       <Alert
         type="warning"
         showIcon
-        message="Não foi possível falar com o IPEADATA. O snapshot local continua servindo normalmente."
+        title="Não foi possível falar com o IPEADATA. O snapshot local continua servindo normalmente."
       />
     );
   }
@@ -78,11 +78,11 @@ function Veredito({ estado }: { estado: EstadoSnapshot }) {
       <Alert
         type="warning"
         showIcon
-        message="O IPEADATA republicou a série depois desta cópia. Há dado novo para baixar."
+        title="O IPEADATA republicou a série depois desta cópia. Há dado novo para baixar."
       />
     );
   }
-  return <Alert type="success" showIcon message="Em dia com a fonte. Nada a baixar." />;
+  return <Alert type="success" showIcon title="Em dia com a fonte. Nada a baixar." />;
 }
 
 export function DadosLocaisCaged() {
@@ -168,7 +168,7 @@ export function DadosLocaisCaged() {
         </Button>
       </Flex>
 
-      {erro && <Alert style={{ marginTop: 16 }} type="error" showIcon message={erro} />}
+      {erro && <Alert style={{ marginTop: 16 }} type="error" showIcon title={erro} />}
 
       {estado && (
         <Flex vertical gap={16} style={{ marginTop: 16 }}>
@@ -207,13 +207,17 @@ export function DadosLocaisCaged() {
             >
               Séries na fonte
             </Text>
-            <List
-              size="small"
-              bordered
-              style={{ marginTop: 8 }}
-              dataSource={estado.series}
-              renderItem={(serie) => (
-                <List.Item key={serie.codigo}>
+            <Flex vertical gap={6} style={{ marginTop: 8 }}>
+              {estado.series.map((serie) => (
+                <div
+                  key={serie.codigo}
+                  style={{
+                    padding: "8px 12px",
+                    borderRadius: token.borderRadius,
+                    border: `1px solid ${token.colorBorderSecondary}`,
+                    background: token.colorBgContainer,
+                  }}
+                >
                   <Flex justify="space-between" align="center" style={{ width: "100%", gap: 12 }}>
                     <Text strong style={{ fontFamily: "var(--font-sync-mono)" }}>
                       {serie.codigo}
@@ -223,7 +227,9 @@ export function DadosLocaisCaged() {
                         serie.erro
                       ) : (
                         <>
-                          cópia {formatarInstante(serie.local)} · fonte {formatarInstante(serie.remoto)}
+                          local: <strong>{formatarInstante(serie.local)}</strong>
+                          {" · "}
+                          remoto: <strong>{formatarInstante(serie.remoto)}</strong>
                           {serie.temDadoNovo && (
                             <Tag color="warning" style={{ marginLeft: 8 }}>
                               novo
@@ -233,9 +239,9 @@ export function DadosLocaisCaged() {
                       )}
                     </Text>
                   </Flex>
-                </List.Item>
-              )}
-            />
+                </div>
+              ))}
+            </Flex>
           </div>
         </Flex>
       )}

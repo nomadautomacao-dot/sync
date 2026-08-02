@@ -12,7 +12,6 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { toast } from "sonner";
 import {
   AppstoreOutlined,
   EnvironmentOutlined,
@@ -21,7 +20,7 @@ import {
   SearchOutlined,
   UnorderedListOutlined,
 } from "@ant-design/icons";
-import { Button, Flex, Input, Result, Segmented, Space, Spin, Tag, Typography } from "antd";
+import { App, Button, Flex, Input, Result, Segmented, Space, Spin, Tag, Typography } from "antd";
 
 import { getFirebaseDb } from "@/core/lib/firebase-client";
 import { useAuth } from "@/core/providers/auth-provider";
@@ -49,6 +48,7 @@ export default function PipelinePage() {
 }
 
 function PipelineContent({ groupId }: { groupId: string }) {
+  const { message } = App.useApp();
   const queryClient = useQueryClient();
   const [isKanbanView, setIsKanbanView] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -69,10 +69,10 @@ function PipelineContent({ groupId }: { groupId: string }) {
       updateCityStage(getFirebaseDb(), cityId, stage),
     onSuccess: (_data, { stage }) => {
       queryClient.invalidateQueries({ queryKey: ["pipeline-cities"] });
-      toast.success(`Estágio atualizado para ${STAGE_LABELS[stage as keyof typeof STAGE_LABELS] ?? stage}`);
+      message.success(`Estágio atualizado para ${STAGE_LABELS[stage as keyof typeof STAGE_LABELS] ?? stage}`);
     },
     onError: (err) => {
-      toast.error(`Erro ao atualizar estágio: ${err.message}`);
+      message.error(`Erro ao atualizar estágio: ${err.message}`);
     },
   });
 
@@ -86,10 +86,10 @@ function PipelineContent({ groupId }: { groupId: string }) {
     }) => updateCityPipeline(getFirebaseDb(), cityId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pipeline-cities"] });
-      toast.success("Dados salvos com sucesso.");
+      message.success("Dados salvos com sucesso.");
     },
     onError: (err) => {
-      toast.error(`Erro ao salvar dados: ${err.message}`);
+      message.error(`Erro ao salvar dados: ${err.message}`);
     },
   });
 
@@ -99,10 +99,10 @@ function PipelineContent({ groupId }: { groupId: string }) {
     ) => ensureCity(getFirebaseDb(), groupId, input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pipeline-cities"] });
-      toast.success("Município adicionado ao pipeline.");
+      message.success("Município adicionado ao pipeline.");
     },
     onError: (err) => {
-      toast.error(`Erro ao criar município: ${err.message}`);
+      message.error(`Erro ao criar município: ${err.message}`);
     },
   });
 

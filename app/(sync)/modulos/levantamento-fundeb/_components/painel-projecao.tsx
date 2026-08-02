@@ -1,7 +1,8 @@
 "use client";
 
 import { Card, Col, Flex, Row, Table, Tag, Typography, theme } from "antd";
-import type { TableColumnsType } from "antd";
+import { ProTable } from "@ant-design/pro-components";
+import type { ProColumns } from "@ant-design/pro-components";
 
 import { formatCurrency } from "@/core/lib/city-types";
 
@@ -53,7 +54,7 @@ export function PainelProjecao({ projecao, recuperavel }: PainelProjecaoProps) {
   const ganhoTotal = projecao?.totalGanho ?? 0;
   const ganhoPercentual = projecao?.ganhoPercentual ?? 0;
 
-  const colunas: TableColumnsType<LinhaComponente> = [
+  const colunas: ProColumns<LinhaComponente>[] = [
     {
       title: "Componente",
       dataIndex: "sigla",
@@ -207,12 +208,14 @@ export function PainelProjecao({ projecao, recuperavel }: PainelProjecaoProps) {
           é o mesmo mecanismo do relatório em papel: rodapé fixo, sem entrar na
           ordenação. */}
       <Card size="small" styles={{ body: { padding: 0 } }}>
-        <Table<LinhaComponente>
+        <ProTable<LinhaComponente>
           columns={colunas}
           dataSource={linhas}
           rowKey="sigla"
           size="small"
           pagination={false}
+          search={false}
+          options={false}
           summary={() => (
             <Table.Summary.Row style={{ background: token.colorFillAlter }}>
               <Table.Summary.Cell index={0}>

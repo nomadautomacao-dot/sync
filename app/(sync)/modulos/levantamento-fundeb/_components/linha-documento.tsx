@@ -1,7 +1,7 @@
 "use client";
 
 import { DownloadOutlined } from "@ant-design/icons";
-import { Button, Flex, Grid, List, Typography, theme } from "antd";
+import { Button, Flex, Grid, Typography, theme } from "antd";
 
 const { useBreakpoint } = Grid;
 const { Text } = Typography;
@@ -44,7 +44,7 @@ export function LinhaDocumento({
   const telas = useBreakpoint();
 
   return (
-    <List.Item style={{ padding: "8px 12px", border: "none" }}>
+    <div style={{ padding: "8px 12px" }}>
       <Flex align="center" gap={12} style={{ width: "100%" }}>
         <Flex
           align="center"
@@ -96,6 +96,6 @@ export function LinhaDocumento({
           {gerando ? "Gerando…" : "Gerar PDF"}
         </Button>
       </Flex>
-    </List.Item>
+    </div>
   );
 }

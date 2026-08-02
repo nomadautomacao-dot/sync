@@ -120,7 +120,7 @@ export function DocumentUploadDialog({
         if (!uploading) onClose();
       }}
       closable={!uploading}
-      maskClosable={!uploading}
+      mask={{ closable: !uploading }}
       width={680}
       footer={[
         <Button key="cancelar" onClick={onClose} disabled={uploading}>
@@ -299,7 +299,7 @@ export function DocumentUploadDialog({
         </Form.Item>
 
         {error && (
-          <Alert type="error" showIcon message={error} style={{ marginBottom: 8 }} />
+          <Alert type="error" showIcon title={error} style={{ marginBottom: 8 }} />
         )}
       </Form>
     </Modal>

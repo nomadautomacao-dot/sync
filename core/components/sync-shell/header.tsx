@@ -25,10 +25,10 @@ import {
   Badge,
   Button,
   Empty,
+  Flex,
   Grid,
   Input,
   Layout,
-  List,
   Modal,
   Popover,
   Skeleton,
@@ -398,37 +398,36 @@ export function SyncHeader({
                     style={{ padding: 28 }}
                   />
                 ) : (
-                  <List
-                    dataSource={alerts}
-                    renderItem={(alert) => (
-                      <List.Item
+                  <Flex vertical gap={4}>
+                    {alerts.map((alert) => (
+                      <Flex
                         key={alert.city.id}
-                        style={{ cursor: "pointer", padding: "12px 16px" }}
+                        align="center"
+                        gap={12}
+                        style={{
+                          cursor: "pointer",
+                          padding: "8px 12px",
+                          borderRadius: token.borderRadiusLG,
+                        }}
                         onClick={() => navigate(`/cidades/${alert.city.id}`)}
                       >
-                        <List.Item.Meta
-                          avatar={
-                            <Avatar
-                              size={34}
-                              icon={<ClockCircleOutlined />}
-                              style={
-                                alert.daysUntilDue < 0
-                                  ? { color: token.colorErrorText, backgroundColor: token.colorErrorBg }
-                                  : { color: token.colorWarningText, backgroundColor: token.colorWarningBg }
-                              }
-                            />
-                          }
-                          title={
-                            <span style={{ fontSize: 11.5 }}>
-                              {alert.city.nextStepDescription || "Próxima ação sem descrição"}
-                            </span>
-                          }
-                          description={
-                            <span style={{ fontSize: 9.5 }}>
-                              {alert.city.name} · {alert.city.uf}
-                            </span>
+                        <Avatar
+                          size={34}
+                          icon={<ClockCircleOutlined />}
+                          style={
+                            alert.daysUntilDue < 0
+                              ? { color: token.colorErrorText, backgroundColor: token.colorErrorBg, flexShrink: 0 }
+                              : { color: token.colorWarningText, backgroundColor: token.colorWarningBg, flexShrink: 0 }
                           }
                         />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <Text ellipsis style={{ fontSize: 11.5, display: "block" }}>
+                            {alert.city.nextStepDescription || "Próxima ação sem descrição"}
+                          </Text>
+                          <Text type="secondary" ellipsis style={{ fontSize: 9.5, display: "block" }}>
+                            {alert.city.name} · {alert.city.uf}
+                          </Text>
+                        </div>
                         <Text
                           style={{
                             fontSize: 9,
@@ -439,9 +438,9 @@ export function SyncHeader({
                         >
                           {alert.dueLabel}
                         </Text>
-                      </List.Item>
-                    )}
-                  />
+                      </Flex>
+                    ))}
+                  </Flex>
                 )}
               </div>
 
@@ -533,73 +532,87 @@ export function SyncHeader({
           )}
 
           {matchedCities.length > 0 && (
-            <List
-              header={
-                <SectionLabel>
-                  {normalizedSearch ? "Municípios" : "Cidades recentes"}
-                </SectionLabel>
-              }
-              dataSource={matchedCities}
-              split={false}
-              renderItem={(city) => (
-                <List.Item
+            <Flex vertical gap={4}>
+              <SectionLabel>
+                {normalizedSearch ? "Municípios" : "Cidades recentes"}
+              </SectionLabel>
+              {matchedCities.map((city) => (
+                <Flex
                   key={city.id}
-                  style={{ cursor: "pointer", borderRadius: token.borderRadiusLG, padding: "7px 10px" }}
+                  align="center"
+                  gap={10}
+                  style={{
+                    cursor: "pointer",
+                    borderRadius: token.borderRadiusLG,
+                    padding: "7px 10px",
+                  }}
                   onClick={() => navigate(`/cidades/${city.id}`)}
                 >
-                  <List.Item.Meta
-                    avatar={
-                      <Avatar
-                        icon={<EnvironmentOutlined />}
-                        style={{ color: token.colorSuccessText, backgroundColor: token.colorSuccessBg }}
-                      />
-                    }
-                    title={<span style={{ fontSize: 12 }}>{city.name}</span>}
-                    description={
-                      <span style={{ fontSize: 9.5 }}>
-                        {city.uf} · IBGE {city.codigoIbge || "não informado"} ·{" "}
-                        {STAGE_LABELS[city.stage] ?? city.stage}
-                      </span>
-                    }
+                  <Avatar
+                    icon={<EnvironmentOutlined />}
+                    style={{
+                      color: token.colorSuccessText,
+                      backgroundColor: token.colorSuccessBg,
+                      flexShrink: 0,
+                    }}
                   />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <Text strong ellipsis style={{ fontSize: 12, display: "block" }}>
+                      {city.name}
+                    </Text>
+                    <Text type="secondary" ellipsis style={{ fontSize: 9.5, display: "block" }}>
+                      {city.uf} · IBGE {city.codigoIbge || "não informado"} ·{" "}
+                      {STAGE_LABELS[city.stage] ?? city.stage}
+                    </Text>
+                  </div>
                   <Text type="secondary" style={{ fontSize: 9, fontWeight: 600 }}>
                     Abrir
                   </Text>
-                </List.Item>
-              )}
-            />
+                </Flex>
+              ))}
+            </Flex>
           )}
 
           {matchedAreas.length > 0 && (
-            <List
-              header={<SectionLabel>Áreas do sistema</SectionLabel>}
-              dataSource={matchedAreas}
-              split={false}
-              renderItem={(area) => {
+            <Flex vertical gap={4} style={{ marginTop: 12 }}>
+              <SectionLabel>Áreas do sistema</SectionLabel>
+              {matchedAreas.map((area) => {
                 const Icon = area.icon;
                 return (
-                  <List.Item
+                  <Flex
                     key={area.href}
-                    style={{ cursor: "pointer", borderRadius: token.borderRadiusLG, padding: "7px 10px" }}
+                    align="center"
+                    gap={10}
+                    style={{
+                      cursor: "pointer",
+                      borderRadius: token.borderRadiusLG,
+                      padding: "7px 10px",
+                    }}
                     onClick={() => navigate(area.href)}
                   >
-                    <List.Item.Meta
-                      avatar={
-                        <Avatar
-                          icon={<Icon />}
-                          style={{ color: token.colorTextSecondary, backgroundColor: token.colorFillTertiary }}
-                        />
-                      }
-                      title={<span style={{ fontSize: 12 }}>{area.label}</span>}
-                      description={<span style={{ fontSize: 9.5 }}>{area.description}</span>}
+                    <Avatar
+                      icon={<Icon />}
+                      style={{
+                        color: token.colorTextSecondary,
+                        backgroundColor: token.colorFillTertiary,
+                        flexShrink: 0,
+                      }}
                     />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <Text strong ellipsis style={{ fontSize: 12, display: "block" }}>
+                        {area.label}
+                      </Text>
+                      <Text type="secondary" ellipsis style={{ fontSize: 9.5, display: "block" }}>
+                        {area.description}
+                      </Text>
+                    </div>
                     <Text type="secondary" style={{ fontSize: 9, fontWeight: 600 }}>
-                      Acessar
+                      Ir
                     </Text>
-                  </List.Item>
+                  </Flex>
                 );
-              }}
-            />
+              })}
+            </Flex>
           )}
         </div>
 

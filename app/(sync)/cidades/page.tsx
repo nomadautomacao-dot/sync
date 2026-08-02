@@ -7,8 +7,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { PlusOutlined, RightOutlined, RiseOutlined } from "@ant-design/icons";
 import { ProTable } from "@ant-design/pro-components";
 import type { ProColumns } from "@ant-design/pro-components";
-import { Button, Result, Space, Statistic, Tag, theme } from "antd";
-import { toast } from "sonner";
+import { App, Button, Result, Space, Statistic, Tag, theme } from "antd";
 
 import {
   ensureCity,
@@ -44,6 +43,7 @@ interface LinhaDaCarteira extends CityAccount {
 }
 
 export default function CidadesPage() {
+  const { message } = App.useApp();
   const { user } = useAuth();
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -79,11 +79,11 @@ export default function CidadesPage() {
       queryClient.invalidateQueries({ queryKey: ["cities"] });
       queryClient.invalidateQueries({ queryKey: ["pipeline-cities"] });
       setNewCityOpen(false);
-      toast.success(`${city.name} está pronta na carteira.`);
+      message.success(`${city.name} está pronta na carteira.`);
       router.push(`/cidades/${city.id}`);
     },
     onError: (error) =>
-      toast.error(
+      message.error(
         error instanceof Error
           ? error.message
           : "Não foi possível adicionar o município.",

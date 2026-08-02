@@ -64,5 +64,16 @@ export const temaSync: ThemeConfig = {
       headerBg: "#FFFFFF",
       bodyBg: "#F5F5F7",
     },
+
+    /* Sidebar Menu: fundo suave em vez do bloco escuro pesado para o item selecionado */
+    Menu: {
+      itemSelectedBg: "#F0F1F5",
+      itemSelectedColor: "#16181D",
+      itemHoverBg: "#F7F7FA",
+      itemHoverColor: "#16181D",
+      itemActiveBg: "#E6E7EB",
+      itemColor: "#595959",
+      iconSize: 16,
+    },
   },
 };

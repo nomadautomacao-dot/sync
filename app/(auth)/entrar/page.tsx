@@ -223,7 +223,7 @@ export default function EntrarPage() {
             <Alert
               type="error"
               showIcon
-              message={erroAuth}
+              title={erroAuth}
               description={
                 <Button
                   type="link"

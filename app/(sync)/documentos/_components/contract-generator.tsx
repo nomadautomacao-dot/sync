@@ -15,6 +15,7 @@ import {
 import {
   Alert,
   Badge,
+  App,
   Button,
   Card,
   Checkbox,
@@ -32,7 +33,6 @@ import {
   Typography,
   theme,
 } from "antd";
-import { toast } from "sonner";
 
 import type { CityAccount } from "@/core/lib/city-types";
 import type {
@@ -81,6 +81,7 @@ export function ContractGenerator({
   cities,
   onArchive,
 }: ContractGeneratorProps) {
+  const { message } = App.useApp();
   const { token } = theme.useToken();
   const [cityId, setCityId] = useState("");
   const [monthlyValue, setMonthlyValue] = useState("27500");
@@ -98,7 +99,7 @@ export function ContractGenerator({
 
   const analyze = async () => {
     if (!selectedCity) {
-      toast.error("Selecione um município.");
+      message.error("Selecione um município.");
       return;
     }
     setAnalyzing(true);
@@ -121,9 +122,9 @@ export function ContractGenerator({
         throw new Error(data.error || data.warnings?.[0] || "Falha na análise.");
       }
       setResult(data);
-      toast.success("Minuta preparada para revisão.");
+      message.success("Minuta preparada para revisão.");
     } catch (error) {
-      toast.error(
+      message.error(
         error instanceof Error
           ? error.message
           : "Não foi possível preparar o contrato.",
@@ -191,13 +192,13 @@ export function ContractGenerator({
         );
       }
 
-      toast.success(
+      message.success(
         archive
           ? "Kit gerado, baixado e salvo no acervo."
           : "Kit gerado e baixado.",
       );
     } catch (error) {
-      toast.error(
+      message.error(
         error instanceof Error ? error.message : "Não foi possível gerar o kit.",
       );
     } finally {
@@ -399,7 +400,7 @@ export function ContractGenerator({
                     type="warning"
                     showIcon
                     icon={<WarningOutlined />}
-                    message="Confira os campos não localizados"
+                    title="Confira os campos não localizados"
                     description={
                       <ul style={{ margin: "4px 0 0", paddingLeft: 18 }}>
                         {result.warnings.slice(0, 3).map((warning) => (

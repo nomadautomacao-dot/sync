@@ -172,9 +172,9 @@ export function NewCityDialog({
       open={open}
       onCancel={reset}
       // O `<dialog>` nativo que este componente substitui só fechava por Esc
-      // ou pelos botões — clique no fundo não fechava. `maskClosable={false}`
+      // ou pelos botões — clique no fundo não fechava. `mask={{ closable: false }}`
       // mantém o mesmo comportamento.
-      maskClosable={false}
+      mask={{ closable: false }}
       destroyOnHidden
       width={540}
       centered
@@ -294,7 +294,7 @@ export function NewCityDialog({
             <Alert
               type="error"
               showIcon
-              message={searchError}
+              title={searchError}
               style={{ marginTop: 8 }}
             />
           )}
@@ -304,7 +304,7 @@ export function NewCityDialog({
               type="success"
               showIcon
               icon={<CheckCircleFilled />}
-              message={
+              title={
                 <span>
                   <strong>
                     {selected.nome}/{selected.uf}

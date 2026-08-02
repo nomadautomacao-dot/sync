@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ArrowRightOutlined } from "@ant-design/icons";
 import { ProCard } from "@ant-design/pro-components";
-import { Avatar, List, Typography, theme } from "antd";
+import { Avatar, Flex, Typography, theme } from "antd";
 
 export interface DocumentoDoModulo {
   nome: string;
@@ -80,34 +80,26 @@ export function ModuleCard({ href, icone: Icone, nome, descricao, fontes, docume
             Entrega
           </Typography.Text>
 
-          <List
-            size="small"
-            split={false}
-            dataSource={documentos}
-            renderItem={(doc) => (
-              <List.Item style={{ padding: "4px 0", border: "none" }}>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "baseline",
-                    justifyContent: "space-between",
-                    width: "100%",
-                    gap: 12,
-                  }}
+          <Flex vertical gap={4} style={{ marginTop: 6 }}>
+            {documentos.map((doc) => (
+              <Flex
+                key={doc.nome}
+                align="baseline"
+                justify="space-between"
+                style={{ width: "100%", gap: 12 }}
+              >
+                <Typography.Text strong style={{ fontSize: 12.5 }}>
+                  {doc.nome}
+                </Typography.Text>
+                <Typography.Text
+                  type="secondary"
+                  style={{ fontFamily: "var(--font-sync-mono)", fontSize: 10.5 }}
                 >
-                  <Typography.Text strong style={{ fontSize: 12.5 }}>
-                    {doc.nome}
-                  </Typography.Text>
-                  <Typography.Text
-                    type="secondary"
-                    style={{ fontFamily: "var(--font-sync-mono)", fontSize: 10.5 }}
-                  >
-                    {doc.paginas} pg
-                  </Typography.Text>
-                </div>
-              </List.Item>
-            )}
-          />
+                  {doc.paginas} pg
+                </Typography.Text>
+              </Flex>
+            ))}
+          </Flex>
         </div>
 
         <Typography.Text type="secondary" style={{ marginTop: 14, fontSize: 11, display: "block" }}>

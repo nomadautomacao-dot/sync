@@ -77,7 +77,7 @@ export function NewCompanyDialog({ open, onClose, onSubmit }: NewCompanyDialogPr
     <Modal
       open={open}
       onCancel={reset}
-      maskClosable={false}
+      mask={{ closable: false }}
       destroyOnHidden
       width={540}
       centered

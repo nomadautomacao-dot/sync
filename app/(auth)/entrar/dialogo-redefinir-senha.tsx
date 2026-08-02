@@ -100,7 +100,7 @@ export function DialogoRedefinirSenha({
         <Form<ValoresRedefinir> form={form} layout="vertical" requiredMark={false} onFinish={aoEnviar}>
           <Paragraph type="secondary">Enviamos um link para você criar uma senha nova.</Paragraph>
 
-          {erro && <Alert type="error" showIcon message={erro} style={{ marginBottom: 16 }} />}
+          {erro && <Alert type="error" showIcon title={erro} style={{ marginBottom: 16 }} />}
 
           <Form.Item
             name="email"

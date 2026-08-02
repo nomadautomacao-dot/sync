@@ -95,11 +95,11 @@ export function PainelCenso({ censo, perfil, projecao }: PainelCensoProps) {
 
           <Alert
             type="info"
-            message="A estimativa é uma leitura possível do próximo ciclo a partir da receita atual e dos pontos de conferência do FUNDEB. Não substitui a validação nas bases oficiais."
+            title="A estimativa é uma leitura possível do próximo ciclo a partir da receita atual e dos pontos de conferência do FUNDEB. Não substitui a validação nas bases oficiais."
           />
 
           {projecao?.ressalva && (
-            <Alert type="warning" showIcon style={{ marginTop: 10 }} message={projecao.ressalva} />
+            <Alert type="warning" showIcon style={{ marginTop: 10 }} title={projecao.ressalva} />
           )}
         </Card>
       </Col>

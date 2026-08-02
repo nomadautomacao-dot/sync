@@ -1,6 +1,6 @@
 "use client";
 
-import { Avatar, Descriptions, Drawer, Space, Tabs, Tag, Typography, theme } from "antd";
+import { Avatar, Descriptions, Drawer, Flex, Space, Tabs, Tag, Typography, theme } from "antd";
 
 import type { CollaboratorItem } from "@/core/lib/people-types";
 import {
@@ -77,7 +77,7 @@ export function CollaboratorDetailPanel({
               key: "cadastrais",
               label: "Dados Cadastrais",
               children: (
-                <Space direction="vertical" size={20} style={{ width: "100%" }}>
+                <Flex vertical gap={20} style={{ width: "100%" }}>
                   <Descriptions
                     title="Contato & Vínculo"
                     column={1}
@@ -115,14 +115,14 @@ export function CollaboratorDetailPanel({
                       },
                     ]}
                   />
-                </Space>
+                </Flex>
               ),
             },
             {
               key: "financeiro",
               label: "Financeiro & PIX",
               children: (
-                <Space direction="vertical" size={20} style={{ width: "100%" }}>
+                <Flex vertical gap={20} style={{ width: "100%" }}>
                   <Descriptions
                     title="Dados de Pagamento"
                     column={1}
@@ -158,14 +158,14 @@ export function CollaboratorDetailPanel({
                       },
                     ]}
                   />
-                </Space>
+                </Flex>
               ),
             },
             {
               key: "cidades",
               label: "Cidades",
               children: (
-                <Space direction="vertical" size={16} style={{ width: "100%" }}>
+                <Flex vertical gap={16} style={{ width: "100%" }}>
                   <Descriptions
                     title="Municípios sob Responsabilidade"
                     column={1}
@@ -181,7 +181,7 @@ export function CollaboratorDetailPanel({
                   <Typography.Text type="secondary">
                     Cidades vinculadas a esta pessoa aparecem destacadas no Kanban do Pipeline.
                   </Typography.Text>
-                </Space>
+                </Flex>
               ),
             },
           ]}

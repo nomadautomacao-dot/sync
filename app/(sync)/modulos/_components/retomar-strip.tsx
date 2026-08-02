@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { RightOutlined } from "@ant-design/icons";
 import { ProCard } from "@ant-design/pro-components";
-import { Avatar, List, Tag, Typography, theme } from "antd";
+import { Avatar, Flex, Tag, Typography, theme } from "antd";
 
 import {
   STAGE_LABELS,
@@ -64,75 +64,72 @@ export function RetomarStrip({ cidades, limite = 6 }: RetomarStripProps) {
         </Link>
       }
     >
-      <List
-        split={false}
-        dataSource={recentes}
-        renderItem={(cidade) => {
+      <Flex vertical gap={2}>
+        {recentes.map((cidade) => {
           const tom = stagePastelTone(cidade.stage);
           const atividade = atividadeRelativa(cidade.lastActivityAt);
 
           return (
-            <List.Item style={{ padding: 0, border: "none" }}>
-              <Link
-                href={`/modulos/levantamento-fundeb?ibge=${cidade.codigoIbge}`}
+            <Link
+              key={cidade.id}
+              href={`/modulos/levantamento-fundeb?ibge=${cidade.codigoIbge}`}
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                width: "100%",
+                padding: "9px 10px",
+                borderRadius: 12,
+              }}
+            >
+              <Avatar
+                size={30}
                 style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 12,
-                  width: "100%",
-                  padding: "9px 10px",
-                  borderRadius: 12,
+                  background: token.colorFillTertiary,
+                  color: token.colorText,
+                  fontFamily: "var(--font-sync-mono)",
+                  fontSize: 10.5,
+                  fontWeight: 600,
                 }}
               >
-                <Avatar
-                  size={30}
-                  style={{
-                    background: token.colorFillTertiary,
-                    color: token.colorText,
-                    fontFamily: "var(--font-sync-mono)",
-                    fontSize: 10.5,
-                    fontWeight: 600,
-                  }}
-                >
-                  {cidade.uf}
-                </Avatar>
+                {cidade.uf}
+              </Avatar>
 
-                <div style={{ minWidth: 0, flex: 1 }}>
-                  <Typography.Text strong ellipsis style={{ display: "block", fontSize: 13 }}>
-                    {cidade.name}
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <Typography.Text strong ellipsis style={{ display: "block", fontSize: 13 }}>
+                  {cidade.name}
+                </Typography.Text>
+                {atividade && (
+                  <Typography.Text
+                    type="secondary"
+                    style={{ display: "block", fontFamily: "var(--font-sync-mono)", fontSize: 10.5 }}
+                  >
+                    {atividade}
                   </Typography.Text>
-                  {atividade && (
-                    <Typography.Text
-                      type="secondary"
-                      style={{ display: "block", fontFamily: "var(--font-sync-mono)", fontSize: 10.5 }}
-                    >
-                      {atividade}
-                    </Typography.Text>
-                  )}
-                </div>
+                )}
+              </div>
 
-                <Tag style={{ background: tom.bg, color: tom.text, border: "none", borderRadius: 999 }}>
-                  {STAGE_LABELS[cidade.stage]}
-                </Tag>
+              <Tag style={{ background: tom.bg, color: tom.text, border: "none", borderRadius: 999 }}>
+                {STAGE_LABELS[cidade.stage]}
+              </Tag>
 
-                <span
-                  style={{
-                    width: 92,
-                    textAlign: "right",
-                    fontFamily: "var(--font-sync-mono)",
-                    fontSize: 12,
-                    color: token.colorTextSecondary,
-                  }}
-                >
-                  {formatCurrencyCompact(cidade.estimatedAnnualRevenue)}
-                </span>
+              <span
+                style={{
+                  width: 92,
+                  textAlign: "right",
+                  fontFamily: "var(--font-sync-mono)",
+                  fontSize: 12,
+                  color: token.colorTextSecondary,
+                }}
+              >
+                {formatCurrencyCompact(cidade.estimatedAnnualRevenue)}
+              </span>
 
-                <RightOutlined style={{ fontSize: 15, color: token.colorTextQuaternary }} />
-              </Link>
-            </List.Item>
+              <RightOutlined style={{ fontSize: 15, color: token.colorTextQuaternary }} />
+            </Link>
           );
-        }}
-      />
+        })}
+      </Flex>
     </ProCard>
   );
 }

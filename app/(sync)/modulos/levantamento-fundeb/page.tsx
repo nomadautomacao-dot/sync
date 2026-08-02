@@ -10,8 +10,7 @@ import {
   PaperClipOutlined,
   RightOutlined,
 } from "@ant-design/icons";
-import { Alert, Button, Card, Flex, List, Result, Skeleton, Typography, theme } from "antd";
-import { toast } from "sonner";
+import { Alert, App, Button, Card, Flex, Result, Skeleton, Typography, theme } from "antd";
 
 import type { IbgeMunicipio } from "@/core/lib/ibge-client";
 import {
@@ -73,6 +72,7 @@ export default function LevantamentoFundebPage() {
 }
 
 function Bancada() {
+  const { message, notification } = App.useApp();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -366,18 +366,20 @@ function Bancada() {
         RELATORIOS_PADRAO,
       );
 
-      toast.success(`${cidade.name} entrou na carteira.`, {
+      notification.success({
+        message: `${cidade.name} entrou na carteira.`,
         description: enfileirados
           ? `${enfileirados} relatórios entraram na fila e serão anexados à ficha.`
           : undefined,
-        action: {
-          label: "Abrir ficha",
-          onClick: () => router.push(`/cidades/${cidade.id}`),
-        },
+        btn: (
+          <Button type="link" size="small" onClick={() => router.push(`/cidades/${cidade.id}`)}>
+            Abrir ficha
+          </Button>
+        ),
       });
     },
     onError: (erro) =>
-      toast.error(
+      message.error(
         erro instanceof Error
           ? erro.message
           : "Não foi possível adicionar o município à carteira.",
@@ -396,7 +398,7 @@ function Bancada() {
 
   const gerarDocumento = async (documento: (typeof DOCUMENTOS)[number]) => {
     if (!municipio || isLoading || error || !resposta || !relatorio) {
-      toast.error(
+      message.error(
         isLoading
           ? "Aguarde os dados do município terminarem de carregar."
           : "Carregue os dados FUNDEB antes de gerar o documento.",
@@ -555,41 +557,42 @@ function Bancada() {
       link.remove();
       window.URL.revokeObjectURL(url);
 
-      const toastOptions = linkedCityId
-        ? {
-            action: {
-              label: "Abrir cidade",
-              onClick: () => router.push(`/cidades/${linkedCityId}`),
-            },
-          }
-        : undefined;
+      const abrirCidadeBtn = linkedCityId ? (
+        <Button type="link" size="small" onClick={() => router.push(`/cidades/${linkedCityId}`)}>
+          Abrir cidade
+        </Button>
+      ) : undefined;
 
       if (dataArchived && !pdfArchived) {
-        toast.warning(
-          `${documento.nome} gerado. Os dados foram vinculados a ${municipio.nome}, mas o PDF não foi arquivado.`,
-          toastOptions,
-        );
+        notification.warning({
+          title: `${documento.nome} gerado.`,
+          description: `Os dados foram vinculados a ${municipio.nome}, mas o PDF não foi arquivado.`,
+          actions: abrirCidadeBtn,
+        });
       } else if (linkingFailed) {
-        toast.error(
-          `${documento.nome} baixado, mas o JSON não foi salvo na cidade. Tente gerar novamente.`,
-          toastOptions,
-        );
+        notification.error({
+          title: `${documento.nome} baixado`,
+          description: "O JSON não foi salvo na cidade. Tente gerar novamente.",
+          actions: abrirCidadeBtn,
+        });
       } else if (!cidadeNaCarteira) {
-        toast.success(`${documento.nome} gerado e baixado.`, {
+        notification.success({
+          title: `${documento.nome} gerado e baixado.`,
           description: `${municipio.nome} não está na carteira, então nada foi arquivado.`,
-          action: {
-            label: "Adicionar à carteira",
-            onClick: () => adicionarNaCarteira.mutate(),
-          },
+          actions: (
+            <Button type="link" size="small" onClick={() => adicionarNaCarteira.mutate()}>
+              Adicionar à carteira
+            </Button>
+          ),
         });
       } else {
-        toast.success(
-          `${documento.nome} gerado e anexado a ${municipio.nome}.`,
-          toastOptions,
-        );
+        notification.success({
+          title: `${documento.nome} gerado e anexado a ${municipio.nome}.`,
+          actions: abrirCidadeBtn,
+        });
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erro ao gerar o documento.");
+      message.error(err instanceof Error ? err.message : "Erro ao gerar o documento.");
     } finally {
       setGerando(null);
     }
@@ -661,7 +664,7 @@ function Bancada() {
                 type="success"
                 showIcon
                 icon={<PaperClipOutlined />}
-                message={
+                title={
                   <Flex align="center" justify="space-between" gap={12} wrap="wrap">
                     <span>
                       {municipio.nome} está na carteira — cada relatório gerado fica anexado
@@ -676,7 +679,7 @@ function Bancada() {
                 type="info"
                 showIcon
                 icon={<FolderAddOutlined />}
-                message={
+                title={
                   <Flex align="center" justify="space-between" gap={12} wrap="wrap">
                     <span>
                       {municipio.nome} não está na carteira. Os relatórios são apenas
@@ -728,10 +731,8 @@ function Bancada() {
                   </Typography.Text>
                 </Flex>
 
-                <List
-                  dataSource={grupo.documentos}
-                  rowKey="id"
-                  renderItem={(documento) => (
+                <Flex vertical gap={2}>
+                  {grupo.documentos.map((documento) => (
                     <LinhaDocumento
                       key={documento.id}
                       icone={documento.icone}
@@ -744,8 +745,8 @@ function Bancada() {
                       desabilitado={documentoDesabilitado}
                       onGerar={() => gerarDocumento(documento)}
                     />
-                  )}
-                />
+                  ))}
+                </Flex>
               </div>
             ))}
           </Card>

@@ -22,6 +22,7 @@ import {
 import { ProCard, ProTable } from "@ant-design/pro-components";
 import type { ActionType, ProColumns, ProFormInstance } from "@ant-design/pro-components";
 import {
+  App,
   Button,
   Dropdown,
   Empty,
@@ -36,7 +37,6 @@ import {
   Typography,
   theme,
 } from "antd";
-import { toast } from "sonner";
 
 import { getFirebaseDb, getFirebaseStorage } from "@/core/lib/firebase-client";
 import { listCities } from "@/core/lib/cities-firestore";
@@ -79,6 +79,7 @@ interface DocumentSearchParams {
 }
 
 export default function DocumentosPage() {
+  const { message } = App.useApp();
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { token } = theme.useToken();
@@ -136,10 +137,10 @@ export default function DocumentosPage() {
       queryClient.invalidateQueries({
         queryKey: ["city-documents", user?.groupId],
       });
-      toast.success("Documento excluído do acervo.");
+      message.success("Documento excluído do acervo.");
     },
     onError: (error) => {
-      toast.error(
+      message.error(
         error instanceof Error
           ? error.message
           : "Não foi possível excluir o documento.",
@@ -176,7 +177,7 @@ export default function DocumentosPage() {
   ) => {
     await uploadMutation.mutateAsync({ file, input });
     setUploadOpen(false);
-    toast.success("Documento anexado ao acervo.");
+    message.success("Documento anexado ao acervo.");
   };
 
   const archiveGeneratedContract = async (

@@ -17,9 +17,9 @@
       "uf": "BA",
       "regiao": "Nordeste",
       "created_at": "2026-03-17T19:57:46.777Z",
-      "updated_at": "2026-07-29T12:30:06.732Z",
-      "ultimo_acesso": "2026-07-29T12:30:06.732Z",
-      "acessos": 43,
+      "updated_at": "2026-08-01T14:51:10.744Z",
+      "ultimo_acesso": "2026-08-01T14:51:10.744Z",
+      "acessos": 44,
       "in_carteira": false
     },
     {
@@ -809,9 +809,9 @@
       "uf": "BA",
       "regiao": "Nordeste",
       "created_at": "2026-06-11T19:36:21.933Z",
-      "updated_at": "2026-06-28T22:29:58.269Z",
-      "ultimo_acesso": "2026-06-28T22:29:58.269Z",
-      "acessos": 2,
+      "updated_at": "2026-08-02T15:51:40.594Z",
+      "ultimo_acesso": "2026-08-02T15:51:40.594Z",
+      "acessos": 3,
       "in_carteira": false
     },
     {
@@ -1490,9 +1490,9 @@
       "uf": "MT",
       "regiao": "Centro-Oeste",
       "created_at": "2026-06-22T20:47:30.561Z",
-      "updated_at": "2026-06-22T20:47:30.561Z",
-      "ultimo_acesso": "2026-06-22T20:47:30.561Z",
-      "acessos": 1,
+      "updated_at": "2026-08-02T15:43:49.345Z",
+      "ultimo_acesso": "2026-08-02T15:43:49.345Z",
+      "acessos": 2,
       "in_carteira": false
     },
     {
@@ -3219,6 +3219,17 @@
       "created_at": "2026-08-01T10:58:04.982Z",
       "updated_at": "2026-08-01T11:00:18.413Z",
       "ultimo_acesso": "2026-08-01T11:00:18.413Z",
+      "acessos": 2,
+      "in_carteira": false
+    },
+    {
+      "codigo_ibge": "2919306",
+      "nome": "Lençóis",
+      "uf": "BA",
+      "regiao": "Nordeste",
+      "created_at": "2026-08-02T15:53:46.423Z",
+      "updated_at": "2026-08-02T15:54:47.251Z",
+      "ultimo_acesso": "2026-08-02T15:54:47.251Z",
       "acessos": 2,
       "in_carteira": false
     }

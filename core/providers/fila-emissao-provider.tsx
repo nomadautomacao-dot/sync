@@ -17,7 +17,7 @@ import {
   ExclamationCircleFilled,
   LoadingOutlined,
 } from "@ant-design/icons";
-import { Badge, Button, Card, Flex, List, Typography, theme } from "antd";
+import { Badge, Button, Card, Flex, Typography, theme } from "antd";
 
 import { getCity } from "@/core/lib/cities-firestore";
 import {
@@ -306,27 +306,18 @@ function PainelDaFila({
       </Button>
 
       {aberto && (
-        <List
-          size="small"
+        <Flex
+          vertical
+          gap={4}
           style={{
             maxHeight: 260,
             overflowY: "auto",
+            padding: "8px 14px",
             borderTop: `1px solid ${token.colorBorderSecondary}`,
           }}
-          dataSource={jobs}
-          renderItem={(job) => (
-            <List.Item
-              style={{ paddingInline: 14 }}
-              actions={
-                job.status === "erro"
-                  ? [
-                      <Button key="repetir" size="small" onClick={() => void repetir(job.id)}>
-                        Repetir
-                      </Button>,
-                    ]
-                  : undefined
-              }
-            >
+        >
+          {jobs.map((job) => (
+            <Flex key={job.id} align="center" justify="space-between" gap={8} style={{ width: "100%" }}>
               <Flex align="center" gap={8} style={{ minWidth: 0, flex: 1 }}>
                 {job.status === "gerando" ? (
                   <LoadingOutlined spin style={{ fontSize: 11, color: token.colorText }} />
@@ -349,9 +340,15 @@ function PainelDaFila({
                   </Text>
                 </div>
               </Flex>
-            </List.Item>
-          )}
-        />
+
+              {job.status === "erro" && (
+                <Button size="small" onClick={() => void repetir(job.id)}>
+                  Repetir
+                </Button>
+              )}
+            </Flex>
+          ))}
+        </Flex>
       )}
     </Card>
   );

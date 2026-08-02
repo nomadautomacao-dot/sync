@@ -31,9 +31,3 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
-
-/* O `sonner` monta os avisos fora da árvore do Ant, então eles não herdam a
-   tipografia do tema. É a única regra que restou por causa disso. */
-.sync-toast {
-  font-family: var(--font-sans);
-}

@@ -15,16 +15,15 @@ import {
   Descriptions,
   Empty,
   Flex,
-  List,
   Row,
   Select,
   Skeleton,
   Space,
-  Table,
   theme,
   Typography,
 } from "antd";
-import type { TableColumnsType } from "antd";
+import { ProTable } from "@ant-design/pro-components";
+import type { ProColumns } from "@ant-design/pro-components";
 
 import { formatCurrency, type CityAccount } from "@/core/lib/city-types";
 import type {
@@ -150,14 +149,14 @@ export function FundebDataTab({
         <Empty
           image={Empty.PRESENTED_IMAGE_DEFAULT}
           description={
-            <Space direction="vertical" size={4} style={{ maxWidth: 460 }}>
+            <Flex vertical gap={4} style={{ maxWidth: 460 }}>
               <Text strong>Ficha FUNDEB ainda não disponível</Text>
               <Text type="secondary">
                 Gere o primeiro levantamento para preencher receitas,
                 projeções, VAAF, VAAT, VAAR, Censo Escolar, habilitação e
                 parâmetros técnicos desta cidade.
               </Text>
-            </Space>
+            </Flex>
           }
         >
           <Link href={`/modulos/levantamento-fundeb?ibge=${city.codigoIbge}`}>
@@ -236,16 +235,16 @@ export function FundebDataTab({
     },
   ];
 
-  const supplementColumns: TableColumnsType<SupplementRow> = [
+  const supplementColumns: ProColumns<SupplementRow>[] = [
     { title: "Modalidade", dataIndex: "label", key: "label" },
     {
       title: "Atual",
       dataIndex: "current",
       key: "current",
       align: "right",
-      render: (value: number | null) => (
+      render: (_, record) => (
         <span style={{ fontFamily: "var(--font-sync-mono)" }}>
-          {formatOptionalCurrency(value)}
+          {formatOptionalCurrency(record.current)}
         </span>
       ),
     },
@@ -254,9 +253,9 @@ export function FundebDataTab({
       dataIndex: "projected",
       key: "projected",
       align: "right",
-      render: (value: number | null) => (
+      render: (_, record) => (
         <span style={{ fontFamily: "var(--font-sync-mono)" }}>
-          {formatOptionalCurrency(value)}
+          {formatOptionalCurrency(record.projected)}
         </span>
       ),
     },
@@ -265,7 +264,7 @@ export function FundebDataTab({
       dataIndex: "gain",
       key: "gain",
       align: "right",
-      render: (value: number | null) => (
+      render: (_, record) => (
         <span
           style={{
             fontFamily: "var(--font-sync-mono)",
@@ -273,7 +272,7 @@ export function FundebDataTab({
             fontWeight: 600,
           }}
         >
-          {formatOptionalCurrency(value)}
+          {formatOptionalCurrency(record.gain)}
         </span>
       ),
     },
@@ -419,10 +418,12 @@ export function FundebDataTab({
               </Text>
             }
           >
-            <Table<SupplementRow>
+            <ProTable<SupplementRow>
               rowKey="label"
               size="small"
               pagination={false}
+              search={false}
+              options={false}
               dataSource={supplements}
               columns={supplementColumns}
             />
@@ -565,7 +566,7 @@ export function FundebDataTab({
           items={sections.map((section) => ({
             key: section.id,
             label: (
-              <Space direction="vertical" size={0}>
+              <Flex vertical gap={0}>
                 <Text strong style={{ fontSize: 11 }}>
                   {section.title}
                 </Text>
@@ -575,7 +576,7 @@ export function FundebDataTab({
                 >
                   {section.source} · {describeValue(section.value)}
                 </Text>
-              </Space>
+              </Flex>
             ),
             children: <DataNode value={section.value} />,
           }))}
@@ -650,17 +651,15 @@ function DataNode({ value, field = "" }: { value: unknown; field?: string }) {
     }
     if (value.every((item) => !item || typeof item !== "object")) {
       return (
-        <List
-          size="small"
-          dataSource={value}
-          renderItem={(item, index) => (
-            <List.Item key={index} style={{ padding: "4px 0", border: "none" }}>
+        <Flex vertical gap={4}>
+          {value.map((item, index) => (
+            <div key={index} style={{ padding: "2px 0" }}>
               <Text style={{ fontFamily: "var(--font-sync-mono)", fontSize: 11.5 }}>
                 {formatDataValue(item, field)}
               </Text>
-            </List.Item>
-          )}
-        />
+            </div>
+          ))}
+        </Flex>
       );
     }
     return (
@@ -697,7 +696,7 @@ function DataNode({ value, field = "" }: { value: unknown; field?: string }) {
   );
 
   return (
-    <Space direction="vertical" size={10} style={{ width: "100%" }}>
+    <Flex vertical gap={10} style={{ width: "100%" }}>
       {leafEntries.length > 0 && (
         <Descriptions
           size="small"
@@ -736,7 +735,7 @@ function DataNode({ value, field = "" }: { value: unknown; field?: string }) {
           }))}
         />
       )}
-    </Space>
+    </Flex>
   );
 }
 
