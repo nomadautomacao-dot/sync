@@ -7,9 +7,19 @@
  *
  * O que sobra é o que o consultor usa: recarregar quando uma fonte demora,
  * zoom para projetar numa TV de sala de reunião, e a pasta onde os PDFs caem.
+ *
+ * ## O primeiro menu muda de nome conforme o sistema
+ *
+ * No macOS o primeiro menu é o do aplicativo e leva o nome dele — é ali que o
+ * usuário procura "Sobre" e "Encerrar". No Windows essa convenção não existe:
+ * o primeiro menu é "Arquivo", e `hide`/`hideOthers`/`unhide` são papéis que só
+ * o macOS implementa — deixá-los no modelo põe três itens mortos na barra, e
+ * clicar num deles chama um método que o `app` não tem naquele sistema.
  */
 
 const { app, Menu, shell, dialog } = require("electron");
+
+const MAC = process.platform === "darwin";
 
 /**
  * @param {{
@@ -23,7 +33,7 @@ function montarMenu(acoes) {
 
   const modelo = [
     {
-      label: nome,
+      label: MAC ? nome : "Arquivo",
       submenu: [
         {
           label: `Sobre o ${nome}`,
@@ -43,10 +53,14 @@ function montarMenu(acoes) {
         { label: "Credenciais…", click: acoes.aoAbrirCredenciais },
         { label: "Registro do servidor", click: acoes.aoVerRegistro },
         { type: "separator" },
-        { role: "hide", label: `Ocultar ${nome}` },
-        { role: "hideOthers", label: "Ocultar outros" },
-        { role: "unhide", label: "Mostrar tudo" },
-        { type: "separator" },
+        ...(MAC
+          ? [
+              { role: "hide", label: `Ocultar ${nome}` },
+              { role: "hideOthers", label: "Ocultar outros" },
+              { role: "unhide", label: "Mostrar tudo" },
+              { type: "separator" },
+            ]
+          : []),
         { role: "quit", label: `Encerrar o ${nome}` },
       ],
     },

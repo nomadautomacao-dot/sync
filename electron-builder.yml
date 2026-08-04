@@ -60,7 +60,33 @@ mac:
 
 win:
   icon: desktop/icones/icon.ico
-  target: nsis
+  target:
+    - target: nsis
+      arch: [x64]
+
+# Instalador com escolha de pasta, e não o de um clique.
+#
+# O padrão do electron-builder é o instalador silencioso: um clique, pasta
+# fixa em `%LOCALAPPDATA%`, sem pergunta. Aqui o pacote passa de 1 GB — o
+# servidor Next, as dependências dele e as duas variantes do Chromium —, e
+# `%LOCALAPPDATA%` mora no disco do sistema, que num notebook de campo é
+# justamente o que costuma estar cheio. Deixar escolher a pasta é o que
+# permite instalar no disco secundário sem desinstalar nada antes.
+#
+# `perMachine: false` mantém a instalação no perfil do usuário: sem UAC, sem
+# pedir a senha do administrador da prefeitura.
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Global Sync
+  # As credenciais ficam em `%APPDATA%\Global Sync` e **não** são apagadas na
+  # desinstalação: reinstalar para atualizar não pode custar o reenvio da
+  # service account para a máquina de cada consultor.
+  deleteAppDataOnUninstall: false
+  artifactName: Global-Sync-${version}-instalador.${ext}
 
 linux:
   icon: desktop/icones/icon.png

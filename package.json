@@ -7,7 +7,7 @@
     "desktop": "electron .",
     "desktop:credenciais": "node scripts/desktop/credenciais-locais.mjs",
     "desktop:icones": "node scripts/desktop/gerar-icones.mjs",
-    "desktop:preparar": "npm run build && node scripts/desktop/preparar-servidor.mjs",
+    "desktop:preparar": "node --max-old-space-size=8192 node_modules/next/dist/bin/next build && node scripts/desktop/preparar-servidor.mjs",
     "desktop:empacotar": "npm run desktop:icones && npm run desktop:preparar && electron-builder --config electron-builder.yml",
     "dev": "next dev --webpack -p 3100",
     "dev:next": "next dev -p 3100",

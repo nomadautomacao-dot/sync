@@ -86,10 +86,10 @@ function mostrarAviso(titulo, corpo) {
     <meta charset="utf-8">
     <title>${titulo}</title>
     <style>
-      body { margin:0; padding:48px 44px; font:15px/1.65 -apple-system,BlinkMacSystemFont,sans-serif;
+      body { margin:0; padding:48px 44px; font:15px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
              color:#3B3F4A; background:linear-gradient(140deg,#F0EEF5,#E9E6F0 60%,#ECEAF1); }
       h1 { font-size:19px; color:#16181D; margin:0 0 14px; letter-spacing:-.01em; }
-      code { font:13px ui-monospace,SFMono-Regular,monospace; background:rgba(255,255,255,.85);
+      code { font:13px ui-monospace,SFMono-Regular,"Cascadia Mono",Consolas,monospace; background:rgba(255,255,255,.85);
              border:1px solid rgba(255,255,255,.95); border-radius:8px; padding:2px 7px; }
       .caixa { background:rgba(255,255,255,.85); border:1px solid rgba(255,255,255,.95);
                border-radius:16px; padding:26px 28px; box-shadow:0 8px 28px rgba(22,24,29,.08); }
@@ -239,7 +239,7 @@ async function subir() {
       "Faltam credenciais",
       `<p>Preencha o arquivo abaixo e abra o app de novo:</p><p><code>${arquivo}</code></p>
        <ul>${itens}</ul>
-       <p style="margin-top:14px">O menu <b>Global Sync → Credenciais…</b> abre esse arquivo, criando o gabarito se ainda não existir.</p>`,
+       <p style="margin-top:14px">O menu <b>${process.platform === "darwin" ? "Global Sync" : "Arquivo"} → Credenciais…</b> abre esse arquivo, criando o gabarito se ainda não existir.</p>`,
     );
     abrirCredenciais();
     aviso.focus();
@@ -253,6 +253,9 @@ async function subir() {
     servidor = iniciado.processo;
     criarJanela(iniciado.porta);
   } catch (erro) {
+    // Também no arquivo, e não só na tela: a tela some quando o usuário fecha a
+    // janela, e o que sobra para diagnosticar à distância é o registro.
+    registrar(`falha ao subir: ${erro instanceof Error ? erro.message : String(erro)}`);
     mostrarAviso(
       "O servidor não subiu",
       `<p>${erro instanceof Error ? erro.message : String(erro)}</p>

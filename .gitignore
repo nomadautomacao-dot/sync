@@ -87,6 +87,9 @@ functions/lib/
 .code-review-graph/
 
 # Local-only tool state
+# `.kilo/` traz `node_modules` proprio (61 MB) e ainda fazia o Vitest varrer os
+# testes internos do zod — ver a exclusao em `vitest.config.ts`.
+.kilo/
 firestore-debug.log
 firebase-debug.log
 *.pid

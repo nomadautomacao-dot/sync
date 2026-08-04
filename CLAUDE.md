@@ -620,26 +620,60 @@ cold start de quem abre o app na frente do secretário.
 
 Os dois caminhos convivem: a nuvem continua sendo o deploy da `main`.
 
+### macOS e Windows
+
+O app nasceu no macOS e roda nos dois desde 2026-08-04, com o **mesmo código**:
+não há pasta por plataforma nem build condicional. O que existe são quatro
+pontos onde o sistema operacional é consultado, todos comentados no lugar:
+
+| Onde | O que muda |
+|---|---|
+| `desktop/ambiente.js` | Quais variáveis de sistema entram na lista branca |
+| `desktop/menu.js` | O primeiro menu — "Global Sync" no macOS, "Arquivo" no Windows — e os papéis `hide`/`unhide`, que só o macOS implementa |
+| `scripts/desktop/gerar-icones.mjs` | O `.icns` só sai no macOS; `.ico` e `.png` saem em qualquer lugar |
+| `scripts/desktop/credenciais-locais.mjs` | Onde fica o `credenciais.env` |
+
+A lista branca é o ponto que mais custou. Montada com `PATH`, `HOME` e `TMPDIR`,
+ela produzia um app que subia no Mac e não subia aqui: `HOME`/`TMPDIR` não
+existem no Windows, e **sem `SystemRoot` o Chromium do Playwright não chega a
+iniciar**. A regra continua a mesma — o ambiente do filho é montado do zero, e
+credencial herdada não passa. `desktop/ambiente.test.ts` cobre as duas
+plataformas rodando em qualquer uma das duas.
+
 ### Arquitetura do pacote
 
 | Parte | Conteúdo |
 |---|---|
 | `app.asar` | Só `desktop/*.js` — o processo principal. `node_modules` fica de fora |
-| `Resources/servidor` | O `.next/standalone`, fora do asar: o servidor abre arquivos por caminho real |
-| `Resources/chromium` | O Chromium do Playwright, **nas duas variantes**. Sem ele o app abre e só quebra na primeira emissão |
+| `resources/servidor` | O `.next/standalone` (675 MB), fora do asar: o servidor abre arquivos por caminho real |
+| `resources/chromium` | O Chromium do Playwright (685 MB), **nas duas variantes**. Sem ele o app abre e só quebra na primeira emissão |
 
 Sobre as duas variantes: `chromium.executablePath()` devolve o Chromium
 completo, mas `chromium.launch({ headless: true })` — o padrão, e o que os 14
 geradores usam — executa o `chromium_headless_shell`. Embarcar só o primeiro
 produz um app que abre, navega e falha na emissão com *"Executable doesn't
-exist"*. São 535 MB somadas; é o mesmo conjunto que `npx playwright install
-chromium` põe na imagem de produção, e igualar os dois evita diferença de
-renderização entre o PDF daqui e o da nuvem.
+exist"*. É o mesmo conjunto que `npx playwright install chromium` põe na imagem
+de produção, e igualar os dois evita diferença de renderização entre o PDF daqui
+e o da nuvem.
+
+**Só a versão em uso, e não tudo que o cache guarda.** O Playwright não apaga a
+versão antiga ao atualizar, e varrer a pasta por padrão embarcava as duas —
+meio giga de Chromium que o app nunca abriria. O número sai do executável que o
+Playwright instalado escolhe, então acompanha a atualização sozinho.
 
 | Arquivo | Papel |
 |---|---|
 | `desktop/main.js` | Janela, downloads, links externos, instância única |
 | `desktop/servidor.js` | Sobe o standalone em `127.0.0.1` numa **porta efêmera** e espera `/api/health` |
+
+A espera por `/api/health` é **paciente de propósito**: 15s por tentativa, e não
+2s. A primeira requisição custa 0,2s num servidor solto e passa de 2s dentro do
+`utilityProcess`, porque concorre com o Electron abrindo a janela e com o Node
+carregando 675 MB de módulo pela primeira vez. Pior: a tentativa abortada não
+cancela o trabalho do servidor, então sondar de novo a cada 250ms empilhava
+requisições disputando a mesma CPU — numa máquina ocupada virava
+congestionamento que não saía sozinho, e o app desistia com "o servidor não
+subiu" com o servidor no ar o tempo todo.
 
 O servidor sobe por `utilityProcess.fork`, **não** por `child_process.spawn`.
 Fazer `spawn(process.execPath, [server])` com `ELECTRON_RUN_AS_NODE=1` funciona,
@@ -651,12 +685,20 @@ registro no Dock, mesmo V8 da janela, sem runtime separado embarcado.
 | `desktop/ambiente.js` | Monta o ambiente do filho a partir de uma **lista branca** |
 | `desktop/menu.js` | Menu nativo em português |
 | `scripts/desktop/preparar-servidor.mjs` | Completa o standalone e tira os segredos de dentro |
-| `scripts/desktop/gerar-icones.mjs` | `.icns`/`.ico` a partir de `public/global-sync-icon.png` |
+| `scripts/desktop/gerar-icones.mjs` | `.icns`/`.ico` a partir de `public/global-sync-icon.png`. Quem redimensiona é o **Chromium do Playwright** — já é dependência do projeto e reamostra igual nos três sistemas, ao contrário do `sips`, que só existe no macOS e fazia o empacotamento morrer na linha 1 fora dele |
+| `scripts/desktop/credenciais-locais.mjs` | Leva as chaves do `.env.local` para o arquivo que o app lê |
 
 ### Credenciais — fora do pacote, sempre
 
-`~/Library/Application Support/Global Sync/credenciais.env`. O menu
-**Global Sync → Credenciais…** cria o gabarito e abre.
+O caminho é o `app.getPath("userData")` de cada sistema:
+
+    macOS    ~/Library/Application Support/Global Sync/credenciais.env
+    Windows  %APPDATA%\Global Sync\credenciais.env
+
+O menu **Credenciais…** (em "Global Sync" no macOS, em "Arquivo" no Windows)
+cria o gabarito e abre. `npm run desktop:credenciais` preenche a partir do
+`.env.local` — preferível a copiar à mão, porque a service account tem 2.348
+caracteres numa linha só e um editor que quebre linha produz 401 em toda rota.
 
 Ficam fora por dois motivos. O `next build` copia todo `.env*` para dentro do
 standalone, e um `.app` é um diretório que qualquer um descompacta — sairia com
@@ -678,19 +720,86 @@ o `playwright-core` chegou sem `browsers.json` e nenhum PDF saía.
 ```bash
 npm run desktop:preparar    # build + completa o standalone + embarca o Chromium
 npm run desktop             # abre em desenvolvimento (usa o .env.local)
+npm run desktop:credenciais # leva as chaves do .env.local para o app instalado
 npm run desktop:empacotar   # ícones + preparar + electron-builder → dist-desktop/
 ```
 
+O `desktop:preparar` chama o `next build` com `--max-old-space-size=8192` em vez
+do `npm run build`. É a única diferença em relação ao build da nuvem, e é só
+teto de heap: com o padrão de 4 GB a checagem de TypeScript estoura numa máquina
+de 16 GB. O `Dockerfile` fixa 4096 e passa porque lá não há mais nada rodando.
+
+No Windows a saída é `dist-desktop/Global-Sync-<versão>-instalador.exe` (436 MB)
+— NSIS com escolha de pasta, instalação no perfil do usuário e sem UAC. Para
+apenas rodar sem instalar, `dist-desktop/win-unpacked/Global Sync.exe` já é o
+app pronto.
+
 ### O que falta
 
-- **Assinatura e notarização.** Construído e aberto nesta máquina, o app roda
-  sem atrito. Um `.dmg` enviado para outra pessoa esbarra no Gatekeeper
+- **Assinatura.** Construído e aberto na própria máquina, o app roda sem atrito
+  nos dois sistemas. Enviado para outra pessoa, um `.dmg` esbarra no Gatekeeper
+  e o `.exe` no SmartScreen ("aplicativo não reconhecido") — o instalador
+  funciona depois de "Mais informações → Executar assim mesmo", mas isso é
+  atrito na frente de quem recebe
 - **Atualização automática.** Hoje uma versão nova exige reinstalar
 - **Python.** As 3 rotas que usam ReportLab (`levantamento-fundeb` pdf e
   autônomo, e slides) dependem do Python do sistema; o pacote não o embarca. Não é
   regressão — `reportlab` também não está instalado nesta máquina
-- **Ícone em alta.** A fonte tem 298×300. O dock fica nítido; a variante de
-  1024 sai interpolada. Um export maior da marca resolve sem tocar em código
+- **Ícone em alta.** A fonte tem 298×300. O dock e a barra de tarefas ficam
+  nítidos; a variante de 1024 sai interpolada. Um export maior da marca resolve
+  sem tocar em código
+
+---
+
+## 11. Console de sistemas (`/sistemas`)
+
+A aba que administra **os outros produtos Global** a partir do Sync: cadastrar
+prefeitura, criar acesso, conceder papel, acompanhar o que foi feito.
+
+Desenho completo e as decisões: `docs/specs/console-de-sistemas.md`.
+Contrato do lado do produto: `docs/PROVISIONAMENTO.md` no repositório dele.
+
+### Por que aqui
+
+Todos os produtos Global vivem no projeto Firebase `globalconsultorias`, cada um
+no seu **banco nomeado**. O servidor do Sync já tem service account desse
+projeto, então alcança qualquer um deles direto — `getFirestore(app, "globaledu")`.
+Não há API entre produtos nem troca de token.
+
+E provisionar usuário **exige o Admin SDK**: as rules do GlobalEdu só autorizam
+escrita em `users/{uid}` para quem já é `global_admin`, e nenhum Web SDK fura
+isso. Um console em SPA precisaria de um backend só para essa parte.
+
+### Cadastro de prefeitura
+
+Digitar o nome basta. A escolha na lista do IBGE traz código, UF e região, e o
+dossiê preenche população, prefeito, Censo Escolar da rede municipal e IDEB —
+tudo de `data/*.json`, sem chamada de rede. O Censo vai gravado no tenant como
+linha de base da implantação. Regra em `core/lib/municipios-dossie.ts`:
+indicador que exija API viva não entra no cadastro.
+
+### Somar um produto ao console
+
+Uma entrada em `CATALOGO_DE_SISTEMAS`, em `core/domain/sistemas.ts`. A entrada
+declara o *dialeto* do produto — coleções, nomes de campo e chaves de claim — e
+as telas e rotas passam a atendê-lo sem mais nenhuma alteração.
+
+### Três coisas para não quebrar
+
+1. **O Auth é um só do projeto**, e `setCustomUserClaims` **substitui** o objeto
+   inteiro. Toda escrita de claim passa por `mesclarClaims()`, senão provisionar
+   alguém no GlobalEdu apaga o `groupId`/`groupRole` dele aqui. Corolário: as
+   chaves de claim não podem colidir entre produtos do catálogo.
+2. **Conta preexistente não tem a senha tocada.** Provisionar procura por e-mail
+   antes de criar; se acha, vincula.
+3. **Documento e claim divergem em silêncio** — as rules leem o token, não o
+   Firestore. A listagem cruza os dois e oferece ressincronizar.
+
+### Permissão
+
+`podeAdministrarSistemas()` em `core/domain/rbac.ts` exige `admin` ou `owner`.
+A guarda que vale é a das rotas (`core/lib/sistemas-http.ts`); esconder o item
+da barra lateral é conveniência.
 
 <!-- code-review-graph MCP tools -->
 ## MCP Tools: code-review-graph

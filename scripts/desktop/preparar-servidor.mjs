@@ -187,9 +187,10 @@ function completar() {
 
 /**
  * O Chromium do Playwright viaja junto. Ele fica no cache do usuário
- * (`~/Library/Caches/ms-playwright`), que existe nesta máquina porque aqui se
- * desenvolve — e não existe em nenhuma outra. Sem embarcar, o app instalado
- * abriria normalmente e só quebraria na primeira emissão de PDF.
+ * (`~/Library/Caches/ms-playwright` no macOS, `%LOCALAPPDATA%\ms-playwright` no
+ * Windows), que existe nesta máquina porque aqui se desenvolve — e não existe
+ * em nenhuma outra. Sem embarcar, o app instalado abriria normalmente e só
+ * quebraria na primeira emissão de PDF.
  *
  * A pasta é resolvida a partir do executável que o Playwright de fato usa, e
  * não por nome fixo: `chromium-1228` hoje, outro número na próxima atualização.
@@ -199,7 +200,8 @@ function embarcarChromium() {
   const { chromium } = require("playwright");
   const executavel = chromium.executablePath();
 
-  // .../ms-playwright/chromium-1228/chrome-mac-arm64/...  → sobe até a pasta da versão
+  // .../ms-playwright/chromium-1234/chrome-mac-arm64/...  → sobe até a pasta da versão
+  // ...\ms-playwright\chromium-1234\chrome-win\chrome.exe → o mesmo no Windows
   const partes = executavel.split(path.sep);
   const indice = partes.findIndex((p) => /^chromium(_headless_shell)?-\d+$/.test(p));
   if (indice < 0) {
@@ -208,6 +210,7 @@ function embarcarChromium() {
     process.exit(1);
   }
   const cache = partes.slice(0, indice).join(path.sep);
+  const versao = partes[indice].split("-")[1];
 
   // **Ambas as variantes, e não só a que `executablePath()` aponta.**
   //
@@ -220,9 +223,18 @@ function embarcarChromium() {
   // A imagem de produção tem as duas, porque `npx playwright install chromium`
   // instala as duas. O app carrega o mesmo conjunto para não haver diferença de
   // renderização entre o PDF gerado aqui e o gerado na nuvem.
-  const variantes = fs.readdirSync(cache).filter((nome) => /^chromium(_headless_shell)?-\d+$/.test(nome));
-  if (variantes.length === 0) {
-    console.error(`Nenhuma variante de Chromium em ${cache}.`);
+  //
+  // **Só a versão em uso, e não tudo que o cache guarda.** O Playwright não
+  // remove a versão antiga ao atualizar: esta máquina tem `chromium-1228` e
+  // `chromium-1234` lado a lado, e varrer a pasta por padrão embarcaria as
+  // quatro pastas — meio giga de Chromium obsoleto que o app nunca abriria.
+  // O número sai do executável que o Playwright instalado escolhe, então
+  // acompanha a atualização sozinho.
+  const variantes = [`chromium-${versao}`, `chromium_headless_shell-${versao}`];
+  const ausentes = variantes.filter((nome) => !fs.existsSync(path.join(cache, nome)));
+  if (ausentes.length > 0) {
+    console.error(`Faltam no cache do Playwright (${cache}): ${ausentes.join(", ")}`);
+    console.error("Rode `npx playwright install chromium` e tente de novo.");
     process.exit(1);
   }
 

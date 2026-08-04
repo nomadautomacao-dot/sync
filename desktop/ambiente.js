@@ -20,9 +20,11 @@
  *
  * ## Onde ficam as credenciais na máquina
  *
- * Empacotado, num arquivo fora do pacote:
+ * Empacotado, num arquivo fora do pacote — o caminho vem do
+ * `app.getPath("userData")`, que cada sistema resolve à sua maneira:
  *
- *     ~/Library/Application Support/Global Sync/credenciais.env
+ *     macOS    ~/Library/Application Support/Global Sync/credenciais.env
+ *     Windows  %APPDATA%\Global Sync\credenciais.env
  *
  * Fica fora de propósito. Atualizar a chave não exige recompilar o app, e o
  * instalador que um dia for para a equipe de campo vai sem segredo nenhum
@@ -88,6 +90,66 @@ function lerArquivoEnv(arquivo) {
 }
 
 /**
+ * O que o sistema operacional precisa ver no filho para o filho existir.
+ *
+ * A lista branca protege de vazar credencial herdada, e ela custou um app que
+ * não abria no Windows: montado do zero com `PATH`, `HOME` e `TMPDIR`, o
+ * servidor subia num Mac e morria aqui. `HOME` e `TMPDIR` não existem no
+ * Windows — o par é `USERPROFILE` e `TEMP` —, e faltava o principal:
+ * **sem `SystemRoot` o Chromium do Playwright não inicia**, porque é dele que
+ * saem as DLLs de rede e de criptografia que o processo carrega antes do
+ * primeiro `main()`. O sintoma seria o pior possível: app abre, navega, e a
+ * emissão de PDF falha na máquina do consultor.
+ *
+ * Nada aqui é segredo — são caminhos de sistema que todo processo do Windows
+ * enxerga. O que a lista continua barrando é o que interessa: `.env` do
+ * repositório, service account, `NODE_TLS_REJECT_UNAUTHORIZED`.
+ */
+const VARIAVEIS_DO_SISTEMA = {
+  win32: [
+    "SystemRoot",
+    "windir",
+    "SystemDrive",
+    "COMSPEC",
+    "PATHEXT",
+    "TEMP",
+    "TMP",
+    "USERPROFILE",
+    "HOMEDRIVE",
+    "HOMEPATH",
+    "APPDATA",
+    "LOCALAPPDATA",
+    "ProgramData",
+    "ProgramFiles",
+    "ProgramFiles(x86)",
+    "NUMBER_OF_PROCESSORS",
+    "PROCESSOR_ARCHITECTURE",
+  ],
+  darwin: ["HOME", "TMPDIR", "LANG"],
+  linux: ["HOME", "TMPDIR", "LANG", "XDG_RUNTIME_DIR", "DISPLAY"],
+};
+
+/**
+ * Copia do ambiente do processo só o que a plataforma pede, e só o que existe.
+ *
+ * @param {string} plataforma valor de `process.platform`
+ * @param {Record<string, string | undefined>} ambiente normalmente `process.env`
+ * @returns {Record<string, string>}
+ */
+function variaveisDoSistema(plataforma, ambiente) {
+  const base = { PATH: ambiente.PATH || ambiente.Path || "" };
+  for (const nome of VARIAVEIS_DO_SISTEMA[plataforma] ?? VARIAVEIS_DO_SISTEMA.linux) {
+    const valor = ambiente[nome];
+    if (valor) base[nome] = valor;
+  }
+  // Fora do Windows a ausência de TMPDIR é comum e o padrão é conhecido; no
+  // Windows não há padrão equivalente, e inventar um daria erro pior que faltar.
+  if (plataforma !== "win32" && !base.TMPDIR) base.TMPDIR = "/tmp";
+  if (plataforma !== "win32" && !base.LANG) base.LANG = "pt_BR.UTF-8";
+  return base;
+}
+
+/**
  * @param {{ empacotado: boolean, pastaUsuario: string, raizRepo: string }} opcoes
  */
 function caminhoCredenciais({ empacotado, pastaUsuario, raizRepo }) {
@@ -107,12 +169,14 @@ function caminhoCredenciais({ empacotado, pastaUsuario, raizRepo }) {
  * }}
  */
 function montarAmbiente(opcoes) {
+  const { plataforma = process.platform, ambiente = process.env } = opcoes;
   const arquivo = caminhoCredenciais(opcoes);
   const doArquivo = lerArquivoEnv(arquivo);
 
   // A lista branca. `process.env` entra depois do arquivo para permitir
   // sobrescrever pontualmente numa sessão de terminal, sem editar o arquivo.
   const env = {
+    ...variaveisDoSistema(plataforma, ambiente),
     // O servidor standalone é uma build de produção; rodá-lo com
     // NODE_ENV=development faria o Next procurar artefatos que não existem no
     // pacote. O `.env.local` diz "development" porque serve ao `next dev`.
@@ -120,14 +184,10 @@ function montarAmbiente(opcoes) {
     // Sem isto o Next escuta em 0.0.0.0 e o servidor fica exposto à rede
     // local — numa prefeitura, isso é a rede inteira da prefeitura.
     HOSTNAME: "127.0.0.1",
-    PATH: process.env.PATH || "",
-    HOME: process.env.HOME || "",
-    TMPDIR: process.env.TMPDIR || "/tmp",
-    LANG: process.env.LANG || "pt_BR.UTF-8",
   };
 
   for (const { nome } of CREDENCIAIS) {
-    const valor = process.env[nome] || doArquivo[nome];
+    const valor = ambiente[nome] || doArquivo[nome];
     if (valor) env[nome] = valor;
   }
 
@@ -137,4 +197,10 @@ function montarAmbiente(opcoes) {
   return { env, arquivo, faltando, bloqueado };
 }
 
-module.exports = { montarAmbiente, caminhoCredenciais, lerArquivoEnv, CREDENCIAIS };
+module.exports = {
+  montarAmbiente,
+  caminhoCredenciais,
+  lerArquivoEnv,
+  variaveisDoSistema,
+  CREDENCIAIS,
+};

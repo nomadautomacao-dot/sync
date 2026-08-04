@@ -4,11 +4,10 @@
  *
  * ## Por que existe
  *
- * O app procura as credenciais em
- * `~/Library/Application Support/Global Sync/credenciais.env`, fora do pacote —
- * ver `desktop/ambiente.js` para o porquê. Na primeira abertura esse arquivo
- * está em branco, e o app mostra a tela "Faltam credenciais". Não é defeito: é
- * a recusa deliberada de subir sem o que verifica o login.
+ * O app procura as credenciais num arquivo fora do pacote — ver
+ * `desktop/ambiente.js` para o porquê. Na primeira abertura esse arquivo está
+ * em branco, e o app mostra a tela "Faltam credenciais". Não é defeito: é a
+ * recusa deliberada de subir sem o que verifica o login.
  *
  * Preencher à mão é onde as coisas dão errado. A service account tem mais de
  * 2 mil caracteres numa linha só, com `\n` escapados dentro da chave privada;
@@ -36,7 +35,25 @@ import { fileURLToPath } from "node:url";
 
 const RAIZ = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const ORIGEM = path.join(RAIZ, ".env.local");
-const DESTINO = path.join(os.homedir(), "Library", "Application Support", "Global Sync", "credenciais.env");
+
+/**
+ * O mesmo caminho que o `app.getPath("userData")` do Electron devolve, e o
+ * mesmo que `desktop/ambiente.js` vai ler. Este script roda como Node puro,
+ * sem Electron carregado, então a regra é reproduzida aqui — e ela é fixa:
+ * é o nome passado a `app.setName("Global Sync")` dentro da pasta de dados de
+ * aplicativo de cada sistema.
+ */
+function pastaDoApp() {
+  if (process.platform === "win32") {
+    return path.join(process.env.APPDATA || path.join(os.homedir(), "AppData", "Roaming"), "Global Sync");
+  }
+  if (process.platform === "darwin") {
+    return path.join(os.homedir(), "Library", "Application Support", "Global Sync");
+  }
+  return path.join(process.env.XDG_CONFIG_HOME || path.join(os.homedir(), ".config"), "Global Sync");
+}
+
+const DESTINO = path.join(pastaDoApp(), "credenciais.env");
 
 const CHAVES = [
   { nome: "FIREBASE_SERVICE_ACCOUNT", obrigatoria: true, json: true },
@@ -112,6 +129,8 @@ const corpo = [
 ].join("\n");
 
 fs.mkdirSync(path.dirname(DESTINO), { recursive: true });
+// `mode` é ignorado no Windows, e ali a proteção vem de onde o arquivo está:
+// `%APPDATA%` fica dentro do perfil do usuário, cuja ACL já barra os outros.
 fs.writeFileSync(DESTINO, corpo, { mode: 0o600 });
 
 console.log(`Escrito em ${DESTINO.replace(os.homedir(), "~")}\n`);

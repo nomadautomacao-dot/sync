@@ -6,7 +6,12 @@ export default defineConfig({
     environment: "node",
     include: ["**/*.test.ts"],
     exclude: [
-      "node_modules/**",
+      // `**/` e nao `node_modules/**`: a forma antiga so pegava a raiz, e
+      // qualquer pasta de ferramenta com dependencias proprias entrava na
+      // suite. Foi o que aconteceu com `.kilo/node_modules/`, que trouxe os
+      // testes internos do zod e deixou o gate vermelho com 3 falhas que nao
+      // eram do projeto.
+      "**/node_modules/**",
       ".next/**",
       // Worktrees de agentes duplicam os testes da raiz
       ".claude/**",

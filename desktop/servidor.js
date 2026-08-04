@@ -26,8 +26,34 @@ const net = require("node:net");
 const path = require("node:path");
 
 /** Tempo que o servidor tem para responder antes de considerarmos que travou. */
-const ESPERA_MAXIMA_MS = 60_000;
-const INTERVALO_SONDA_MS = 250;
+const ESPERA_MAXIMA_MS = 90_000;
+const INTERVALO_SONDA_MS = 500;
+
+/**
+ * Quanto cada sonda espera antes de desistir **daquela** tentativa.
+ *
+ * Já foram 2s, e 2s produziam um app que não abria no Windows. A primeira
+ * requisição a `/api/health` custa 0,2s num servidor solto e passa de 2s aqui
+ * dentro, porque ela concorre com o Electron abrindo a janela e com o Node
+ * carregando 673 MB de módulo pela primeira vez. O registro instrumentado
+ * mostrou o padrão exato:
+ *
+ *     [sonda] The operation was aborted due to timeout (+2012ms)
+ *     [sonda] The operation was aborted due to timeout (+2009ms)
+ *     [sonda] ok (+955ms)
+ *
+ * E o desperdício não para no relógio: a tentativa abortada não cancela o
+ * trabalho do servidor, então sondar de novo a cada 250ms empilha requisições
+ * que disputam a mesma CPU e deixam a resposta mais lenta ainda. Numa máquina
+ * ocupada isso vira congestionamento que não sai sozinho — o app ficava os 60s
+ * inteiros tentando e desistia com "o servidor não subiu", com o servidor no ar
+ * o tempo todo.
+ *
+ * Uma sonda paciente resolve os dois: quem está subindo tem tempo de responder,
+ * e quem morreu de verdade já foi detectado pelo evento `exit`, sem depender
+ * deste relógio.
+ */
+const ESPERA_POR_SONDA_MS = 15_000;
 
 /**
  * Pede uma porta livre ao sistema e devolve. Há uma janela de corrida entre
@@ -47,15 +73,22 @@ function portaLivre() {
   });
 }
 
-async function respondeSaude(porta) {
+/**
+ * Devolve `null` quando o servidor respondeu, e o motivo da recusa quando não.
+ *
+ * O motivo importa. A primeira versão engolia a exceção — conexão recusada
+ * enquanto o Next sobe é o caso normal, não erro — e com isso o único desfecho
+ * possível de uma falha era "o servidor não respondeu em 60s", que não diz se
+ * a porta estava fechada, se um proxy interceptou ou se a rota devolveu 500.
+ */
+async function motivoDeNaoResponder(porta) {
   try {
     const resposta = await fetch(`http://127.0.0.1:${porta}/api/health`, {
-      signal: AbortSignal.timeout(2_000),
+      signal: AbortSignal.timeout(ESPERA_POR_SONDA_MS),
     });
-    return resposta.ok;
-  } catch {
-    // Conexão recusada enquanto o Next ainda sobe é o caso normal, não erro.
-    return false;
+    return resposta.ok ? null : `/api/health respondeu ${resposta.status}`;
+  } catch (erro) {
+    return erro instanceof Error ? erro.message : String(erro);
   }
 }
 
@@ -108,14 +141,19 @@ async function iniciarServidor({ raizServidor, env, aoRegistrar = () => {} }) {
   });
 
   const limite = Date.now() + ESPERA_MAXIMA_MS;
+  let ultimoMotivo = null;
   while (Date.now() < limite) {
     if (morreu) throw new Error(morreu);
-    if (await respondeSaude(porta)) return { porta, processo };
+    ultimoMotivo = await motivoDeNaoResponder(porta);
+    if (ultimoMotivo === null) return { porta, processo };
     await new Promise((r) => setTimeout(r, INTERVALO_SONDA_MS));
   }
 
   processo.kill();
-  throw new Error(`o servidor não respondeu em ${ESPERA_MAXIMA_MS / 1000}s.`);
+  throw new Error(
+    `o servidor não respondeu em ${ESPERA_MAXIMA_MS / 1000}s na porta ${porta}` +
+      `${ultimoMotivo ? ` — última tentativa: ${ultimoMotivo}` : ""}.`,
+  );
 }
 
 /**
