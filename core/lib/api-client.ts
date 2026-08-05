@@ -1,7 +1,10 @@
 /**
- * Cliente HTTP das rotas do BFF. Sem consumidor por ora: a Fase 1 lê o Firestore
- * direto. As Fases 4-5 (FUNDEB e geradores de PDF), que são BFF-only, são as
- * consumidoras previstas — não é código morto.
+ * Cliente HTTP das rotas do BFF — anexa o ID token do Firebase a cada chamada.
+ *
+ * Quem usa hoje é o console de sistemas (`app/(sync)/sistemas/`), que não pode
+ * ler o Firestore direto: ele administra o banco de *outro* produto, e isso só
+ * o servidor consegue, com a service account. As telas do próprio Sync
+ * continuam lendo o Firestore pelo Web SDK.
  */
 
 import { getFirebaseAuth } from "./firebase-client";

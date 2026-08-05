@@ -8,6 +8,7 @@ import {
   AppstoreOutlined,
   BankOutlined,
   CloseOutlined,
+  ClusterOutlined,
   DashboardOutlined,
   EnvironmentOutlined,
   FolderOpenOutlined,
@@ -33,6 +34,7 @@ import {
 } from "antd";
 import type { MenuProps } from "antd";
 
+import { podeAdministrarSistemas } from "@/core/domain/rbac";
 import { useAuth } from "@/core/providers/auth-provider";
 
 const { Sider } = Layout;
@@ -43,6 +45,8 @@ interface ItemDeNavegacao {
   rotulo: string;
   rota: string;
   icone: React.ComponentType;
+  /** Só aparece para quem administra o grupo. Ver `podeAdministrarSistemas`. */
+  restrito?: boolean;
 }
 
 interface SyncSidebarProps {
@@ -59,6 +63,7 @@ const NAV_ITEMS: readonly ItemDeNavegacao[] = [
   { rotulo: "Pessoas", rota: "/pessoas", icone: TeamOutlined },
   { rotulo: "Documentos", rota: "/documentos", icone: FolderOpenOutlined },
   { rotulo: "Módulos", rota: "/modulos", icone: AppstoreOutlined },
+  { rotulo: "Sistemas", rota: "/sistemas", icone: ClusterOutlined, restrito: true },
   { rotulo: "Ajustes", rota: "/ajustes", icone: SettingOutlined },
 ];
 
@@ -121,13 +126,19 @@ export function SyncSidebar({ abertaNoMobile, aoFecharNoMobile }: SyncSidebarPro
       .join("")
       .toUpperCase() || "GS";
 
-  const chaveAtiva = NAV_ITEMS.find(
+  // Esconder o item é conveniência, não segurança: a guarda que vale está em
+  // `core/lib/sistemas-http.ts`, do lado do servidor.
+  const itensVisiveis = NAV_ITEMS.filter(
+    (item) => !item.restrito || podeAdministrarSistemas(user?.groupRole),
+  );
+
+  const chaveAtiva = itensVisiveis.find(
     (item) =>
       pathname === item.rota ||
       (item.rota !== "/painel" && pathname.startsWith(`${item.rota}/`)),
   )?.rota;
 
-  const itensDoMenu: MenuProps["items"] = NAV_ITEMS.map((item) => {
+  const itensDoMenu: MenuProps["items"] = itensVisiveis.map((item) => {
     const Icone = item.icone;
     return {
       key: item.rota,
