@@ -1,4 +1,10 @@
-import type { GroupRole } from "@/core/domain/rbac";
+import {
+  CLAIM_PERMISSOES,
+  ajustesDaClaim,
+  permissoesEfetivas,
+  type GroupRole,
+  type Permissoes,
+} from "@/core/domain/rbac";
 
 export interface SessionUser {
   id: string;
@@ -6,6 +12,12 @@ export interface SessionUser {
   email: string;
   groupId: string;
   groupRole: GroupRole;
+  /**
+   * Já resolvidas: padrão do papel + ajustes da claim + as travas. Quem
+   * consome não precisa saber que existe uma claim, e não há um segundo lugar
+   * onde alguém possa esquecer de aplicar a trava.
+   */
+  permissoes: Permissoes;
 }
 
 const groupRoles: GroupRole[] = ["owner", "admin", "member", "viewer"];
@@ -37,6 +49,17 @@ export function sessionUserFromClaims(claims: Record<string, unknown>): SessionU
   if (!id || !email || !groupId) return null;
 
   const name = typeof claims.name === "string" && claims.name.trim() ? claims.name : email;
+  const groupRole = normalizeGroupRole(claims.groupRole);
 
-  return { id, name, email, groupId, groupRole: normalizeGroupRole(claims.groupRole) };
+  return {
+    id,
+    name,
+    email,
+    groupId,
+    groupRole,
+    permissoes: permissoesEfetivas(
+      groupRole,
+      ajustesDaClaim(claims[CLAIM_PERMISSOES]),
+    ),
+  };
 }

@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { permissoesPadrao } from "@/core/domain/rbac";
 import { clientUserFromClaims } from "./client-session";
 
 describe("clientUserFromClaims", () => {
@@ -6,7 +7,7 @@ describe("clientUserFromClaims", () => {
 
   it("monta ClientUser a partir de claims válidas", () => {
     expect(clientUserFromClaims({ groupId: "g1", name: "Ana", groupRole: "admin" }, fallback))
-      .toEqual({ id: "u1", name: "Ana", email: "a@b.com", groupId: "g1", groupRole: "admin" });
+      .toEqual({ id: "u1", name: "Ana", email: "a@b.com", groupId: "g1", groupRole: "admin", permissoes: permissoesPadrao("admin") });
   });
 
   it("retorna null sem groupId", () => {
@@ -16,6 +17,7 @@ describe("clientUserFromClaims", () => {
   it("preenche uid/email a partir do fallback quando ausentes nas claims", () => {
     expect(clientUserFromClaims({ groupId: "g1" }, fallback)).toEqual({
       id: "u1", name: "a@b.com", email: "a@b.com", groupId: "g1", groupRole: "member",
+      permissoes: permissoesPadrao("member"),
     });
   });
 
@@ -33,6 +35,6 @@ describe("clientUserFromClaims", () => {
     expect(clientUserFromClaims({ groupId: "g1" }, fallbackWithNullEmail)).toBeNull();
     // com email válido nas claims e email null no fallback -> espera sucesso (claims têm precedência)
     expect(clientUserFromClaims({ groupId: "g1", email: "claim@email.com" }, fallbackWithNullEmail))
-      .toEqual({ id: "u1", name: "claim@email.com", email: "claim@email.com", groupId: "g1", groupRole: "member" });
+      .toEqual({ id: "u1", name: "claim@email.com", email: "claim@email.com", groupId: "g1", groupRole: "member", permissoes: permissoesPadrao("member") });
   });
 });

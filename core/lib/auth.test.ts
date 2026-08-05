@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from "vitest";
+import { permissoesPadrao } from "@/core/domain/rbac";
 
 const getHeader = vi.fn();
 vi.mock("next/headers", () => ({
@@ -28,7 +29,7 @@ describe("getSessionUser", () => {
     getHeader.mockReturnValue("Bearer token-valido");
     verifyIdToken.mockResolvedValue({
       uid: "uid-1",
-      email: "consultor@rochaprime.com.br",
+      email: "consultora@globalcompany.com.br",
       name: "Consultor",
       groupId: "grupo-1",
       groupRole: "owner",
@@ -37,9 +38,10 @@ describe("getSessionUser", () => {
     expect(await getSessionUser()).toEqual({
       id: "uid-1",
       name: "Consultor",
-      email: "consultor@rochaprime.com.br",
+      email: "consultora@globalcompany.com.br",
       groupId: "grupo-1",
       groupRole: "owner",
+      permissoes: permissoesPadrao("owner"),
     });
   });
 

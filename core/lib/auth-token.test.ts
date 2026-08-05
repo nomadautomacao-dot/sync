@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { permissoesPadrao } from "@/core/domain/rbac";
 import { bearerToken, sessionUserFromClaims } from "./auth-token";
 
 describe("bearerToken", () => {
@@ -23,7 +24,7 @@ describe("bearerToken", () => {
 describe("sessionUserFromClaims", () => {
   const claims = {
     uid: "uid-1",
-    email: "consultor@rochaprime.com.br",
+    email: "consultora@globalcompany.com.br",
     name: "Consultor",
     groupId: "grupo-1",
     groupRole: "admin",
@@ -33,15 +34,37 @@ describe("sessionUserFromClaims", () => {
     expect(sessionUserFromClaims(claims)).toEqual({
       id: "uid-1",
       name: "Consultor",
-      email: "consultor@rochaprime.com.br",
+      email: "consultora@globalcompany.com.br",
       groupId: "grupo-1",
       groupRole: "admin",
+      permissoes: permissoesPadrao("admin"),
     });
+  });
+
+  it("aplica os ajustes da claim por cima do padrão do papel", () => {
+    const restrita = sessionUserFromClaims({
+      ...claims,
+      groupRole: "member",
+      perm: { cidades: "nenhum", pessoas: "editar" },
+    });
+    expect(restrita?.permissoes.cidades).toBe("nenhum");
+    expect(restrita?.permissoes.pessoas).toBe("editar");
+    // O que a claim não tocou segue o padrão de member.
+    expect(restrita?.permissoes.pipeline).toBe("editar");
+  });
+
+  it("claim de permissão adulterada não escala privilégio", () => {
+    const tentativa = sessionUserFromClaims({
+      ...claims,
+      groupRole: "viewer",
+      perm: { ajustes: "editar" },
+    });
+    expect(tentativa?.permissoes.ajustes).toBe("ver");
   });
 
   it("usa o email como nome quando name esta ausente", () => {
     const { name: _omitido, ...semNome } = claims;
-    expect(sessionUserFromClaims(semNome)?.name).toBe("consultor@rochaprime.com.br");
+    expect(sessionUserFromClaims(semNome)?.name).toBe("consultora@globalcompany.com.br");
   });
 
   it("rebaixa groupRole desconhecido para member", () => {

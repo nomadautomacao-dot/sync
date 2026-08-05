@@ -7,7 +7,12 @@
 
 ## 1. Visão Geral
 
-**Sync** é uma plataforma de gestão e automação para a **Rocha Prime Consultorias**, focada em consultoria educacional FUNDEB para municípios brasileiros.
+**Sync** é uma plataforma de gestão e automação para a **Global Company**
+(razão social GLOBAL SERVICES COMPANY LTDA, CNPJ 26.137.996/0001-75, Santa
+Maria da Vitória/BA), consultoria que atende municípios brasileiros em toda a
+área da educação. O FUNDEB é o serviço mais desenvolvido no sistema, não o
+único — a identidade da empresa vive em `core/domain/empresa.ts`, com espelho
+em `kit_padrao_pdf/empresa.py` para os geradores ReportLab.
 
 ### O que faz
 1. Gera levantamentos financeiros automáticos de municípios (dados IBGE, FNDE, INEP, TSE, SICONFI, QEdu, IDEB)
@@ -89,7 +94,7 @@ Sync/
 ├── data/                         # JSONs derivados (IDEB, INEP, TSE) + fnde/*.csv
 │                                 #   Entram por `import from "@/data/..."` → bundlados
 │                                 #   no build. Fontes brutas ficam em Sync-Arquivos/.
-├── kit_padrao_pdf_rocha_prime/   # Módulo Python de geração de PDFs FUNDEB
+├── kit_padrao_pdf/   # Módulo Python de geração de PDFs FUNDEB
 ├── docs/                         # Specs, roadmaps e análises (kebab-case)
 │   ├── specs/                    # Specs de produto
 │   ├── roadmaps/                 # Roadmaps de automação
@@ -177,6 +182,7 @@ cliente; as rotas apenas verificam o ID token. Ver seção 3.2.
 | `/api/modulos/levantamento-fundeb/censo-inep` | GET | Dados do Censo INEP |
 | `/api/modulos/levantamento-fundeb/pdf` | POST | Geração de PDF (Python/ReportLab) |
 | `/api/modulos/levantamento-fundeb/raio-x` | POST | Raio-X municipal em PDF (42 páginas) |
+| `/api/modulos/levantamento-fundeb/dever-de-casa` | GET/POST | Dever de Casa — veredito interno item a item, com nota de 0 a 10 (GET é a prévia) |
 | `/api/modulos/levantamento-fundeb/oficio-documentos` | POST | Ofício à prefeitura + questionário (4 páginas) |
 | `/api/modulos/dossies/escolas` | GET/POST | Dossiê das Escolas — um bloco por unidade da rede |
 | `/api/modulos/dossies/conformidade` | GET/POST | Dossiê da Conformidade — CAUC, SIOPE, DCA, VAAR, piso |
@@ -208,6 +214,8 @@ cliente; as rotas apenas verificam o ID token. Ver seção 3.2.
 **Outros:**
 | Rota | Método | Descrição |
 |------|--------|-----------|
+| `/api/acessos` | GET/POST | Usuárias do grupo e concessão de acesso (seção 11) |
+| `/api/acessos/[uid]` | PATCH/POST | Papel e permissões; link de definição de senha |
 | `/api/health` | GET | Health check (status, timestamp, uptime) |
 | `/api/modules` | GET | Catálogo de módulos disponíveis |
 | `/api/propostas/prefill` | GET | Pre-fill de propostas com dados públicos |
@@ -318,7 +326,7 @@ a regra correspondente em `firestore.rules` — sem regra, o acesso é negado.
 | `/modulos/levantamento-fundeb` | `app/(sync)/modulos/levantamento-fundeb/page.tsx` | Os três relatórios (seção 5) |
 | `/documentos` | `app/(sync)/documentos/page.tsx` | Kit documental |
 | `/caixa` | `app/(sync)/caixa/page.tsx` | Inbox / auditoria |
-| `/ajustes` | `app/(sync)/ajustes/page.tsx` | Configurações do workspace |
+| `/ajustes` | `app/(sync)/ajustes/page.tsx` | Configurações do workspace + aba **Acessos** (seção 11), visível só para owner/admin |
 
 ### 4.3 Interface — Ant Design
 
@@ -586,10 +594,36 @@ No fluxo normal não se usa nenhum dos dois.
   local — não há store global no projeto.
 - Imports: `@/core/`, `@/modules/`, `@/data/`
 
-### RBAC
-- **GroupRole:** `owner > admin > member > viewer`
-- **CompanyRole:** `director > manager > coordinator > analyst > operator`
-- **ModulePermission:** `admin > write > read`
+### RBAC — duas camadas
+
+Tudo em `core/domain/rbac.ts`, com teste em `rbac.test.ts`.
+
+- **GroupRole** (`owner > admin > member > viewer`) — que tipo de pessoa é no
+  grupo. Viaja na custom claim `groupRole`.
+- **Área × nível** — a camada fina. Nove áreas (`AREAS`, espelhando a barra
+  lateral) e três níveis (`nenhum`/`ver`/`editar`). O papel define o padrão;
+  a claim `perm` carrega **só os desvios**, porque custom claim tem teto de
+  1000 bytes por usuária.
+
+Duas travas não se configuram, e as duas existem para o mesmo fim — que sempre
+haja alguém capaz de destravar o sistema:
+
+1. `owner` alcança tudo, sempre. Qualquer ajuste em contrário é ignorado.
+2. Ninguém abaixo de `admin` chega a `editar` em Ajustes — editar Ajustes é
+   conceder acesso, e conceder acesso a si mesma é escalar privilégio.
+
+`SessionUser.permissoes` já vem resolvido (padrão + desvios + travas): quem
+consome não sabe que existe claim, e não há um segundo lugar onde alguém possa
+esquecer de aplicar a trava.
+
+A barra lateral é **derivada** de `AREAS` — área nova sem ícone não compila, e
+item de menu sem regra de permissão deixou de ser possível. Esconder o item é
+conveniência; a guarda que vale é a de `app/(sync)/layout.tsx`, que confere
+`areaDaRota(pathname)` contra as permissões.
+
+> **CompanyRole** (`director > manager > coordinator > analyst > operator`) e
+> **ModulePermission** aparecem em documento antigo e **não existem no código**.
+> Não há tela nem rota que os leia.
 
 ### O que NÃO está implementado
 - Módulos: Terceirização, Formação, Atas, Tecnologia, RH, Financeiro — existem
@@ -751,13 +785,73 @@ app pronto.
 
 ---
 
-## 11. Console de sistemas (`/sistemas`)
+## 11. Acessos (`/ajustes` › aba Acessos)
 
-A aba que administra **os outros produtos Global** a partir do Sync: cadastrar
-prefeitura, criar acesso, conceder papel, acompanhar o que foi feito.
+Quem entra no Sync e até onde vai. Aba visível só para `owner`/`admin`, em
+`core/components/ajustes/acessos.tsx`, servida por `app/api/acessos/`.
 
-Desenho completo e as decisões: `docs/specs/console-de-sistemas.md`.
-Contrato do lado do produto: `docs/PROVISIONAMENTO.md` no repositório dele.
+| Rota | Método | O que faz |
+|---|---|---|
+| `/api/acessos` | GET | Lista as usuárias do grupo |
+| `/api/acessos` | POST | Cria ou vincula por e-mail e devolve o link de senha |
+| `/api/acessos/[uid]` | PATCH | Papel, permissões e situação (ativa/desativada) |
+| `/api/acessos/[uid]` | POST | Gera novo link de definição de senha |
+
+Regras puras e testadas em `core/lib/acessos.ts`. Três coisas para não quebrar:
+
+1. **`setCustomUserClaims` substitui o objeto inteiro.** O Auth é um só do
+   projeto `globalconsultorias`, compartilhado com os outros produtos Global —
+   gravar `{groupId, groupRole}` direto apagaria a claim que a mesma pessoa usa
+   no outro sistema, e o estrago só apareceria no dia em que ela tentasse
+   entrar lá. Toda escrita passa por `mesclarClaims()`.
+2. **Conta preexistente não tem a senha tocada.** Provisionar procura por
+   e-mail antes de criar; se acha, vincula.
+3. **Senha não passa pelo sistema.** A conta nasce sem senha e a rota devolve
+   um link do Firebase para a própria pessoa definir a dela. Não existe rota
+   que grave senha — nem a administradora nem o servidor chegam a vê-la.
+
+Claim nova só vale no **próximo token**: a pessoa precisa entrar de novo. A
+tela diz isso; sem esse aviso, parece que a mudança não pegou.
+
+---
+
+## 12. Console de sistemas (`/sistemas`)
+
+Administra **os outros produtos Global** a partir do Sync. Chegou no commit
+`2c572ea`, vindo da máquina Windows — até então esta seção descrevia um plano
+como se fosse código, e nada dela existia no repositório.
+
+**Acessos e Sistemas não são a mesma coisa.** Acessos (seção 11) governa quem
+entra **no Sync**; Sistemas governa contas e prefeituras **de outros produtos**,
+escrevendo no banco deles pelo Admin SDK. Por isso as duas guardas têm nomes
+próprios em `core/domain/rbac.ts` — `podeAdministrarAcessos` e
+`podeAdministrarSistemas` — mesmo tendo hoje a mesma régua (`admin`): fundir os
+dois faria afrouxar um afrouxar o outro sem ninguém notar.
+
+`sistemas` também é uma **área** do catálogo de permissões, e a mais dura de
+todas: abaixo de `admin` ela é forçada a `nenhum`, sem nível intermediário. Não
+existe "ver" seguro numa tela que lista contas de outro produto.
+
+### Confirmado ao vivo em 2026-08-05
+
+Sonda somente-leitura com a service account do próprio Sync, contra o projeto
+`globalconsultorias`:
+
+| O que | Situação |
+|---|---|
+| Banco nomeado `globaledu` | **Existe** e é alcançável — `getFirestore(app, "globaledu")` |
+| Coleção `users` nele | **Existe**, com `ativo, createdAt, email, nome, role, tenantIds, updatedAt` — bate com o dialeto declarado no catálogo |
+| Coleção `tenants` nele | **Vazia, e nem aparece na listagem** — nenhuma prefeitura foi cadastrada ainda |
+
+Consequência: o lado de **usuários** está validado contra dado real; o lado de
+**prefeituras** ainda não. O primeiro cadastro pelo console vai criar o primeiro
+documento que já existiu em `tenants` — e nada garante ainda que o GlobalEdu lê
+essa coleção com esse nome. Conferir do lado dele antes de cadastrar em série.
+
+> **Não confundir com `integra-edu-sr` ("Educa Serra").** É outro produto, de
+> outro projeto Firebase (`opus-sec`), cujas rules autorizam por **documento**
+> (`get(/users/$(uid)).data.perfil`) e não por claim. Ele **não** está no
+> catálogo de sistemas e não é administrável por este console.
 
 ### Por que aqui
 

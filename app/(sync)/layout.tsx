@@ -3,8 +3,9 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { MenuOutlined } from "@ant-design/icons";
-import { Button, Grid, Layout, Skeleton, theme } from "antd";
+import { Button, Grid, Layout, Result, Skeleton, theme } from "antd";
 
+import { areaDaRota, podeVer } from "@/core/domain/rbac";
 import { SyncHeader } from "@/core/components/sync-shell/header";
 import { SyncSidebar } from "@/core/components/sync-shell/sidebar";
 import { useAuth } from "@/core/providers/auth-provider";
@@ -40,6 +41,17 @@ export default function SyncLayout({ children }: SyncLayoutProps) {
   }, [loading, user, router]);
 
   if (loading || !user) return <EsqueletoDoShell />;
+
+  /**
+   * Esconder o item do menu é conveniência; a guarda é aqui.
+   *
+   * O caminho continua alcançável por URL colada, por link antigo e por voltar
+   * no histórico — sem esta conferência, tirar a área do menu daria a
+   * impressão de bloqueio sem bloquear nada. Caminho fora do catálogo
+   * (`null`) passa: é tela que não é área, como um detalhe solto.
+   */
+  const area = areaDaRota(pathname);
+  const areaBloqueada = area !== null && !podeVer(user.permissoes, area);
 
   return (
     <FilaEmissaoProvider>
@@ -79,7 +91,7 @@ export default function SyncLayout({ children }: SyncLayoutProps) {
           )}
 
           <Layout.Content style={{ minWidth: 0, flex: 1, overflowY: "auto" }}>
-            {children}
+            {areaBloqueada ? <SemAcesso /> : children}
           </Layout.Content>
         </Layout>
       </Layout>
@@ -98,6 +110,21 @@ const soLeitorDeTela: CSSProperties = {
   whiteSpace: "nowrap",
   border: 0,
 };
+
+function SemAcesso() {
+  return (
+    <Result
+      status="403"
+      title="Esta área não está liberada para você"
+      subTitle="Se você precisa dela para trabalhar, peça a quem administra o grupo para liberar em Ajustes › Acessos."
+      extra={
+        <Button type="primary" href="/painel">
+          Voltar ao painel
+        </Button>
+      }
+    />
+  );
+}
 
 function EsqueletoDoShell() {
   const { token } = theme.useToken();

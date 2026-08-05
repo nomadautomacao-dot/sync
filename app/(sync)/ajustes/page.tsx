@@ -10,6 +10,7 @@ import {
   LockOutlined,
   SafetyCertificateOutlined,
   SettingOutlined,
+  TeamOutlined,
   UserOutlined,
 } from "@ant-design/icons";
 import { ProCard, ProTable } from "@ant-design/pro-components";
@@ -31,7 +32,9 @@ import {
   theme,
 } from "antd";
 
+import { Acessos } from "@/core/components/ajustes/acessos";
 import { DadosLocaisCaged } from "@/core/components/ajustes/dados-locais-caged";
+import { podeAdministrarAcessos } from "@/core/domain/rbac";
 import { useAuth } from "@/core/providers/auth-provider";
 
 const { Text, Title, Paragraph } = Typography;
@@ -145,7 +148,7 @@ export default function AjustesPage() {
             </div>
           </Flex>
           <Tag color="geekblue" style={{ fontFamily: FONTE_MONO }}>
-            Workspace: {user?.groupId ?? "Rocha Prime"}
+            Workspace: {user?.groupId ?? "Global Company"}
           </Tag>
         </Flex>
       </Card>
@@ -171,7 +174,7 @@ export default function AjustesPage() {
                     bordered
                     column={{ xs: 1, sm: 2 }}
                     items={[
-                      { key: "grupo", label: "Grupo Operacional", children: user?.groupId ?? "Rocha Prime Consultoria" },
+                      { key: "grupo", label: "Grupo Operacional", children: user?.groupId ?? "Global Company" },
                       { key: "usuario", label: "Usuário Logado", children: user?.name ?? user?.email },
                       { key: "email", label: "E-mail de Acesso", children: user?.email },
                       {
@@ -222,11 +225,29 @@ export default function AjustesPage() {
                 </Flex>
               ),
             },
+            ...(podeAdministrarAcessos(user?.groupRole ?? "viewer")
+              ? [
+                  {
+                    key: "acessos",
+                    label: (
+                      <span>
+                        <TeamOutlined /> Acessos
+                      </span>
+                    ),
+                    children: (
+                      <Acessos
+                        papelDeQuemEdita={user?.groupRole ?? "viewer"}
+                        uidDeQuemEdita={user?.id ?? ""}
+                      />
+                    ),
+                  },
+                ]
+              : []),
             {
               key: "rbac",
               label: (
                 <span>
-                  <SafetyCertificateOutlined /> Controle de Acesso (RBAC)
+                  <SafetyCertificateOutlined /> Perfis de uso
                 </span>
               ),
               children: (

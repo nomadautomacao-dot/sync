@@ -34,7 +34,7 @@ import {
 } from "antd";
 import type { MenuProps } from "antd";
 
-import { podeAdministrarSistemas } from "@/core/domain/rbac";
+import { AREAS, areasVisiveis, type AreaKey } from "@/core/domain/rbac";
 import { useAuth } from "@/core/providers/auth-provider";
 
 const { Sider } = Layout;
@@ -45,8 +45,6 @@ interface ItemDeNavegacao {
   rotulo: string;
   rota: string;
   icone: React.ComponentType;
-  /** Só aparece para quem administra o grupo. Ver `podeAdministrarSistemas`. */
-  restrito?: boolean;
 }
 
 interface SyncSidebarProps {
@@ -54,18 +52,32 @@ interface SyncSidebarProps {
   aoFecharNoMobile: () => void;
 }
 
-const NAV_ITEMS: readonly ItemDeNavegacao[] = [
-  { rotulo: "Painel", rota: "/painel", icone: DashboardOutlined },
-  { rotulo: "Caixa de entrada", rota: "/caixa", icone: InboxOutlined },
-  { rotulo: "Cidades", rota: "/cidades", icone: EnvironmentOutlined },
-  { rotulo: "Pipeline", rota: "/pipeline", icone: RiseOutlined },
-  { rotulo: "Empresas", rota: "/empresas", icone: BankOutlined },
-  { rotulo: "Pessoas", rota: "/pessoas", icone: TeamOutlined },
-  { rotulo: "Documentos", rota: "/documentos", icone: FolderOpenOutlined },
-  { rotulo: "Módulos", rota: "/modulos", icone: AppstoreOutlined },
-  { rotulo: "Sistemas", rota: "/sistemas", icone: ClusterOutlined, restrito: true },
-  { rotulo: "Ajustes", rota: "/ajustes", icone: SettingOutlined },
-];
+/**
+ * O ícone de cada área. O rótulo e a rota vêm do catálogo em `core/domain/rbac`.
+ *
+ * O menu é **derivado** do catálogo de propósito: enquanto as duas listas eram
+ * escritas à mão, uma área nova podia aparecer no menu sem regra de permissão
+ * nenhuma — e área sem regra é área liberada para todo mundo. O tipo
+ * `Record<AreaKey, …>` faz o compilador cobrar o ícone da área nova.
+ */
+const ICONES: Record<AreaKey, React.ComponentType> = {
+  painel: DashboardOutlined,
+  caixa: InboxOutlined,
+  cidades: EnvironmentOutlined,
+  pipeline: RiseOutlined,
+  empresas: BankOutlined,
+  pessoas: TeamOutlined,
+  documentos: FolderOpenOutlined,
+  modulos: AppstoreOutlined,
+  sistemas: ClusterOutlined,
+  ajustes: SettingOutlined,
+};
+
+const NAV_ITEMS: readonly ItemDeNavegacao[] = AREAS.map((area) => ({
+  rotulo: area.rotulo,
+  rota: area.rota,
+  icone: ICONES[area.key],
+}));
 
 function formatarNomeExibicao(name?: string | null, email?: string | null): string {
   if (name && name.trim()) return name.trim();
@@ -126,11 +138,17 @@ export function SyncSidebar({ abertaNoMobile, aoFecharNoMobile }: SyncSidebarPro
       .join("")
       .toUpperCase() || "GS";
 
-  // Esconder o item é conveniência, não segurança: a guarda que vale está em
-  // `core/lib/sistemas-http.ts`, do lado do servidor.
-  const itensVisiveis = NAV_ITEMS.filter(
-    (item) => !item.restrito || podeAdministrarSistemas(user?.groupRole),
+  // Só as áreas que esta pessoa alcança. Enquanto a sessão não resolveu, o
+  // menu fica vazio em vez de mostrar tudo — piscar item que some em seguida
+  // ensina o caminho de uma tela que a pessoa não pode abrir.
+  //
+  // Esconder o item é conveniência, não segurança: para Sistemas a guarda que
+  // vale está em `core/lib/sistemas-http.ts`, do lado do servidor; para as
+  // demais áreas, em `app/(sync)/layout.tsx`.
+  const rotasVisiveis = new Set(
+    user ? areasVisiveis(user.permissoes).map((area) => area.rota) : [],
   );
+  const itensVisiveis = NAV_ITEMS.filter((item) => rotasVisiveis.has(item.rota));
 
   const chaveAtiva = itensVisiveis.find(
     (item) =>
