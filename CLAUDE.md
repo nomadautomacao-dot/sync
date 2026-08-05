@@ -409,10 +409,34 @@ O repositório tem **apenas `main`**. Não se cria branch, não se abre PR: é u
 ambiente de um desenvolvedor só. Trabalha-se direto na `main` e **o push é o
 deploy**.
 
-### Deploy contínuo (push na main → produção)
+### ⚠️ O deploy contínuo NÃO está ligado (conferido em 2026-08-05)
 
-Um trigger do Cloud Build observa a `main` no GitHub. A cada push ele roda o
-`cloudbuild.yaml`, em sequência:
+Esta seção descrevia, no presente, um gatilho que **não existe**:
+
+```
+$ gcloud builds triggers list
+Listed 0 items.
+```
+
+O último build do Cloud Build é de **2026-07-24**. A revisão no ar,
+`sync-app-00113-bfp`, foi criada em **2026-07-31** — por deploy manual. Nenhum
+push desde então chegou à produção, e ninguém foi avisado, porque o único sinal
+de que o deploy aconteceu era a crença de que ele acontecia.
+
+**Enquanto o gatilho não for recriado, `git push` publica no GitHub e nada
+mais.** Subir ao ar exige rodar o deploy manual:
+
+```bash
+bash scripts/deploy/deploy-cloudrun-linux.sh
+```
+
+Para religar o contínuo, o gatilho precisa ser recriado no Cloud Build,
+apontando para `nomadautomacao-dot/sync`, branch `main`, arquivo
+`cloudbuild.yaml`. O `cloudbuild.yaml` em si está intacto — o que sumiu foi só
+o gatilho que o chamava.
+
+O que segue é como o pipeline funciona **quando o gatilho existe**, e continua
+valendo como descrição do `cloudbuild.yaml`:
 
 1. **`test`** — `npm ci` + `npm test`. **É o gate:** se a
    suíte falha, o build aborta e a produção continua na revisão anterior.
@@ -422,8 +446,12 @@ Um trigger do Cloud Build observa a `main` no GitHub. A cada push ele roda o
    **as variáveis de ambiente já configuradas no serviço são preservadas**.
 5. **`smoke`** — `npm run smoke` contra a revisão recém-publicada (seção 7.1).
 
-Consequência prática: **commit quebrado não derruba o ar, mas commit que passa
-nos testes vai direto para os usuários.** Não existe staging.
+Consequência prática, **com o gatilho ligado**: commit quebrado não derruba o
+ar, mas commit que passa nos testes vai direto para os usuários. Não existe
+staging.
+
+Consequência prática **hoje, com o gatilho ausente**: commit nenhum vai para os
+usuários, e o `npm test` local passa a ser o único gate que roda de verdade.
 
 ### 7.1 Smoke test pós-deploy
 
@@ -508,8 +536,11 @@ também não tem consumidor hoje.
 ### Comandos
 
 ```bash
-# Subir para produção — é isto e mais nada
+# Publicar no GitHub. NÃO vai ao ar sozinho — o gatilho não existe (seção 7)
 git push
+
+# Subir de fato para produção, hoje: deploy manual
+bash scripts/deploy/deploy-cloudrun-linux.sh
 
 # Dev local (Next na porta 3100)
 npm run dev
