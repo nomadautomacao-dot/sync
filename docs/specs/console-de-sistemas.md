@@ -13,10 +13,32 @@ A alternativa considerada era um app separado, "modo dev", em Vite. Ela morre
 num detalhe técnico que não tem contorno barato:
 
 **Provisionar usuário exige o Admin SDK, e o Admin SDK exige servidor.** As
-security rules do GlobalEdu só autorizam escrita em `users/{uid}` para quem já é
-`global_admin` — e não existe caminho pelo Web SDK que fure isso, venha ele de
-onde vier. Uma SPA em Vite precisaria de um backend só para essa parte; seriam
-duas coisas onde já existe uma.
+security rules do GlobalEdu não deixam ninguém escrever em `users/{uid}` sem já
+ter perfil lá dentro — e a **primeira** conta de um município é justamente a que
+não tem ninguém para criá-la. Esse ovo-e-galinha só se quebra por fora, com uma
+credencial que ignora as rules. Uma SPA em Vite precisaria de um backend só para
+essa parte; seriam duas coisas onde já existe uma.
+
+> **Correção de 2026-08-05.** Este parágrafo afirmava que só `global_admin`
+> escreve em `users`. As rules publicadas no banco `globaledu` (atualizadas em
+> 2026-08-02) dizem outra coisa:
+>
+> ```
+> function administraUsuarios() {
+>   return ativo() && papel() in ['global_admin', 'consultor', 'sec_educacao'];
+> }
+> ```
+>
+> Ou seja: **a Secretaria de Educação do município administra os próprios
+> usuários de dentro do GlobalEdu.** Ela não pode apenas criar `global_admin` —
+> esse continua exclusivo de quem já é. Isso muda o papel deste console: ele
+> provisiona a **primeira** conta de cada prefeitura, e a partir dela o cliente
+> se vira sozinho.
+>
+> **Dívida conhecida, no repositório do GlobalEdu:** o `match /users/` é o único
+> bloco das rules que **não** passa por `noTenant(data)`. Uma `sec_educacao`
+> pode listar e criar usuários de **qualquer** prefeitura, não só da sua. Com um
+> município só isso não tem efeito; com dois, tem. Corrigir antes da segunda.
 
 E o Sync já é o control plane, quase por acidente:
 
