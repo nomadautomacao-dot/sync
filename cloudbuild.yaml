@@ -8,6 +8,13 @@ steps:
   - name: 'node:22-slim'
     id: 'test'
     entrypoint: 'bash'
+    env:
+      # A maquina abaixo e `E2_HIGHCPU_8`: oito vCPU e **oito** GB, porque a
+      # familia HIGHCPU da 1 GB por vCPU. O Vitest, no padrao, abre um processo
+      # por CPU — e oito processos carregando o grafo de modulos inteiro nao
+      # cabem. O passo morria com `Killed` e exit 137, e o build parava aqui.
+      # Ver a nota longa em vitest.config.ts.
+      - 'VITEST_MAX_FORKS=2'
     args:
       - '-c'
       - |

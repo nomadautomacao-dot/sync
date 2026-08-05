@@ -409,34 +409,23 @@ O repositório tem **apenas `main`**. Não se cria branch, não se abre PR: é u
 ambiente de um desenvolvedor só. Trabalha-se direto na `main` e **o push é o
 deploy**.
 
-### ⚠️ O deploy contínuo NÃO está ligado (conferido em 2026-08-05)
+### Deploy contínuo (push na main → produção)
 
-Esta seção descrevia, no presente, um gatilho que **não existe**:
+> **O gatilho é regional, e isso engana quem for procurá-lo.** Ele vive em
+> `us-central1`, criado pela 2ª geração do Cloud Build:
+>
+> ```bash
+> gcloud builds triggers list --region=us-central1   # sync-main-deploy
+> gcloud builds list --region=us-central1            # o histórico de verdade
+> ```
+>
+> **Sem `--region`, os dois comandos mentem em silêncio**: listam só o escopo
+> global e devolvem `Listed 0 items` / builds de julho, dando a impressão de
+> que não há gatilho e de que nada roda. Em 2026-08-05 esse detalhe custou um
+> diagnóstico errado antes do certo.
 
-```
-$ gcloud builds triggers list
-Listed 0 items.
-```
-
-O último build do Cloud Build é de **2026-07-24**. A revisão no ar,
-`sync-app-00113-bfp`, foi criada em **2026-07-31** — por deploy manual. Nenhum
-push desde então chegou à produção, e ninguém foi avisado, porque o único sinal
-de que o deploy aconteceu era a crença de que ele acontecia.
-
-**Enquanto o gatilho não for recriado, `git push` publica no GitHub e nada
-mais.** Subir ao ar exige rodar o deploy manual:
-
-```bash
-bash scripts/deploy/deploy-cloudrun-linux.sh
-```
-
-Para religar o contínuo, o gatilho precisa ser recriado no Cloud Build,
-apontando para `nomadautomacao-dot/sync`, branch `main`, arquivo
-`cloudbuild.yaml`. O `cloudbuild.yaml` em si está intacto — o que sumiu foi só
-o gatilho que o chamava.
-
-O que segue é como o pipeline funciona **quando o gatilho existe**, e continua
-valendo como descrição do `cloudbuild.yaml`:
+Um gatilho do Cloud Build observa a `main` no GitHub. A cada push ele roda o
+`cloudbuild.yaml`, em sequência:
 
 1. **`test`** — `npm ci` + `npm test`. **É o gate:** se a
    suíte falha, o build aborta e a produção continua na revisão anterior.
@@ -446,12 +435,29 @@ valendo como descrição do `cloudbuild.yaml`:
    **as variáveis de ambiente já configuradas no serviço são preservadas**.
 5. **`smoke`** — `npm run smoke` contra a revisão recém-publicada (seção 7.1).
 
-Consequência prática, **com o gatilho ligado**: commit quebrado não derruba o
-ar, mas commit que passa nos testes vai direto para os usuários. Não existe
-staging.
+Consequência prática: **commit quebrado não derruba o ar, mas commit que passa
+nos testes vai direto para os usuários.** Não existe staging.
 
-Consequência prática **hoje, com o gatilho ausente**: commit nenhum vai para os
-usuários, e o `npm test` local passa a ser o único gate que roda de verdade.
+#### O modo de falha que já aconteceu: o gate morre e ninguém sabe
+
+De 2026-08-02 a 2026-08-05 **todo build falhou**, e a produção ficou parada na
+revisão de 31 de julho sem que nada avisasse. A causa era memória: a máquina do
+gate é `E2_HIGHCPU_8` — oito vCPU e **oito** GB, porque a família HIGHCPU dá
+1 GB por vCPU — e o Vitest, no padrão, abre um processo por CPU. Oito processos
+carregando o grafo de módulos inteiro não cabem; o kernel matava o passo
+(`Killed`, exit 137). Daí o `VITEST_MAX_FORKS=2` no passo `test`.
+
+O que torna essa falha traiçoeira não é a causa, é o **silêncio**: build que
+falha deixa a revisão anterior no ar, e a revisão anterior responde normalmente.
+Do lado de fora, "está no ar" e "seu commit está no ar" são indistinguíveis.
+
+Por isso, depois de um push que importa, confira em vez de supor:
+
+```bash
+gcloud builds list --region=us-central1 --limit=3
+gcloud run services describe sync-app --region=us-central1 \
+  --format="value(status.traffic[0].revisionName)"
+```
 
 ### 7.1 Smoke test pós-deploy
 
@@ -536,10 +542,13 @@ também não tem consumidor hoje.
 ### Comandos
 
 ```bash
-# Publicar no GitHub. NÃO vai ao ar sozinho — o gatilho não existe (seção 7)
+# Subir para produção — é isto e mais nada
 git push
 
-# Subir de fato para produção, hoje: deploy manual
+# Conferir se o push virou deploy mesmo (o --region não é opcional, seção 7)
+gcloud builds list --region=us-central1 --limit=3
+
+# Saída de emergência: deploy manual, quando o gatilho estiver fora do ar
 bash scripts/deploy/deploy-cloudrun-linux.sh
 
 # Dev local (Next na porta 3100)
