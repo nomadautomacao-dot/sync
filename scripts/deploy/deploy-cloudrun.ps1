@@ -1,5 +1,9 @@
+# EnvFile vazio de proposito — ver a nota longa no equivalente Linux.
+# `gcloud run deploy --env-vars-file` SUBSTITUI o conjunto inteiro de variaveis
+# do servico; com o padrao antigo, este script publicava uma revisao sem
+# FIREBASE_SERVICE_ACCOUNT e derrubava toda a API com 401.
 param(
-  [string]$EnvFile = "cloudrun.env.yaml",
+  [string]$EnvFile = "",
   [string]$ServiceName = "sync-app",
   [string]$Region = "us-central1",
   [string]$ProjectId = ""
@@ -20,7 +24,7 @@ function Require-Command($name) {
 
 Require-Command "gcloud"
 
-if (-not (Test-Path -LiteralPath $EnvFile)) {
+if ($EnvFile -and -not (Test-Path -LiteralPath $EnvFile)) {
   throw "Arquivo de variaveis nao encontrado: $EnvFile. Copie cloudrun.env.yaml.example para $EnvFile e preencha os valores reais."
 }
 
@@ -46,20 +50,28 @@ gcloud services enable cloudbuild.googleapis.com run.googleapis.com containerreg
 Write-Step "Buildando e publicando a imagem"
 gcloud builds submit --project $ProjectId --tag $ImageUri . | Out-Host
 
-Write-Step "Fazendo deploy publico no Cloud Run com variaveis do ambiente"
-gcloud run deploy $ServiceName `
-  --project $ProjectId `
-  --image $ImageUri `
-  --region $Region `
-  --platform managed `
-  --allow-unauthenticated `
-  --port 3000 `
-  --memory 2Gi `
-  --cpu 2 `
-  --timeout 900 `
-  --max-instances 10 `
-  --min-instances 0 `
-  --env-vars-file $EnvFile | Out-Host
+if ($EnvFile) {
+  Write-Step "Deploy no Cloud Run — SUBSTITUINDO as variaveis por $EnvFile"
+} else {
+  Write-Step "Deploy no Cloud Run — troca so a imagem, variaveis preservadas"
+}
+
+$DeployArgs = @(
+  "--project", $ProjectId,
+  "--image", $ImageUri,
+  "--region", $Region,
+  "--platform", "managed",
+  "--allow-unauthenticated",
+  "--port", "3000",
+  "--memory", "2Gi",
+  "--cpu", "2",
+  "--timeout", "900",
+  "--max-instances", "10",
+  "--min-instances", "0"
+)
+if ($EnvFile) { $DeployArgs += @("--env-vars-file", $EnvFile) }
+
+gcloud run deploy $ServiceName @DeployArgs | Out-Host
 
 $ServiceUrl = (gcloud run services describe $ServiceName --project $ProjectId --region $Region --format "value(status.url)").Trim()
 

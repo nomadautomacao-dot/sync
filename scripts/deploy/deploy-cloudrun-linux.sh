@@ -8,7 +8,17 @@
 set -euo pipefail
 
 # ── Defaults ──
-ENV_FILE="cloudrun.env.yaml"
+#
+# ENV_FILE vazio de proposito. `gcloud run deploy --env-vars-file` NAO soma:
+# ele SUBSTITUI o conjunto inteiro de variaveis do servico pelo conteudo do
+# arquivo. Enquanto isso era o padrao, rodar este script publicava uma revisao
+# sem FIREBASE_SERVICE_ACCOUNT — e sem ela `getSessionUser()` devolve null em
+# toda requisicao, ou seja, 401 em cada rota da API.
+#
+# O padrao agora e o mesmo do cloudbuild.yaml: troca so a imagem, e o que ja
+# esta configurado no servico continua onde esta. Quem quiser reescrever as
+# variaveis pede explicitamente com --env-file.
+ENV_FILE=""
 SERVICE_NAME="sync-app"
 REGION="us-central1"
 PROJECT_ID=""
@@ -39,7 +49,7 @@ if ! command -v gcloud &>/dev/null; then
   exit 1
 fi
 
-if [[ ! -f "$ENV_FILE" ]]; then
+if [[ -n "$ENV_FILE" && ! -f "$ENV_FILE" ]]; then
   echo -e "${RED}Erro: Arquivo de variáveis '$ENV_FILE' não encontrado.${NC}"
   echo "Copie cloudrun.env.yaml.example para $ENV_FILE e preencha os valores reais."
   exit 1
@@ -64,7 +74,11 @@ echo -e "  ${GREEN}Projeto:${NC}  $PROJECT_ID"
 echo -e "  ${GREEN}Serviço:${NC}  $SERVICE_NAME"
 echo -e "  ${GREEN}Região:${NC}   $REGION"
 echo -e "  ${GREEN}Imagem:${NC}   $IMAGE_URI"
-echo -e "  ${GREEN}Env:${NC}      $ENV_FILE"
+if [[ -n "$ENV_FILE" ]]; then
+  echo -e "  ${YELLOW}Env:${NC}      $ENV_FILE — SUBSTITUI todas as variáveis do serviço"
+else
+  echo -e "  ${GREEN}Env:${NC}      preservadas (troca só a imagem)"
+fi
 
 step "Ativando APIs necessárias"
 gcloud services enable \
@@ -81,19 +95,22 @@ gcloud builds submit \
   .
 
 step "Fazendo deploy no Cloud Run"
-gcloud run deploy "$SERVICE_NAME" \
-  --project "$PROJECT_ID" \
-  --image "$IMAGE_URI" \
-  --region "$REGION" \
-  --platform managed \
-  --allow-unauthenticated \
-  --port 3000 \
-  --memory 4Gi \
-  --cpu 2 \
-  --timeout 900 \
-  --max-instances 10 \
-  --min-instances 0 \
-  --env-vars-file "$ENV_FILE"
+DEPLOY_ARGS=(
+  --project "$PROJECT_ID"
+  --image "$IMAGE_URI"
+  --region "$REGION"
+  --platform managed
+  --allow-unauthenticated
+  --port 3000
+  --memory 4Gi
+  --cpu 2
+  --timeout 900
+  --max-instances 10
+  --min-instances 0
+)
+[[ -n "$ENV_FILE" ]] && DEPLOY_ARGS+=(--env-vars-file "$ENV_FILE")
+
+gcloud run deploy "$SERVICE_NAME" "${DEPLOY_ARGS[@]}"
 
 SERVICE_URL=$(gcloud run services describe "$SERVICE_NAME" \
   --project "$PROJECT_ID" \
@@ -104,11 +121,15 @@ step "Deploy concluído! ✅"
 echo ""
 echo -e "  ${GREEN}URL pública:${NC}   $SERVICE_URL"
 echo -e "  ${GREEN}Health check:${NC}  $SERVICE_URL/api/health"
-echo -e "  ${GREEN}Flutter Web:${NC}   $SERVICE_URL/flutter-web/"
 echo ""
-echo -e "${CYAN}Próximo passo no Flutter (Android/iOS/Linux):${NC}"
-echo "  1. Abra o app"
-echo "  2. Preencha 'URL da API' com: $SERVICE_URL"
-echo "  3. Autenticacao e via Firebase Auth (projeto globalconsultorias)"
+echo -e "${CYAN}Próximo passo — o smoke test (seção 7.1 do CLAUDE.md):${NC}"
+echo "  npm run smoke -- $SERVICE_URL --producao"
+echo ""
+echo "  O npm test é cego para erro de dado, que aqui é a falha mais provável."
+echo "  O smoke emite um Raio-X de verdade e confere folhas, corte e fontes vivas."
+echo ""
+echo -e "${CYAN}Reverter, se preciso:${NC}"
+echo "  gcloud run services update-traffic $SERVICE_NAME \\"
+echo "    --to-revisions=<revisão-anterior>=100 --region=$REGION"
 echo ""
 echo -e "${YELLOW}Garanta que FIREBASE_SERVICE_ACCOUNT esteja setada no Cloud Run.${NC}"
