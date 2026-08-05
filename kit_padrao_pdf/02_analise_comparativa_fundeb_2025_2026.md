@@ -150,7 +150,7 @@ O outro sistema deve conseguir reutilizar ou reproduzir:
 - `round_rect`
 
 Base atual de estilo:
-- `kit_padrao_pdf_rocha_prime/report_style_pdf.py`
+- `kit_padrao_pdf/report_style_pdf.py`
 
 ## Regras de negócio
 
@@ -179,7 +179,7 @@ Base atual de estilo:
 
 ## Checklist de implementação no outro sistema
 
-1. Incluir a pasta `kit_padrao_pdf_rocha_prime`.
+1. Incluir a pasta `kit_padrao_pdf`.
 2. Mapear as tabelas de receita e matrículas para os campos obrigatórios.
 3. Implementar cálculos de variação antes de desenhar o PDF.
 4. Injetar os textos analíticos por município.

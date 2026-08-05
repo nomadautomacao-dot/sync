@@ -2,7 +2,7 @@
 Gerador: Analise Comparativa FUNDEB 2025-2026
 Formato: A4 retrato
 Paginas: 3
-Spec: kit_padrao_pdf_rocha_prime/02_analise_comparativa_fundeb_2025_2026.md
+Spec: kit_padrao_pdf/02_analise_comparativa_fundeb_2025_2026.md
 """
 import sys
 import json
@@ -19,7 +19,7 @@ try:
     from reportlab.lib import colors
     from reportlab.lib.styles import ParagraphStyle
     from reportlab.platypus import Paragraph
-    from kit_padrao_pdf_rocha_prime.report_style_pdf import (
+    from kit_padrao_pdf.report_style_pdf import (
         PAGE_W, PAGE_H, MARGIN_X,
         draw_header, draw_footer, draw_section_title, draw_kv_table,
         draw_highlight_box, draw_paragraph, register_fonts, round_rect,
@@ -211,8 +211,12 @@ def gerar_comparativa(payload_raw) -> str:
         f"A variacao de receita entre {ano1} e {ano2} aponta para oportunidade"
         " de incremento via ajustes tecnicos nas bases do FNDE — sem impacto"
         " fiscal adicional para o municipio.")
-    txt_como_entra = safe(d.get("texto_como_rocha_prime_entra") or
-        "A Global Sync atua na identificacao e correcao das inconsistencias"
+    # A chave antiga fica como reserva: relatorios ja arquivados guardam o
+    # envelope exato que os gerou, e um snapshot de 2026 nao muda de nome
+    # porque a empresa mudou.
+    txt_como_entra = safe(d.get("texto_como_consultoria_entra") or
+        d.get("texto_como_rocha_prime_entra") or
+        "A Global Company atua na identificacao e correcao das inconsistencias"
         " tecnicas que limitam o acesso as complementacoes federais. Nosso"
         " trabalho e fundamentado em evidencias documentadas e orientado ao resultado.")
     txt_conclusao = safe(d.get("texto_conclusao") or
@@ -228,7 +232,7 @@ def gerar_comparativa(payload_raw) -> str:
     # ═══════════════════════════════════════════════════════════
     # PG 1 — CAPA
     # ═══════════════════════════════════════════════════════════
-    from kit_padrao_pdf_rocha_prime.report_style_pdf import draw_cover
+    from kit_padrao_pdf.report_style_pdf import draw_cover
     draw_cover(
         c,
         title=f"ANÁLISE COMPARATIVA FUNDEB",

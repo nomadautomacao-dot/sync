@@ -1,7 +1,7 @@
 """
 gerador_institucional.py
 ========================
-Motor de geracao do deck Institucional (16 slides) — Rocha Prime
+Motor de geracao do deck Institucional (16 slides) — Global Company
 Formato 16:9 (1280x720). Paleta navy + blue.
 Lê JSON via stdin, imprime caminho do PDF gerado em stdout.
 """
@@ -20,8 +20,18 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.platypus import Paragraph
 from reportlab.lib.enums import TA_LEFT, TA_CENTER
 
+# Import duro, ao contrario dos utilitarios de formatacao abaixo: se a
+# identidade da empresa nao carregar, o certo e nao sair deck nenhum. Um deck
+# com a marca errada circula por fora e nao volta atras.
+from kit_padrao_pdf.empresa import (
+    MARCA,
+    RAZAO_SOCIAL,
+    CNPJ,
+    linhas_de_contato,
+)
+
 try:
-    from kit_padrao_pdf_rocha_prime.report_style_pdf import fmt_money, fmt_int
+    from kit_padrao_pdf.report_style_pdf import fmt_money, fmt_int
 except ImportError:
     def fmt_money(v):
         return f"R$ {v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
@@ -123,10 +133,10 @@ def slide_01_capa(c):
     section_badge(c, PX, H - PY - 22, "APRESENTACAO INSTITUCIONAL · 2026")
     c.setFillColor(WHITE)
     c.setFont(F_HERO, 72)
-    c.drawString(PX, H - PY - 110, "ROCHA PRIME")
+    c.drawString(PX, H - PY - 110, MARCA.upper())
     c.setFillColor(BLUE_BRIGHT)
     c.setFont(F_HERO, 48)
-    c.drawString(PX, H - PY - 175, "SERVICOS ESPECIALIZADOS")
+    c.drawString(PX, H - PY - 175, "CONSULTORIAS")
     c.setFillColor(BLUE_ACC)
     c.rect(PX, H - PY - 200, 80, 3, fill=1, stroke=0)
     para(c, "Inteligencia Tecnica para Gestao Educacional Municipal",
@@ -156,7 +166,7 @@ def slide_02_quem_somos(c):
     c.drawString(PX, H - PY - 136, "Especializada em Educacao")
     accent_bar(c, PX, H - PY - 165, 4, w=100, color=BLUE_ACC)
     para(c,
-         "A Rocha Prime e uma consultoria tecnica especializada na gestao educacional municipal. "
+         "A Global Company e uma consultoria tecnica especializada na gestao educacional municipal. "
          "Atuamos como um setor de inteligencia para organizar dados, ajustar sistemas e sustentar "
          "a conformidade operacional, trabalhando junto com a equipe do municipio para obter "
          "resultados concretos na captacao de recursos do FUNDEB.",
@@ -283,7 +293,7 @@ def slide_08_diferenciais(c):
     c.setFont(F_HERO, 44)
     c.drawString(PX, H - PY - 84, "Por que a")
     c.setFillColor(BLUE_BRIGHT)
-    c.drawString(PX, H - PY - 136, "Rocha Prime?")
+    c.drawString(PX, H - PY - 136, "Global Company?")
     cols = [
         {"title": "Equipe Tecnica", "body": "Profissionais especializados\nem legislacao educacional\ne sistemas federais."},
         {"title": "Metodologia", "body": "Processo proprietario de\ndiagnostico, organizacao\ne monitoramento continuo."},
@@ -469,7 +479,7 @@ def slide_14_prova_social(c):
     c.drawString(PX, H - PY - 126, "nossos clientes")
     hline(c, PX, H - PY - 145, CW, color=NAVY_LIGHT)
     depoimentos = [
-        {"texto": "A Rocha Prime transformou a gestao educacional do nosso municipio. Conseguimos captar recursos que nao sabiamos existir.", "autor": "Secretario de Educacao"},
+        {"texto": "A Global Company transformou a gestao educacional do nosso municipio. Conseguimos captar recursos que nao sabiamos existir.", "autor": "Secretario de Educacao"},
         {"texto": "A equipe tecnica e extremamente qualificada e comprometida com resultados. Recomendo sem hesitacao.", "autor": "Prefeito Municipal"},
     ]
     pw = CW / 2 - 20
@@ -499,7 +509,7 @@ def slide_15_investimento(c):
     c.drawString(PX, H - PY - 140, "que se paga")
     hline(c, PX, H - PY - 160, CW, color=NAVY_LIGHT)
     para(c,
-         "O investimento na consultoria Rocha Prime e proporcional ao porte do municipio "
+         "O investimento na consultoria Global Company e proporcional ao porte do municipio "
          "e ao potencial de captacao identificado no diagnostico inicial. "
          "Em media, o retorno sobre o investimento supera 10x o valor contratado.",
          PX, H - PY - 195, CW, size=21, leading=34, color=MUTED)
@@ -513,7 +523,7 @@ def slide_15_investimento(c):
     c.drawString(PX + 340, 178, "retorno medio sobre o investimento")
     c.setFillColor(LIGHT_TEXT)
     c.setFont(F_BODY, 16)
-    c.drawString(PX + 30, 128, "* Baseado em resultados historicos de municipios atendidos pela Rocha Prime")
+    c.drawString(PX + 30, 128, "* Baseado em resultados historicos de municipios atendidos pela Global Company")
     footer_line(c)
     page_number(c, 15)
 
@@ -529,19 +539,15 @@ def slide_16_contato(c):
     c.drawCentredString(W / 2, H - PY - 100, "VAMOS CONVERSAR?")
     c.setFillColor(BLUE_ACC)
     c.rect(W / 2 - 40, H - PY - 130, 80, 3, fill=1, stroke=0)
-    contatos = [
-        "Tel: (61) 99866-7834",
-        "E-mail: contato@rochaprime.com.br",
-        "Site: www.rochaprime.com.br",
-    ]
+    contatos = linhas_de_contato()
     yy = H / 2 + 20
     for contato in contatos:
         para(c, contato, W / 2 - 250, yy, 500, size=22, color=LIGHT_TEXT, align=TA_CENTER)
         yy -= 40
     c.setFillColor(MUTED)
     c.setFont(F_BODY, 14)
-    c.drawCentredString(W / 2, 100, "ROCHA PRIME SERVICOS ESPECIALIZADOS LTDA")
-    c.drawCentredString(W / 2, 80, "CNPJ: 29.342.691/0001-93")
+    c.drawCentredString(W / 2, 100, RAZAO_SOCIAL)
+    c.drawCentredString(W / 2, 80, "CNPJ: " + CNPJ)
     footer_line(c)
     page_number(c, 16)
 

@@ -4,7 +4,7 @@ import {
   calcularProjecaoPorMultiplicador,
   createEmptyCensoEscolar,
 } from "@/modules/levantamento-fundeb/utils/calculos";
-import type { PerfilComercialFundeb, ProjecaoRochaPrime } from "@/modules/levantamento-fundeb/types";
+import type { PerfilComercialFundeb, ProjecaoFundeb } from "@/modules/levantamento-fundeb/types";
 import type { FndeVaatContext } from "@/core/lib/fundeb-fnde";
 import type { IbgeCidadeIndicators } from "@/core/lib/ibge-cidade-indicators";
 import type { InepCensoMunicipalRecord } from "@/core/lib/inep-censo";
@@ -127,7 +127,7 @@ export function buildPerfilEProjecaoComercial(params: {
   ibgeIndicators: IbgeCidadeIndicators | null;
   inepRecord: InepCensoMunicipalRecord | null;
   vaatContext: FndeVaatContext | null;
-}): { perfil: PerfilComercialFundeb; projecao: ProjecaoRochaPrime } {
+}): { perfil: PerfilComercialFundeb; projecao: ProjecaoFundeb } {
   const perfil = calcularPerfilComercialFundeb({
     uf: params.vaatContext?.uf ?? params.inepRecord?.uf ?? "UF",
     totalReceitas: params.receitas.totalReceitas,

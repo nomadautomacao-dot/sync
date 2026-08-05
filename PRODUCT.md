@@ -1,7 +1,7 @@
 # Product
 
 ## Product Purpose
-Sync é uma plataforma de gestão e automação para a Rocha Prime Consultorias, focada em consultoria educacional FUNDEB para municípios brasileiros.
+Sync é uma plataforma de gestão e automação para a Global Company, focada em consultoria educacional FUNDEB para municípios brasileiros.
 
 ## Register
 product
@@ -22,4 +22,4 @@ product
 1. **Profissional e confiável**: transmitir seriedade para gestores públicos
 2. **Dados em primeiro plano**: informação é o produto, não decoração
 3. **Ação rápida**: o consultor precisa gerar documentos em campo, sem fricção
-4. **Identidade Rocha Prime**: navy (#1B2A4A) como âncora, accent blue (#2F6BFF) para ações
+4. **Identidade Global Company**: navy (#1B2A4A) como âncora, accent blue (#2F6BFF) para ações

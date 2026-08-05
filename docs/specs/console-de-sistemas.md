@@ -26,7 +26,7 @@ E o Sync já é o control plane, quase por acidente:
 - Sessão, RBAC, shell do Ant, pipeline de deploy, suíte de testes e cofre da
   service account: tudo já existe e não precisa ser reescrito.
 
-Some-se que o Sync é **interno**. Ninguém de fora da Rocha Prime entra aqui
+Some-se que o Sync é **interno**. Ninguém de fora da Global Company entra aqui
 (`PRODUCT.md`: o gestor municipal *recebe* relatório, não loga). O motivo
 clássico para separar um console — não embarcar o painel de administração no
 produto que o cliente usa — não se aplica.

@@ -12,7 +12,7 @@ const GERADORES: Record<SlidesTemplateId, string> = {
 };
 
 const FILENAMES: Record<SlidesTemplateId, string> = {
-  "institucional": "slides-institucional-rocha-prime",
+  "institucional": "slides-institucional-global-company",
   "proposta-fundeb": "slides-proposta-fundeb",
   "resumo-executivo": "slides-resumo-executivo",
 };

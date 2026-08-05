@@ -86,5 +86,5 @@ tmp_*
 BIT4AFD.tmp
 outputs/
 pdf_extracts/
-kit_padrao_pdf_rocha_prime/__pycache__/
+kit_padrao_pdf/__pycache__/
 **/__pycache__/

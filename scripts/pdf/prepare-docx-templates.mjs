@@ -150,6 +150,12 @@ async function processDocxFile(filePath) {
       ['000.26', '{processoNumero}'],
 
       // ===== EMPRESA =====
+      // Os literais abaixo são os da empresa ANTERIOR, de propósito: este
+      // script lê os DOCX originais e troca o que estiver escrito neles por
+      // placeholder. Quem preenche o placeholder é core/domain/empresa.ts, na
+      // geração. Se um dia os DOCX forem refeitos já com a Global Services
+      // Company, atenção ao par abaixo — "Santa Maria da Vitória" mapeia para
+      // {foroComarca} e passou a ser também o município da empresa.
       ['ROCHA PRIME SERVIÇOS ESPECIALIZADOS LTDA', '{empresaRazaoSocialUpper}'],
       ['ROCHA PRIME', '{empresaRazaoSocialUpper}'],
       ['29.342.691/0001-93', '{empresaCNPJ}'],

@@ -89,7 +89,7 @@ async function extractPdfMetrics(filePath) {
     const totalReceitas = extractMoneyAfterLabel(text, "TOTAL GERAL DE RECEITAS PREVISTAS");
 
     const totalProjetadoMatch = text.match(
-      /VALOR TOTAL PROJETADO COM OTIMIZACAO ROCHA PRIME:\s*R\$\s*([\d\.,]+)/i,
+      /VALOR TOTAL PROJETADO COM OTIMIZACAO (?:ROCHA PRIME|GLOBAL[A-Z ]*):\s*R\$\s*([\d\.,]+)/i,
     );
     const ganhoMatch = text.match(/Ganho Potencial Estimado:\s*\+?R\$\s*([\d\.,]+)/i);
     const ganhoPctMatch = text.match(/Ganho Potencial Estimado:[^\n]*\(([+\-]?[\d\.,]+)%\)/i);

@@ -23,12 +23,12 @@ Esta pasta contém apenas a parte reutilizável do padrão visual dos PDFs.
 
 ## Como usar no outro projeto
 
-1. Copie a pasta `kit_padrao_pdf_rocha_prime` para dentro do outro sistema.
+1. Copie a pasta `kit_padrao_pdf` para dentro do outro sistema.
 2. Instale as dependências de `requirements.txt`.
 3. Importe o módulo:
 
 ```python
-from kit_padrao_pdf_rocha_prime.report_style_pdf import (
+from kit_padrao_pdf.report_style_pdf import (
     PAGE_W,
     PAGE_H,
     MARGIN_X,

@@ -13,7 +13,7 @@ try:
     from reportlab.lib.styles import ParagraphStyle
     from reportlab.pdfgen import canvas
     from reportlab.platypus import Paragraph
-    from kit_padrao_pdf_rocha_prime.report_style_pdf import (
+    from kit_padrao_pdf.report_style_pdf import (
         BLUE,
         GREEN,
         LIGHT_BLUE,

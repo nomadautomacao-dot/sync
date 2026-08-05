@@ -21,7 +21,7 @@ export interface ReceitasFundeb {
   totalReceitas: number;
 }
 
-export interface ProjecaoRochaPrime {
+export interface ProjecaoFundeb {
   vaafAtual: number;
   vaafProjetado: number;
   vaafGanho: number;
@@ -227,9 +227,9 @@ export interface RelatorioFundeb {
   identificacao: MunicipioIdentificacao;
   parametros?: FundebRelatorioParametros;
   receitas: ReceitasFundeb;
-  projecao: ProjecaoRochaPrime;
-  projecaoRecuperavel: ProjecaoRochaPrime;
-  projecaoComercial: ProjecaoRochaPrime | null;
+  projecao: ProjecaoFundeb;
+  projecaoRecuperavel: ProjecaoFundeb;
+  projecaoComercial: ProjecaoFundeb | null;
   upsideCondicionado: UpsideCondicionadoFundeb | null;
   perfilComercial: PerfilComercialFundeb | null;
   cronogramaVAAF: CronogramaVAAF[];

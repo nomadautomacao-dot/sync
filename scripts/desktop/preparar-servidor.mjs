@@ -93,7 +93,7 @@ const RAIZ_PERMITIDA = new Set([
   "data",
   // Os geradores Python moram em `app/api/modulos/.../pdf`.
   "app",
-  "kit_padrao_pdf_rocha_prime",
+  "kit_padrao_pdf",
   "core",
   "modules",
 ]);
@@ -163,7 +163,7 @@ const COMPLEMENTOS = [
   ["node_modules/pdf-parse", "contagem de páginas"],
   ["app/api/modulos/levantamento-fundeb/pdf", "geradores Python do FUNDEB"],
   ["app/api/modulos/slides/pdf", "geradores Python dos slides"],
-  ["kit_padrao_pdf_rocha_prime", "módulo ReportLab"],
+  ["kit_padrao_pdf", "módulo ReportLab"],
   ["data/fnde", "CSVs do FNDE, lidos por caminho"],
   ["data/caged-municipios.json", "sem isto, baixa 117 MB do IPEADATA a cada partida"],
   ["data/inep-equidade-municipal.json", "equidade do Censo Escolar"],

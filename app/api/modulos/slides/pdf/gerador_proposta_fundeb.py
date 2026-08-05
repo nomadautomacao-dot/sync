@@ -20,8 +20,11 @@ from reportlab.lib.styles import ParagraphStyle
 from reportlab.platypus import Paragraph
 from reportlab.lib.enums import TA_LEFT, TA_CENTER
 
+# Import duro: proposta sem identidade confiavel nao deve sair.
+from kit_padrao_pdf.empresa import RAZAO_SOCIAL, CNPJ, linhas_de_contato
+
 try:
-    from kit_padrao_pdf_rocha_prime.report_style_pdf import fmt_money, fmt_int
+    from kit_padrao_pdf.report_style_pdf import fmt_money, fmt_int
 except ImportError:
     def fmt_money(v):
         return f"R$ {v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
@@ -162,7 +165,7 @@ def slide_01_capa(c, payload):
     c.rect(PX, H - PY - 190, 80, 3, fill=1, stroke=0)
     if prefeito:
         para(c, f"Exmo(a). Sr(a). {prefeito}", PX, H - PY - 210, CW, size=20, color=MUTED)
-    para(c, "Rocha Prime Servicos Especializados", PX, H - PY - 250, CW, size=18, color=MUTED)
+    para(c, "Global Company", PX, H - PY - 250, CW, size=18, color=MUTED)
     footer_line(c)
     page_number(c, 1)
 
@@ -368,7 +371,7 @@ def slide_05_projecao(c, payload):
     c.drawString(PX + 20, 100, f"GANHO POTENCIAL: {f_money_safe(ganho_estimado)}")
     c.setFillColor(MUTED)
     c.setFont(F_BODY, 16)
-    c.drawString(PX + 520, 104, "estimativa baseada em diagnostico tecnico Rocha Prime")
+    c.drawString(PX + 520, 104, "estimativa baseada em diagnostico tecnico Global Company")
 
     footer_line(c)
     page_number(c, 5)
@@ -632,11 +635,7 @@ def slide_12_contato(c, payload):
         para(c, f"Estamos prontos para transformar a gestao educacional de {nome}.",
              W / 2 - 300, H / 2 + 50, 600, size=20, color=MUTED, align=TA_CENTER)
 
-    contatos = [
-        "Tel: (61) 99866-7834",
-        "E-mail: contato@rochaprime.com.br",
-        "Site: www.rochaprime.com.br",
-    ]
+    contatos = linhas_de_contato()
     yy = H / 2 - 20
     for contato in contatos:
         para(c, contato, W / 2 - 250, yy, 500, size=22, color=LIGHT_TEXT, align=TA_CENTER)
@@ -644,8 +643,8 @@ def slide_12_contato(c, payload):
 
     c.setFillColor(MUTED)
     c.setFont(F_BODY, 14)
-    c.drawCentredString(W / 2, 100, "ROCHA PRIME SERVICOS ESPECIALIZADOS LTDA")
-    c.drawCentredString(W / 2, 80, "CNPJ: 29.342.691/0001-93")
+    c.drawCentredString(W / 2, 100, RAZAO_SOCIAL)
+    c.drawCentredString(W / 2, 80, "CNPJ: " + CNPJ)
     footer_line(c)
     page_number(c, 12)
 

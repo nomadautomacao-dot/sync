@@ -288,7 +288,7 @@ model CollaboratorDocument {
 
 ## 7. Considerações sobre "Minha Empresa" (Tab existente)
 
-A tela "Minha Empresa" já mostra dados institucionais da Rocha Prime.
+A tela "Minha Empresa" já mostra dados institucionais da Global Company.
 A seção **"Documentação e Atestados"** existente deve funcionar de forma similar:
 
 - **Os documentos da empresa** (Certidões, Balanço, Contrato Social) servem

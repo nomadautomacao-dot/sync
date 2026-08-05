@@ -92,7 +92,7 @@ export function extractLegacyMetrics(text) {
     extractFirst(text, [/TOTAL GERAL\s+R\$\s*([\d\.,]+)\s+R\$\s*[\d\.,]+\+?R\$\s*[\d\.,]+/i]),
   );
   const totalProjetado = parseBrazilianNumber(
-    extractFirst(text, [/VALOR TOTAL PROJETADO COM OTIMIZACAO ROCHA PRIME:\s*R\$\s*([\d\.,]+)/i]),
+    extractFirst(text, [/VALOR TOTAL PROJETADO COM OTIMIZACAO (?:ROCHA PRIME|GLOBAL[A-Z ]*):\s*R\$\s*([\d\.,]+)/i]),
   );
   const totalGanho = parseBrazilianNumber(
     extractFirst(text, [/Ganho Potencial Estimado:\s*\+?R\$\s*([\d\.,]+)/i]),

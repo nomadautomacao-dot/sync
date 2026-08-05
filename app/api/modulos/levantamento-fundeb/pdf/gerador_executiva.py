@@ -2,7 +2,7 @@
 Gerador: Apresentacao Executiva Global Sync — Fundeb
 Formato: 16:9 (960 x 540 pt)
 Paginas: 7
-Spec: kit_padrao_pdf_rocha_prime/01_apresentacao_executiva_fundeb.md
+Spec: kit_padrao_pdf/01_apresentacao_executiva_fundeb.md
 """
 import sys
 import json
@@ -19,7 +19,7 @@ try:
     from reportlab.lib import colors
     from reportlab.lib.styles import ParagraphStyle
     from reportlab.platypus import Paragraph
-    from kit_padrao_pdf_rocha_prime.report_style_pdf import (
+    from kit_padrao_pdf.report_style_pdf import (
         register_fonts, round_rect,
         NAVY, BLUE, TEXT, MUTED, LINE, LIGHT_BLUE, GREEN, WHITE, SOFT_ROW, ORANGE,
         LIGHT_GREEN, load_logo, LOGO_SMALL, fmt_money,
@@ -296,8 +296,10 @@ def gerar_executiva(payload_raw) -> str:
     txt_importancia = safe(d.get("texto_importancia_municipio") or
         f"A rede publica de {mun} tem caracteristicas que pesam na formula do FUNDEB,"
         " em especial no calculo do VAAT e na habilitacao as complementacoes federais.")
-    txt_leitura     = safe(d.get("texto_leitura_rocha_prime") or
-        "A Global Sync levantou as bases de calculo e mapeou os pontos em que os dados"
+    # Chave antiga como reserva — ver nota em gerador_comparativa.py.
+    txt_leitura     = safe(d.get("texto_leitura_consultoria") or
+        d.get("texto_leitura_rocha_prime") or
+        "A Global Company levantou as bases de calculo e mapeou os pontos em que os dados"
         " declarados precisam ser confrontados com os criterios vigentes do FNDE. A"
         " conferencia desses pontos e o principal vetor de ganho tecnico — o que cada um"
         " vale so se determina apos a verificacao documental.")

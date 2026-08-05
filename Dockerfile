@@ -10,7 +10,7 @@ WORKDIR /app
 
 # Copy package files
 COPY package.json package-lock.json* ./
-COPY kit_padrao_pdf_rocha_prime/requirements.txt ./kit_padrao_pdf_rocha_prime/requirements.txt
+COPY kit_padrao_pdf/requirements.txt ./kit_padrao_pdf/requirements.txt
 
 # Install dependencies
 #
@@ -22,7 +22,7 @@ COPY kit_padrao_pdf_rocha_prime/requirements.txt ./kit_padrao_pdf_rocha_prime/re
 ENV ELECTRON_SKIP_BINARY_DOWNLOAD=1
 RUN npm ci
 RUN python3 -m pip install --no-cache-dir --break-system-packages \
-    -r kit_padrao_pdf_rocha_prime/requirements.txt
+    -r kit_padrao_pdf/requirements.txt
 
 # Install Playwright browsers (only Chromium, minimizes size)
 RUN npx playwright install --with-deps chromium
@@ -63,9 +63,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxrandr2 xdg-utils libxss1 libxshmfence1 libpango-1.0-0 \
     libpangocairo-1.0-0 libcairo2 libgdk-pixbuf2.0-0 \
     && rm -rf /var/lib/apt/lists/*
-COPY kit_padrao_pdf_rocha_prime/requirements.txt ./kit_padrao_pdf_rocha_prime/requirements.txt
+COPY kit_padrao_pdf/requirements.txt ./kit_padrao_pdf/requirements.txt
 RUN python3 -m pip install --no-cache-dir --break-system-packages \
-    -r kit_padrao_pdf_rocha_prime/requirements.txt
+    -r kit_padrao_pdf/requirements.txt
 
 # Copy necessary files
 COPY --from=builder /app/public ./public
@@ -90,7 +90,7 @@ COPY --from=deps /app/node_modules/playwright-core ./node_modules/playwright-cor
 # Copy Python PDF generators and supporting modules (not included in Next.js standalone)
 COPY --from=builder /app/app/api/modulos/levantamento-fundeb/pdf ./app/api/modulos/levantamento-fundeb/pdf
 COPY --from=builder /app/app/api/modulos/slides/pdf ./app/api/modulos/slides/pdf
-COPY --from=builder /app/kit_padrao_pdf_rocha_prime ./kit_padrao_pdf_rocha_prime
+COPY --from=builder /app/kit_padrao_pdf ./kit_padrao_pdf
 
 # Copy bundled FNDE CSV data (fallback when gov.br blocks Cloud Run IPs)
 COPY --from=builder /app/data/fnde ./data/fnde

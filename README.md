@@ -5,7 +5,7 @@
 
   **Plataforma de gestão e automação para consultoria educacional FUNDEB**
   <br />
-  Rocha Prime Consultorias
+  Global Company
 
   [![Next.js](https://img.shields.io/badge/Next.js-16.2-000000?logo=next.js&logoColor=white)](https://nextjs.org/)
   [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev/)
@@ -100,7 +100,7 @@ app/api/                      → Rotas de API (BFF) + geradores PDF em Python
 core/                         → Domínio, libs server-side, auth, integrações
 modules/                      → Lógica de negócio (FUNDEB, contratos, propostas)
 functions/                    → Cloud Functions v2 (comissões sobre Firestore)
-kit_padrao_pdf_rocha_prime/   → Estilo compartilhado dos PDFs (ReportLab)
+kit_padrao_pdf/   → Estilo compartilhado dos PDFs (ReportLab)
 firestore.rules               → Regras de acesso (escopo por grupo via claims)
 storage.rules                 → Regras do Firebase Storage
 docs/                         → Specs de negócio e roadmaps

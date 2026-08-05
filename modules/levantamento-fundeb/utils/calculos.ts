@@ -6,7 +6,7 @@ import type {
   MunicipioIdentificacao,
   ObraPAC2,
   PerfilComercialFundeb,
-  ProjecaoRochaPrime,
+  ProjecaoFundeb,
   ReceitasFundeb,
   RelatorioFundeb,
   RepassePDDE,
@@ -106,7 +106,7 @@ function calcularReceitas(receitas: Partial<ReceitasFundeb>): ReceitasFundeb {
   };
 }
 
-function calcularProjecao(receitas: ReceitasFundeb): ProjecaoRochaPrime {
+function calcularProjecao(receitas: ReceitasFundeb): ProjecaoFundeb {
   const possuiComplementacao =
     receitas.complementacaoVAAF > 0 || receitas.complementacaoVAAT > 0 || receitas.complementacaoVAAR > 0;
 
@@ -154,7 +154,7 @@ export function calcularProjecaoPorMultiplicador(
   options?: {
     perfilComercial?: PerfilComercialFundeb | null;
   },
-): ProjecaoRochaPrime {
+): ProjecaoFundeb {
   const totalAtual = receitas.totalReceitas;
   const totalProjetado = totalAtual * multiplicador;
   const totalGanho = totalProjetado - totalAtual;
@@ -194,8 +194,8 @@ export function calcularProjecaoPorMultiplicador(
 }
 
 function calcularUpsideCondicionado(
-  projecaoRecuperavel: ProjecaoRochaPrime,
-  projecaoComercial: ProjecaoRochaPrime | null,
+  projecaoRecuperavel: ProjecaoFundeb,
+  projecaoComercial: ProjecaoFundeb | null,
   perfilComercial: PerfilComercialFundeb | null,
   receitas: ReceitasFundeb,
 ): UpsideCondicionadoFundeb | null {

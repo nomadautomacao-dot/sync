@@ -76,7 +76,7 @@ Levantamento FUNDEB (Cidade X)
 ### 2.2 — Documentos → Kit FUNDEB (sob demanda)
 
 ```
-CollaboratorDocument (João)               CompanyDocument (Rocha Prime)
+CollaboratorDocument (João)               CompanyDocument (Global Company)
 ├─ CND Federal (válido)                  ├─ Contrato Social (válido)
 ├─ CND Estadual (válido)                 ├─ Balanço 2025 (válido)
 ├─ FGTS (vencido ⚠️)                     ├─ Alvará (válido)
@@ -92,11 +92,11 @@ CollaboratorDocument (João)               CompanyDocument (Rocha Prime)
 │   ❌ FGTS → VENCIDO! (bloqueia geração do kit)        │
 │                                                       │
 │ Habilitação Jurídica:                                 │
-│   ✅ Contrato Social → da Empresa Rocha Prime         │
-│   ✅ Alvará → da Empresa Rocha Prime                  │
+│   ✅ Contrato Social → da Empresa Global Company         │
+│   ✅ Alvará → da Empresa Global Company                  │
 │                                                       │
 │ Habilitação Técnica:                                  │
-│   ✅ Balanço 2025 → da Empresa Rocha Prime            │
+│   ✅ Balanço 2025 → da Empresa Global Company            │
 │   ❌ Atestado Capacidade Técnica → PENDENTE           │
 └─────────────────────────────────────────────────────┘
 ```

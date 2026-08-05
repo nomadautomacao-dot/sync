@@ -175,7 +175,7 @@ O outro sistema deve conseguir reutilizar ou reproduzir:
 - `paragraph helper`
 
 Base atual de estilo:
-- `kit_padrao_pdf_rocha_prime/report_style_pdf.py`
+- `kit_padrao_pdf/report_style_pdf.py`
 
 ## Regras de negócio
 
@@ -205,7 +205,7 @@ Base atual de estilo:
 
 ## Checklist de implementação no outro sistema
 
-1. Incluir a pasta `kit_padrao_pdf_rocha_prime`.
+1. Incluir a pasta `kit_padrao_pdf`.
 2. Mapear os dados do município para o payload acima.
 3. Criar um gerador específico do relatório consumindo o kit visual.
 4. Parametrizar textos e listas em vez de fixar conteúdo em código.

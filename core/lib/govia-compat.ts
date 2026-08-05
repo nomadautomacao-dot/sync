@@ -875,7 +875,13 @@ function buildRelatorioDirigidoBase({
       textoSintese: comparativo.comparativaPdfInput.texto_sintese ?? null,
       textoQedu: comparativo.comparativaPdfInput.texto_qedu ?? null,
       textoMovimentosRelevantes: comparativo.comparativaPdfInput.texto_movimentos_relevantes ?? null,
-      textoComoRochaPrimeEntra: comparativo.comparativaPdfInput.texto_como_rocha_prime_entra ?? null,
+      // Chave nova primeiro, a antiga como reserva: envelopes ja arquivados
+      // guardam o nome que valia na epoca da geracao.
+      textoComoConsultoriaEntra:
+        comparativo.comparativaPdfInput.texto_como_consultoria_entra ??
+        (comparativo.comparativaPdfInput as Record<string, unknown>)
+          .texto_como_rocha_prime_entra as string | undefined ??
+        null,
       textoConclusao: comparativo.comparativaPdfInput.texto_conclusao ?? null,
     },
     saudeFiscal: siconfiFiscal ? {

@@ -33,7 +33,7 @@ deletado quando for regenerável.
 app/  core/  components/  modules/  lib/  styles/  types/  prisma/   Next
 sync_flutter/                                                        Flutter (fonte)
 public/flutter-web/ + favicon.png + file.svg                         servido pelo Next
-kit_padrao_pdf_rocha_prime/  +  app/api/**/pdf/*.py                  motor PDF (runtime)
+kit_padrao_pdf/  +  app/api/**/pdf/*.py                  motor PDF (runtime)
 data/*.json  +  data/fnde/*.csv                                      bundlado no build
 data-stub/  scripts/  docs/  + configs da raiz
 ```
@@ -78,7 +78,7 @@ final. Saem apenas as fontes que ninguém importa: `_sinopses/`, os `.xlsx` de
 origem e `data/batch/`.
 
 **`apresentacao/` sai inteira.** Os geradores de slides em
-`app/api/modulos/slides/pdf/` importam `kit_padrao_pdf_rocha_prime`, não
+`app/api/modulos/slides/pdf/` importam `kit_padrao_pdf`, não
 `apresentacao`. Nenhuma rota referencia a pasta.
 
 **`contratos/` se divide.** `Anexos_DOCX`, `Anexos_TXT` e `Habilitacao_PRIME`

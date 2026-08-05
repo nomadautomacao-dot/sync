@@ -465,7 +465,7 @@ export async function buildFundebComparativeSnapshot(relatorio: RelatorioFundeb)
       texto_sintese: textoSintese,
       texto_qedu: textoQedu,
       texto_movimentos_relevantes: textoMovimentos,
-      texto_como_rocha_prime_entra: textoComoEntra,
+      texto_como_consultoria_entra: textoComoEntra,
       texto_conclusao: textoConclusao,
     },
   };

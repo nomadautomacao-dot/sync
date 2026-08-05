@@ -2,7 +2,7 @@
  * Concede groupId e groupRole a um usuario do Firebase Auth.
  *
  * Uso: npm run firebase:claims -- <email> <groupId> <groupRole>
- * Ex.: npm run firebase:claims -- adriel@rochaprime.com.br grupo-1 owner
+ * Ex.: npm run firebase:claims -- maria@globalcompany.com.br grupo-1 owner
  *
  * As claims so entram em vigor no proximo ID token: o cliente precisa chamar
  * getIdToken(true) ou refazer login.

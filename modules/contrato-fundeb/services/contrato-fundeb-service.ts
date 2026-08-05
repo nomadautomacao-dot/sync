@@ -11,16 +11,17 @@ import type {
   ContratoFundebCampoStatus,
 } from "../types";
 import type { RelatorioFundeb } from "@/modules/levantamento-fundeb/types";
+import { EMPRESA, enderecoCompleto } from "@/core/domain/empresa";
 
 const CONTRATADO_DEFAULT = {
-  empresaRazaoSocial: "ROCHA PRIME SERVIÇOS ESPECIALIZADOS LTDA",
-  empresaCNPJ: "29.342.691/0001-93",
-  empresaEndereco: "Rua Riachão, 23, CEP: 47.970-000",
-  empresaCidade: "Caripare, Riachão das Neves - BA",
-  empresaCEP: "47.970-000",
-  representanteNome: "Paulo Ferreira da Rocha",
-  representanteCPF: "014.815.995-85",
-  representanteQualificacao: "Procurador",
+  empresaRazaoSocial: EMPRESA.razaoSocial,
+  empresaCNPJ: EMPRESA.cnpj,
+  empresaEndereco: enderecoCompleto(),
+  empresaCidade: `${EMPRESA.cidade} - ${EMPRESA.uf}`,
+  empresaCEP: EMPRESA.cep,
+  representanteNome: EMPRESA.representante.nome,
+  representanteCPF: EMPRESA.representante.cpf,
+  representanteQualificacao: EMPRESA.representante.qualificacao,
 };
 
 const VALOR_MENSAL_PADRAO = 27_500;

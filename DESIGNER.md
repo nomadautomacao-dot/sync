@@ -8,7 +8,7 @@
 
 ## 1. O produto, sem marketing
 
-**Global Sync** é a ferramenta interna da Rocha Prime, uma consultoria educacional
+**Global Sync** é a ferramenta interna da Global Company, uma consultoria educacional
 que trabalha com prefeituras brasileiras. O trabalho é este: pegar dados públicos
 de um município — repasses do FUNDEB, censo escolar, indicadores de saúde, obras
 federais, dados fiscais — e transformar em documento que se põe na mesa de um

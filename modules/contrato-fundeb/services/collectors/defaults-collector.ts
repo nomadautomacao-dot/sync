@@ -2,6 +2,8 @@
  * Defaults Collector — Valores fixos da empresa contratada e constantes legais
  */
 
+import { EMPRESA } from "@/core/domain/empresa";
+
 interface DefaultsCollectorResult {
   // Empresa (Contratado)
   empresaRazaoSocial: string;
@@ -45,20 +47,20 @@ export function collectDefaults(opcoes?: {
   quantidadeMeses?: number;
 }): DefaultsCollectorResult {
   return {
-    // Empresa Rocha Prime
-    empresaRazaoSocial: "ROCHA PRIME SERVIÇOS ESPECIALIZADOS LTDA",
-    empresaCNPJ: "29.342.691/0001-93",
-    empresaEndereco: "Rua Riachão, 23",
-    empresaCidade: "Caripare, Riachão das Neves",
-    empresaUF: "BA",
-    empresaCEP: "47.970-000",
-    representanteNome: "Paulo Ferreira da Rocha",
-    representanteCPF: "014.815.995-85",
-    representanteRG: "984391703",
-    representanteOrgaoExp: "SSP/BA",
-    representanteNacionalidade: "brasileiro",
-    representanteEstadoCivil: "solteiro",
-    representanteQualificacao: "Procurador",
+    // Empresa contratada — fonte única em core/domain/empresa.ts
+    empresaRazaoSocial: EMPRESA.razaoSocial,
+    empresaCNPJ: EMPRESA.cnpj,
+    empresaEndereco: EMPRESA.endereco,
+    empresaCidade: EMPRESA.cidade,
+    empresaUF: EMPRESA.uf,
+    empresaCEP: EMPRESA.cep,
+    representanteNome: EMPRESA.representante.nome,
+    representanteCPF: EMPRESA.representante.cpf,
+    representanteRG: EMPRESA.representante.rg,
+    representanteOrgaoExp: EMPRESA.representante.orgaoExpedidor,
+    representanteNacionalidade: EMPRESA.representante.nacionalidade,
+    representanteEstadoCivil: EMPRESA.representante.estadoCivil,
+    representanteQualificacao: EMPRESA.representante.qualificacao,
 
     // Constantes legais
     baseLegal: `Art. 74, inciso III, alínea "f", da Lei Federal nº 14.133/2021`,
