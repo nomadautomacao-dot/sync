@@ -17,9 +17,18 @@ import path from "node:path";
  *
  * Limitar em vez de aumentar a maquina de proposito: a suite leva ~19s local e
  * o gargalo aqui e memoria, nao CPU.
+ *
+ * A opcao e `maxWorkers`, no nivel de topo, e a variavel e `VITEST_MAX_WORKERS`
+ * — o Vitest 4 le essa variavel sozinho. A forma anterior,
+ * `poolOptions.forks.maxForks` alimentada por `VITEST_MAX_FORKS`, **nao limita
+ * nada nesta versao**: o Vitest 4 removeu `poolOptions` (ele avisa na saida) e
+ * nao conhece `VITEST_MAX_FORKS`. O valor era lido, montado e descartado, e a
+ * suite seguia abrindo um processo por CPU — medido em 16 processos e 6.366 MB
+ * de pico numa maquina de 10 nucleos, com a variavel valendo 1. Foi por isso
+ * que o gate continuou morrendo depois do primeiro conserto.
  */
 function maximoDeProcessos(): number | undefined {
-  const bruto = process.env.VITEST_MAX_FORKS;
+  const bruto = process.env.VITEST_MAX_WORKERS;
   if (!bruto) return undefined;
   const n = Number.parseInt(bruto, 10);
   return Number.isFinite(n) && n > 0 ? n : undefined;
@@ -28,7 +37,7 @@ function maximoDeProcessos(): number | undefined {
 export default defineConfig({
   test: {
     environment: "node",
-    poolOptions: { forks: { maxForks: maximoDeProcessos(), minForks: 1 } },
+    maxWorkers: maximoDeProcessos(),
     include: ["**/*.test.ts"],
     exclude: [
       // `**/` e nao `node_modules/**`: a forma antiga so pegava a raiz, e

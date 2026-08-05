@@ -448,9 +448,29 @@ carregando os 156 MB de JSON de `data/` (quatro arquivos de 19 MB só do Censo
 INEP, cada um virando objeto JS várias vezes maior) não cabem; o kernel matava
 o passo com `Killed`, exit 137.
 
-O conserto foi `VITEST_MAX_FORKS=1` e heap limitado no passo `test`: 2,5 GB de
-pico e os mesmos 19 segundos, porque a suíte é limitada por `import` e não por
-CPU — paralelizar nunca comprou muito aqui.
+O conserto é `VITEST_MAX_WORKERS=1` no passo `test`, repassado a `maxWorkers`
+em `vitest.config.ts`.
+
+**A primeira tentativa de conserto não consertou nada, e isso é a lição.** Ela
+usou `VITEST_MAX_FORKS=1` com `poolOptions.forks.maxForks` — os nomes corretos
+até o Vitest 3. O Vitest 4 **removeu `poolOptions`** e não conhece
+`VITEST_MAX_FORKS`: o valor era lido, montado e descartado em silêncio, a suíte
+seguia abrindo um processo por CPU, e o gate continuou morrendo com a variável
+aparentemente configurada. O único aviso era uma linha de `DEPRECATED` no meio
+da saída dos testes.
+
+Medido em 2026-08-05, mesma suíte, máquina de 10 núcleos:
+
+| Configuração | Processos | Pico | Cabe em 8 GB? |
+|---|---|---|---|
+| `VITEST_MAX_FORKS=1` (ignorada) | 16 | 6.366 MB | não |
+| `VITEST_MAX_WORKERS=1`, heap 6144 | 1 | 4.886 MB | sim |
+| `VITEST_MAX_WORKERS=1`, heap 3072 | 1 | 4.823 MB | sim |
+
+**O heap não é a alavanca.** Cortá-lo pela metade mudou o pico em 63 MB: a
+memória está no `import` dos JSON, não no old-space do V8. Quem decide é o
+número de processos. O custo é o tempo — 19s em paralelo contra ~37s em série,
+e vale a troca.
 
 **Não troque a máquina por uma maior sem ler isto:** `E2_HIGHCPU_32` é o
 caminho óbvio e **não está disponível** — o projeto não tem cota para esse tipo

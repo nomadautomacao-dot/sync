@@ -14,18 +14,29 @@ steps:
       # vezes maior. O Vitest, no padrao, abre um processo por CPU: oito copias
       # disso nao cabem, e o passo morria com `Killed`, exit 137.
       #
-      # Um processo so, com heap limitado: medido em 2,5 GB de pico e 19s, o
-      # mesmo tempo de antes — a suite e limitada por `import`, nao por CPU,
-      # entao paralelizar nunca comprou muito aqui.
+      # A variavel e `VITEST_MAX_WORKERS`, lida nativamente pelo Vitest 4 e
+      # repassada a `maxWorkers` em `vitest.config.ts`. **Nao troque por
+      # `VITEST_MAX_FORKS`**: esse era o nome antigo, casado com
+      # `poolOptions.forks.maxForks`, e o Vitest 4 removeu `poolOptions`. Com o
+      # nome antigo o limite e lido, montado e descartado em silencio — a suite
+      # segue abrindo um processo por CPU e o passo continua morrendo, que foi
+      # exatamente o que aconteceu no primeiro conserto.
       #
-      # Dois processos ja nao bastaram: essa combinacao foi tentada e falhou.
-      - 'VITEST_MAX_FORKS=1'
-      - 'NODE_OPTIONS=--max-old-space-size=6144'
+      # Medido em 2026-08-05, mesma suite, maquina de 10 nucleos:
+      #   sem limite efetivo ... 16 processos, 6.366 MB — nao cabe
+      #   VITEST_MAX_WORKERS=1 .. 1 processo,  4.886 MB — cabe
+      #
+      # O heap **nao e a alavanca**: baixa-lo de 6144 para 3072 mudou o pico de
+      # 4.886 para 4.823 MB. A memoria esta no `import` dos JSON, nao no
+      # old-space do V8. O que decide e o numero de processos. O teto abaixo e
+      # so guarda-corpo contra crescimento descontrolado.
+      - 'VITEST_MAX_WORKERS=1'
+      - 'NODE_OPTIONS=--max-old-space-size=4096'
     args:
       - '-c'
       - |
         set -e
-        echo "VITEST_MAX_FORKS=${VITEST_MAX_FORKS:-<nao definida>}"
+        echo "VITEST_MAX_WORKERS=${VITEST_MAX_WORKERS:-<nao definida>}"
         echo "memoria disponivel:"; free -g || true
         npm ci
         npm test
