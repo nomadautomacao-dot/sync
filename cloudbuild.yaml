@@ -9,12 +9,18 @@ steps:
     id: 'test'
     entrypoint: 'bash'
     env:
-      # A maquina abaixo e `E2_HIGHCPU_8`: oito vCPU e **oito** GB, porque a
-      # familia HIGHCPU da 1 GB por vCPU. O Vitest, no padrao, abre um processo
-      # por CPU — e oito processos carregando o grafo de modulos inteiro nao
-      # cabem. O passo morria com `Killed` e exit 137, e o build parava aqui.
-      # Ver a nota longa em vitest.config.ts.
-      - 'VITEST_MAX_FORKS=2'
+      # A maquina tem 8 GB e a suite carrega 156 MB de JSON de `data/` — quatro
+      # arquivos de 19 MB so do Censo INEP, cada um virando objeto JS varias
+      # vezes maior. O Vitest, no padrao, abre um processo por CPU: oito copias
+      # disso nao cabem, e o passo morria com `Killed`, exit 137.
+      #
+      # Um processo so, com heap limitado: medido em 2,5 GB de pico e 19s, o
+      # mesmo tempo de antes — a suite e limitada por `import`, nao por CPU,
+      # entao paralelizar nunca comprou muito aqui.
+      #
+      # Dois processos ja nao bastaram: essa combinacao foi tentada e falhou.
+      - 'VITEST_MAX_FORKS=1'
+      - 'NODE_OPTIONS=--max-old-space-size=6144'
     args:
       - '-c'
       - |
@@ -109,18 +115,14 @@ images:
 timeout: '4500s'
 
 options:
-  # E2_HIGHCPU_32: 32 vCPU e **32 GB**. A HIGHCPU_8 anterior dava 8 GB, e o
-  # passo de teste morria nela com `Killed`/137 mesmo depois de limitar o Vitest
-  # a dois processos.
+  # E2_HIGHCPU_8: oito vCPU e **oito** GB (a familia HIGHCPU da 1 GB por vCPU).
   #
-  # O motivo esta em `data/`: 156 MB de JSON, com quatro arquivos de 19 MB (o
-  # Censo INEP, um por ano). Cada `import` desses vira objeto JS varias vezes
-  # maior que o arquivo, e a suite os carrega em dezenas de arquivos de teste.
-  # Nao e desperdicio a cortar — e a base do produto.
-  #
-  # Continua valendo o teto de dois processos (VITEST_MAX_FORKS no passo
-  # `test`): sem ele, 32 vCPU virariam 32 processos e o problema voltaria maior.
-  machineType: 'E2_HIGHCPU_32'
+  # `E2_HIGHCPU_32` seria o caminho obvio e **nao esta disponivel**: o projeto
+  # nao tem cota para esse tipo de maquina nesta regiao, e o Cloud Build recusa
+  # antes de comecar — "due to quota restrictions". Pior, o gatilho recusa em
+  # silencio: o push simplesmente nao gera build nenhum. Se um dia a suite
+  # deixar de caber aqui, o caminho e pedir cota, nao trocar a linha abaixo.
+  machineType: 'E2_HIGHCPU_8'
   # O build roda como 621901234263-compute@developer.gserviceaccount.com (a
   # conta default do projeto, que já tem Editor). Nesse modo o Cloud Build
   # recusa o build se o destino dos logs não for explícito. Os logs ficam no

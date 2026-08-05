@@ -444,8 +444,19 @@ De 2026-08-02 a 2026-08-05 **todo build falhou**, e a produção ficou parada na
 revisão de 31 de julho sem que nada avisasse. A causa era memória: a máquina do
 gate é `E2_HIGHCPU_8` — oito vCPU e **oito** GB, porque a família HIGHCPU dá
 1 GB por vCPU — e o Vitest, no padrão, abre um processo por CPU. Oito processos
-carregando o grafo de módulos inteiro não cabem; o kernel matava o passo
-(`Killed`, exit 137). Daí o `VITEST_MAX_FORKS=2` no passo `test`.
+carregando os 156 MB de JSON de `data/` (quatro arquivos de 19 MB só do Censo
+INEP, cada um virando objeto JS várias vezes maior) não cabem; o kernel matava
+o passo com `Killed`, exit 137.
+
+O conserto foi `VITEST_MAX_FORKS=1` e heap limitado no passo `test`: 2,5 GB de
+pico e os mesmos 19 segundos, porque a suíte é limitada por `import` e não por
+CPU — paralelizar nunca comprou muito aqui.
+
+**Não troque a máquina por uma maior sem ler isto:** `E2_HIGHCPU_32` é o
+caminho óbvio e **não está disponível** — o projeto não tem cota para esse tipo
+nesta região. E a recusa é silenciosa do lado do gatilho: o push simplesmente
+não gera build nenhum, sem erro em lugar algum. Se a suíte deixar de caber em
+8 GB, o caminho é pedir cota, não editar a linha.
 
 O que torna essa falha traiçoeira não é a causa, é o **silêncio**: build que
 falha deixa a revisão anterior no ar, e a revisão anterior responde normalmente.
