@@ -42,6 +42,7 @@ import type { RespostaLevantamento } from "./_components/tipos";
 type Documento =
   | "raio-x"
   | "levantamento"
+  | "dever-de-casa"
   | "historico-censo"
   | "oficio-documentos"
   | "dossie-escolas"
@@ -203,6 +204,26 @@ function Bancada() {
     retry: false,
   });
 
+  /* O Dever de Casa julga contra fontes vivas (CAUC, Siconfi) e datasets
+     locais; a prévia antecipa a nota e quantos itens ficaram verificáveis. */
+  const { data: previaDever } = useQuery<{
+    nota: number | null;
+    rotulo: string;
+    cumpre: number;
+    avaliados: number;
+    semDado: number;
+    paginasEstimadas: number;
+  }>({
+    queryKey: ["dever-de-casa-previa", codigoIbge],
+    queryFn: async () => {
+      const res = await fetch(`/api/modulos/levantamento-fundeb/dever-de-casa?codigo_ibge=${codigoIbge}`);
+      if (!res.ok) throw new Error("prévia indisponível");
+      return res.json();
+    },
+    enabled: !!codigoIbge,
+    retry: false,
+  });
+
   const { data: previaComparativo } = useQuery<{
     indicadores: number;
     piores: number;
@@ -259,6 +280,14 @@ function Bancada() {
      numa grandeza diferente. Sem prévia o card diz "tamanho variável" em vez de
      mentir um número — falha de prévia não bloqueia a geração. */
   const medidaDoCard = (id: Documento): string | undefined => {
+    if (id === "dever-de-casa") {
+      if (!previaDever) return "tamanho variável";
+      const nota =
+        previaDever.nota !== null
+          ? `nota ${previaDever.nota.toFixed(1).replace(".", ",")}`
+          : "sem nota";
+      return `${nota} · ${previaDever.cumpre}/${previaDever.avaliados} itens · ~${previaDever.paginasEstimadas} pg`;
+    }
     if (id === "dossie-escolas") {
       return previaDossie
         ? `${previaDossie.escolas} escolas · ~${previaDossie.paginasEstimadas} pg`

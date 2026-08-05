@@ -1,6 +1,7 @@
 export const CITY_REPORT_TYPES = [
   "raio_x",
   "diagnostico_fundeb",
+  "dever_de_casa",
   "historico_censo",
   "oficio_documentos",
   "dossie_escolas",
@@ -18,6 +19,7 @@ export type CityReportType = (typeof CITY_REPORT_TYPES)[number];
 export const CITY_REPORT_TYPE_LABELS: Record<CityReportType, string> = {
   raio_x: "Raio-X Municipal",
   diagnostico_fundeb: "Diagnóstico FUNDEB",
+  dever_de_casa: "Dever de Casa",
   historico_censo: "Histórico do Censo Escolar",
   oficio_documentos: "Ofício de solicitação de documentos",
   dossie_escolas: "Dossiê das Escolas",

@@ -129,10 +129,10 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // ── Modelos ainda em Python: executiva, comparativa, comercial-premium ───
+    // ── Modelos ainda em Python: executiva e comparativa ─────────────────────
     if (!isFundebPdfTipo(tipo)) {
       return NextResponse.json(
-        { error: `Tipo invalido: "${tipo}". Use: levantamento | executiva | comparativa | comercial-premium` },
+        { error: `Tipo invalido: "${tipo}". Use: levantamento | executiva | comparativa` },
         { status: 400 },
       );
     }

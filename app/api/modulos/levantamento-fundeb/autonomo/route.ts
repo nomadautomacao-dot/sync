@@ -3,8 +3,6 @@ import { buildFundebComparativeSnapshot } from "@/core/lib/fundeb-comparative";
 import { buildGoviaMunicipioCompleto } from "@/core/lib/govia-compat";
 import { markGoviaMunicipioAccess } from "@/core/lib/govia-storage";
 import { generateFundebPdfBuffer, isFundebPdfTipo } from "@/core/lib/fundeb-pdf";
-import { generateComercialHtml, mapPayloadToComercialData } from "@/core/lib/fundeb-comercial-template";
-import { generateComercialPremiumPdf } from "@/core/lib/fundeb-comercial-pdf";
 import type { FundebRelatorioParametros } from "@/modules/levantamento-fundeb/types";
 
 interface AutonomoRequestBody {
@@ -23,7 +21,7 @@ export async function POST(request: NextRequest) {
 
     if (!isFundebPdfTipo(tipo)) {
       return NextResponse.json(
-        { error: `Tipo invalido: "${tipo}". Use: levantamento | executiva | comparativa | comercial-premium` },
+        { error: `Tipo invalido: "${tipo}". Use: levantamento | executiva | comparativa` },
         { status: 400 },
       );
     }
@@ -69,33 +67,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         data: data.payload,
-      });
-    }
-
-    // ── Comercial Premium: Playwright-based HTML → PDF ──────────────
-    if (tipo === "comercial-premium") {
-      const comercialData = mapPayloadToComercialData(data.payload);
-      const htmlContent = generateComercialHtml(comercialData);
-
-      const municipioSlug = (comercialData.municipio || "municipio")
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/[^a-zA-Z0-9]+/g, "-")
-        .replace(/^-+|-+$/g, "")
-        .toUpperCase();
-      const ufSlug = (comercialData.uf || "UF").toUpperCase();
-
-      const { pdfBuffer, filename } = await generateComercialPremiumPdf(
-        htmlContent,
-        `${municipioSlug}-${ufSlug}`,
-      );
-
-      return new NextResponse(new Uint8Array(pdfBuffer), {
-        status: 200,
-        headers: {
-          "Content-Type": "application/pdf",
-          "Content-Disposition": `attachment; filename=${filename}`,
-        },
       });
     }
 

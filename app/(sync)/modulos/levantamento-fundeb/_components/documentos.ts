@@ -3,6 +3,7 @@ import {
   BankOutlined,
   BarChartOutlined,
   CalculatorOutlined,
+  CheckSquareOutlined,
   FileTextOutlined,
   GlobalOutlined,
   HistoryOutlined,
@@ -28,6 +29,8 @@ import type { CityReportType } from "@/modules/cidades/reports-types";
  *
  * - **Raio-X** é a cidade inteira, o passo que antecede a conversa de fundo.
  * - **Diagnóstico e Histórico do Censo** aprofundam no FUNDEB.
+ * - **Dever de Casa** é o único que julga: nota interna de 0 a 10, item a
+ *   item, para o consultor decidir prioridade e argumento. Não vai ao gestor.
  * - **Ofício** é o único endereçado à prefeitura — os outros são análise
  *   interna, e por isso o tom dele é de coleta, nunca de veredito.
  * - **Os oito dossiês** são o produto que justifica o preço da consultoria:
@@ -89,6 +92,27 @@ export const DOCUMENTOS = [
       "Série histórica",
       "Saúde fiscal",
       "Plano de ação",
+    ],
+  },
+  {
+    id: "dever-de-casa" as const,
+    reportType: "dever_de_casa" as CityReportType,
+    icone: CheckSquareOutlined,
+    nome: "Dever de Casa",
+    // O tamanho depende das fontes que responderem; a medida vem da prévia.
+    paginas: 0,
+    variante: "secundario" as const,
+    prefixoArquivo: "Dever_de_Casa",
+    endpoint: "/api/modulos/levantamento-fundeb/dever-de-casa",
+    descricao:
+      "O veredito interno: cada obrigação que o município controla, com parâmetro legal, dado apurado e nota de 0 a 10. Não vai à mesa do gestor.",
+    conteudo: [
+      "Nota do dever de casa",
+      "Prestação de contas, item a item",
+      "As cinco condicionalidades do VAAR",
+      "Censo × Portaria e creche",
+      "Alfabetização e IDEB contra a régua",
+      "O que o descumprimento custa",
     ],
   },
   {
