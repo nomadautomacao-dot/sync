@@ -1,11 +1,16 @@
-import ideb2023 from "@/data/ideb-municipal-2023.json";
-import idebHistorico from "@/data/ideb-municipal-historico.json";
-import idebHistoricoMunicipiosData from "@/data/ideb-municipal-historico-municipios.json";
+import { lerJsonDeDados } from "@/core/lib/dados-arquivo";
 
-const idebHistoricoMunicipios = idebHistoricoMunicipiosData as Record<string, {
+type IdebHistoricoMunicipios = Record<string, {
   anosIniciais: Array<{ ano: number; ideb: number }>;
   anosFinais: Array<{ ano: number; ideb: number }>;
 }>;
+
+/* Lido em execução, não por `import`: o dataset de 2023 tem 11 MB e o
+ * TypeScript deduzia o tipo literal dele a cada checagem. Ver
+ * `core/lib/dados-arquivo.ts` para o custo medido. */
+function idebHistoricoMunicipios(): IdebHistoricoMunicipios {
+  return lerJsonDeDados<IdebHistoricoMunicipios>("data/ideb-municipal-historico-municipios.json");
+}
 
 interface IdebMunicipalRecord {
   codigoIBGE: string;
@@ -27,10 +32,14 @@ interface IdebMunicipalHistorico {
   anosFinais: IdebHistoricoEntry[];
 }
 
-const dataset2023 = ideb2023 as Record<string, Omit<IdebMunicipalRecord, "codigoIBGE" | "anoReferencia"> & {
+type IdebDataset2023 = Record<string, Omit<IdebMunicipalRecord, "codigoIBGE" | "anoReferencia"> & {
   historicoAnosIniciais?: Array<{ ano: number; idebObservado: number | null; metaProjetada: number | null }>;
   historicoAnosFinais?: Array<{ ano: number; idebObservado: number | null; metaProjetada: number | null }>;
 }>;
+
+function dataset2023(): IdebDataset2023 {
+  return lerJsonDeDados<IdebDataset2023>("data/ideb-municipal-2023.json");
+}
 
 export function getIdebMunicipalRecord(codigoIBGE: string): IdebMunicipalRecord | null {
   const digits = codigoIBGE.replace(/\D/g, "");
@@ -39,7 +48,7 @@ export function getIdebMunicipalRecord(codigoIBGE: string): IdebMunicipalRecord 
     return null;
   }
 
-  const record = dataset2023[digits];
+  const record = dataset2023()[digits];
   if (record) {
     return {
       codigoIBGE: digits,
@@ -56,11 +65,11 @@ export function getIdebMunicipalRecord(codigoIBGE: string): IdebMunicipalRecord 
  */
 export function getIdebMunicipalHistorico(codigoIBGE: string): IdebMunicipalHistorico | null {
   const digits = codigoIBGE.replace(/\D/g, "");
-  const entry = dataset2023[digits];
+  const entry = dataset2023()[digits];
   if (!entry) return null;
   
   // Also check old idebHistoricoMunicipiosData if needed, but primary is dataset2023
-  const legacyEntry = idebHistoricoMunicipios[digits];
+  const legacyEntry = idebHistoricoMunicipios()[digits];
   
   const mapHistory = (history?: Array<{ano: number; idebObservado: number | null}>) => {
     if (!history) return [];
@@ -85,11 +94,13 @@ export function getIdebMunicipalHistorico(codigoIBGE: string): IdebMunicipalHist
   };
 }
 
-export function getIdebMetasNacionais(): {
+interface MetasNacionais {
   anosIniciais: Array<{ ano: number; meta: number }>;
   anosFinais: Array<{ ano: number; meta: number }>;
   ensinoMedio: Array<{ ano: number; meta: number }>;
-} {
-  return idebHistorico.metasNacionais;
+}
+
+export function getIdebMetasNacionais(): MetasNacionais {
+  return lerJsonDeDados<{ metasNacionais: MetasNacionais }>("data/ideb-municipal-historico.json").metasNacionais;
 }
 

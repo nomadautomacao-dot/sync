@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import censo2025 from "@/data/inep-censo-municipal-2025.json";
+import { lerJsonDeDados } from "@/core/lib/dados-arquivo";
 import { getEquidadeMunicipal } from "@/core/lib/inep-equidade";
 
 /**
@@ -14,10 +14,10 @@ import { getEquidadeMunicipal } from "@/core/lib/inep-equidade";
  * publica por outro caminho. Se o INEP mudar o layout ou a junção regredir,
  * este teste falha antes de o número entrar num PDF de cliente.
  */
-const registros = censo2025 as Record<
+const registros = lerJsonDeDados<Record<
   string,
   { matriculasMunicipaisTotal?: number; matriculasPublicasTotal?: number; municipio?: string }
->;
+>>("data/inep-censo-municipal-2025.json");
 
 const AMOSTRA = [
   "2801207", // Canindé de São Francisco/SE — rede pequena, alta proporção parda

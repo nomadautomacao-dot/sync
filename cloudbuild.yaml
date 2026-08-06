@@ -24,13 +24,22 @@ steps:
       #
       # Medido em 2026-08-05, mesma suite, maquina de 10 nucleos:
       #   sem limite efetivo ... 16 processos, 6.366 MB — nao cabe
-      #   VITEST_MAX_WORKERS=1 .. 1 processo,  4.886 MB — cabe
+      #   VITEST_MAX_WORKERS=1 .. 1 processo,  4.886 MB — cabe, 37s
       #
-      # O heap **nao e a alavanca**: baixa-lo de 6144 para 3072 mudou o pico de
-      # 4.886 para 4.823 MB. A memoria esta no `import` dos JSON, nao no
-      # old-space do V8. O que decide e o numero de processos. O teto abaixo e
-      # so guarda-corpo contra crescimento descontrolado.
-      - 'VITEST_MAX_WORKERS=1'
+      # Em 2026-08-06 os JSON sairam do `import` (`core/lib/dados-arquivo.ts`) e
+      # o peso caiu: a mesma suite passou a 1.508 MB com um processo, e 2.502 MB
+      # com paralelismo total — folga de 3x sobre os 8 GB. O limite de 1 deixou
+      # de ser necessario e custava tempo: 14s contra 3s.
+      #
+      # Quatro, e nao solto: o modo de falha que congelou a producao por quatro
+      # dias foi um estouro de memoria silencioso. Numero explicito mantem o
+      # teto previsivel se `data/` voltar a crescer, e ainda entrega quase toda
+      # a velocidade.
+      #
+      # O heap **nao e a alavanca**: quando o peso estava no `import`, baixa-lo
+      # de 6144 para 3072 mudou o pico em 63 MB. Quem decide e o numero de
+      # processos e o que entra no grafo de tipos.
+      - 'VITEST_MAX_WORKERS=4'
       - 'NODE_OPTIONS=--max-old-space-size=4096'
     args:
       - '-c'

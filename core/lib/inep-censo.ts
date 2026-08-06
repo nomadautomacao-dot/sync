@@ -1,7 +1,4 @@
-import censoMunicipal2025 from "@/data/inep-censo-municipal-2025.json";
-import censoMunicipal2024 from "@/data/inep-censo-municipal-2024.json";
-import censoMunicipal2023 from "@/data/inep-censo-municipal-2023.json";
-import censoMunicipal2022 from "@/data/inep-censo-municipal-2022.json";
+import { lerJsonDeDados } from "@/core/lib/dados-arquivo";
 
 export interface InepCensoMunicipalRecord {
   anoReferencia: number;
@@ -105,23 +102,28 @@ export interface InepCensoMunicipalRecord {
   escolasSemAcessibilidadePct?: number;
 }
 
-const dataset2025 = censoMunicipal2025 as Record<string, Omit<InepCensoMunicipalRecord, "anoReferencia">>;
-const dataset2024 = censoMunicipal2024 as Record<string, Omit<InepCensoMunicipalRecord, "anoReferencia">>;
-const dataset2023 = censoMunicipal2023 as Record<string, Omit<InepCensoMunicipalRecord, "anoReferencia">>;
-const dataset2022 = censoMunicipal2022 as Record<string, Omit<InepCensoMunicipalRecord, "anoReferencia">>;
-const datasetsByYear = {
-  2025: dataset2025,
-  2024: dataset2024,
-  2023: dataset2023,
-  2022: dataset2022,
-} as const;
+type CensoPorMunicipio = Record<string, Omit<InepCensoMunicipalRecord, "anoReferencia">>;
+
+/**
+ * Os quatro Censos são 75 MB de JSON — o maior peso do projeto inteiro. Lidos
+ * por `import`, o TypeScript deduzia o tipo literal dos quatro em toda checagem
+ * e o `next build` deixou de caber na máquina do Cloud Build (ver
+ * `core/lib/dados-arquivo.ts`).
+ *
+ * Sob demanda também em execução: uma consulta a um ano só carrega esse ano, em
+ * vez dos quatro. O `lerJsonDeDados` guarda o que já leu, então a segunda
+ * consulta ao mesmo ano não toca no disco.
+ */
+function censoDoAno(ano: 2022 | 2023 | 2024 | 2025): CensoPorMunicipio {
+  return lerJsonDeDados<CensoPorMunicipio>(`data/inep-censo-municipal-${ano}.json`);
+}
 
 function getInepCensoMunicipalRecordByYear(
   codigoIBGE: string,
   anoReferencia: 2022 | 2023 | 2024 | 2025,
 ): InepCensoMunicipalRecord | null {
   const digits = codigoIBGE.replace(/\D/g, "");
-  const dataset = datasetsByYear[anoReferencia];
+  const dataset = censoDoAno(anoReferencia);
   const record = dataset[digits];
 
   if (!record) {

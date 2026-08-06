@@ -105,6 +105,27 @@ COPY --from=builder /app/data/caged-municipios.json ./data/caged-municipios.json
 # scripts/dados/gerar-equidade-censo-municipal.mjs.
 COPY --from=builder /app/data/inep-equidade-municipal.json ./data/inep-equidade-municipal.json
 
+# Datasets read at runtime by core/lib/dados-arquivo.ts instead of `import`.
+#
+# These were static imports until 2026-08-05. With `resolveJsonModule`, each one
+# made TypeScript infer the literal type of its entire contents: the four INEP
+# censuses alone are 75 MB, and `next build` grew past the 8 GB of the Cloud
+# Build machine — the image stopped building at all. Reading them at runtime
+# removed ~2.9 GB from the type check.
+#
+# The trade is this block: Next's file tracing cannot see a path assembled at
+# runtime, so a dataset without its COPY line ships missing and only fails on
+# the first request that needs it. Same trap as COMPLEMENTOS in
+# scripts/desktop/preparar-servidor.mjs — a file added there must be added here.
+COPY --from=builder /app/data/inep-censo-municipal-2022.json ./data/inep-censo-municipal-2022.json
+COPY --from=builder /app/data/inep-censo-municipal-2023.json ./data/inep-censo-municipal-2023.json
+COPY --from=builder /app/data/inep-censo-municipal-2024.json ./data/inep-censo-municipal-2024.json
+COPY --from=builder /app/data/inep-censo-municipal-2025.json ./data/inep-censo-municipal-2025.json
+COPY --from=builder /app/data/ideb-municipal-2023.json ./data/ideb-municipal-2023.json
+COPY --from=builder /app/data/ideb-municipal-historico.json ./data/ideb-municipal-historico.json
+COPY --from=builder /app/data/ideb-municipal-historico-municipios.json ./data/ideb-municipal-historico-municipios.json
+COPY --from=builder /app/data/inep-rendimento-municipal-2023.json ./data/inep-rendimento-municipal-2023.json
+
 # Set permissions
 RUN chown -R nextjs:nodejs /app
 

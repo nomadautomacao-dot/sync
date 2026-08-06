@@ -92,8 +92,9 @@ Sync/
 │   ├── dados/                    # Pipelines INEP / IDEB / TSE
 │   └── pdf/                      # Comparação e análise de PDFs, templates DOCX
 ├── data/                         # JSONs derivados (IDEB, INEP, TSE) + fnde/*.csv
-│                                 #   Entram por `import from "@/data/..."` → bundlados
-│                                 #   no build. Fontes brutas ficam em Sync-Arquivos/.
+│                                 #   Os pesados são lidos em execução por
+│                                 #   `lerJsonDeDados()`; os leves ainda entram
+│                                 #   por `import`. Fontes brutas em Sync-Arquivos/.
 ├── kit_padrao_pdf/   # Módulo Python de geração de PDFs FUNDEB
 ├── docs/                         # Specs, roadmaps e análises (kebab-case)
 │   ├── specs/                    # Specs de produto
@@ -244,6 +245,7 @@ account fica em `FIREBASE_SERVICE_ACCOUNT` (`.env.local`), nunca versionada.
 
 | Arquivo | Descrição |
 |---------|-----------|
+| `dados-arquivo.ts` | `lerJsonDeDados()` — lê os JSON de `data/` em execução, **não** por `import` (ver abaixo) |
 | `auth.ts` | `getSessionUser()` — verifica o ID token do Firebase |
 | `auth-token.ts` | `bearerToken()`, `sessionUserFromClaims()` — parsing puro, testável |
 | `firebase-admin.ts` | Cliente do Admin SDK (lê `FIREBASE_SERVICE_ACCOUNT`) |
@@ -468,9 +470,40 @@ Medido em 2026-08-05, mesma suíte, máquina de 10 núcleos:
 | `VITEST_MAX_WORKERS=1`, heap 3072 | 1 | 4.823 MB | sim |
 
 **O heap não é a alavanca.** Cortá-lo pela metade mudou o pico em 63 MB: a
-memória está no `import` dos JSON, não no old-space do V8. Quem decide é o
-número de processos. O custo é o tempo — 19s em paralelo contra ~37s em série,
-e vale a troca.
+memória está no `import` dos JSON, não no old-space do V8.
+
+#### A causa por trás dos dois: `resolveJsonModule`
+
+Consertado o gate, o build da imagem caiu no passo seguinte — e por um erro
+**diferente**: `JavaScript heap out of memory`, o próprio Node batendo no teto,
+em vez de `Killed`. Medido em 2026-08-06: a checagem de tipos pedia 5.615 MB
+num processo e ~8,5 GB somando os dois. Não cabia, e apertar o teto só trocava
+um erro pelo outro.
+
+A causa era comum aos dois sintomas. Com `resolveJsonModule: true`, um
+`import dados from "@/data/x.json"` faz o TypeScript **deduzir o tipo literal
+de todo o conteúdo** — 75 MB só nos quatro Censos INEP. E o tipo era descartado
+na linha seguinte: os consumidores já faziam `as Record<string, Interface>`.
+Pagava-se a dedução para jogá-la fora.
+
+`core/lib/dados-arquivo.ts` lê esses arquivos em execução. O TypeScript passa a
+ver a interface declarada, não o conteúdo. Medido antes e depois:
+
+| | Antes | Depois |
+|---|---|---|
+| `next build`, maior processo | 5.615 MB | 2.300 MB |
+| `next build`, soma | 8.519 MB | 4.975 MB |
+| `next build`, com teto 4096 | falhava | passa |
+| Suíte, pico | 4.886 MB | 2.499 MB |
+| Suíte, duração | 37s | 4s |
+
+Com a folga recuperada, o gate voltou a paralelizar: `VITEST_MAX_WORKERS=4`.
+
+> **Arquivo lido por `lerJsonDeDados()` precisa de duas linhas**: um `COPY` no
+> `Dockerfile` e uma entrada em `COMPLEMENTOS` de
+> `scripts/desktop/preparar-servidor.mjs`. O rastreamento do Next não enxerga
+> caminho montado em execução — sem elas o arquivo não viaja, e a falha só
+> aparece na primeira requisição que precisar dele.
 
 **Não troque a máquina por uma maior sem ler isto:** `E2_HIGHCPU_32` é o
 caminho óbvio e **não está disponível** — o projeto não tem cota para esse tipo

@@ -167,6 +167,20 @@ const COMPLEMENTOS = [
   ["data/fnde", "CSVs do FNDE, lidos por caminho"],
   ["data/caged-municipios.json", "sem isto, baixa 117 MB do IPEADATA a cada partida"],
   ["data/inep-equidade-municipal.json", "equidade do Censo Escolar"],
+  // Lidos em execução por `core/lib/dados-arquivo.ts` desde 2026-08-05. Eram
+  // `import`, e com `resolveJsonModule` o TypeScript deduzia o tipo literal de
+  // cada um: só os quatro Censos são 75 MB, e o `next build` deixou de caber
+  // nos 8 GB da máquina do Cloud Build. Sem estas linhas o app abre, navega e
+  // falha na emissão — o mesmo modo de falha do `playwright-core` sem
+  // `browsers.json`.
+  ["data/inep-censo-municipal-2022.json", "Censo Escolar 2022"],
+  ["data/inep-censo-municipal-2023.json", "Censo Escolar 2023"],
+  ["data/inep-censo-municipal-2024.json", "Censo Escolar 2024"],
+  ["data/inep-censo-municipal-2025.json", "Censo Escolar 2025"],
+  ["data/ideb-municipal-2023.json", "IDEB por município"],
+  ["data/ideb-municipal-historico.json", "metas nacionais do IDEB"],
+  ["data/ideb-municipal-historico-municipios.json", "série histórica do IDEB"],
+  ["data/inep-rendimento-municipal-2023.json", "rendimento escolar"],
 ];
 
 function completar() {

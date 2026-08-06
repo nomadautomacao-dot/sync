@@ -1,4 +1,4 @@
-import rendimentoDataset from "@/data/inep-rendimento-municipal-2023.json";
+import { lerJsonDeDados } from "@/core/lib/dados-arquivo";
 
 /**
  * Indicadores de aprendizagem, rendimento e fluxo escolar por município.
@@ -113,7 +113,7 @@ interface QeduMunicipalIndicators {
 
 // Cast nomeado: o JSON é artefato versionado do próprio repo, gerado a partir das
 // planilhas do INEP, então a forma é conhecida em tempo de build — não é entrada externa.
-const dataset = rendimentoDataset as unknown as DatasetRaw;
+const dataset = lerJsonDeDados<DatasetRaw>("data/inep-rendimento-municipal-2023.json");
 
 // Fallback para `{}` em vez de estourar: dataset corrompido vira ausência de dado,
 // nunca uma exceção que derruba a geração do PDF.

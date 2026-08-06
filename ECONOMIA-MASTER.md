@@ -104,22 +104,33 @@ Registry, senão o problema volta sozinho em três meses.
 > Regra: guardar as 10 mais recentes, apagar o resto. Sem isso, todo deploy
 > acrescenta custo permanente.
 
-### Passo 2 — Tirar os JSON da compilação
+### Passo 2 — Tirar os JSON da compilação *(feito em 2026-08-06)*
 
-O item de maior retorno do documento. Carregar `data/*.json` do disco em tempo
-de execução em vez de `import`.
+O item de maior retorno do documento. `core/lib/dados-arquivo.ts` lê os
+datasets do disco em execução; o TypeScript passa a ver a interface declarada
+em vez de deduzir o tipo literal do conteúdo.
 
-Destrava, de uma vez:
-- o build volta a caber em máquina pequena
-- o gate de testes deixa de exigir ajuste fino de memória
-- a imagem encolhe, e com ela o custo de depósito por deploy
-- o empacotamento do desktop para de precisar de 8 GB de heap
+Não foram os 26 pontos: **92 dos ~100 MB estavam em 4 arquivos-fonte**. Mexer
+neles colheu quase todo o ganho. Os JSON pequenos seguem por `import`, e não há
+motivo para mudá-los.
 
-Custo: mexe em 26 pontos de importação. É a tarefa mais trabalhosa da lista e a
-única que resolve mais de um problema.
+| | Antes | Depois |
+|---|---|---|
+| `next build`, maior processo | 5.615 MB | 2.300 MB |
+| `next build`, soma | 8.519 MB | 4.975 MB |
+| `next build` com teto 4096 | falhava | passa |
+| Suíte, pico | 4.886 MB | 2.499 MB |
+| Suíte, duração | 37s | 4s |
+
+Com a folga recuperada, o gate voltou a paralelizar (`VITEST_MAX_WORKERS=4`),
+o que corta minutos de Cloud Build — custo direto.
 
 > **Não confundir com "tirar os dados do repositório".** Os JSON continuam
 > versionados — o que muda é *quando* são lidos.
+
+> **O preço:** cada arquivo lido assim precisa de um `COPY` no `Dockerfile` e de
+> uma entrada em `COMPLEMENTOS` de `scripts/desktop/preparar-servidor.mjs`. Sem
+> elas o arquivo não viaja, e a falha só aparece na primeira requisição.
 
 ### Passo 3 — Reavaliar a máquina de build
 

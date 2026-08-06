@@ -1,4 +1,4 @@
-import dataset from "@/data/inep-rendimento-municipal-2023.json";
+import { lerJsonDeDados } from "@/core/lib/dados-arquivo";
 
 /**
  * Rendimento escolar e distorção idade-série por município — a metade do IDEB
@@ -86,7 +86,9 @@ interface Bruto {
   municipios: Record<string, RegistroBruto>;
 }
 
-const dados = dataset as unknown as Bruto;
+/* Lido em execução: 6 MB que o TypeScript deduziria a cada checagem.
+ * Ver `core/lib/dados-arquivo.ts`. */
+const dados = lerJsonDeDados<Bruto>("data/inep-rendimento-municipal-2023.json");
 
 const PRECEDENCIA: RecorteRede[] = ["municipal", "publica", "total"];
 
