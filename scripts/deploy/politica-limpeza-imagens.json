@@ -1,0 +1,12 @@
+[
+  {
+    "name": "manter-as-10-mais-recentes",
+    "action": { "type": "Keep" },
+    "mostRecentVersions": { "keepCount": 10 }
+  },
+  {
+    "name": "apagar-com-mais-de-30-dias",
+    "action": { "type": "Delete" },
+    "condition": { "olderThan": "30d" }
+  }
+]

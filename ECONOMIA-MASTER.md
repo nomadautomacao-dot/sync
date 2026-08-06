@@ -49,16 +49,27 @@ caminho é esse.
 Medido em 2026-08-05. Os consumos são reais (lidos da conta); os valores em
 dólar são estimativa pela tabela pública do Google — **não são a fatura**.
 
-| Item | Consumo real | Estimativa/mês |
-|---|---|---|
-| Imagens Docker guardadas | 63 GB, 100 imagens | ~US$ 6 |
-| Cloud Build | ~14 builds em agosto, `E2_HIGHCPU_8` | ~US$ 2–3 |
-| Cloud Run | escala a zero, 2 vCPU / 2 GB | ~US$ 0 |
-| Firestore | volume pequeno | ~US$ 0 |
+| Item | Antes | Depois da limpeza | Estimativa/mês |
+|---|---|---|---|
+| Imagens Docker guardadas | 63 GB, 100 imagens | **20,5 GB, 7 imagens** | ~US$ 6 → ~US$ 2 |
+| Cloud Build | ~14 builds em agosto, `E2_HIGHCPU_8` | idem | ~US$ 2–3 |
+| Cloud Run | escala a zero, 2 vCPU / 2 GB | idem | ~US$ 0 |
+| Firestore | volume pequeno | idem | ~US$ 0 |
 
 **O grosso não é processamento — é depósito.** As imagens Docker eram 92% do
-custo, e eram lixo: 100 imagens de abril a julho, sem política de limpeza,
-crescendo ~580 MB por deploy, para sempre.
+custo, e eram lixo: 100 imagens de abril a julho, sem política de limpeza.
+
+> **Duas lições da medição, para quem repetir a conta.**
+>
+> A primeira: **o tamanho relatado leva horas para atualizar.** Logo após apagar
+> 94 imagens o painel ainda marcava os mesmos 55 GB, e concluir dali que "não
+> economizou" teria sido errado — algumas horas depois marcava 15 GB.
+>
+> A segunda: **as camadas são compartilhadas.** Dividir 55 GB por 100 imagens dá
+> 550 MB e sugere que cada deploy custa isso; o número real é outro. Sobraram
+> ~15 GB para 7 imagens porque a base (Chromium, Playwright, Python) é contada
+> uma vez e as 100 a compartilhavam. Estimar custo por deploy dividindo o total
+> pela contagem superestima a economia.
 
 O Cloud Run está bem configurado e **não deve ser mexido**: sem `minScale`, ele
 desliga quando ninguém usa. Só se paga pelos segundos de uso real.
@@ -95,14 +106,26 @@ Carregá-los em execução, lidos do disco, ataca os cinco de uma vez.
 
 A ordem importa: cada passo torna o seguinte mais fácil ou desnecessário.
 
-### Passo 1 — Parar a hemorragia do depósito *(feito em 2026-08-05)*
+### Passo 1 — Parar a hemorragia do depósito *(feito em 2026-08-06)*
 
-Apagadas as imagens antigas, preservando a que está no ar e as 5 mais recentes
-para reversão. Falta configurar **política de limpeza automática** no Artifact
-Registry, senão o problema volta sozinho em três meses.
+Apagadas 94 imagens de abril a julho, preservando a que está no ar e as mais
+recentes para reversão. **63 GB → 20,5 GB.**
 
-> Regra: guardar as 10 mais recentes, apagar o resto. Sem isso, todo deploy
-> acrescenta custo permanente.
+E a política de limpeza automática está ativa no repositório `gcr.io`, que
+contém só o `sync-app` — conferido antes de aplicar, porque a política vale
+para o repositório inteiro:
+
+| Regra | Efeito |
+|---|---|
+| `manter-as-10-mais-recentes` | KEEP — as 10 últimas nunca são apagadas |
+| `apagar-com-mais-de-30-dias` | DELETE — o resto sai sozinho |
+
+O KEEP tem precedência sobre o DELETE: uma imagem entre as 10 mais recentes
+sobrevive por mais velha que seja. Sempre haverá 10 alvos de reversão.
+
+Foi ativada com 7 imagens no repositório — ou seja, sem apagar nada no ato.
+Ativar uma política de exclusão no momento em que ela é comprovadamente inócua
+é o jeito de conferir a configuração sem arriscar o acervo.
 
 ### Passo 2 — Tirar os JSON da compilação *(feito em 2026-08-06)*
 
@@ -214,7 +237,27 @@ gcloud container images list-tags gcr.io/opus-sec/sync-app --format="value(diges
 # 3. O Cloud Run continua escalando a zero (nao pode aparecer minScale)
 gcloud run services describe sync-app --region=us-central1 \
   --format="yaml(spec.template.metadata.annotations)" | grep -i scale
+
+# 4. A politica de limpeza continua ativa (cleanupPolicyDryRun tem de estar ausente)
+gcloud artifacts repositories describe gcr.io --location=us --format="json"
 ```
+
+> **Lembre do atraso da métrica.** O item 1 leva horas para refletir uma
+> exclusão. Comparar antes e depois no mesmo minuto sempre mostra "não mudou
+> nada", e a conclusão errada seria abandonar a limpeza.
+
+A política vive versionada em
+[`scripts/deploy/politica-limpeza-imagens.json`](scripts/deploy/politica-limpeza-imagens.json) — configuração de
+nuvem que não está no repositório é configuração que ninguém revisa. Para
+reaplicar (ou restaurar depois de alguém mexer pelo console):
+
+```bash
+gcloud artifacts repositories set-cleanup-policies gcr.io --location=us \
+  --policy=scripts/deploy/politica-limpeza-imagens.json --no-dry-run
+```
+
+Trocar `--no-dry-run` por `--dry-run` registra a política sem apagar nada — é
+como conferir o efeito antes de valer.
 
 O sinal de que o plano está funcionando não é a fatura cair de uma vez — é ela
 **parar de subir sozinha** a cada deploy.
