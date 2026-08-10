@@ -23,7 +23,7 @@ describe("Saeb e IDEB por escola", () => {
   });
 
   it("ordena o sinal grave primeiro: ND, depois pior IDEB", () => {
-    const r = getIdebEscolas("1100080")!; // Costa Marques/RO
+    const r = getIdebEscolas("2910800")!; // Feira de Santana/BA
     const nds = r.escolas.map((e) => e.ai?.nd === true || e.af?.nd === true);
 
     // Todos os ND vêm antes de qualquer não-ND.
@@ -33,13 +33,13 @@ describe("Saeb e IDEB por escola", () => {
   });
 
   it("liga o ND à Condicionalidade II no caso que os dois datasets confirmam", () => {
-    // Costa Marques reprovou na Cond. II do VAAR 2026 e tem escolas com
-    // resultado retido por participação no Saeb 2023 — o rastro e a sanção,
-    // cada um na sua fonte oficial.
-    const vaar = getSituacaoVaar("1100080")!;
+    // Feira de Santana reprovou na Cond. II do VAAR 2026 e segue com escolas
+    // de resultado retido por participação no Saeb 2025 — a sanção de um ciclo
+    // e o rastro que já compromete o próximo, cada um na sua fonte oficial.
+    const vaar = getSituacaoVaar("2910800")!;
     expect(vaar.reprovadas).toContain("II");
 
-    const r = getIdebEscolas("1100080")!;
+    const r = getIdebEscolas("2910800")!;
     const nd = r.escolas.filter((e) => e.ai?.nd || e.af?.nd);
     expect(nd.length).toBeGreaterThanOrEqual(2);
     for (const escola of nd) expect(escola.nome.length).toBeGreaterThan(3);

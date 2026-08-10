@@ -22,7 +22,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-const ARQUIVO = join("data", "inep", "ideb-escolas-2023.json");
+const ARQUIVO = join("data", "inep", "ideb-escolas-2025.json");
 
 export interface EtapaEscola {
   aprovacao: number | null;

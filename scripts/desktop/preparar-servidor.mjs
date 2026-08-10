@@ -177,7 +177,7 @@ const COMPLEMENTOS = [
   ["data/inep-censo-municipal-2023.json", "Censo Escolar 2023"],
   ["data/inep-censo-municipal-2024.json", "Censo Escolar 2024"],
   ["data/inep-censo-municipal-2025.json", "Censo Escolar 2025"],
-  ["data/ideb-municipal-2023.json", "IDEB por município"],
+  ["data/ideb-municipal-2025.json", "IDEB por município"],
   ["data/ideb-municipal-historico.json", "metas nacionais do IDEB"],
   ["data/ideb-municipal-historico-municipios.json", "série histórica do IDEB"],
   ["data/inep-rendimento-municipal-2023.json", "rendimento escolar"],

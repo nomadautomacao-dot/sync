@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Build IDEB arrays merged with national metas AND full historical series
-    const localAnoRef = idebRecord?.anoReferencia ?? 2023;
+    const localAnoRef = idebRecord?.anoReferencia ?? 2025;
     const localVerificadoIniciais = idebRecord?.anosIniciaisPublica ?? null;
     const localVerificadoFinais = idebRecord?.anosFinaisPublica ?? null;
     const localVerificadoEM = idebRecord?.ensinoMedioPublica ?? null;

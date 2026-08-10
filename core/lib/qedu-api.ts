@@ -1,5 +1,5 @@
 const CACHE_TTL_MS = 1000 * 60 * 30;
-const IDEB_YEARS = [2005, 2007, 2009, 2011, 2013, 2015, 2017, 2019, 2021, 2023] as const;
+const IDEB_YEARS = [2005, 2007, 2009, 2011, 2013, 2015, 2017, 2019, 2021, 2023, 2025] as const;
 const PREFERRED_DEPENDENCIA_IDS = [3, 5, 0] as const;
 
 interface CacheEntry<T> {

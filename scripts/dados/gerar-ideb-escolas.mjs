@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 /**
- * Gera `data/inep/ideb-escolas-2023.json` — Saeb e IDEB **por escola** da rede
- * municipal, a partir das planilhas de divulgação do INEP.
+ * Gera `data/inep/ideb-escolas-<edição>.json` — Saeb e IDEB **por escola** da
+ * rede municipal, a partir das planilhas de divulgação do INEP. A edição sai
+ * da constante `ANO` abaixo; ao atualizá-la, trocar também `ARQUIVO` em
+ * `core/lib/ideb-escolas.ts` (o caminho lá é literal de propósito — é o que o
+ * rastreamento do Next enxerga para levar o arquivo ao standalone).
  *
  * ## Por que este dataset existe
  *
@@ -12,12 +15,12 @@
  *
  * ## Por que a planilha de divulgação, e não o microdado
  *
- * O microdado do Saeb 2023 é anonimizado (pós-LGPD): `ID_MUNICIPIO` e
- * `ID_ESCOLA` são máscaras — verificado em 2026-07-29, zero códigos IBGE
- * reais em 5.569 municípios. A planilha de divulgação do IDEB é a via
- * **identificada** oficial: código INEP e nome de cada escola, notas Saeb
- * 2023, IDEB observado e a marca `ND` — resultado não divulgado por não
- * atingir o critério de participação mínima de 80%.
+ * O microdado do Saeb é anonimizado (pós-LGPD): `ID_MUNICIPIO` e
+ * `ID_ESCOLA` são máscaras — verificado em 2026-07-29 no Saeb 2023, zero
+ * códigos IBGE reais em 5.569 municípios. A planilha de divulgação do IDEB é a
+ * via **identificada** oficial: código INEP e nome de cada escola, notas Saeb,
+ * IDEB observado e a marca `ND` — resultado não divulgado por não atingir o
+ * critério de participação mínima de 80%.
  *
  * A projeção (meta) só existe até 2021: o INEP não projetou metas para o
  * ciclo seguinte, e é por isso que o campo se chama `meta2021`.
@@ -37,13 +40,13 @@ import { tmpdir } from "node:os";
 import { createInflateRaw, inflateRawSync } from "node:zlib";
 import { StringDecoder } from "node:string_decoder";
 
-const ANO = 2023;
+const ANO = 2025;
 const FONTES = [
-  { etapa: "ai", url: "https://download.inep.gov.br/ideb/resultados/divulgacao_anos_iniciais_escolas_2023.zip" },
-  { etapa: "af", url: "https://download.inep.gov.br/ideb/resultados/divulgacao_anos_finais_escolas_2023.zip" },
+  { etapa: "ai", url: `https://download.inep.gov.br/ideb/resultados/divulgacao_anos_iniciais_escolas_${ANO}.zip` },
+  { etapa: "af", url: `https://download.inep.gov.br/ideb/resultados/divulgacao_anos_finais_escolas_${ANO}.zip` },
 ];
 
-const DESTINO = join(process.cwd(), "data", "inep", "ideb-escolas-2023.json");
+const DESTINO = join(process.cwd(), "data", "inep", `ideb-escolas-${ANO}.json`);
 
 function log(mensagem) {
   console.log(`[ideb-escolas] ${mensagem}`);
@@ -171,9 +174,15 @@ async function processarFonte({ etapa, url }, caminhoLocal, destino) {
   const xlsx = inflateRawSync(bytesDe(zip, externas.get(nomeXlsx)));
   const internas = entradasZip(xlsx);
 
+  // Agrupar por <si>, não achatar os <t>: uma string rich text tem várias
+  // runs <t> dentro do mesmo <si> (os cabeçalhos humanos de 2025 têm), e
+  // achatá-las desloca o índice de todas as strings seguintes — a planilha
+  // inteira sai com os nomes de coluna trocados, em silêncio.
   const strings = [...inflateRawSync(bytesDe(xlsx, internas.get("xl/sharedStrings.xml")))
     .toString("utf8")
-    .matchAll(/<t[^>]*>([^<]*)<\/t>/g)].map((m) => m[1]);
+    .matchAll(/<si\b[^>]*>([\s\S]*?)<\/si>/g)].map((si) =>
+    [...si[1].matchAll(/<t[^>]*>([^<]*)<\/t>/g)].map((t) => t[1]).join(""),
+  );
 
   let colunas = null; // nome → índice, montado na linha "SG_UF"
   let aproveitadas = 0;

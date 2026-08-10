@@ -880,7 +880,14 @@ export function mapMunicipalXrayModel(params: {
           .map((r) => ({
             key: text(r.chave, ""),
             label: text(r.rotulo, ""),
-            unit: r.unidade === "reais" ? ("reais" as const) : r.unidade === "fator" ? ("fator" as const) : ("percentual" as const),
+            unit:
+              r.unidade === "reais"
+                ? ("reais" as const)
+                : r.unidade === "fator"
+                  ? ("fator" as const)
+                  : r.unidade === "indice"
+                    ? ("indice" as const)
+                    : ("percentual" as const),
             value: number(r.valor) ?? 0,
             cohortMedian: number(r.medianaPorte) ?? 0,
             stateMedian: number(r.medianaUf),

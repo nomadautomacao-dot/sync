@@ -13,7 +13,7 @@ import { getIndicadoresEscolas } from "./indicadores-escolas";
  *
  *     escolas-territorio.json   → toda a rede municipal ativa (geo, matrícula,
  *                                 localização, cor/raça, transporte)
- *     ideb-escolas-2023.json    → só as escolas na divulgação do IDEB
+ *     ideb-escolas-2025.json    → só as escolas na divulgação do IDEB
  *     indicadores-escolas.json  → só as escolas com Saeb 2023
  *
  * ## A regra que governa a cobertura

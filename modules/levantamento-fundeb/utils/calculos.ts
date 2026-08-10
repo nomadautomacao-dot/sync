@@ -31,7 +31,7 @@ const PERCENTUAIS_MENSAIS = [
   { mes: "Dezembro", pct: 0.094 },
 ] as const;
 
-const IDEB_YEARS = [2005, 2007, 2009, 2011, 2013, 2015, 2017, 2019, 2021, 2023] as const;
+const IDEB_YEARS = [2005, 2007, 2009, 2011, 2013, 2015, 2017, 2019, 2021, 2023, 2025] as const;
 
 export function validarCodigoIBGE(codigo: string) {
   return /^\d{6,7}$/.test(codigo.replace(/\D/g, ""));

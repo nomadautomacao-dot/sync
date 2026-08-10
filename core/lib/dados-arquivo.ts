@@ -52,7 +52,7 @@ const cache = new Map<string, unknown>();
  * faziam sobre o `import`. A garantia de que o arquivo bate com a interface
  * continua sendo do script gerador em `scripts/dados/`.
  *
- * @param caminhoRelativo caminho a partir da raiz, ex.: `data/ideb-municipal-2023.json`
+ * @param caminhoRelativo caminho a partir da raiz, ex.: `data/ideb-municipal-2025.json`
  */
 export function lerJsonDeDados<T>(caminhoRelativo: string): T {
   const emCache = cache.get(caminhoRelativo);

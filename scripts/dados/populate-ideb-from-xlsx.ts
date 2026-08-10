@@ -1,11 +1,17 @@
 /**
- * Populate data/ideb-municipal-2023.json from INEP XLSX files.
- * Extracts IDEB observado, meta projetada, taxa de aprovação e indicador de rendimento
- * para os anos 2005-2023 para TODOS os 5.571 municípios.
+ * Populate data/ideb-municipal-<edição>.json from INEP XLSX files.
+ * Extracts IDEB observado, meta projetada e taxa de aprovação para os anos
+ * 2005-<edição> (anos iniciais/finais) e o IDEB do ensino médio (rede pública)
+ * para TODOS os municípios.
  *
- * Usage: npx tsx scripts/dados/populate-ideb-from-xlsx.ts
+ * Fonte: planilhas de divulgação do INEP (divulgacao_anos_iniciais_municipios_<edição>.xlsx,
+ * divulgacao_anos_finais_municipios_<edição>.xlsx, divulgacao_ensino_medio_municipios_<edição>.xlsx),
+ * baixadas de https://download.inep.gov.br/ideb/resultados/ para DADOS_BRUTOS_DIR.
+ *
+ * Usage: npx tsx scripts/dados/populate-ideb-from-xlsx.ts [edição]
+ *        (edição padrão: 2025)
  */
-import { readFile, writeFile } from "node:fs/promises";
+import { readFile, writeFile, access } from "node:fs/promises";
 import path from "node:path";
 import JSZip from "jszip";
 
@@ -16,7 +22,14 @@ const DATA_DIR = path.join(process.cwd(), "data");
 const RAW_DIR = process.env.DADOS_BRUTOS_DIR?.trim()
   ? path.resolve(process.env.DADOS_BRUTOS_DIR.trim())
   : DATA_DIR;
-const IDEB_YEARS = [2005, 2007, 2009, 2011, 2013, 2015, 2017, 2019, 2021, 2023] as const;
+
+const EDICAO = Number(process.argv[2] ?? 2025);
+if (!Number.isInteger(EDICAO) || EDICAO < 2005 || EDICAO % 2 === 0) {
+  throw new Error(`Edição inválida: ${process.argv[2]} — o IDEB é bienal, em anos ímpares (2005, 2007, ..., 2025).`);
+}
+
+const IDEB_YEARS: number[] = [];
+for (let year = 2005; year <= EDICAO; year += 2) IDEB_YEARS.push(year);
 
 function decodeXmlEntities(value: string) {
   return value
@@ -100,10 +113,11 @@ interface IdebMunicipalFull {
 }
 
 async function main() {
-  console.log("Parsing XLSX files...");
+  console.log(`Parsing XLSX files (edição ${EDICAO})...`);
 
-  const aiPath = path.join(RAW_DIR, "divulgacao_anos_iniciais_municipios_2023.xlsx");
-  const afPath = path.join(RAW_DIR, "divulgacao_anos_finais_municipios_2023.xlsx");
+  const aiPath = path.join(RAW_DIR, `divulgacao_anos_iniciais_municipios_${EDICAO}.xlsx`);
+  const afPath = path.join(RAW_DIR, `divulgacao_anos_finais_municipios_${EDICAO}.xlsx`);
+  const emPath = path.join(RAW_DIR, `divulgacao_ensino_medio_municipios_${EDICAO}.xlsx`);
 
   const aiRows = await parseWorkbookRows(aiPath);
   const afRows = await parseWorkbookRows(afPath);
@@ -123,11 +137,7 @@ async function main() {
     const map: Record<string, number> = {};
     map.codigo = findColumnIndex(headerValues, "CO_MUNICIPIO");
     map.rede = findColumnIndex(headerValues, "REDE");
-    map.aprovacao2023 = findColumnIndex(headerValues, "VL_APROVACAO_2023_SI_4");
-    map.indicadorRend2023 = findColumnIndex(headerValues, "VL_INDICADOR_REND_2023");
-    map.notaMatematica2023 = findColumnIndex(headerValues, "VL_NOTA_MATEMATICA_2023");
-    map.notaPortugues2023 = findColumnIndex(headerValues, "VL_NOTA_PORTUGUES_2023");
-    map.notaMedia2023 = findColumnIndex(headerValues, "VL_NOTA_MEDIA_2023");
+    map.aprovacaoAtual = findColumnIndex(headerValues, `VL_APROVACAO_${EDICAO}_SI_4`);
 
     for (const year of IDEB_YEARS) {
       map[`observado_${year}`] = findColumnIndex(headerValues, `VL_OBSERVADO_${year}`);
@@ -140,8 +150,8 @@ async function main() {
   const aiCols = buildColMap(aiHeader.values);
   const afCols = buildColMap(afHeader.values);
 
-  console.log(`AI: codigo=${aiCols.codigo}, rede=${aiCols.rede}, observado_2023=${aiCols.observado_2023}`);
-  console.log(`AF: codigo=${afCols.codigo}, rede=${afCols.rede}, observado_2023=${afCols.observado_2023}`);
+  console.log(`AI: codigo=${aiCols.codigo}, rede=${aiCols.rede}, observado_${EDICAO}=${aiCols[`observado_${EDICAO}`]}`);
+  console.log(`AF: codigo=${afCols.codigo}, rede=${afCols.rede}, observado_${EDICAO}=${afCols[`observado_${EDICAO}`]}`);
 
   const result: Record<string, IdebMunicipalFull> = {};
 
@@ -173,11 +183,11 @@ async function main() {
     if (!isMunicipal && !isPublica) continue;
 
     const entry = ensureEntry(codigo);
-    const ideb2023 = parseNum(row.values[aiCols.observado_2023]);
-    const aprovacao = parseNum(row.values[aiCols.aprovacao2023]);
+    const idebAtual = parseNum(row.values[aiCols[`observado_${EDICAO}`]]);
+    const aprovacao = parseNum(row.values[aiCols.aprovacaoAtual]);
 
     if (isMunicipal || entry.anosIniciaisPublica === null) {
-      entry.anosIniciaisPublica = ideb2023;
+      entry.anosIniciaisPublica = idebAtual;
       entry.taxaAprovacaoIniciais = aprovacao;
 
       // Build history
@@ -205,11 +215,11 @@ async function main() {
     if (!isMunicipal && !isPublica) continue;
 
     const entry = ensureEntry(codigo);
-    const ideb2023 = parseNum(row.values[afCols.observado_2023]);
-    const aprovacao = parseNum(row.values[afCols.aprovacao2023]);
+    const idebAtual = parseNum(row.values[afCols[`observado_${EDICAO}`]]);
+    const aprovacao = parseNum(row.values[afCols.aprovacaoAtual]);
 
     if (isMunicipal || entry.anosFinaisPublica === null) {
-      entry.anosFinaisPublica = ideb2023;
+      entry.anosFinaisPublica = idebAtual;
       entry.taxaAprovacaoFinais = aprovacao;
 
       const history: IdebHistoryEntry[] = [];
@@ -223,34 +233,68 @@ async function main() {
     afProcessed++;
   }
 
-  console.log(`\nProcessed: ${aiProcessed} AI rows, ${afProcessed} AF rows`);
+  // Process EM (ensino médio) — rede PÚBLICA do território. A rede municipal
+  // raramente oferta ensino médio; a planilha do INEP traz o recorte "Pública"
+  // (estadual + municipal + federal), que é o que o relatório exibe.
+  let emProcessed = 0;
+  const emExists = await access(emPath).then(() => true, () => false);
+  if (emExists) {
+    const emRows = await parseWorkbookRows(emPath);
+    const emHeader = emRows.find((r) => r.values.some((v) => v === "CO_MUNICIPIO"));
+    if (!emHeader) throw new Error("EM header row not found");
+    const emCols = buildColMap(emHeader.values);
+    console.log(`EM: codigo=${emCols.codigo}, rede=${emCols.rede}, observado_${EDICAO}=${emCols[`observado_${EDICAO}`]}`);
+
+    for (const row of emRows) {
+      if (row.rowNumber <= emHeader.rowNumber) continue;
+      const codigo = (row.values[emCols.codigo] ?? "").trim();
+      if (!/^\d{7}$/.test(codigo)) continue;
+
+      const rede = (row.values[emCols.rede] ?? "").toUpperCase();
+      if (!rede.includes("PUBLICA") && !rede.includes("PÚBLIC")) continue;
+
+      const entry = ensureEntry(codigo);
+      entry.ensinoMedioPublica = parseNum(row.values[emCols[`observado_${EDICAO}`]]);
+      emProcessed++;
+    }
+  } else {
+    console.log(`EM file not found (${emPath}) — ensinoMedioPublica ficará null.`);
+  }
+
+  console.log(`\nProcessed: ${aiProcessed} AI rows, ${afProcessed} AF rows, ${emProcessed} EM rows`);
   console.log(`Total municipalities with data: ${Object.keys(result).length}`);
 
   // Check Salvador
   const salvador = result["2927408"];
   if (salvador) {
     console.log(`\nSalvador (2927408):`);
-    console.log(`  IDEB AI 2023: ${salvador.anosIniciaisPublica}`);
-    console.log(`  IDEB AF 2023: ${salvador.anosFinaisPublica}`);
+    console.log(`  IDEB AI ${EDICAO}: ${salvador.anosIniciaisPublica}`);
+    console.log(`  IDEB AF ${EDICAO}: ${salvador.anosFinaisPublica}`);
+    console.log(`  IDEB EM ${EDICAO}: ${salvador.ensinoMedioPublica}`);
     console.log(`  Histórico AI:`, salvador.historicoAnosIniciais.map((h) => `${h.ano}:${h.idebObservado ?? "-"}`).join(", "));
     console.log(`  Histórico AF:`, salvador.historicoAnosFinais.map((h) => `${h.ano}:${h.idebObservado ?? "-"}`).join(", "));
   }
 
   // Write output
-  const outputPath = path.join(DATA_DIR, "ideb-municipal-2023.json");
+  const outputPath = path.join(DATA_DIR, `ideb-municipal-${EDICAO}.json`);
   await writeFile(outputPath, JSON.stringify(result, null, 2));
   console.log(`\nWritten to ${outputPath} (${(JSON.stringify(result).length / 1024 / 1024).toFixed(1)} MB)`);
 
   // Stats
-  let withAI = 0, withAF = 0, withHistory = 0;
+  let withAI = 0, withAF = 0, withEM = 0, withHistory = 0;
   for (const entry of Object.values(result)) {
     if (entry.anosIniciaisPublica !== null) withAI++;
     if (entry.anosFinaisPublica !== null) withAF++;
+    if (entry.ensinoMedioPublica !== null) withEM++;
     if (entry.historicoAnosIniciais.some((h) => h.idebObservado !== null)) withHistory++;
   }
   console.log(`With IDEB AI: ${withAI}`);
   console.log(`With IDEB AF: ${withAF}`);
+  console.log(`With IDEB EM: ${withEM}`);
   console.log(`With historical series: ${withHistory}`);
 }
 
-main().catch(console.error);
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

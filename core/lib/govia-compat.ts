@@ -1139,8 +1139,12 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
     idebAnosIniciais: (() => {
       const apiHistory = qeduApiSnapshot?.historicoIdeb?.anosIniciais;
       const localHistorico = getIdebMunicipalHistorico(String(municipio.id));
-      const localVerificado = qeduIndicators?.anosIniciais?.idebObservado ?? idebRecord?.anosIniciaisPublica ?? null;
-      const localAnoRef = idebRecord?.anoReferencia ?? 2023;
+      // A divulgação atual (idebRecord) vem antes: o dataset de qeduIndicators
+      // deriva da divulgação de 2023 e, se preencher o valor, carrega o ano dele.
+      const localVerificado = idebRecord?.anosIniciaisPublica ?? qeduIndicators?.anosIniciais?.idebObservado ?? null;
+      const localAnoRef = idebRecord?.anosIniciaisPublica != null
+        ? idebRecord.anoReferencia
+        : qeduIndicators?.anoReferencia ?? idebRecord?.anoReferencia ?? 2025;
       const metasNacionais = getIdebMetasNacionais();
 
       if (apiHistory?.length) {
@@ -1187,8 +1191,12 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
     idebAnosFinais: (() => {
       const apiHistory = qeduApiSnapshot?.historicoIdeb?.anosFinais;
       const localHistorico = getIdebMunicipalHistorico(String(municipio.id));
-      const localVerificado = qeduIndicators?.anosFinais?.idebObservado ?? idebRecord?.anosFinaisPublica ?? null;
-      const localAnoRef = idebRecord?.anoReferencia ?? 2023;
+      // A divulgação atual (idebRecord) vem antes: o dataset de qeduIndicators
+      // deriva da divulgação de 2023 e, se preencher o valor, carrega o ano dele.
+      const localVerificado = idebRecord?.anosFinaisPublica ?? qeduIndicators?.anosFinais?.idebObservado ?? null;
+      const localAnoRef = idebRecord?.anosFinaisPublica != null
+        ? idebRecord.anoReferencia
+        : qeduIndicators?.anoReferencia ?? idebRecord?.anoReferencia ?? 2025;
       const metasNacionais = getIdebMetasNacionais();
 
       if (apiHistory?.length) {
@@ -1235,7 +1243,7 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
     idebEnsinoMedio: (() => {
       const apiHistory = qeduApiSnapshot?.historicoIdeb?.ensinoMedio;
       const localVerificado = idebRecord?.ensinoMedioPublica ?? null;
-      const localAnoRef = idebRecord?.anoReferencia ?? 2023;
+      const localAnoRef = idebRecord?.anoReferencia ?? 2025;
       const metasNacionais = getIdebMetasNacionais();
 
       if (apiHistory?.length) {
@@ -1371,10 +1379,12 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
       // "nenhum aluno abandonou"), enquanto a fonte muda (QEdu/INEP fora do ar, municipio
       // sem divulgacao por sigilo estatistico) significa apenas "nao sabemos". O template
       // imprime "N/D" para null e "0,0" para zero -- confundir os dois inverte o diagnostico.
-      ideb_anos_iniciais: qeduIndicators?.anosIniciais?.idebObservado ?? idebRecord?.anosIniciaisPublica ?? null,
-      ideb_anos_finais: qeduIndicators?.anosFinais?.idebObservado ?? idebRecord?.anosFinaisPublica ?? null,
-      taxa_aprovacao: qeduIndicators?.anosIniciais?.taxaAprovacao ?? idebRecord?.taxaAprovacaoIniciais ?? null,
-      taxa_aprovacao_anos_finais: qeduIndicators?.anosFinais?.taxaAprovacao ?? idebRecord?.taxaAprovacaoFinais ?? null,
+      // A divulgação atual do IDEB (idebRecord) vem antes: qeduIndicators
+      // deriva da divulgação de 2023 e só preenche onde a atual não traz.
+      ideb_anos_iniciais: idebRecord?.anosIniciaisPublica ?? qeduIndicators?.anosIniciais?.idebObservado ?? null,
+      ideb_anos_finais: idebRecord?.anosFinaisPublica ?? qeduIndicators?.anosFinais?.idebObservado ?? null,
+      taxa_aprovacao: idebRecord?.taxaAprovacaoIniciais ?? qeduIndicators?.anosIniciais?.taxaAprovacao ?? null,
+      taxa_aprovacao_anos_finais: idebRecord?.taxaAprovacaoFinais ?? qeduIndicators?.anosFinais?.taxaAprovacao ?? null,
       taxa_reprovacao: qeduIndicators?.taxasRendimento?.reprovacao?.total ?? null,
       taxa_abandono: qeduIndicators?.taxasRendimento?.abandono?.total ?? null,
       taxa_abandono_anos_finais: qeduIndicators?.taxasRendimento?.abandono?.anosFinais ?? null,

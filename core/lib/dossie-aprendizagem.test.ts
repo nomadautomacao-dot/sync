@@ -16,6 +16,7 @@ const PAULO_AFONSO = "2924009";
 const MANAUS = "1302603";
 const IBATEGUARA = "2703007";
 const SAO_PAULO = "3550308";
+const RIBEIRAO_PRETO = "3543402";
 
 describe("distribuição de proficiência", () => {
   it("traz as quatro provas com os quatro grupos somando 100%", () => {
@@ -147,9 +148,9 @@ describe("série do IDEB", () => {
     expect(lerIdeb(serieDe([{ ano: 2023, ai: 5.0 }]))[0].trajetoria).toBe("indefinida");
   });
 
-  /** São Paulo cai nas duas etapas em 2023 — é o caso que o dossiê precisa nomear. */
+  /** Ribeirão Preto cai nas duas etapas em 2025 — é o caso que o dossiê precisa nomear. */
   it("identifica queda nas duas etapas", () => {
-    const leitura = lerIdeb(montarSerieIdeb(SAO_PAULO));
+    const leitura = lerIdeb(montarSerieIdeb(RIBEIRAO_PRETO));
     expect(leitura.every((l) => l.trajetoria === "caindo")).toBe(true);
   });
 });

@@ -26,6 +26,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
+import { lerJsonDeDados } from "./dados-arquivo";
 import { agruparNiveis } from "./saeb-distribuicao";
 
 const ARQUIVO_PONDERADAS = join("data", "fnde", "matriculas-ponderadas-2026.json");
@@ -169,13 +170,18 @@ function construirTabela(): MetricasMunicipio[] | null {
     municipios?: Record<
       string,
       {
-        anosIniciais?: Record<string, { idebObservado?: number }>;
-        anosFinais?: Record<string, { idebObservado?: number }>;
         distorcao?: Record<string, { fundamentalTotal?: number }>;
         rendimento?: Record<string, { abandono?: { total?: number } }>;
       }
     >;
   } | null;
+
+  // O IDEB sai da divulgação atual do INEP (o mesmo dataset do resto do app,
+  // já cacheado por `lerJsonDeDados`), não do dataset de rendimento de 2023 —
+  // a coorte inteira compara a mesma edição.
+  const ideb = lerJsonDeDados<
+    Record<string, { anosIniciaisPublica?: number | null; anosFinaisPublica?: number | null }>
+  >("data/ideb-municipal-2025.json");
 
   const saeb = lerJson(ARQUIVO_SAEB) as {
     municipios?: Record<string, Record<string, { niveis?: number[] }>>;
@@ -259,14 +265,14 @@ function construirTabela(): MetricasMunicipio[] | null {
       valores.set("medianaMagisterio", salario.medianaMagisterio);
     }
 
+    const idebLocal = ideb[codigo];
+    if (typeof idebLocal?.anosIniciaisPublica === "number") valores.set("idebAnosIniciais", idebLocal.anosIniciaisPublica);
+    if (typeof idebLocal?.anosFinaisPublica === "number") valores.set("idebAnosFinais", idebLocal.anosFinaisPublica);
+
     const rend = rendimento?.municipios?.[codigo];
     if (rend) {
-      const ai = doRecorte(rend.anosIniciais)?.idebObservado;
-      const af = doRecorte(rend.anosFinais)?.idebObservado;
       const tdi = doRecorte(rend.distorcao)?.fundamentalTotal;
       const abandono = doRecorte(rend.rendimento)?.abandono?.total;
-      if (typeof ai === "number") valores.set("idebAnosIniciais", ai);
-      if (typeof af === "number") valores.set("idebAnosFinais", af);
       if (typeof tdi === "number") valores.set("distorcaoFundamental", tdi);
       if (typeof abandono === "number") valores.set("abandonoFundamental", abandono);
     }

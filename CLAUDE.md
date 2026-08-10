@@ -652,7 +652,7 @@ No fluxo normal não se usa nenhum dos dois.
 |--------|-----------|
 | `dados/build-inep-censo-municipal-dataset.py` | Dataset municipal INEP |
 | `dados/gerar-tse-prefeitos.py` | Dados TSE prefeitos |
-| `dados/gerar-ideb-municipios.py` | Dados IDEB |
+| `dados/populate-ideb-from-xlsx.ts` | IDEB municipal (AI/AF/EM + histórico) a partir das planilhas de divulgação do INEP em `DADOS_BRUTOS_DIR`. Regerar a cada edição bienal: `npx tsx scripts/dados/populate-ideb-from-xlsx.ts 2025` — e atualizar `EDICAO_IDEB` em `core/lib/ideb-municipal.ts`, as metas em `data/ideb-municipal-historico.json`, os `IDEB_YEARS` e a dupla Dockerfile/COMPLEMENTOS |
 | `dados/gerar-caged-municipios.mjs` | `npm run dados:caged` — snapshot do Novo CAGED (IPEADATA). Regerar mensalmente |
 | `dados/gerar-remuneracao-docente.mjs` | `npm run dados:remuneracao` — remuneração do magistério e adimplência ao piso (SIOPE). Agrega na coleta; não persiste dado pessoal |
 | `dados/gerar-siope-indicadores.mjs` | `npm run dados:siope` — vinculações da educação por município (SIOPE, API OData sem captcha) |

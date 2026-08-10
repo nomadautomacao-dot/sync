@@ -5,7 +5,7 @@ type IdebHistoricoMunicipios = Record<string, {
   anosFinais: Array<{ ano: number; ideb: number }>;
 }>;
 
-/* Lido em execução, não por `import`: o dataset de 2023 tem 11 MB e o
+/* Lido em execução, não por `import`: o dataset municipal tem vários MB e o
  * TypeScript deduzia o tipo literal dele a cada checagem. Ver
  * `core/lib/dados-arquivo.ts` para o custo medido. */
 function idebHistoricoMunicipios(): IdebHistoricoMunicipios {
@@ -32,13 +32,16 @@ interface IdebMunicipalHistorico {
   anosFinais: IdebHistoricoEntry[];
 }
 
-type IdebDataset2023 = Record<string, Omit<IdebMunicipalRecord, "codigoIBGE" | "anoReferencia"> & {
+/** Edição da divulgação do IDEB carregada em data/ — atualizar junto com o dataset. */
+const EDICAO_IDEB = 2025;
+
+type IdebDatasetAtual = Record<string, Omit<IdebMunicipalRecord, "codigoIBGE" | "anoReferencia"> & {
   historicoAnosIniciais?: Array<{ ano: number; idebObservado: number | null; metaProjetada: number | null }>;
   historicoAnosFinais?: Array<{ ano: number; idebObservado: number | null; metaProjetada: number | null }>;
 }>;
 
-function dataset2023(): IdebDataset2023 {
-  return lerJsonDeDados<IdebDataset2023>("data/ideb-municipal-2023.json");
+function datasetAtual(): IdebDatasetAtual {
+  return lerJsonDeDados<IdebDatasetAtual>(`data/ideb-municipal-${EDICAO_IDEB}.json`);
 }
 
 export function getIdebMunicipalRecord(codigoIBGE: string): IdebMunicipalRecord | null {
@@ -48,11 +51,11 @@ export function getIdebMunicipalRecord(codigoIBGE: string): IdebMunicipalRecord 
     return null;
   }
 
-  const record = dataset2023()[digits];
+  const record = datasetAtual()[digits];
   if (record) {
     return {
       codigoIBGE: digits,
-      anoReferencia: 2023,
+      anoReferencia: EDICAO_IDEB,
       ...record,
     };
   }
@@ -61,14 +64,14 @@ export function getIdebMunicipalRecord(codigoIBGE: string): IdebMunicipalRecord 
 }
 
 /**
- * Returns the per-municipality historical IDEB series (2005-2023) from INEP dataset.
+ * Returns the per-municipality historical IDEB series (2005 até a edição atual) from INEP dataset.
  */
 export function getIdebMunicipalHistorico(codigoIBGE: string): IdebMunicipalHistorico | null {
   const digits = codigoIBGE.replace(/\D/g, "");
-  const entry = dataset2023()[digits];
+  const entry = datasetAtual()[digits];
   if (!entry) return null;
-  
-  // Also check old idebHistoricoMunicipiosData if needed, but primary is dataset2023
+
+  // Also check old idebHistoricoMunicipiosData if needed, but primary is datasetAtual
   const legacyEntry = idebHistoricoMunicipios()[digits];
   
   const mapHistory = (history?: Array<{ano: number; idebObservado: number | null}>) => {

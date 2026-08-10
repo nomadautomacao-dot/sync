@@ -350,9 +350,9 @@ describe("Saeb/IDEB por escola no Raio-X", () => {
   });
 
   it("liga as escolas ND à reprovação na Condicionalidade II", () => {
-    // Costa Marques/RO: reprovado na Cond. II e com escolas de resultado
-    // retido por participação — a página diz em quais portas bater.
-    const saida = comEscolas("1100080", true);
+    // Feira de Santana/BA: reprovada na Cond. II e com escolas de resultado
+    // retido por participação em 2025 — a página diz em quais portas bater.
+    const saida = comEscolas("2910800", true);
 
     expect(saida).toContain("sem resultado divulgado por participação abaixo de 80%");
     expect(saida).toContain("reprovou na Condicionalidade II do VAAR");
