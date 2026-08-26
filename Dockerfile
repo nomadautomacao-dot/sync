@@ -105,6 +105,12 @@ COPY --from=builder /app/data/caged-municipios.json ./data/caged-municipios.json
 # scripts/dados/gerar-equidade-censo-municipal.mjs.
 COPY --from=builder /app/data/inep-equidade-municipal.json ./data/inep-equidade-municipal.json
 
+# DOCX templates for the contratação-direta kit, opened by path at runtime
+# (core/lib/assets-paths.ts). Without this line the image builds, the app
+# serves, and only the kit fails — which is exactly what happened until
+# 2026-08-20, in the packaged desktop app and here.
+COPY --from=builder /app/assets/contratos ./assets/contratos
+
 # Datasets read at runtime by core/lib/dados-arquivo.ts instead of `import`.
 #
 # These were static imports until 2026-08-05. With `resolveJsonModule`, each one
@@ -125,6 +131,16 @@ COPY --from=builder /app/data/ideb-municipal-2025.json ./data/ideb-municipal-202
 COPY --from=builder /app/data/ideb-municipal-historico.json ./data/ideb-municipal-historico.json
 COPY --from=builder /app/data/ideb-municipal-historico-municipios.json ./data/ideb-municipal-historico-municipios.json
 COPY --from=builder /app/data/inep-rendimento-municipal-2023.json ./data/inep-rendimento-municipal-2023.json
+
+# Same trap, one directory deeper. These are read by path at runtime too
+# (core/lib/{enem-abstencao,saeb-distribuicao,ideb-escolas,indicadores-escolas,
+# escolas-territorio,violencia-municipal,assentamentos-incra}.ts). Each one
+# catches the read error and yields an empty block, so a missing dataset does
+# not fail the build or the request — the report just comes out shorter, with
+# no error anywhere. That silence is why they went unnoticed.
+COPY --from=builder /app/data/inep ./data/inep
+COPY --from=builder /app/data/ipea ./data/ipea
+COPY --from=builder /app/data/incra ./data/incra
 
 # Set permissions
 RUN chown -R nextjs:nodejs /app

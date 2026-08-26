@@ -124,10 +124,33 @@ function removerTestes(raiz) {
   return contagem;
 }
 
+/**
+ * A lista branca de `enxugar()`, somada às raízes que `COMPLEMENTOS` traz.
+ *
+ * As duas listas precisavam concordar à mão, e em 2026-08-20 discordaram: o
+ * `assets/` dos templates DOCX foi copiado por `completar()` e apagado por
+ * `enxugar()` três linhas depois, porque ninguém o acrescentou aqui. O app saiu
+ * pronto, abriu, navegou — e o kit de contratos falhou exatamente como antes do
+ * conserto, com a saída do empacotador dizendo "21 de 21 complementos copiados"
+ * na linha de cima.
+ *
+ * Derivar em vez de repetir fecha a porta: o que entra em `COMPLEMENTOS` é, por
+ * construção, o que sobrevive à limpeza. A lista branca continua sendo a
+ * guarda contra o que o rastreamento do Next varre por conta própria.
+ */
+function raizesPermitidas() {
+  const permitidas = new Set(RAIZ_PERMITIDA);
+  for (const [relativo] of COMPLEMENTOS) {
+    permitidas.add(relativo.split("/")[0]);
+  }
+  return permitidas;
+}
+
 function enxugar() {
+  const permitidas = raizesPermitidas();
   const removidos = [];
   for (const nome of fs.readdirSync(STANDALONE)) {
-    if (RAIZ_PERMITIDA.has(nome)) continue;
+    if (permitidas.has(nome)) continue;
     fs.rmSync(path.join(STANDALONE, nome), { recursive: true, force: true });
     removidos.push(nome);
   }
@@ -165,6 +188,7 @@ const COMPLEMENTOS = [
   ["app/api/modulos/slides/pdf", "geradores Python dos slides"],
   ["kit_padrao_pdf", "módulo ReportLab"],
   ["data/fnde", "CSVs do FNDE, lidos por caminho"],
+  ["assets/contratos", "templates DOCX do kit — sem eles a geração falha só aqui"],
   ["data/caged-municipios.json", "sem isto, baixa 117 MB do IPEADATA a cada partida"],
   ["data/inep-equidade-municipal.json", "equidade do Censo Escolar"],
   // Lidos em execução por `core/lib/dados-arquivo.ts` desde 2026-08-05. Eram
@@ -181,6 +205,13 @@ const COMPLEMENTOS = [
   ["data/ideb-municipal-historico.json", "metas nacionais do IDEB"],
   ["data/ideb-municipal-historico-municipios.json", "série histórica do IDEB"],
   ["data/inep-rendimento-municipal-2023.json", "rendimento escolar"],
+  // A mesma armadilha, uma pasta abaixo. Cada um destes é lido por caminho e
+  // tem `catch` que troca o dataset ausente por bloco vazio: faltando, o
+  // relatório sai menor e nada reclama. Foi assim que passaram despercebidos
+  // na nuvem — ver o bloco equivalente no `Dockerfile`.
+  ["data/inep", "ENEM, Saeb, IDEB por escola, indicadores e territórios"],
+  ["data/ipea", "homicídios do Atlas da Violência"],
+  ["data/incra", "assentamentos"],
 ];
 
 function completar() {
