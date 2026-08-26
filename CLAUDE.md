@@ -742,6 +742,43 @@ Reverter: `gcloud run services update-traffic sync-app --to-revisions=<revisão-
 - **Recursos:** 2 vCPU, 2GB RAM, timeout 900s, 0-10 instâncias
 - **URL:** `https://sync-app-n7cfomhaaq-uc.a.run.app`
 
+### 7.1.1 O endereço da equipe — `globalsync.web.app`
+
+Desde 2026-08-26 a equipe entra por **https://globalsync.web.app**, um site do
+Firebase Hosting que reescreve **tudo** (`"source": "**"`) para o mesmo serviço
+Cloud Run. Não há segunda cópia do app: é o endereço que muda, não o servidor.
+O endereço `sync-app-...run.app` continua valendo, e é a saída de emergência se
+o Hosting sair do ar.
+
+**Três coisas que não são óbvias e custaram descoberta:**
+
+1. **O site vive no `opus-sec`, e não no `globalconsultorias`.** A reescrita do
+   Hosting para Cloud Run **exige que os dois estejam no mesmo projeto**, e o
+   `sync-app` está no `opus-sec`. Por isso o deploy é
+   `npm run hosting`, que fixa `--project opus-sec` — enquanto
+   `npm run firebase:regras` vai para o `globalconsultorias`. **Um `firebase
+   deploy` sem `--only` no projeto errado publica regra de um produto no
+   banco de outro.** Os dois scripts existem para ninguém precisar lembrar.
+2. **Não publicar em `globalconsultorias.web.app` nem em `opus-sec.web.app`.**
+   Os dois **já têm produto no ar** — Global Control e Educa Serra. Foram
+   conferidos com `curl` antes, e publicar ali derrubaria outro sistema.
+3. **A pasta `hosting-publico/` é vazia de propósito.** Arquivo que existe nela
+   é servido **no lugar** da reescrita, em silêncio: um `index.html` esquecido
+   ali derruba o Sync sem erro nenhum.
+
+> **O limite de 60s do Hosting foi medido, não suposto.** A preocupação era o
+> Hosting cortar a requisição antes de um relatório pesado terminar. Medido em
+> 2026-08-26, pelo próprio `globalsync.web.app`: Igaci/AL (24 mil hab.) em
+> **27,9s** e Feira de Santana/BA (600 mil hab.) em **28,8s** — o tempo é das
+> chamadas às fontes públicas, não do tamanho da rede. Sobra o dobro de folga.
+> Se um dia encostar, o caminho é o endereço do Cloud Run, que tem teto de 900s.
+
+**Domínios autorizados no Firebase Auth** (sem eles o "Entrar com Google" falha
+só em produção, com `auth/unauthorized-domain`): `globalsync.web.app`,
+`globalsync.firebaseapp.com` e o host do Cloud Run. Este último **estava
+faltando** até 2026-08-26 — o botão do Google nunca funcionou em produção, e
+ninguém percebeu porque entrar por e-mail e senha não passa por essa lista.
+
 ### 7.2 Observabilidade de erro
 
 Sem SDK e sem serviço de terceiro: o Cloud Error Reporting já vem ligado no

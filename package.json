@@ -43,7 +43,8 @@
     "dados:violencia-infantil": "node scripts/dados/gerar-violencia-infantil.mjs",
     "dados:ponderadas": "node --max-old-space-size=6144 scripts/dados/gerar-matriculas-ponderadas.mjs",
     "dados:trabalho-infantil": "node scripts/dados/gerar-trabalho-infantil.mjs",
-    "firebase:regras": "npx --yes firebase-tools@latest deploy --only firestore:rules,firestore:indexes,storage"
+    "firebase:regras": "npx --yes firebase-tools@latest deploy --only firestore:rules,firestore:indexes,storage",
+    "hosting": "npx --yes firebase-tools@latest deploy --only hosting --project opus-sec"
   },
   "dependencies": {
     "@ant-design/nextjs-registry": "^1.3.0",
