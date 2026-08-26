@@ -614,8 +614,8 @@ nos testes vai direto para os usuários.** Não existe staging.
 
 De 2026-08-02 a 2026-08-05 **todo build falhou**, e a produção ficou parada na
 revisão de 31 de julho sem que nada avisasse. A causa era memória: a máquina do
-gate é `E2_HIGHCPU_8` — oito vCPU e **oito** GB, porque a família HIGHCPU dá
-1 GB por vCPU — e o Vitest, no padrão, abre um processo por CPU. Oito processos
+gate **era** `E2_HIGHCPU_8` — oito vCPU e **oito** GB, porque a família HIGHCPU
+dá 1 GB por vCPU — e o Vitest, no padrão, abre um processo por CPU. Oito processos
 carregando os 156 MB de JSON de `data/` (quatro arquivos de 19 MB só do Censo
 INEP, cada um virando objeto JS várias vezes maior) não cabem; o kernel matava
 o passo com `Killed`, exit 137.
@@ -675,11 +675,20 @@ Com a folga recuperada, o gate voltou a paralelizar: `VITEST_MAX_WORKERS=4`.
 > caminho montado em execução — sem elas o arquivo não viaja, e a falha só
 > aparece na primeira requisição que precisar dele.
 
-**Não troque a máquina por uma maior sem ler isto:** `E2_HIGHCPU_32` é o
-caminho óbvio e **não está disponível** — o projeto não tem cota para esse tipo
-nesta região. E a recusa é silenciosa do lado do gatilho: o push simplesmente
-não gera build nenhum, sem erro em lugar algum. Se a suíte deixar de caber em
-8 GB, o caminho é pedir cota, não editar a linha.
+**A máquina do gate é a padrão, e isso é escolha — não descuido.** Desde
+2026-08-26 o `cloudbuild.yaml` **não** fixa `machineType`. Fixar uma máquina
+abre mão dos **2.500 minutos grátis por mês**, e a padrão (`e2-standard-2`) tem
+os mesmos 8 GB da `E2_HIGHCPU_8` que estava ali: muda o número de núcleos, não a
+memória — e memória era o único motivo de ter escolhido a outra. Só deu para
+tirar depois que os JSON saíram do `import`, porque antes disso nada cabia. O
+teto do passo `build` subiu de 1800s para 2400s no mesmo movimento, já que ele é
+o único de CPU cheia. Ver o Passo 3 do `ECONOMIA-MASTER.md`.
+
+**E não troque por uma maior sem ler isto:** `E2_HIGHCPU_32` é o caminho óbvio
+e **não está disponível** — o projeto não tem cota para esse tipo nesta região.
+A recusa é silenciosa do lado do gatilho: o push simplesmente não gera build
+nenhum, sem erro em lugar algum. Se a suíte deixar de caber em 8 GB, o caminho é
+consertar o peso ou pedir cota, nunca voltar a fixar uma máquina paga.
 
 O que torna essa falha traiçoeira não é a causa, é o **silêncio**: build que
 falha deixa a revisão anterior no ar, e a revisão anterior responde normalmente.

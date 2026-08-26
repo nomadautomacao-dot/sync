@@ -52,7 +52,7 @@ dólar são estimativa pela tabela pública do Google — **não são a fatura**
 | Item | Antes | Depois da limpeza | Estimativa/mês |
 |---|---|---|---|
 | Imagens Docker guardadas | 63 GB, 100 imagens | **20,5 GB, 7 imagens** | ~US$ 6 → ~US$ 2 |
-| Cloud Build | ~14 builds em agosto, `E2_HIGHCPU_8` | idem | ~US$ 2–3 |
+| Cloud Build | ~14 builds em agosto, `E2_HIGHCPU_8` | máquina padrão (passo 3) | **~US$ 0** |
 | Cloud Run | escala a zero, 2 vCPU / 2 GB | idem | ~US$ 0 |
 | Firestore | volume pequeno | idem | ~US$ 0 |
 
@@ -155,28 +155,65 @@ o que corta minutos de Cloud Build — custo direto.
 > uma entrada em `COMPLEMENTOS` de `scripts/desktop/preparar-servidor.mjs`. Sem
 > elas o arquivo não viaja, e a falha só aparece na primeira requisição.
 
-### Passo 3 — Reavaliar a máquina de build
+### Passo 3 — Reavaliar a máquina de build *(feito em 2026-08-26)*
 
 Só depois do passo 2, porque antes dele nada cabe.
 
-Hoje o `cloudbuild.yaml` fixa `E2_HIGHCPU_8`. Escolher uma máquina específica
+O `cloudbuild.yaml` fixava `E2_HIGHCPU_8`. Escolher uma máquina específica
 **abre mão dos 2.500 minutos grátis por mês** que o Google dá na máquina padrão.
 E a padrão (`e2-standard-2`) tem **os mesmos 8 GB** — muda o número de núcleos,
-não a memória.
+não a memória, e memória era o único motivo de ter escolhido a outra.
 
-Como o gate já roda em um processo só, os oito núcleos não servem para nada.
-Depois do passo 2, a troca provavelmente zera o custo de build.
+A linha saiu. Medido no último build da máquina antiga (`22332f17`):
+
+| Passo | Duração | Teto |
+|---|---|---|
+| test | 54s | 900s |
+| build | 375s | 1800s → **2400s** |
+| push · deploy · smoke | 49s · 30s · 47s | — |
+| **total** | **9,3 min** | |
+
+Só o passo `build` é de CPU cheia, e é o único que sente a troca. Mesmo a 3x
+ele fica em ~19 min, e ~25 min de build inteiro cabem folgados: são cerca de
+100 builds por mês dentro do gratuito, contra os ~15 que fazemos.
+
+O teto do passo subiu junto, de 1800s para 2400s. Não é detalhe: 1800s davam
+4,8x sobre os 375s medidos e cairiam para ~1,6x com um quarto dos núcleos — e
+build que estoura teto não parece defeito, porque a revisão anterior continua
+respondendo. É o modo de falha de 2 a 5 de agosto.
 
 > **Não peça cota para máquina maior.** É o caminho oposto ao deste documento:
 > paga-se mensalmente para não consertar a causa. `E2_HIGHCPU_32` já foi
 > tentado em 2026-08-05 e nem está disponível nesta região.
 
-### Passo 4 — O desktop vira o caminho principal
+### Passo 4 — ~~O desktop vira o caminho principal~~ *(revertido em 2026-08-26)*
 
-O app Electron já existe, roda em macOS e Windows com o mesmo código, e já
-produz relatório melhor que a nuvem (seção 2).
+**Decisão do dono: o navegador é o caminho, e ninguém instala nada.** Este passo
+fica registrado porque a análise continua valendo — o que mudou foi o peso dado
+a ela.
 
-O que falta para ele ser o caminho padrão, e não a alternativa:
+O que derrubou o desktop como padrão não foi nenhum dos três itens da tabela
+abaixo, e sim um quarto que este documento não previa: **o app desktop exige a
+`FIREBASE_SERVICE_ACCOUNT`** (`obrigatoria: true` em
+`scripts/desktop/credenciais-locais.mjs`), que não é senha de usuário — é acesso
+administrativo ao Firebase inteiro, capaz de ler e apagar todo o Firestore de
+todos os produtos Global, emitir token em nome de qualquer pessoa e conceder a
+si mesma `owner`. Ela ficaria em texto puro no notebook de cada consultor, sem
+como revogar de uma pessoa só: laptop perdido significa trocar a chave e
+reinstalar em todo mundo.
+
+Isso é contornável — só duas rotas (`/api/acessos`) precisam mesmo do Admin SDK;
+as demais usam a chave só para conferir a assinatura do login, o que se faz com
+chave pública. Mas some com o "instalar é grátis".
+
+**O preço da reversão, e ele é real:** na nuvem o relatório sai com 17 fontes
+vivas, não 19. O Portal da Transparência recusa conexão do Cloud Run, e
+convênios e sanções CEIS/CNEP saem vazios (seção 2). Quem quiser recuperar as
+duas tem três caminhos: aceitar, manter o desktop só para quem emite, ou IP
+fixo de saída — que é conta fixa e vai contra este documento.
+
+O que faltava para o desktop ser o padrão, mantido para quando a decisão for
+revisitada:
 
 | Falta | Por quê importa |
 |---|---|
@@ -196,10 +233,11 @@ Ao fim do plano, a nuvem deve conter **apenas** o que passa no teste da seção 
 | Firebase Auth | Identidade — e é compartilhado com outros produtos Global |
 | Firestore | Estado compartilhado entre consultoras |
 | Cloud Functions (comissões, lucro) | Reagem a escrita no Firestore; moram junto do dado |
-| Cloud Run | Alcance externo — e reserva para quando a máquina não estiver disponível |
+| Cloud Run | **É por onde o trabalho passa**, desde a reversão do passo 4 — além do alcance externo |
 
 Os dois primeiros são praticamente gratuitos no volume atual. O Cloud Run
-continua existindo, mas deixa de ser por onde o trabalho passa.
+continua sendo por onde o trabalho passa — e continua custando ~US$ 0, porque
+escala a zero e o volume de uma equipe pequena cabe na cota gratuita.
 
 ---
 
