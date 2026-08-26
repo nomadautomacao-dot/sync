@@ -26,10 +26,6 @@ import { useAuth } from "@/core/providers/auth-provider";
 const { Text } = Typography;
 const FONTE_MONO = "var(--font-sync-mono)";
 
-/* Sem `onSnapshot` de propósito: tempo real é a fase 5 do roadmap. O intervalo
-   de 45s segura o badge "quase ao vivo" sem custo de leitura por escrita. */
-const INTERVALO_DE_ATUALIZACAO = 45_000;
-
 const ICONES: Record<TipoDeNotificacao, React.ComponentType<{ style?: React.CSSProperties }>> = {
   pergunta_mural: QuestionCircleOutlined,
   comentario_evento: CommentOutlined,
@@ -81,7 +77,20 @@ export function SinoDeNotificacoes({
       return { notificacoes, ultimaLeituraEm };
     },
     enabled: Boolean(user?.groupId && user?.id),
-    refetchInterval: INTERVALO_DE_ATUALIZACAO,
+    /* Sem consulta periódica e sem `onSnapshot`. A caixa carrega uma vez, ao
+       abrir a página, e depois só quando a própria pessoa mexe nela — o
+       provider tem `refetchOnWindowFocus: false`, então não há segunda leitura
+       escondida.
+
+       Havia um intervalo de 45s aqui, tirado em 2026-08-26 por custo. Ele era a
+       única leitura recorrente do sistema inteiro: 80 consultas por hora, de até
+       30 documentos cada, por pessoa logada — perto de 19 mil leituras diárias
+       por pessoa no pior caso, contra a cota grátis de 50 mil por dia do
+       projeto todo. Com três pessoas o Firestore começava a cobrar por um badge.
+
+       O preço é o badge não acender sozinho: quem quer saber de novidade
+       recarrega a página. Quando tempo real valer a pena, o caminho é
+       `onSnapshot`, que cobra o que muda — e não o intervalo de volta. */
   });
 
   const notificacoes = data?.notificacoes ?? [];
