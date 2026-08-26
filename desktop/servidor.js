@@ -13,17 +13,17 @@
  * Transparência devolve 502/504 para o Cloud Run e responde para uma conexão
  * comum. Rodar aqui não é conveniência; é o relatório mais completo.
  *
- * ## Por que porta efêmera e não uma fixa
+ * ## A porta
  *
- * O `npm run dev` usa a 3100 e já colidiu com o app aberto — o usuário levou
- * `EADDRINUSE` justamente tentando gerar um relatório de teste. Um app que
- * escolhe porta fixa transforma "tenho dois Sync abertos" em erro obscuro.
- * Aqui o sistema operacional dá a porta e ninguém precisa saber qual é.
+ * Foi efêmera sempre; hoje é uma porta preferida com a efêmera como plano B,
+ * porque a origem do browser inclui a porta e é a origem que guarda a sessão do
+ * Firebase Auth. O porquê inteiro está em `porta.js`, junto do código.
  */
 
 const { utilityProcess } = require("electron");
-const net = require("node:net");
 const path = require("node:path");
+
+const { escolherPorta } = require("./porta");
 
 /** Tempo que o servidor tem para responder antes de considerarmos que travou. */
 const ESPERA_MAXIMA_MS = 90_000;
@@ -56,24 +56,6 @@ const INTERVALO_SONDA_MS = 500;
 const ESPERA_POR_SONDA_MS = 15_000;
 
 /**
- * Pede uma porta livre ao sistema e devolve. Há uma janela de corrida entre
- * fechar aqui e o Next abrir lá; na prática é irrelevante numa máquina de
- * trabalho, e o alternativo — deixar o Next escolher — não serve porque ele
- * não informa de volta qual porta pegou.
- */
-function portaLivre() {
-  return new Promise((resolve, reject) => {
-    const sonda = net.createServer();
-    sonda.unref();
-    sonda.on("error", reject);
-    sonda.listen(0, "127.0.0.1", () => {
-      const { port } = sonda.address();
-      sonda.close(() => resolve(port));
-    });
-  });
-}
-
-/**
  * Devolve `null` quando o servidor respondeu, e o motivo da recusa quando não.
  *
  * O motivo importa. A primeira versão engolia a exceção — conexão recusada
@@ -93,11 +75,42 @@ async function motivoDeNaoResponder(porta) {
 }
 
 /**
+ * Espera uma origem já no ar responder — o caso do `--dev-url`, em que o
+ * servidor é o `next dev` e quem o subiu foi outra pessoa, noutro terminal.
+ *
+ * Devolve `null` quando respondeu e o último motivo quando desistiu. A primeira
+ * compilação do `next dev` é lenta, e por isso a paciência aqui é a mesma do
+ * servidor empacotado, não menos.
+ *
+ * @param {string} base origem, ex. `http://127.0.0.1:3100`
+ * @param {(linha: string) => void} [aoRegistrar]
+ * @returns {Promise<string | null>}
+ */
+async function esperarResponder(base, aoRegistrar = () => {}) {
+  const limite = Date.now() + ESPERA_MAXIMA_MS;
+  let ultimoMotivo = null;
+  while (Date.now() < limite) {
+    try {
+      const resposta = await fetch(`${base}/api/health`, {
+        signal: AbortSignal.timeout(ESPERA_POR_SONDA_MS),
+      });
+      if (resposta.ok) return null;
+      ultimoMotivo = `/api/health respondeu ${resposta.status}`;
+    } catch (erro) {
+      ultimoMotivo = erro instanceof Error ? erro.message : String(erro);
+    }
+    aoRegistrar(`[dev] aguardando ${base}: ${ultimoMotivo}`);
+    await new Promise((r) => setTimeout(r, INTERVALO_SONDA_MS));
+  }
+  return ultimoMotivo ?? "tempo esgotado";
+}
+
+/**
  * @param {{ raizServidor: string, env: Record<string,string>, aoRegistrar?: (linha: string) => void }} opcoes
  * @returns {Promise<{ porta: number, processo: Electron.UtilityProcess }>}
  */
 async function iniciarServidor({ raizServidor, env, aoRegistrar = () => {} }) {
-  const porta = await portaLivre();
+  const porta = await escolherPorta();
   const servidor = path.join(raizServidor, "server.js");
 
   // `utilityProcess`, e não `child_process.spawn`.
@@ -182,4 +195,4 @@ function encerrarServidor(processo) {
   carrasco.unref();
 }
 
-module.exports = { iniciarServidor, encerrarServidor, portaLivre };
+module.exports = { iniciarServidor, encerrarServidor, esperarResponder };

@@ -91,7 +91,6 @@ export type AreaKey =
   | "caixa"
   | "cidades"
   | "pipeline"
-  | "empresas"
   | "pessoas"
   | "documentos"
   | "modulos"
@@ -137,12 +136,6 @@ export const AREAS: readonly Area[] = [
     rotulo: "Pipeline",
     rota: "/pipeline",
     descricao: "Funil comercial por estágio, com valores e probabilidade.",
-  },
-  {
-    key: "empresas",
-    rotulo: "Empresas",
-    rota: "/empresas",
-    descricao: "Empresas do grupo e seus funcionários.",
   },
   {
     key: "pessoas",
@@ -231,8 +224,8 @@ function mapaDeAreas(fn: (area: AreaKey) => NivelAcesso): Permissoes {
  * O ponto de partida de cada papel, antes de qualquer ajuste manual.
  *
  * `member` nasce operando o dia a dia e só olhando o que é cadastro de outra
- * gente: Pessoas guarda comissão e chave PIX, e Empresas é estrutura do grupo
- * — nenhum dos dois é coisa que se mexa sem querer.
+ * gente: Pessoas guarda comissão, chave PIX e dados bancários — não é coisa que
+ * se mexa sem querer.
  */
 export function permissoesPadrao(papel: GroupRole): Permissoes {
   switch (papel) {
@@ -242,7 +235,7 @@ export function permissoesPadrao(papel: GroupRole): Permissoes {
     case "member":
       return mapaDeAreas((area) => {
         if (area === "ajustes" || area === "sistemas") return "nenhum";
-        if (area === "empresas" || area === "pessoas") return "ver";
+        if (area === "pessoas") return "ver";
         return "editar";
       });
     case "viewer":

@@ -28,6 +28,8 @@ export interface UsuariaDeAcesso {
   desativada: boolean;
   criadaEm?: string;
   ultimoAcessoEm?: string;
+  /** Como ela entra: "Senha", "Google". Vazio significa que nunca entrou. */
+  metodos: string[];
 }
 
 /**
@@ -43,6 +45,32 @@ export interface RegistroFirebase {
   disabled?: boolean;
   customClaims?: Record<string, unknown>;
   metadata?: { creationTime?: string; lastSignInTime?: string };
+  providerData?: { providerId?: string }[];
+}
+
+const NOME_DO_PROVEDOR: Record<string, string> = {
+  password: "Senha",
+  "google.com": "Google",
+};
+
+/**
+ * Como a pessoa entra no sistema.
+ *
+ * Lista **vazia** é informação, não falha: a conta foi criada pela
+ * administradora, o link de senha foi gerado e ninguém entrou ainda. Distinguir
+ * isso de "entra com senha" é o que permite a tela dizer se falta a pessoa
+ * fazer a parte dela.
+ *
+ * Provedor desconhecido entra com o identificador cru em vez de sumir — a lista
+ * é para saber a verdade, e um método que não sabemos nomear ainda é um método
+ * pelo qual alguém entra.
+ */
+export function metodosDeEntrada(registro: RegistroFirebase): string[] {
+  const ids = (registro.providerData ?? [])
+    .map((p) => p?.providerId)
+    .filter((id): id is string => typeof id === "string" && id.length > 0);
+
+  return [...new Set(ids.map((id) => NOME_DO_PROVEDOR[id] ?? id))];
 }
 
 /**
@@ -109,6 +137,7 @@ export function usuariaDoRegistro(registro: RegistroFirebase): UsuariaDeAcesso {
     desativada: registro.disabled === true,
     criadaEm: registro.metadata?.creationTime,
     ultimoAcessoEm: registro.metadata?.lastSignInTime,
+    metodos: metodosDeEntrada(registro),
   };
 }
 

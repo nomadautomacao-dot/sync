@@ -24,7 +24,7 @@ ENDERECO = "Pe. Orthon Vieira Lima, S/N, Centro"
 CIDADE = "Santa Maria da Vitoria"
 UF = "BA"
 CEP = "47640-058"
-TELEFONE = "(77) 9700-5880"
+TELEFONE = "(61) 98155-1533"
 EMAIL = "globalconsultorias@icloud.com"
 
 # Vazio enquanto nao houver dominio proprio. `linhas_de_contato` omite o que

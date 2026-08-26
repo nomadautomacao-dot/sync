@@ -71,6 +71,66 @@ export function collaboratorDocFromInput(
   };
 }
 
+/** O que a ficha deixa editar — e nada além disso. */
+export type CamposEditaveis = Pick<
+  CollaboratorItem,
+  | 'fullName'
+  | 'email'
+  | 'phone'
+  | 'whatsapp'
+  | 'state'
+  | 'primaryRole'
+  | 'collaboratorType'
+  | 'partnershipStatus'
+  | 'defaultCommissionPercent'
+  | 'companyOrOrganization'
+  | 'pixKey'
+  | 'bankAccountInfo'
+>;
+
+const CAMPOS_DE_TEXTO = [
+  'email',
+  'phone',
+  'whatsapp',
+  'companyOrOrganization',
+  'pixKey',
+  'bankAccountInfo',
+] as const;
+
+/**
+ * O corpo de uma edição, com só os campos que a pessoa preencheu na mão.
+ *
+ * Existe por duas razões que já morderiam se a tela mandasse o objeto inteiro:
+ *
+ * 1. **O Firestore recusa `undefined`.** Campo apagado no formulário chega como
+ *    `""` ou `undefined`, e `setDoc` estoura em vez de gravar. Aqui vira `null`,
+ *    que é como o resto da coleção representa ausência.
+ * 2. **Números apurados não são do formulário.** `commissionPaidYtd`,
+ *    `profitAccruedYtd` e `sourcedCitiesCount` vêm de contrato e comissão; se
+ *    entrassem no `merge`, salvar um telefone zeraria o histórico financeiro da
+ *    pessoa em silêncio. Eles não estão em `CamposEditaveis` de propósito.
+ */
+export function corpoDaEdicao(entrada: Partial<CamposEditaveis>): Record<string, unknown> {
+  const corpo: Record<string, unknown> = {};
+
+  if (entrada.fullName !== undefined) corpo.fullName = entrada.fullName.trim();
+  if (entrada.state !== undefined) corpo.state = entrada.state.trim().toUpperCase();
+  if (entrada.primaryRole !== undefined) corpo.primaryRole = entrada.primaryRole.trim();
+  if (entrada.collaboratorType !== undefined) corpo.collaboratorType = entrada.collaboratorType;
+  if (entrada.partnershipStatus !== undefined) corpo.partnershipStatus = entrada.partnershipStatus;
+  if (entrada.defaultCommissionPercent !== undefined) {
+    corpo.defaultCommissionPercent = entrada.defaultCommissionPercent;
+  }
+
+  for (const campo of CAMPOS_DE_TEXTO) {
+    if (entrada[campo] === undefined) continue;
+    const limpo = (entrada[campo] ?? '').trim();
+    corpo[campo] = limpo === '' ? null : limpo;
+  }
+
+  return corpo;
+}
+
 export async function listCollaborators(
   db: Firestore,
   groupId: string,
@@ -124,11 +184,11 @@ export async function createCollaborator(
 export async function updateCollaborator(
   db: Firestore,
   collaboratorId: string,
-  data: Partial<CollaboratorItem>
+  data: Partial<CamposEditaveis>
 ): Promise<void> {
   await setDoc(
     doc(db, COLLECTION, collaboratorId),
-    { ...data, updatedAt: serverTimestamp() },
+    { ...corpoDaEdicao(data), updatedAt: serverTimestamp() },
     { merge: true }
   );
 }

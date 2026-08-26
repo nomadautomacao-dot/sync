@@ -3306,8 +3306,10 @@ function paginaCauc(model: MunicipalXrayModel, pagina: number): string {
     ? `${integer.format(c.nationwide.withPending)} dos ${integer.format(c.nationwide.total)} municípios do país (${decimal.format((c.nationwide.withPending / c.nationwide.total) * 100)}%) têm ao menos uma pendência hoje`
     : "";
 
+  // A lista cresce com o município (Caetité chegou com 12 e estourou a folha
+  // mesmo no piso de escala); a partir de 8 linhas a tabela vira densa.
   const listaPendencias = c.pending.length
-    ? `<table><thead><tr><th>Item</th><th>Requisito sem comprovação</th></tr></thead><tbody>${c.pending
+    ? `<table${c.pending.length >= 8 ? ` class="densa"` : ""}><thead><tr><th>Item</th><th>Requisito sem comprovação</th></tr></thead><tbody>${c.pending
         .map(
           (p) =>
             `<tr><td><b>${esc(p.code)}</b></td><td>${esc(p.label)}${
@@ -4270,6 +4272,10 @@ html{-webkit-print-color-adjust:exact;print-color-adjust:exact}
 .grid-2,.grid-3,.grid-4{align-items:stretch}
 .grid-2>*,.grid-3>*,.grid-4>*{min-width:0}
 .card,.metric,.callout,.note,.insight,.risk,table{break-inside:avoid}
+/* Tabela densa: para listas cujo tamanho varia por município (ex.: pendências
+   do CAUC). Acima de ~8 linhas a versão normal passa do que o auto-ajuste de
+   escala (piso de 88% em pdf-corte.ts) consegue recuperar. */
+table.densa{font-size:7.1pt}table.densa th{padding:.05in .07in}table.densa td{padding:.035in .07in}
 .card{border-radius:8px;padding:.17in}
 .metric{min-height:.76in;padding:.035in 0 .045in .13in}
 .metric-value{overflow-wrap:anywhere}

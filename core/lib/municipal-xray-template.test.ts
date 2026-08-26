@@ -858,6 +858,23 @@ describe("requisitos fiscais do CAUC no Raio-X", () => {
     expect(saida).toContain("a transferência voluntária que não é assinada");
   });
 
+  it("lista longa de pendências compacta a tabela; lista curta não", () => {
+    const muitas = Array.from({ length: 12 }, (_, i) => ({
+      codigo: `9.${i + 1}`,
+      rotulo: `Requisito fiscal de exemplo número ${i + 1}`,
+    }));
+    const saida = comCauc({ ...base, pendencias: muitas, pendenciasEducacao: [] });
+    expect(saida).toContain(`<table class="densa">`);
+    expect(saida).toContain("Requisito fiscal de exemplo número 12");
+
+    const poucas = comCauc({
+      ...base,
+      pendencias: muitas.slice(0, 2),
+      pendenciasEducacao: [],
+    });
+    expect(poucas).not.toContain(`class="densa"`);
+  });
+
   it("explica que Desabilitado é do país inteiro, nunca falha local", () => {
     const saida = comCauc({ ...base, pendencias: [], pendenciasEducacao: [] });
     expect(saida).toContain("igual para todos os entes do país");

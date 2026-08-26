@@ -6,7 +6,6 @@ import {
   collaboratorInitials,
   formatCompactCurrency,
 } from './people-types';
-import { formatCnpj, cleanCnpj, companyInitials } from './company-types';
 
 describe('people-types helpers', () => {
   it('identifies internal vs partner collaborators', () => {
@@ -34,14 +33,3 @@ describe('people-types helpers', () => {
   });
 });
 
-describe('company-types helpers', () => {
-  it('cleans and formats CNPJ', () => {
-    const raw = '12.345.678/0001-95';
-    expect(cleanCnpj(raw)).toBe('12345678000195');
-    expect(formatCnpj('12345678000195')).toBe('12.345.678/0001-95');
-  });
-
-  it('formats company initials', () => {
-    expect(companyInitials('Empresa Alpha Ltda')).toBe('EL');
-  });
-});

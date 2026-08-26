@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dayjs from "dayjs";
+import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import {
   ArrowRightOutlined,
@@ -15,6 +17,7 @@ import {
   Alert,
   AutoComplete,
   Button,
+  DatePicker,
   Flex,
   Form,
   Input,
@@ -30,6 +33,11 @@ import {
 import type { CityAccount, StageKey } from "@/core/lib/city-types";
 import { STAGE_LABELS, BOARD_STAGES } from "@/core/lib/city-types";
 import { searchMunicipios, preloadMunicipios, type IbgeMunicipio } from "@/core/lib/ibge-client";
+import { listCollaborators } from "@/core/lib/collaborators-firestore";
+import { collaboratorLinkCategory } from "@/core/lib/people-types";
+import { getFirebaseDb } from "@/core/lib/firebase-client";
+import { podeVer } from "@/core/domain/rbac";
+import { useAuth } from "@/core/providers/auth-provider";
 
 interface NewCityDialogProps {
   open: boolean;
@@ -55,6 +63,9 @@ interface CamposDoFormulario {
   stage: StageKey;
   revenue: number | null;
   nextStep: string;
+  parceiroId?: string;
+  responsavelId?: string;
+  inicio?: dayjs.Dayjs;
 }
 
 export function NewCityDialog({
@@ -64,8 +75,28 @@ export function NewCityDialog({
   context = "pipeline",
 }: NewCityDialogProps) {
   const { token } = theme.useToken();
+  const { user } = useAuth();
   const [form] = Form.useForm<CamposDoFormulario>();
   const [search, setSearch] = useState("");
+
+  /* Receita estimada e próximo passo comercial são do funil. E cadastrar um
+     município é exatamente o momento em que a consultora está com o notebook
+     virado para o gestor — os dois campos ficavam à vista dele. Mesma régua da
+     ficha da cidade: quem não tem Pipeline não os vê aqui. */
+  const verComercial = user ? podeVer(user.permissoes, "pipeline") : false;
+
+  const { data: colaboradores = [] } = useQuery({
+    queryKey: ["collaborators", user?.groupId],
+    queryFn: () => listCollaborators(getFirebaseDb(), user!.groupId),
+    enabled: open && Boolean(user?.groupId),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  /* A data de início só aparece a partir do contratual: antes disso não há
+     implantação para datar, e um campo de data num município que ainda está em
+     mapeamento convida a preencher qualquer coisa. */
+  const stageEscolhido = Form.useWatch("stage", form);
+  const pedeDataDeInicio = stageEscolhido === "contractual";
   const [results, setResults] = useState<IbgeMunicipio[]>([]);
   const [selected, setSelected] = useState<IbgeMunicipio | null>(null);
   const [searching, setSearching] = useState(false);
@@ -126,6 +157,9 @@ export function NewCityDialog({
     if (!selected) return;
     setSubmitting(true);
     try {
+      const responsavel = colaboradores.find((c) => c.id === values.responsavelId);
+      const parceiro = colaboradores.find((c) => c.id === values.parceiroId);
+
       await onSubmit({
         name: selected.nome,
         uf: selected.uf,
@@ -134,6 +168,14 @@ export function NewCityDialog({
         stage: values.stage,
         estimatedAnnualRevenue: values.revenue ?? 0,
         nextStepDescription: values.nextStep?.trim() || undefined,
+        collaboratorId: responsavel?.id,
+        // O nome vai copiado junto: a carteira lista dezenas de municípios e
+        // buscar o nome de cada responsável seria uma leitura por linha.
+        collaboratorName: responsavel?.fullName,
+        parceiroId: parceiro?.id,
+        parceiroName: parceiro?.fullName,
+        implantacaoInicio:
+          pedeDataDeInicio && values.inicio ? values.inicio.format("YYYY-MM-DD") : undefined,
       });
       reset();
     } catch {
@@ -324,22 +366,97 @@ export function NewCityDialog({
           <Select options={STAGE_OPTIONS} />
         </Form.Item>
 
-        <Form.Item label="Receita anual estimada FUNDEB (R$)" name="revenue">
-          <InputNumber<number>
-            style={{ width: "100%", fontFamily: "var(--font-sync-mono)" }}
-            min={0}
-            step={1000}
-            placeholder={
-              context === "cities"
-                ? "Opcional — o levantamento preencherá quando disponível"
-                : "Ex: 1250000"
-            }
+        <Form.Item
+          label="Parceiro que agenciou a entrada"
+          name="parceiroId"
+          extra={
+            <Typography.Text type="secondary" style={{ fontSize: 11.5 }}>
+              Quem abriu a porta da prefeitura para a Global. Pode ficar vazio e
+              ser definido depois, pela ficha da cidade.
+            </Typography.Text>
+          }
+        >
+          <Select
+            allowClear
+            showSearch
+            optionFilterProp="label"
+            placeholder="Escolha o parceiro"
+            options={colaboradores
+              .filter(
+                (colaborador) =>
+                  collaboratorLinkCategory(colaborador.collaboratorType) ===
+                  "Parceiro",
+              )
+              .map((colaborador) => ({
+                value: colaborador.id,
+                label: `${colaborador.fullName}${
+                  colaborador.primaryRole ? ` · ${colaborador.primaryRole}` : ""
+                }`,
+              }))}
+            notFoundContent="Nenhum parceiro cadastrado em Pessoas."
           />
         </Form.Item>
 
-        <Form.Item label="Próximo passo comercial" name="nextStep">
-          <Input placeholder="Ex: Agendar apresentação executiva com prefeito" />
+        <Form.Item
+          label="Responsável técnico"
+          name="responsavelId"
+          extra={
+            <Typography.Text type="secondary" style={{ fontSize: 11.5 }}>
+              Quem a equipe procura quando esta cidade travar. Pode ficar vazio e
+              ser definido depois.
+            </Typography.Text>
+          }
+        >
+          <Select
+            allowClear
+            showSearch
+            optionFilterProp="label"
+            placeholder="Escolha quem responde por esta cidade"
+            options={colaboradores.map((colaborador) => ({
+              value: colaborador.id,
+              label: `${colaborador.fullName}${
+                colaborador.primaryRole ? ` · ${colaborador.primaryRole}` : ""
+              }`,
+            }))}
+            notFoundContent="Nenhuma pessoa cadastrada em Pessoas."
+          />
         </Form.Item>
+
+        {pedeDataDeInicio && (
+          <Form.Item
+            label="Início da implantação"
+            name="inicio"
+            extra={
+              <Typography.Text type="secondary" style={{ fontSize: 11.5 }}>
+                Normalmente a assinatura do contrato. É a partir dela que os
+                prazos do cronograma são contados.
+              </Typography.Text>
+            }
+          >
+            <DatePicker format="DD/MM/YYYY" style={{ width: "100%" }} />
+          </Form.Item>
+        )}
+
+        {verComercial && (
+          <>
+            <Form.Item label="Receita anual estimada FUNDEB (R$)" name="revenue">
+              <InputNumber<number>
+                style={{ width: "100%", fontFamily: "var(--font-sync-mono)" }}
+                min={0}
+                step={1000}
+                placeholder={
+                  context === "cities"
+                    ? "Opcional — o levantamento preencherá quando disponível"
+                    : "Ex: 1250000"
+                }
+              />
+            </Form.Item>
+
+            <Form.Item label="Próximo passo comercial" name="nextStep">
+              <Input placeholder="Ex: Agendar apresentação executiva com prefeito" />
+            </Form.Item>
+          </>
+        )}
       </Form>
     </Modal>
   );

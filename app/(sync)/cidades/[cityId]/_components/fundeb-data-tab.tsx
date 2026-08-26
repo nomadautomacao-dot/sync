@@ -26,10 +26,16 @@ import { ProTable } from "@ant-design/pro-components";
 import type { ProColumns } from "@ant-design/pro-components";
 
 import { formatCurrency, type CityAccount } from "@/core/lib/city-types";
-import type {
-  CityReport,
-  CityReportSnapshot,
+import {
+  CITY_REPORT_TYPE_LABELS,
+  type CityReport,
+  type CityReportSnapshot,
 } from "@/modules/cidades/reports-types";
+import {
+  ehLevantamento,
+  relatorioParaInspecionar,
+  relatoriosComDados,
+} from "@/modules/cidades/ficha-fundeb";
 
 const { Text, Title } = Typography;
 
@@ -139,9 +145,15 @@ export function FundebDataTab({
     );
   }
 
-  const reportsWithData = reports.filter((report) => report.snapshot);
-  const active =
-    (selected?.snapshot ? selected : undefined) ?? reportsWithData[0];
+  /* Duas perguntas diferentes, e a distinção é o conserto:
+     — *qual relatório abrir*: qualquer um que tenha arquivado JSON, porque o
+       Raio-X e os dossiês guardam dezenas de blocos que só existiam no PDF;
+     — *se o painel de VAAF/VAAT/VAAR aparece*: só para o levantamento, porque
+       esses campos não existem nos outros e liam como R$ 0,00.
+     As regras moram em `modules/cidades/ficha-fundeb.ts`, com teste. */
+  const reportsWithData = relatoriosComDados(reports);
+  const active = relatorioParaInspecionar(reports, selected);
+  const mostraPainelFundeb = ehLevantamento(active);
 
   if (!active?.snapshot) {
     return (
@@ -152,9 +164,12 @@ export function FundebDataTab({
             <Flex vertical gap={4} style={{ maxWidth: 460 }}>
               <Text strong>Ficha FUNDEB ainda não disponível</Text>
               <Text type="secondary">
-                Gere o primeiro levantamento para preencher receitas,
-                projeções, VAAF, VAAT, VAAR, Censo Escolar, habilitação e
-                parâmetros técnicos desta cidade.
+                {/* Dizer que existem outros relatórios evita a conclusão errada
+                    de que a emissão falhou — ela pode ter emitido o Raio-X e os
+                    dossiês, que não alimentam esta ficha. */}
+                {reports.length > 0
+                  ? `Esta cidade tem ${reports.length} relatório(s) arquivado(s), mas nenhum é o Levantamento FUNDEB — que é o único que preenche receitas, VAAF, VAAT, VAAR e habilitação. Emita-o para ver a ficha.`
+                  : "Gere o primeiro levantamento para preencher receitas, projeções, VAAF, VAAT, VAAR, Censo Escolar, habilitação e parâmetros técnicos desta cidade."}
               </Text>
             </Flex>
           }
@@ -172,11 +187,41 @@ export function FundebDataTab({
   const sections = snapshotSections(active.snapshot);
   const reportData = active.snapshot.reportData ?? {};
   const revenues = recordField(reportData, "receitas");
+
+  /*
+   * O levantamento arquiva **três** leituras do mesmo município, e a ficha
+   * mostrava uma só, sem dizer qual:
+   *
+   *   projecaoRecuperavel  multiplicador 1,02 — só o que as bases já evidenciam
+   *   projecaoComercial    multiplicador 1,75 — o teto de benchmark interno
+   *   upsideCondicionado   o que depende de validação documental
+   *
+   * Conferido na emissão de Nossa Senhora do Livramento (2026): R$ 300.651,13
+   * contra R$ 14.789.005,01. Não é divergência de cálculo — são perguntas
+   * diferentes, e mostrar só a conservadora fazia a ficha parecer não bater com
+   * o relatório, que lidera pela comercial.
+   *
+   * As duas aparecem, cada uma com a ressalva que o próprio JSON carrega. A do
+   * benchmark não é decorativa: ela diz para não tratá-lo como ganho
+   * recuperável sem validação documental, e é justamente esse número que vai
+   * para conversa de proposta.
+   */
   const projection =
     active.snapshot.projecaoRecuperavel ??
     recordField(reportData, "projecaoRecuperavel") ??
     active.snapshot.projecao ??
     recordField(reportData, "projecao");
+  const comercial =
+    recordField(reportData, "projecaoComercial") ??
+    /* Quando não há bloco comercial próprio, `projecao` é o benchmark — foi
+       assim que o gerador nomeou antes de separar os dois. */
+    (recordField(reportData, "projecao") !== projection
+      ? recordField(reportData, "projecao")
+      : undefined);
+  const ressalvaRecuperavel = firstText(projection?.ressalva);
+  const ressalvaComercial = firstText(comercial?.ressalva);
+  const ganhoComercial = firstNumber(comercial?.totalGanho);
+  const percentualComercial = firstNumber(comercial?.ganhoPercentual);
   const census =
     active.snapshot.censoEscolar ?? recordField(reportData, "censoEscolar");
   const profile =
@@ -299,7 +344,12 @@ export function FundebDataTab({
             </Flex>
             <div>
               <Title level={5} style={{ margin: 0 }}>
-                Ficha do levantamento FUNDEB
+                {/* O título segue o relatório aberto. Dizer sempre "Ficha do
+                    levantamento FUNDEB" foi o que fez um dossiê passar por
+                    levantamento na tela. */}
+                {mostraPainelFundeb
+                  ? "Ficha do levantamento FUNDEB"
+                  : `Dados arquivados · ${CITY_REPORT_TYPE_LABELS[active.type] ?? active.type}`}
               </Title>
               <Text type="secondary" style={{ fontSize: 11 }}>
                 {city.name} · exercício {active.exercise} ·{" "}
@@ -319,15 +369,18 @@ export function FundebDataTab({
                   textTransform: "uppercase",
                 }}
               >
-                Versão consultada
+                Relatório consultado
               </Text>
               <Select
                 value={active.id}
                 onChange={(value) => onSelect(value)}
                 style={{ minWidth: 220 }}
+                /* O rótulo nomeia o tipo: com treze documentos arquivados,
+                    "2026 · 13 de ago" não distingue o Raio-X do Dossiê da
+                    Demanda. */
                 options={reportsWithData.map((report) => ({
                   value: report.id,
-                  label: `${report.exercise} · ${formatDate(report.generatedAt)}`,
+                  label: `${CITY_REPORT_TYPE_LABELS[report.type] ?? report.type} · ${formatDate(report.generatedAt)}`,
                 }))}
               />
             </Flex>
@@ -345,201 +398,261 @@ export function FundebDataTab({
         </Flex>
       </Card>
 
-      <Card style={{ background: token.colorBgSpotlight, border: "none" }}>
-        <Row gutter={[24, 20]} align="middle">
-          <Col
-            xs={24}
-            md={9}
-            style={{
-              borderRight: "1px solid rgba(255,255,255,.1)",
-              paddingRight: 24,
-            }}
-          >
-            <Text
+      {/* Os painéis abaixo leem campos que só o levantamento FUNDEB arquiva
+          (VAAF, VAAT, VAAR, habilitação, projeção). Num Raio-X ou num dossiê
+          eles apareciam zerados e "Não informado" — número plausível e errado
+          numa tela que sustenta proposta. Fora do levantamento, o inspetor de
+          blocos abaixo continua mostrando tudo que aquele relatório guardou. */}
+      {mostraPainelFundeb && (
+        <>
+        <Card style={{ background: token.colorBgSpotlight, border: "none" }}>
+          <Row gutter={[24, 20]} align="middle">
+            <Col
+              xs={24}
+              md={9}
               style={{
-                color: "rgba(255,255,255,.6)",
-                fontSize: 10,
-                fontWeight: 600,
+                borderRight: "1px solid rgba(255,255,255,.1)",
+                paddingRight: 24,
               }}
             >
-              Potencial recuperável identificado
-            </Text>
-            <div
-              style={{
-                marginTop: 4,
-                color: token.colorTextLightSolid,
-                fontFamily: "var(--font-sync-mono)",
-                fontSize: 26,
-                fontWeight: 600,
-                letterSpacing: -1,
-              }}
-            >
-              {formatOptionalCurrency(gain)}
-            </div>
-            <Text style={{ color: token.colorSuccess, fontSize: 11 }}>
-              {gainPercentage === null
-                ? "Percentual não informado"
-                : `+${formatNumber(gainPercentage)}% sobre a base atual`}
-            </Text>
-          </Col>
-          <Col xs={24} md={15}>
-            <Row gutter={16}>
-              <Col span={8}>
-                <HeroMetric
-                  label="Receita atual"
-                  value={formatOptionalCurrency(current)}
-                />
+              <Text
+                style={{
+                  color: "rgba(255,255,255,.6)",
+                  fontSize: 10,
+                  fontWeight: 600,
+                }}
+              >
+                Potencial recuperável identificado
+              </Text>
+              <div
+                style={{
+                  marginTop: 4,
+                  color: token.colorTextLightSolid,
+                  fontFamily: "var(--font-sync-mono)",
+                  fontSize: 26,
+                  fontWeight: 600,
+                  letterSpacing: -1,
+                }}
+              >
+                {formatOptionalCurrency(gain)}
+              </div>
+              <Text style={{ color: token.colorSuccess, fontSize: 11 }}>
+                {gainPercentage === null
+                  ? "Percentual não informado"
+                  : `+${formatNumber(gainPercentage)}% sobre a base atual`}
+              </Text>
+              {ressalvaRecuperavel && (
+                <Text
+                  style={{
+                    color: "rgba(255,255,255,.5)",
+                    fontSize: 10,
+                    display: "block",
+                    marginTop: 8,
+                  }}
+                >
+                  {ressalvaRecuperavel}
+                </Text>
+              )}
+            </Col>
+            <Col xs={24} md={15}>
+              <Row gutter={16}>
+                <Col span={8}>
+                  <HeroMetric
+                    label="Receita atual"
+                    value={formatOptionalCurrency(current)}
+                  />
+                </Col>
+                <Col span={8}>
+                  <HeroMetric
+                    label="Receita projetada"
+                    value={formatOptionalCurrency(projected)}
+                  />
+                </Col>
+                <Col span={8}>
+                  <HeroMetric
+                    label="Matrículas consideradas"
+                    value={formatOptionalInteger(enrollments)}
+                  />
+                </Col>
+              </Row>
+            </Col>
+          </Row>
+        </Card>
+
+        {/* A leitura comercial, ao lado da recuperável e nunca no lugar dela.
+            É a que o relatório lidera e a que a proposta cita — omiti-la fazia
+            a ficha parecer não bater com o documento. A ressalva anda junto: o
+            próprio gerador diz que este número não é ganho recuperável sem
+            validação documental, e é essa a frase que falta numa reunião. */}
+        {ganhoComercial !== null && (
+          <Card size="small">
+            <Row gutter={[16, 12]} align="middle">
+              <Col xs={24} md={9}>
+                <Text type="secondary" style={{ fontSize: 10, fontWeight: 600 }}>
+                  Teto comercial (benchmark interno)
+                </Text>
+                <div
+                  style={{
+                    marginTop: 4,
+                    fontFamily: "var(--font-sync-mono)",
+                    fontSize: 22,
+                    fontWeight: 600,
+                    letterSpacing: -0.5,
+                  }}
+                >
+                  {formatOptionalCurrency(ganhoComercial)}
+                </div>
+                <Text type="secondary" style={{ fontSize: 11 }}>
+                  {percentualComercial === null
+                    ? "Percentual não informado"
+                    : `+${formatNumber(percentualComercial)}% sobre a base atual`}
+                </Text>
               </Col>
-              <Col span={8}>
-                <HeroMetric
-                  label="Receita projetada"
-                  value={formatOptionalCurrency(projected)}
-                />
-              </Col>
-              <Col span={8}>
-                <HeroMetric
-                  label="Matrículas consideradas"
-                  value={formatOptionalInteger(enrollments)}
-                />
+              <Col xs={24} md={15}>
+                <Text type="secondary" style={{ fontSize: 11.5 }}>
+                  {ressalvaComercial ??
+                    "Benchmark interno de teto comercial. Não deve ser tratado como ganho recuperável sem validação documental."}
+                </Text>
               </Col>
             </Row>
+          </Card>
+        )}
+
+        <Row gutter={[14, 14]}>
+          <Col xs={24} xl={13}>
+            <Card
+              title="Composição das complementações"
+              size="small"
+              extra={
+                <Text type="secondary" style={{ fontSize: 10 }}>
+                  Valores atuais, projeção e ganho por modalidade
+                </Text>
+              }
+            >
+              <ProTable<SupplementRow>
+                rowKey="label"
+                size="small"
+                pagination={false}
+                search={false}
+                options={false}
+                dataSource={supplements}
+                columns={supplementColumns}
+              />
+            </Card>
+          </Col>
+
+          <Col xs={24} xl={11}>
+            <Card
+              title="Identificação do levantamento"
+              size="small"
+              extra={
+                <Text type="secondary" style={{ fontSize: 10 }}>
+                  Campos informados nesta versão
+                </Text>
+              }
+            >
+              <Descriptions
+                size="small"
+                column={1}
+                items={[
+                  ["Responsável técnico", parameters?.responsavelTecnico],
+                  ["Órgão demandante", parameters?.orgaoDemandante],
+                  ["Secretário(a) de Educação", parameters?.secretarioEducacao],
+                  ["Número do processo", parameters?.numeroProcesso],
+                  ["Período de referência", parameters?.periodoReferencia],
+                  ["Cenário da análise", parameters?.cenarioAnalise],
+                ].map(([label, value]) => ({
+                  key: label as string,
+                  label: label as string,
+                  children: formatInfoValue(value),
+                }))}
+              />
+            </Card>
           </Col>
         </Row>
-      </Card>
 
-      <Row gutter={[14, 14]}>
-        <Col xs={24} xl={13}>
-          <Card
-            title="Composição das complementações"
-            size="small"
-            extra={
-              <Text type="secondary" style={{ fontSize: 10 }}>
-                Valores atuais, projeção e ganho por modalidade
-              </Text>
-            }
-          >
-            <ProTable<SupplementRow>
-              rowKey="label"
+        <Row gutter={[14, 14]}>
+          <Col xs={24} xl={11}>
+            <Card
+              title="Rede educacional considerada"
               size="small"
-              pagination={false}
-              search={false}
-              options={false}
-              dataSource={supplements}
-              columns={supplementColumns}
-            />
-          </Card>
-        </Col>
-
-        <Col xs={24} xl={11}>
-          <Card
-            title="Identificação do levantamento"
-            size="small"
-            extra={
-              <Text type="secondary" style={{ fontSize: 10 }}>
-                Campos informados nesta versão
-              </Text>
-            }
-          >
-            <Descriptions
-              size="small"
-              column={1}
-              items={[
-                ["Responsável técnico", parameters?.responsavelTecnico],
-                ["Órgão demandante", parameters?.orgaoDemandante],
-                ["Secretário(a) de Educação", parameters?.secretarioEducacao],
-                ["Número do processo", parameters?.numeroProcesso],
-                ["Período de referência", parameters?.periodoReferencia],
-                ["Cenário da análise", parameters?.cenarioAnalise],
-              ].map(([label, value]) => ({
-                key: label as string,
-                label: label as string,
-                children: formatInfoValue(value),
-              }))}
-            />
-          </Card>
-        </Col>
-      </Row>
-
-      <Row gutter={[14, 14]}>
-        <Col xs={24} xl={11}>
-          <Card
-            title="Rede educacional considerada"
-            size="small"
-            extra={
-              <Text type="secondary" style={{ fontSize: 10 }}>
-                Censo Escolar{censusYear ? ` · ${censusYear}` : ""}
-              </Text>
-            }
-          >
-            <Row
-              style={{
-                background: token.colorFillTertiary,
-                borderRadius: token.borderRadiusLG,
-                padding: "14px 4px",
-              }}
+              extra={
+                <Text type="secondary" style={{ fontSize: 10 }}>
+                  Censo Escolar{censusYear ? ` · ${censusYear}` : ""}
+                </Text>
+              }
             >
-              <Col span={8}>
-                <HeroMetric
-                  dark={false}
-                  label="Matrículas municipais"
-                  value={formatOptionalInteger(enrollments)}
-                />
-              </Col>
-              <Col span={8}>
-                <HeroMetric
-                  dark={false}
-                  label="Escolas municipais"
-                  value={formatOptionalInteger(schools)}
-                />
-              </Col>
-              <Col span={8}>
-                <HeroMetric
-                  dark={false}
-                  label="Docentes municipais"
-                  value={formatOptionalInteger(teachers)}
-                />
-              </Col>
-            </Row>
-          </Card>
-        </Col>
+              <Row
+                style={{
+                  background: token.colorFillTertiary,
+                  borderRadius: token.borderRadiusLG,
+                  padding: "14px 4px",
+                }}
+              >
+                <Col span={8}>
+                  <HeroMetric
+                    dark={false}
+                    label="Matrículas municipais"
+                    value={formatOptionalInteger(enrollments)}
+                  />
+                </Col>
+                <Col span={8}>
+                  <HeroMetric
+                    dark={false}
+                    label="Escolas municipais"
+                    value={formatOptionalInteger(schools)}
+                  />
+                </Col>
+                <Col span={8}>
+                  <HeroMetric
+                    dark={false}
+                    label="Docentes municipais"
+                    value={formatOptionalInteger(teachers)}
+                  />
+                </Col>
+              </Row>
+            </Card>
+          </Col>
 
-        <Col xs={24} xl={13}>
-          <Card
-            title="Habilitação e perfil técnico"
-            size="small"
-            extra={
-              <SafetyCertificateOutlined
-                style={{ color: token.colorTextTertiary }}
-              />
-            }
-          >
-            <Descriptions
+          <Col xs={24} xl={13}>
+            <Card
+              title="Habilitação e perfil técnico"
               size="small"
-              column={2}
-              items={[
-                ["Habilitação VAAT", profile?.habilitacaoVaat],
-                ["Pendência identificada", profile?.pendenciaVaat],
-                [
-                  "Score de viabilidade",
-                  firstNumber(profile?.score) === null
-                    ? null
-                    : `${formatNumber(firstNumber(profile?.score)!)} pontos`,
-                ],
-                [
-                  "Confiança da análise",
-                  firstNumber(profile?.confianca) === null
-                    ? null
-                    : `${formatNumber(firstNumber(profile?.confianca)!)}%`,
-                ],
-              ].map(([label, value]) => ({
-                key: label as string,
-                label: label as string,
-                children: formatInfoValue(value),
-              }))}
-            />
-          </Card>
-        </Col>
-      </Row>
+              extra={
+                <SafetyCertificateOutlined
+                  style={{ color: token.colorTextTertiary }}
+                />
+              }
+            >
+              <Descriptions
+                size="small"
+                column={2}
+                items={[
+                  ["Habilitação VAAT", profile?.habilitacaoVaat],
+                  ["Pendência identificada", profile?.pendenciaVaat],
+                  [
+                    "Score de viabilidade",
+                    firstNumber(profile?.score) === null
+                      ? null
+                      : `${formatNumber(firstNumber(profile?.score)!)} pontos`,
+                  ],
+                  [
+                    "Confiança da análise",
+                    firstNumber(profile?.confianca) === null
+                      ? null
+                      : `${formatNumber(firstNumber(profile?.confianca)!)}%`,
+                  ],
+                ].map(([label, value]) => ({
+                  key: label as string,
+                  label: label as string,
+                  children: formatInfoValue(value),
+                }))}
+              />
+            </Card>
+          </Col>
+        </Row>
+        </>
+      )}
 
       <Card
         title="Base completa e auditável"
@@ -929,6 +1042,14 @@ function firstNumber(...values: unknown[]): number | null {
     if (value === null || value === undefined || value === "") continue;
     const parsed = Number(value);
     if (Number.isFinite(parsed)) return parsed;
+  }
+  return null;
+}
+
+/** Primeiro texto não vazio — as ressalvas do JSON vêm como string solta. */
+function firstText(...values: unknown[]): string | null {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) return value.trim();
   }
   return null;
 }

@@ -248,7 +248,11 @@ function estadoBySigla(sigla: string): string {
     SP: "São Paulo",
     TO: "Tocantins",
   };
-  return mapa[sigla.toUpperCase()] || sigla;
+  // A UF pode não vir: o kit é emitido a partir de fichas de cidade que às
+  // vezes só têm o nome. Antes isso estourava `toUpperCase of undefined` lá
+  // dentro do gerador e derrubava o kit inteiro por causa de duas letras.
+  const normalizada = String(sigla ?? "").trim();
+  return mapa[normalizada.toUpperCase()] || normalizada;
 }
 
 function parseDataBR(dataBR: string): Date | null {

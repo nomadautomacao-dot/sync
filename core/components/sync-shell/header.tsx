@@ -42,6 +42,8 @@ import { listCities } from "@/core/lib/cities-firestore";
 import { getFirebaseDb } from "@/core/lib/firebase-client";
 import { STAGE_LABELS, type CityAccount } from "@/core/lib/city-types";
 
+import { SinoDeNotificacoes } from "./notificacoes-inbox";
+
 const { Header } = Layout;
 const { useBreakpoint } = Grid;
 const { Text } = Typography;
@@ -82,12 +84,6 @@ const AREAS: readonly AreaSearchItem[] = [
     description: "Etapas e próximas ações",
     href: "/pipeline",
     icon: RiseOutlined,
-  },
-  {
-    label: "Empresas",
-    description: "Entidades e módulos contratados",
-    href: "/empresas",
-    icon: BankOutlined,
   },
   {
     label: "Pessoas",
@@ -484,6 +480,10 @@ export function SyncHeader({
             />
           </Badge>
         </Popover>
+
+        {/* O sino do inbox também vive na barra lateral — ela está em todas as
+            telas, este header não. Ver `notificacoes-inbox.tsx`. */}
+        <SinoDeNotificacoes aparencia="cabecalho" />
       </Header>
 
       <Modal

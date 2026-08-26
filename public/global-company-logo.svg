@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 300" role="img" aria-label="Global Company">
+  <!--
+    A assinatura da Global Company: símbolo + nome, para fundo claro.
+
+    O nome fica em quase-preto (#16181D, o mesmo do tema e do timbre), e não em
+    branco como a assinatura do Global Sync: esta versão existe para papel, e
+    peça de processo administrativo é impressa em folha branca.
+
+    Global Sync é o sistema; Global Company é quem assina contrato. Mesmo
+    símbolo, nomes diferentes — quem recebe o kit na prefeitura precisa ler o
+    nome da empresa, não o do software que a atende.
+  -->
+  <defs>
+    <linearGradient id="gcl-tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5BD3A0" />
+      <stop offset="0.52" stop-color="#26B9AC" />
+      <stop offset="1" stop-color="#0C97B0" />
+    </linearGradient>
+
+    <mask id="gcl-ring-cut">
+      <rect width="300" height="300" fill="#fff" />
+      <g transform="rotate(45 150 150)">
+        <rect x="127" y="34" width="46" height="46" fill="#000" />
+        <rect x="127" y="220" width="46" height="46" fill="#000" />
+      </g>
+    </mask>
+  </defs>
+
+  <g>
+    <rect width="300" height="300" rx="66" fill="url(#gcl-tile)" />
+    <g transform="rotate(45 150 150)">
+      <circle
+        cx="150"
+        cy="150"
+        r="88"
+        fill="none"
+        stroke="#fff"
+        stroke-width="26"
+        mask="url(#gcl-ring-cut)"
+      />
+      <path d="M150 12 Q186 150 150 288 Q114 150 150 12 Z" fill="#fff" />
+    </g>
+  </g>
+
+  <g
+    fill="#16181D"
+    font-family="Inter, 'Helvetica Neue', Helvetica, Arial, sans-serif"
+    font-size="128"
+    font-weight="700"
+    letter-spacing="-4"
+  >
+    <text x="372" y="126">Global</text>
+    <text x="372" y="254">Company</text>
+  </g>
+</svg>

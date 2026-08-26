@@ -18,13 +18,13 @@ before(async () => {
 
 after(async () => { await env.cleanup(); });
 
-function ctx(uid, groupId, role) {
-  return env.authenticatedContext(uid, { groupId, groupRole: role }).firestore();
+function ctx(uid, groupId, role, extra = {}) {
+  return env.authenticatedContext(uid, { groupId, groupRole: role, ...extra }).firestore();
 }
 
-// Documentos de colaborador nao restringem por role: qualquer usuario
-// autenticado do grupo pode subir/excluir, igual a rota Next legada (so
-// exigia getSessionUser()). Por isso os testes usam 'member', nao 'admin'.
+// Documentos de colaborador seguem a area `pessoas`: o padrao de member e so
+// "ver" (ver permissoesPadrao em core/domain/rbac.ts), entao os testes de
+// escrita usam member com o ajuste explicito na claim, ou admin.
 
 test('membro comum le documento do proprio grupo', async () => {
   await env.withSecurityRulesDisabled(async (c) => {
@@ -46,27 +46,34 @@ test('usuario de outro grupo nao le documento alheio', async () => {
   await assertFails(getDoc(doc(outro, 'collaboratorDocuments/d2')));
 });
 
-test('membro comum cria documento do proprio grupo', async () => {
-  const db = ctx('u1', 'grupo-1', 'member');
+test('membro com permissao de editar pessoas cria documento', async () => {
+  const db = ctx('u1', 'grupo-1', 'member', { perm: { pessoas: 'editar' } });
   await assertSucceeds(setDoc(doc(db, 'collaboratorDocuments/d3'), {
     groupId: 'grupo-1', collaboratorId: 'colab1', name: 'RG',
   }));
 });
 
-test('membro nao cria documento sequestrando outro grupo (hijack)', async () => {
+test('membro sem permissao de editar pessoas nao cria documento', async () => {
   const db = ctx('u1', 'grupo-1', 'member');
+  await assertFails(setDoc(doc(db, 'collaboratorDocuments/d3b'), {
+    groupId: 'grupo-1', collaboratorId: 'colab1', name: 'RG',
+  }));
+});
+
+test('membro nao cria documento sequestrando outro grupo (hijack)', async () => {
+  const db = ctx('u1', 'grupo-1', 'member', { perm: { pessoas: 'editar' } });
   await assertFails(setDoc(doc(db, 'collaboratorDocuments/d4'), {
     groupId: 'grupo-2', collaboratorId: 'colab1', name: 'RG',
   }));
 });
 
-test('membro comum exclui documento do proprio grupo (hard delete)', async () => {
+test('membro com permissao de editar pessoas exclui documento (hard delete)', async () => {
   await env.withSecurityRulesDisabled(async (c) => {
     await setDoc(doc(c.firestore(), 'collaboratorDocuments/d5'), {
       groupId: 'grupo-1', collaboratorId: 'colab1', name: 'X',
     });
   });
-  const db = ctx('u1', 'grupo-1', 'member');
+  const db = ctx('u1', 'grupo-1', 'member', { perm: { pessoas: 'editar' } });
   await assertSucceeds(deleteDoc(doc(db, 'collaboratorDocuments/d5')));
 });
 
@@ -86,7 +93,7 @@ test('update e sempre negado (metadado imutavel apos criado)', async () => {
       groupId: 'grupo-1', collaboratorId: 'colab1', name: 'X',
     });
   });
-  const db = ctx('u1', 'grupo-1', 'member');
+  const db = ctx('u1', 'grupo-1', 'member', { perm: { pessoas: 'editar' } });
   await assertFails(updateDoc(doc(db, 'collaboratorDocuments/d7'), {
     name: 'Y',
   }));

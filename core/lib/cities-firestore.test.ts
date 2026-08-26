@@ -21,6 +21,7 @@ describe('cityFromDoc', () => {
       name: 'Acajutiba', uf: 'BA', codigoIbge: '2900108', region: 'Nordeste',
       status: 'ativo', stage: 'first_contact',
       collaboratorId: 'c1', collaboratorName: 'João Silva',
+      parceiroId: 'p1', parceiroName: 'Maria Souza',
       estimatedAnnualRevenueCents: 7095852358,
       probability: 40,
       nextStepDescription: 'Agendar reunião', nextStepDueDate: '2026-08-01',
@@ -33,6 +34,8 @@ describe('cityFromDoc', () => {
     expect(result.stage).toBe('first_contact');
     expect(result.region).toBe('Nordeste');
     expect(result.collaboratorName).toBe('João Silva');
+    expect(result.parceiroId).toBe('p1');
+    expect(result.parceiroName).toBe('Maria Souza');
   });
 
   it('uses defaults for missing fields', () => {

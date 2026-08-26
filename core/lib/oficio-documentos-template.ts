@@ -95,7 +95,7 @@ export interface OficioParams {
 export const RESPONSAVEL_PADRAO: ResponsavelOficio = {
   nome: "Adriel Pereira Tavares",
   cargo: "Responsável Técnico · TI — Global Company Consultorias",
-  whatsapp: "(77) 99700-5880",
+  whatsapp: "(61) 98155-1533",
   email: "globalconsultorias@icloud.com",
 };
 

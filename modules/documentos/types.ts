@@ -43,6 +43,16 @@ export interface CityDocument {
   createdByName: string;
   createdAt?: string;
   source: "upload" | "generated";
+  /**
+   * O relatório que este arquivo complementa.
+   *
+   * É o que transforma um documento solto numa **análise sobre** algo: a aba de
+   * Relatórios agrupa por aqui, e a linha do tempo diz "Análise anexada a
+   * <relatório>" em vez de "documento anexado". Ausente no documento avulso,
+   * que continua sendo o caso comum.
+   */
+  relatorioId?: string;
+  relatorioTitulo?: string;
 }
 
 export interface CreateCityDocumentInput {
@@ -59,6 +69,8 @@ export interface CreateCityDocumentInput {
   createdBy: string;
   createdByName: string;
   source?: CityDocument["source"];
+  relatorioId?: string;
+  relatorioTitulo?: string;
 }
 
 export interface ContractAgentStats {

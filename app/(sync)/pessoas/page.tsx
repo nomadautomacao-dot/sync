@@ -8,27 +8,37 @@ import { Button, Flex, Result, Skeleton, Typography } from "antd";
 import { getFirebaseDb } from "@/core/lib/firebase-client";
 import { useAuth } from "@/core/providers/auth-provider";
 import type { CollaboratorItem, LinkFilter } from "@/core/lib/people-types";
-import { listCollaborators, createCollaborator } from "@/core/lib/collaborators-firestore";
+import {
+  listCollaborators,
+  createCollaborator,
+  updateCollaborator,
+  type CamposEditaveis,
+} from "@/core/lib/collaborators-firestore";
 
 import { PeopleKpis } from "./_components/people-kpis";
 import { PeopleTable } from "./_components/people-table";
 import { CollaboratorDetailPanel } from "./_components/collaborator-detail-panel";
-import { NewCollaboratorDialog } from "./_components/new-collaborator-dialog";
-
-const DEFAULT_GROUP_ID = "default";
+import { CollaboratorFormDialog } from "./_components/collaborator-form-dialog";
 
 export default function PessoasPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const db = getFirebaseDb();
-  const groupId = user?.groupId || DEFAULT_GROUP_ID;
+  // Sem fallback: sessão sem a claim de grupo falha fechado — misturar dados
+  // de grupos diferentes é pior que uma tela vazia. O auth-provider já impede
+  // o login sem claim; isto é defesa em profundidade.
+  const groupId = user?.groupId ?? "";
 
   const [search, setSearch] = useState("");
   const [linkFilter, setLinkFilter] = useState<LinkFilter>("todos");
   const [selectedCollaborator, setSelectedCollaborator] = useState<CollaboratorItem | null>(
     null,
   );
-  const [isNewDialogOpen, setIsNewDialogOpen] = useState(false);
+  /* `"novo"` abre em cadastro; um item abre em edição; `null` fecha. Um estado
+     só, porque abrir os dois ao mesmo tempo nunca faz sentido. */
+  const [alvoDoFormulario, setAlvoDoFormulario] = useState<CollaboratorItem | "novo" | null>(
+    null,
+  );
 
   const {
     data: collaborators = [],
@@ -38,6 +48,7 @@ export default function PessoasPage() {
   } = useQuery<CollaboratorItem[]>({
     queryKey: ["collaborators", groupId, search, linkFilter],
     queryFn: () => listCollaborators(db, groupId, { search, linkFilter }),
+    enabled: Boolean(groupId),
   });
 
   const createMutation = useMutation({
@@ -45,6 +56,19 @@ export default function PessoasPage() {
       createCollaborator(db, groupId, input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["collaborators"] });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, valores }: { id: string; valores: CamposEditaveis }) =>
+      updateCollaborator(db, id, valores),
+    onSuccess: (_resultado, { id, valores }) => {
+      queryClient.invalidateQueries({ queryKey: ["collaborators"] });
+      // A gaveta segura uma cópia do item, não uma consulta própria: sem este
+      // ajuste ela continuaria mostrando o dado antigo até ser fechada e reaberta.
+      setSelectedCollaborator((atual) =>
+        atual && atual.id === id ? { ...atual, ...valores } : atual,
+      );
     },
   });
 
@@ -56,6 +80,16 @@ export default function PessoasPage() {
     (sum, c) => sum + (c.commissionPaidYtd || 0),
     0,
   );
+
+  if (!groupId) {
+    return (
+      <Result
+        status="warning"
+        title="Acesso não configurado"
+        subTitle="Sua conta não está vinculada a um grupo. Fale com quem administra os acessos."
+      />
+    );
+  }
 
   if (isError) {
     return (
@@ -84,7 +118,7 @@ export default function PessoasPage() {
           </Typography.Text>
         </div>
 
-        <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsNewDialogOpen(true)}>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => setAlvoDoFormulario("novo")}>
           Nova Pessoa
         </Button>
       </Flex>
@@ -112,13 +146,18 @@ export default function PessoasPage() {
       <CollaboratorDetailPanel
         collaborator={selectedCollaborator}
         onClose={() => setSelectedCollaborator(null)}
+        onEdit={(pessoa) => setAlvoDoFormulario(pessoa)}
       />
 
-      <NewCollaboratorDialog
-        open={isNewDialogOpen}
-        onClose={() => setIsNewDialogOpen(false)}
-        onSubmit={async (input) => {
-          await createMutation.mutateAsync(input);
+      <CollaboratorFormDialog
+        alvo={alvoDoFormulario}
+        onClose={() => setAlvoDoFormulario(null)}
+        onSubmit={async (valores) => {
+          if (alvoDoFormulario === "novo" || alvoDoFormulario === null) {
+            await createMutation.mutateAsync(valores);
+          } else {
+            await updateMutation.mutateAsync({ id: alvoDoFormulario.id, valores });
+          }
         }}
       />
     </Flex>

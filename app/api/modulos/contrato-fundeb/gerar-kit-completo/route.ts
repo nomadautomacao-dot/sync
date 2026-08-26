@@ -1,7 +1,7 @@
 /**
  * POST /api/modulos/contrato-fundeb/gerar-kit-completo
  *
- * Gera o Kit Documental completo (15 DOCXs + documentação habilitatória)
+ * Gera o Kit Documental completo (14 DOCXs + documentação habilitatória)
  * em formato ZIP, aceitando multipart/form-data com:
  *   - Campo "contrato": JSON stringified dos dados ContratosFundebData
  *   - Campos de arquivo por categoria: "societario", "certidoes", "atestados",
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
         `${new Set(anexos.map((a) => a.categoria)).size} categoria(s)`,
     );
 
-    // 3. Gerar o ZIP completo (15 DOCXs + anexos)
+    // 3. Gerar o ZIP completo (14 DOCXs + anexos)
     const zipBuffer = await gerarKitContratoComAnexosZip(
       contratoData,
       anexos,

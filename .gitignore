@@ -73,6 +73,11 @@ yarn-error.log*
 !data/fnde/*.pdf
 *.doc
 *.docx
+# Exceção: os templates do kit de contratação direta. Eles são peça do produto,
+# não acervo — sem viajar no repositório o kit não sai no Cloud Run nem no app
+# desktop, que não enxergam ../Sync-Arquivos/. São 1,9 MB que mudam de ano em
+# ano. Ver core/lib/assets-paths.ts.
+!assets/contratos/Anexos_DOCX/*.docx
 /*.html
 relatorios_*/
 data/_sinopses/

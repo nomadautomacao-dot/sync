@@ -182,7 +182,7 @@ def draw_header(c: canvas.Canvas, title: str, subtitle: str | None = None, sourc
     c.drawString(left, PAGE_H - 44, "GLOBAL SYNC")
     c.setFillColor(TEXT)
     c.setFont("Body", 6.5)
-    c.drawString(left, PAGE_H - 54, "Global Services Company  |  Tel: (77) 99700-5880")
+    c.drawString(left, PAGE_H - 54, "Global Services Company  |  Tel: (61) 98155-1533")
     c.setFillColor(NAVY)
     c.setFont("BodyBold", 12.5)
     c.drawString(left, PAGE_H - 72, title)

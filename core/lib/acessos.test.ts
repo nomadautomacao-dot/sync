@@ -12,6 +12,7 @@ import {
   podeAtribuirPapel,
   podeVincularAoGrupo,
   tamanhoDasClaims,
+  metodosDeEntrada,
   usuariaDoRegistro,
   validarAlvo,
 } from "./acessos";
@@ -68,7 +69,6 @@ describe("claimsDeAcesso", () => {
       caixa: "nenhum",
       cidades: "nenhum",
       pipeline: "nenhum",
-      empresas: "nenhum",
       pessoas: "nenhum",
       documentos: "nenhum",
       modulos: "nenhum",
@@ -81,6 +81,39 @@ describe("claimsDeAcesso", () => {
 
   it("reprova claims acima do teto", () => {
     expect(claimsCabem({ lixo: "x".repeat(LIMITE_CLAIMS_BYTES) })).toBe(false);
+  });
+});
+
+describe("metodosDeEntrada", () => {
+  it("traduz os provedores para o nome que a tela mostra", () => {
+    expect(
+      metodosDeEntrada({
+        uid: "u",
+        providerData: [{ providerId: "password" }, { providerId: "google.com" }],
+      }),
+    ).toEqual(["Senha", "Google"]);
+  });
+
+  it("devolve lista vazia para quem nunca entrou", () => {
+    // Conta criada pela administradora, link de senha gerado, ninguém entrou.
+    // É informação, não falha — a tela diz isso em vez de mostrar "Senha".
+    expect(metodosDeEntrada({ uid: "u" })).toEqual([]);
+    expect(metodosDeEntrada({ uid: "u", providerData: [] })).toEqual([]);
+  });
+
+  it("não esconde provedor que não sabemos nomear", () => {
+    expect(metodosDeEntrada({ uid: "u", providerData: [{ providerId: "apple.com" }] })).toEqual([
+      "apple.com",
+    ]);
+  });
+
+  it("não repete o mesmo método", () => {
+    expect(
+      metodosDeEntrada({
+        uid: "u",
+        providerData: [{ providerId: "google.com" }, { providerId: "google.com" }],
+      }),
+    ).toEqual(["Google"]);
   });
 });
 

@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { LockOutlined, MailOutlined } from "@ant-design/icons";
+import { GoogleOutlined, LockOutlined, MailOutlined } from "@ant-design/icons";
 import {
   Alert,
   Badge,
@@ -35,6 +35,16 @@ const VERSAO_APP = `v${packageJson.version}`;
 
 const MENSAGENS_POR_CODIGO: Record<string, string> = {
   "auth/invalid-credential": "E-mail ou senha incorretos.",
+  // Fechar a janela do Google é desistência, não falha — e um alerta vermelho
+  // dizendo "erro" para quem simplesmente mudou de ideia assusta à toa.
+  "auth/popup-closed-by-user": "",
+  "auth/cancelled-popup-request": "",
+  "auth/popup-blocked":
+    "O navegador bloqueou a janela do Google. Libere as janelas pop-up para este endereço e tente de novo.",
+  "auth/unauthorized-domain":
+    "Este endereço ainda não está autorizado no Firebase para entrar com Google. Avise quem administra o sistema.",
+  "auth/account-exists-with-different-credential":
+    "Já existe uma conta com esse e-mail usando outro método. Entre com e-mail e senha desta vez.",
   "auth/user-not-found": "E-mail ou senha incorretos.",
   "auth/wrong-password": "E-mail ou senha incorretos.",
   "auth/invalid-email": "E-mail em formato inválido.",
@@ -62,7 +72,7 @@ interface ValoresLogin {
 
 export default function EntrarPage() {
   const router = useRouter();
-  const { user, loading, signIn } = useAuth();
+  const { user, loading, signIn, signInWithGoogle, ultimoEmail } = useAuth();
   const { token } = theme.useToken();
   const telas = Grid.useBreakpoint();
   const [form] = Form.useForm<ValoresLogin>();
@@ -73,8 +83,13 @@ export default function EntrarPage() {
   const emailDigitado = Form.useWatch("email", form) ?? "";
 
   const [enviando, setEnviando] = useState(false);
+  const [entrandoComGoogle, setEntrandoComGoogle] = useState(false);
   const [erroAuth, setErroAuth] = useState<string | null>(null);
   const [redefinindo, setRedefinindo] = useState(false);
+
+  // "Manter sessão ativa" vale para os dois caminhos de entrada — o Form é a
+  // fonte da verdade, e o botão do Google lê o mesmo valor.
+  const manterConectado = Form.useWatch("manterConectado", form) ?? true;
 
   // Status dinâmico da API
   const [statusApi, setStatusApi] = useState<{ ok: boolean; carregando: boolean }>({
@@ -121,6 +136,20 @@ export default function EntrarPage() {
     } catch (erro) {
       setErroAuth(mensagemDeErro(erro));
       setEnviando(false);
+    }
+  };
+
+  const aoEntrarComGoogle = async () => {
+    setEntrandoComGoogle(true);
+    setErroAuth(null);
+    try {
+      await signInWithGoogle(manterConectado);
+      // Sem `setEntrandoComGoogle(false)` no caminho feliz: a navegação para o
+      // painel desmonta a tela, e apagar o estado antes disso devolveria o
+      // botão ao normal por um instante, como se nada tivesse acontecido.
+    } catch (erro) {
+      setErroAuth(mensagemDeErro(erro) || null);
+      setEntrandoComGoogle(false);
     }
   };
 
@@ -242,7 +271,10 @@ export default function EntrarPage() {
             form={form}
             layout="vertical"
             requiredMark={false}
-            initialValues={{ manterConectado: false }}
+            // O `Form` só monta depois de `loading` virar `false`, então
+            // `ultimoEmail` já chegou do `localStorage` quando estes valores
+            // são lidos — `initialValues` vale uma vez, na montagem.
+            initialValues={{ manterConectado: true, email: ultimoEmail }}
             onFinish={aoEnviar}
             scrollToFirstError
             style={{ marginTop: 24 }}
@@ -259,7 +291,7 @@ export default function EntrarPage() {
                 prefix={<MailOutlined style={{ color: token.colorTextQuaternary }} />}
                 placeholder="usuario@globalcompany.com.br"
                 autoComplete="username"
-                autoFocus
+                autoFocus={!ultimoEmail}
               />
             </Form.Item>
 
@@ -284,6 +316,9 @@ export default function EntrarPage() {
                 id="senha"
                 prefix={<LockOutlined style={{ color: token.colorTextQuaternary }} />}
                 autoComplete="current-password"
+                // Com o e-mail já preenchido, o cursor começa onde ainda falta
+                // digitar algo. Sem ele, o foco fica no e-mail, como antes.
+                autoFocus={Boolean(ultimoEmail)}
               />
             </Form.Item>
 
@@ -292,11 +327,39 @@ export default function EntrarPage() {
             </Form.Item>
 
             <Form.Item style={{ marginBottom: 0 }}>
-              <Button type="primary" htmlType="submit" block loading={enviando}>
+              <Button
+                type="primary"
+                htmlType="submit"
+                block
+                loading={enviando}
+                disabled={entrandoComGoogle}
+              >
                 {enviando ? "Autenticando…" : "Acessar console"}
               </Button>
             </Form.Item>
           </Form>
+
+          <Divider plain style={{ margin: "20px 0" }}>
+            <Text type="secondary" style={{ fontSize: 11 }}>
+              ou
+            </Text>
+          </Divider>
+
+          <Button
+            block
+            icon={<GoogleOutlined />}
+            loading={entrandoComGoogle}
+            disabled={enviando}
+            onClick={aoEntrarComGoogle}
+          >
+            {entrandoComGoogle ? "Aguardando o Google…" : "Entrar com Google"}
+          </Button>
+          <Text
+            type="secondary"
+            style={{ display: "block", textAlign: "center", fontSize: 11, marginTop: 8 }}
+          >
+            Use a conta do mesmo e-mail cadastrado no Sync.
+          </Text>
 
           <Divider style={{ margin: "24px 0 16px" }} />
           <Text type="secondary" style={{ display: "block", textAlign: "center", fontSize: 11, fontFamily: "var(--font-sync-mono)" }}>

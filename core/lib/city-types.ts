@@ -21,13 +21,33 @@ export interface CityAccount {
   region?: string;
   status: string;
   stage: StageKey;
+  /**
+   * O responsável técnico pelo município — quem a equipe procura quando a
+   * cidade travar. O nome do campo é anterior à separação de papéis e fica
+   * como está para não migrar as cidades já cadastradas.
+   */
   collaboratorId?: string;
   collaboratorName?: string;
+  /**
+   * O parceiro que agenciou a entrada da Global no município. É papel
+   * distinto do responsável técnico: um abriu a porta, o outro responde pela
+   * operação — e comissão se calcula sobre o primeiro.
+   */
+  parceiroId?: string;
+  parceiroName?: string;
   estimatedAnnualRevenue: number; // in REAIS (converted from Firestore cents)
   probability: number; // 0-100
   nextStepDescription?: string;
   nextStepDueDate?: string;
   lastActivityAt?: string;
+  /**
+   * Quando a implantação começou — `YYYY-MM-DD`, normalmente a assinatura.
+   *
+   * Só faz sentido a partir do estágio contratual, e serve de semente para o
+   * cronograma: sem ela, quem for criar o cronograma teria de lembrar a data
+   * meses depois, e o que se lembra em vez de consultar vira prazo errado.
+   */
+  implantacaoInicio?: string;
 }
 
 export const STAGE_KEYS: StageKey[] = [

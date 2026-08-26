@@ -20,6 +20,13 @@ service firebase.storage {
       allow delete: if isSignedIn() && groupId == myGroupId();
     }
 
+    match /empresa-documentos/{groupId}/{categoria}/{fileName} {
+      allow read: if isSignedIn() && groupId == myGroupId();
+      allow create, update: if isSignedIn() && groupId == myGroupId()
+                            && request.resource.size < 20 * 1024 * 1024;
+      allow delete: if isSignedIn() && groupId == myGroupId();
+    }
+
     match /city-documents/{groupId}/{cityId}/{fileName} {
       allow read: if isSignedIn() && groupId == myGroupId();
       allow create, update: if isSignedIn() && groupId == myGroupId()

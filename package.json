@@ -1,10 +1,11 @@
 {
   "name": "sync",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "main": "desktop/main.js",
   "scripts": {
     "desktop": "electron .",
+    "desktop:dev": "electron . --dev-url=http://127.0.0.1:3100",
     "desktop:credenciais": "node scripts/desktop/credenciais-locais.mjs",
     "desktop:icones": "node scripts/desktop/gerar-icones.mjs",
     "desktop:preparar": "node --max-old-space-size=8192 node_modules/next/dist/bin/next build && node scripts/desktop/preparar-servidor.mjs",
@@ -42,7 +43,7 @@
     "dados:violencia-infantil": "node scripts/dados/gerar-violencia-infantil.mjs",
     "dados:ponderadas": "node --max-old-space-size=6144 scripts/dados/gerar-matriculas-ponderadas.mjs",
     "dados:trabalho-infantil": "node scripts/dados/gerar-trabalho-infantil.mjs",
-    "firebase:regras": "npx --yes firebase-tools@latest deploy --only firestore:rules,firestore:indexes"
+    "firebase:regras": "npx --yes firebase-tools@latest deploy --only firestore:rules,firestore:indexes,storage"
   },
   "dependencies": {
     "@ant-design/nextjs-registry": "^1.3.0",

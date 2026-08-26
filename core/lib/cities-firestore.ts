@@ -34,11 +34,14 @@ export function cityFromDoc(
     stage: (str(data.stage) ?? "mapping") as CityAccount["stage"],
     collaboratorId: str(data.collaboratorId),
     collaboratorName: str(data.collaboratorName),
+    parceiroId: str(data.parceiroId),
+    parceiroName: str(data.parceiroName),
     estimatedAnnualRevenue: centsToReais(num(data.estimatedAnnualRevenueCents)),
     probability: typeof data.probability === "number" ? data.probability : 10,
     nextStepDescription: str(data.nextStepDescription),
     nextStepDueDate: str(data.nextStepDueDate),
     lastActivityAt: str(data.lastActivityAt),
+    implantacaoInicio: str(data.implantacaoInicio),
   };
 }
 
@@ -56,6 +59,8 @@ export function cityDocFromInput(
     stage: input.stage ?? "mapping",
     collaboratorId: input.collaboratorId ?? null,
     collaboratorName: input.collaboratorName ?? null,
+    parceiroId: input.parceiroId ?? null,
+    parceiroName: input.parceiroName ?? null,
     estimatedAnnualRevenueCents: input.estimatedAnnualRevenue
       ? reaisToCents(input.estimatedAnnualRevenue)
       : 0,
@@ -63,6 +68,7 @@ export function cityDocFromInput(
     nextStepDescription: input.nextStepDescription ?? null,
     nextStepDueDate: input.nextStepDueDate ?? null,
     lastActivityAt: input.lastActivityAt ?? null,
+    implantacaoInicio: input.implantacaoInicio ?? null,
     deletedAt: null,
   };
 }
@@ -187,6 +193,34 @@ export async function ensureCity(
   }
 
   return existing;
+}
+
+/**
+ * Grava os dois papéis da cidade — parceiro que agenciou e responsável
+ * técnico. Campo limpo vira `null`, e não ausência: com `merge`, ausência
+ * deixaria o valor antigo de pé e "remover o responsável" não removeria nada.
+ */
+export async function updateCityResponsaveis(
+  db: Firestore,
+  cityId: string,
+  responsaveis: {
+    collaboratorId?: string;
+    collaboratorName?: string;
+    parceiroId?: string;
+    parceiroName?: string;
+  },
+): Promise<void> {
+  await setDoc(
+    doc(db, COLLECTION, cityId),
+    {
+      collaboratorId: responsaveis.collaboratorId ?? null,
+      collaboratorName: responsaveis.collaboratorName ?? null,
+      parceiroId: responsaveis.parceiroId ?? null,
+      parceiroName: responsaveis.parceiroName ?? null,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true },
+  );
 }
 
 export async function updateCityStage(

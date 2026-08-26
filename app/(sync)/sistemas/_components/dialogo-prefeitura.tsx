@@ -227,7 +227,7 @@ export function DialogoPrefeitura({ sistema, aberto, edicao, salvando, aoFechar,
             type="warning"
             showIcon
             style={{ marginBottom: 24 }}
-            message="A base do IBGE não respondeu"
+            title="A base do IBGE não respondeu"
             description="Dá para cadastrar mesmo assim: informe nome, UF e código IBGE à mão. Os indicadores do município podem ser preenchidos depois."
           />
         )}
@@ -266,7 +266,7 @@ export function DialogoPrefeitura({ sistema, aberto, edicao, salvando, aoFechar,
           <Alert
             type="info"
             showIcon
-            message={
+            title={
               <Space size={6} wrap>
                 Identificador
                 <Text code style={{ fontFamily: FONTE_MONO }}>
@@ -436,7 +436,7 @@ function PainelDoDossie({
           <Alert
             type="info"
             showIcon
-            message="Sem Censo Escolar para este município"
+            title="Sem Censo Escolar para este município"
             description="O cadastro segue normalmente; o sistema só não terá a linha de base para medir a implantação."
           />
         )}

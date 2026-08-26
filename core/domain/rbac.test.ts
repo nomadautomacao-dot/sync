@@ -62,7 +62,6 @@ describe("permissoesPadrao", () => {
     expect(p.pipeline).toBe("editar");
     expect(p.modulos).toBe("editar");
     expect(p.pessoas).toBe("ver");
-    expect(p.empresas).toBe("ver");
     expect(p.ajustes).toBe("nenhum");
   });
 

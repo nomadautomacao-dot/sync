@@ -28,7 +28,8 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const { montarAmbiente, caminhoCredenciais, CREDENCIAIS } = require("./ambiente");
-const { iniciarServidor, encerrarServidor } = require("./servidor");
+const { iniciarServidor, encerrarServidor, esperarResponder } = require("./servidor");
+const { ehJanelaDeLogin } = require("./login-google");
 const { montarMenu } = require("./menu");
 
 // Precisa vir antes de qualquer `getPath("userData")`: é o nome que decide a
@@ -38,6 +39,43 @@ app.setName("Global Sync");
 
 const EMPACOTADO = app.isPackaged;
 const RAIZ_REPO = path.join(__dirname, "..");
+
+/**
+ * Modo de desenvolvimento: a janela aponta para um `next dev` já rodando.
+ *
+ * Sem isto, testar um ajuste de tela dentro do app custava um
+ * `npm run desktop:preparar` inteiro — `next build` mais a cópia de 675 MB de
+ * standalone — para ver uma mudança de uma linha. Com o `--dev-url`, o Electron
+ * não sobe servidor nenhum: ele abre a janela sobre a porta 3100, e o
+ * hot reload do Next vale dentro do app como vale no navegador.
+ *
+ * A opção vem por argumento, e não por variável de ambiente, porque
+ * `VAR=valor comando` não funciona no `cmd` do Windows — e o app roda nos dois.
+ */
+const URL_DEV = (() => {
+  const arg = process.argv.find((a) => a.startsWith("--dev-url="));
+  if (!arg) return null;
+  const valor = arg.slice("--dev-url=".length).trim();
+  // Só localhost: o `--dev-url` desliga a lista branca de navegação, e apontar
+  // a janela para um host qualquer transformaria a opção numa porta de entrada.
+  return /^https?:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(valor) ? valor : null;
+})();
+
+/**
+ * O app de desenvolvimento tem identidade própria, e isso não é preferência.
+ *
+ * `requestSingleInstanceLock()` é chaveado pela pasta `userData`. Com a mesma
+ * pasta do app instalado, abrir o modo dev enquanto o app está aberto fazia o
+ * processo **sair em silêncio** — sem janela, sem erro, sem uma linha no
+ * registro, porque o `quit()` acontece antes de o registro existir. Passei por
+ * isso: o app de desenvolvimento não abria e não dizia por quê.
+ *
+ * Pasta separada resolve os dois lados: a trava deixa de colidir, e a sessão e
+ * as credenciais de desenvolvimento param de dividir espaço com as de trabalho.
+ */
+if (URL_DEV) {
+  app.setPath("userData", path.join(app.getPath("appData"), "Global Sync (dev)"));
+}
 
 /**
  * Onde o servidor mora nas duas situações. Empacotado ele fica em
@@ -55,7 +93,11 @@ const RAIZ_SERVIDOR = EMPACOTADO
  * desenvolvimento e empacotado — e é o mesmo arquivo que assina o rodapé de
  * todos os dossiês.
  */
-const ICONE = path.join(RAIZ_SERVIDOR, "public", "global-sync-icon.png");
+// Em `--dev-url` não há standalone construído; o ícone vem do repositório, que
+// é o mesmo arquivo que o `desktop:preparar` copiaria para junto do servidor.
+const ICONE = URL_DEV
+  ? path.join(RAIZ_REPO, "public", "global-sync-icon.png")
+  : path.join(RAIZ_SERVIDOR, "public", "global-sync-icon.png");
 
 let janela = null;
 let servidor = null;
@@ -143,7 +185,8 @@ function abrirCredenciais() {
   shell.openPath(arquivo);
 }
 
-function criarJanela(porta) {
+/** @param {string} base origem do servidor, ex. `http://127.0.0.1:51737` */
+function criarJanela(base) {
   janela = new BrowserWindow({
     width: 1440,
     height: 900,
@@ -175,12 +218,31 @@ function criarJanela(porta) {
   // Link externo abre no navegador do sistema. Sem isto, clicar numa fonte
   // (portal do FNDE, painel do INEP) sequestraria a janela do app, e não há
   // botão "voltar" visível para desfazer.
+  //
+  // A exceção é o "Entrar com Google". O `signInWithPopup` do Firebase abre uma
+  // janela e conversa com ela por `postMessage` ao terminar; mandada para o
+  // Safari, a conversa nunca volta — o usuário faz o login, vê a página de
+  // sucesso no navegador e o app continua parado em "Aguardando o Google…".
+  // Estas duas origens abrem como janela de verdade, filha desta.
   janela.webContents.setWindowOpenHandler(({ url }) => {
+    if (ehJanelaDeLogin(url)) {
+      return {
+        action: "allow",
+        overrideBrowserWindowOptions: {
+          width: 520,
+          height: 640,
+          autoHideMenuBar: true,
+          // Modal da janela principal: some junto se o app for fechado no meio,
+          // em vez de virar janela órfã pedindo senha do Google.
+          parent: janela,
+        },
+      };
+    }
     shell.openExternal(url);
     return { action: "deny" };
   });
   janela.webContents.on("will-navigate", (evento, url) => {
-    if (!url.startsWith(`http://127.0.0.1:${porta}`)) {
+    if (!url.startsWith(base) && !ehJanelaDeLogin(url)) {
       evento.preventDefault();
       shell.openExternal(url);
     }
@@ -198,7 +260,7 @@ function criarJanela(porta) {
     });
   });
 
-  janela.loadURL(`http://127.0.0.1:${porta}/entrar`);
+  janela.loadURL(`${base}/entrar`);
 }
 
 async function subir() {
@@ -207,6 +269,24 @@ async function subir() {
   // Trunca a cada abertura: interessa o que aconteceu nesta sessão, e um log
   // que só cresce vira um arquivo de centenas de MB numa máquina de campo.
   fs.writeFileSync(arquivoRegistro, `— sessão iniciada —\n`);
+
+  // Em desenvolvimento o servidor é o `next dev`, que já roda fora daqui com o
+  // `.env.local` dele. O Electron não sobe processo nenhum nem monta ambiente:
+  // só espera a porta responder e abre a janela em cima dela.
+  if (URL_DEV) {
+    registrar(`modo desenvolvimento: usando ${URL_DEV}`);
+    const motivo = await esperarResponder(URL_DEV, (linha) => registrar(linha));
+    if (motivo) {
+      mostrarAviso(
+        "O servidor de desenvolvimento não respondeu",
+        `<p>Esperei por <code>${URL_DEV}</code> e não obtive resposta:</p><p><code>${motivo}</code></p>
+         <p>Suba o Next em outro terminal e abra o app de novo:</p><p><code>npm run dev</code></p>`,
+      );
+      return;
+    }
+    criarJanela(URL_DEV);
+    return;
+  }
 
   if (!fs.existsSync(path.join(RAIZ_SERVIDOR, "server.js"))) {
     mostrarAviso(
@@ -251,7 +331,7 @@ async function subir() {
   try {
     const iniciado = await iniciarServidor({ raizServidor: RAIZ_SERVIDOR, env, aoRegistrar: registrar });
     servidor = iniciado.processo;
-    criarJanela(iniciado.porta);
+    criarJanela(`http://127.0.0.1:${iniciado.porta}`);
   } catch (erro) {
     // Também no arquivo, e não só na tela: a tela some quando o usuário fecha a
     // janela, e o que sobra para diagnosticar à distância é o registro.

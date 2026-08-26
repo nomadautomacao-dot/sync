@@ -1,19 +1,38 @@
 "use client";
 
-import { Avatar, Descriptions, Drawer, Flex, Space, Tabs, Tag, Typography, theme } from "antd";
+import { EditOutlined } from "@ant-design/icons";
+import {
+  Avatar,
+  Button,
+  Descriptions,
+  Drawer,
+  Flex,
+  Space,
+  Tabs,
+  Tag,
+  Typography,
+  theme,
+} from "antd";
+import type { TabsProps } from "antd";
 
 import type { CollaboratorItem } from "@/core/lib/people-types";
 import {
   collaboratorInitials,
   collaboratorLinkCategory,
   formatCompactCurrency,
+  linkDeWhatsapp,
+  whatsappDoColaborador,
 } from "@/core/lib/people-types";
+import { AcessoDaPessoa } from "@/core/components/acessos/acesso-da-pessoa";
+import { podeAdministrarAcessos } from "@/core/domain/rbac";
+import { useAuth } from "@/core/providers/auth-provider";
 
 interface CollaboratorDetailPanelProps {
   /* `null` fecha a gaveta — a página mantém sempre montado o mesmo componente
      em vez de montar/desmontar condicionalmente. */
   collaborator: CollaboratorItem | null;
   onClose: () => void;
+  onEdit: (collaborator: CollaboratorItem) => void;
 }
 
 function tonalidadeDoStatus(status: string): "success" | "warning" | "default" {
@@ -27,15 +46,49 @@ function tonalidadeDoStatus(status: string): "success" | "warning" | "default" {
 export function CollaboratorDetailPanel({
   collaborator,
   onClose,
+  onEdit,
 }: CollaboratorDetailPanelProps) {
   const { token } = theme.useToken();
+  const { user } = useAuth();
+
+  const whatsapp = collaborator ? whatsappDoColaborador(collaborator) : null;
+  const urlDoWhatsapp = whatsapp ? linkDeWhatsapp(whatsapp.numero) : null;
+
+  /* A aba de acesso carrega a grade de áreas, que é uma tabela de duas colunas:
+     em 450px ela espreme o rótulo da área contra os três botões de nível. */
+  const administraAcessos = podeAdministrarAcessos(user?.groupRole ?? "viewer");
+
+  const abasDeAcesso: NonNullable<TabsProps["items"]> =
+    collaborator && administraAcessos
+      ? [
+          {
+            key: "acesso",
+            label: "Acesso ao sistema",
+            children: (
+              <AcessoDaPessoa
+                nome={collaborator.fullName}
+                email={collaborator.email}
+                papelDeQuemEdita={user?.groupRole ?? "viewer"}
+                uidDeQuemEdita={user?.id ?? ""}
+              />
+            ),
+          },
+        ]
+      : [];
 
   return (
     <Drawer
       open={Boolean(collaborator)}
       onClose={onClose}
-      size={450}
+      size={administraAcessos ? 720 : 450}
       destroyOnHidden
+      extra={
+        collaborator && (
+          <Button icon={<EditOutlined />} onClick={() => onEdit(collaborator)}>
+            Editar
+          </Button>
+        )
+      }
       title={
         collaborator && (
           <Space size={12} align="start">
@@ -88,7 +141,30 @@ export function CollaboratorDetailPanel({
                       {
                         key: "whatsapp",
                         label: "WhatsApp",
-                        children: collaborator.whatsapp || "—",
+                        children: whatsapp ? (
+                          <Space size={6} wrap>
+                            {urlDoWhatsapp ? (
+                              <Typography.Link
+                                href={urlDoWhatsapp}
+                                target="_blank"
+                                rel="noreferrer"
+                              >
+                                {whatsapp.numero}
+                              </Typography.Link>
+                            ) : (
+                              whatsapp.numero
+                            )}
+                            {/* Dizer de onde veio o número evita a dúvida de
+                                quem procura o campo próprio e o encontra vazio. */}
+                            {whatsapp.mesmoDoTelefone && (
+                              <Typography.Text type="secondary" style={{ fontSize: 11.5 }}>
+                                mesmo do telefone
+                              </Typography.Text>
+                            )}
+                          </Space>
+                        ) : (
+                          "—"
+                        ),
                       },
                       { key: "uf", label: "UF", children: collaborator.state || "—" },
                       {
@@ -184,6 +260,7 @@ export function CollaboratorDetailPanel({
                 </Flex>
               ),
             },
+            ...abasDeAcesso,
           ]}
         />
       )}

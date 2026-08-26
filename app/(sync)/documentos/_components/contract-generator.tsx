@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   AuditOutlined,
   CheckCircleOutlined,
@@ -26,6 +27,7 @@ import {
   Input,
   InputNumber,
   Row,
+  Segmented,
   Select,
   Space,
   Statistic,
@@ -34,11 +36,26 @@ import {
   theme,
 } from "antd";
 
+import {
+  VIAS_DE_CONTRATACAO,
+  avisoDeLimite,
+  fundamentoPadrao,
+  viaPorKey,
+  type ViaDeContratacao,
+} from "@/core/domain/contratacao-direta";
+import {
+  caminhoNoKit,
+  resumoDaHabilitacao,
+} from "@/core/domain/habilitacao";
+import { lerResumoDoKit, type ResumoDoKit } from "@/core/domain/kit-resumo";
 import type { CityAccount } from "@/core/lib/city-types";
+import { getFirebaseDb } from "@/core/lib/firebase-client";
+import { useAuth } from "@/core/providers/auth-provider";
 import type {
   ContratoFundebCampoMeta,
   ContratosFundebData,
 } from "@/modules/contrato-fundeb/types";
+import { listDocumentosDaHabilitacao } from "@/modules/documentos/habilitacao-firestore";
 import type { ContractAgentStats } from "@/modules/documentos/types";
 
 interface AgentResponse {
@@ -83,18 +100,55 @@ export function ContractGenerator({
 }: ContractGeneratorProps) {
   const { message } = App.useApp();
   const { token } = theme.useToken();
+  const { user } = useAuth();
   const [cityId, setCityId] = useState("");
   const [monthlyValue, setMonthlyValue] = useState("27500");
   const [months, setMonths] = useState("12");
   const [year, setYear] = useState(String(new Date().getFullYear()));
   const [analyzing, setAnalyzing] = useState(false);
   const [generating, setGenerating] = useState(false);
+  const [pendencias, setPendencias] = useState<ResumoDoKit | null>(null);
   const [archive, setArchive] = useState(true);
+  /* A via da contratação direta. O padrão é dispensa — decisão do dono
+     (2026-08-14): a inexigibilidade exige inviabilidade de competição, e o
+     caso comum aqui é o que a lei dispensa. Trocar aqui muda a nomenclatura
+     de todas as peças e o fundamento do parecer. */
+  const [via, setVia] = useState<ViaDeContratacao>("dispensa");
+  const [fundamentoId, setFundamentoId] = useState<string>(
+    fundamentoPadrao("dispensa").id,
+  );
   const [result, setResult] = useState<AgentResponse | null>(null);
 
   const selectedCity = useMemo(
     () => cities.find((city) => city.id === cityId),
     [cities, cityId],
+  );
+
+  /* A habilitação da empresa (Documentos › Habilitação) entra no ZIP junto
+     com as 14 peças. Mesma chave de query da aba, então anexar lá reflete
+     aqui sem recarregar. */
+  const { data: documentosDaHabilitacao = [] } = useQuery({
+    queryKey: ["empresa-documentos", user?.groupId],
+    queryFn: () => listDocumentosDaHabilitacao(getFirebaseDb(), user!.groupId),
+    enabled: Boolean(user?.groupId),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const resumoHabilitacao = useMemo(
+    () => resumoDaHabilitacao(documentosDaHabilitacao, new Date()),
+    [documentosDaHabilitacao],
+  );
+
+  /* Dispensa por valor tem teto legal, e o valor global é o que conta — não o
+     mensal. Um contrato anual de seis dígitos entrando como dispensa por valor
+     é o erro que este aviso existe para pegar antes do protocolo. */
+  const avisoDoLimite = useMemo(
+    () =>
+      avisoDeLimite(
+        fundamentoId,
+        Math.round(Number(monthlyValue || 0) * Number(months || 0) * 100),
+      ),
+    [fundamentoId, monthlyValue, months],
   );
 
   const analyze = async () => {
@@ -152,10 +206,21 @@ export function ContractGenerator({
     if (!result || !selectedCity) return;
     setGenerating(true);
     try {
+      /* A habilitação viaja com o pedido: quem enxerga o Firestore é o
+         browser (a rota atende também o smoke test, sem sessão), e é o
+         acervo — não a pasta local de quem montou o kit — que manda hoje. */
+      const habilitacao = documentosDaHabilitacao.map((documento) => ({
+        caminho: caminhoNoKit(documento),
+        url: documento.downloadUrl,
+      }));
+
       const response = await fetch("/api/contratos-fundeb/generate-kit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contrato: result.contrato }),
+        body: JSON.stringify({
+          contrato: { ...result.contrato, via, fundamentoId },
+          habilitacao,
+        }),
       });
       if (!response.ok) {
         const data = (await response.json().catch(() => null)) as {
@@ -164,6 +229,7 @@ export function ContractGenerator({
         throw new Error(data?.error || "Falha ao gerar o kit documental.");
       }
 
+      const resumo = lerResumoDoKit(response.headers.get("X-Kit-Resumo"));
       const blob = await response.blob();
       const disposition = response.headers.get("Content-Disposition") ?? "";
       const responseName = disposition.match(/filename="([^"]+)"/)?.[1];
@@ -197,6 +263,17 @@ export function ContractGenerator({
           ? "Kit gerado, baixado e salvo no acervo."
           : "Kit gerado e baixado.",
       );
+
+      /* O kit sai mesmo com lacuna, e é aqui que a pessoa fica sabendo disso.
+         Sem este aviso, "Kit gerado" e "kit pronto para protocolar" viram a
+         mesma frase — e a diferença só apareceria no balcão da prefeitura. A
+         lista completa vai no PENDENCIAS.txt dentro do ZIP, porque a tela
+         fecha e o arquivo fica. */
+      if (resumo.pendencias.length || resumo.avisos.length) {
+        setPendencias(resumo);
+      } else {
+        setPendencias(null);
+      }
     } catch (error) {
       message.error(
         error instanceof Error ? error.message : "Não foi possível gerar o kit.",
@@ -309,19 +386,69 @@ export function ContractGenerator({
               </Form.Item>
             </Flex>
 
+            <Form.Item label="Via da contratação direta">
+              <Segmented
+                block
+                value={via}
+                onChange={(valor) => {
+                  const escolhida = valor as ViaDeContratacao;
+                  setVia(escolhida);
+                  // O fundamento pertence à via: mantê-lo ao trocar produziria
+                  // uma dispensa fundamentada no artigo da inexigibilidade.
+                  setFundamentoId(fundamentoPadrao(escolhida).id);
+                  setResult(null);
+                }}
+                options={VIAS_DE_CONTRATACAO.map((v) => ({
+                  value: v.key,
+                  label: v.nomeCurto,
+                }))}
+              />
+              <Typography.Text
+                type="secondary"
+                style={{ fontSize: 11, display: "block", marginTop: 6 }}
+              >
+                {viaPorKey(via).descricao}
+              </Typography.Text>
+            </Form.Item>
+
+            <Form.Item label="Fundamento legal">
+              <Select
+                value={fundamentoId}
+                onChange={(valor) => {
+                  setFundamentoId(valor);
+                  setResult(null);
+                }}
+                options={viaPorKey(via).fundamentos.map((f) => ({
+                  value: f.id,
+                  label: f.rotulo,
+                }))}
+              />
+            </Form.Item>
+
+            {avisoDoLimite && (
+              <Alert
+                type="warning"
+                showIcon
+                style={{ marginBottom: 16 }}
+                title="O valor não cabe nesta hipótese"
+                description={avisoDoLimite}
+              />
+            )}
+
             <Card size="small" style={{ background: token.colorFillQuaternary }}>
               <Flex align="center" gap={8}>
                 <AuditOutlined style={{ color: token.colorTextSecondary }} />
                 <Typography.Text strong style={{ fontSize: 11 }}>
-                  Base legal do modelo
+                  {viaPorKey(via).artigo}
                 </Typography.Text>
               </Flex>
               <Typography.Paragraph
                 type="secondary"
                 style={{ marginTop: 8, marginBottom: 0, fontSize: 11 }}
               >
-                Lei Federal nº 14.133/2021, com estrutura de DFD, ETP, Termo de
-                Referência, pareceres, ratificação, homologação e minuta.
+                Estrutura de DFD, ETP, Termo de Referência, pareceres,
+                ratificação, homologação e minuta — todas as peças saem com a
+                nomenclatura e o fundamento da via escolhida.
               </Typography.Paragraph>
             </Card>
           </Form>
@@ -452,6 +579,71 @@ export function ContractGenerator({
                   padding: "16px 20px",
                 }}
               >
+                {/* O que vai de habilitação junto das 14 peças. Sem este
+                    aviso, um kit sairia sem certidão nenhuma — ou com uma
+                    vencida — e só o setor de licitação da prefeitura veria. */}
+                <Alert
+                  type={
+                    resumoHabilitacao.vencidos > 0
+                      ? "error"
+                      : resumoHabilitacao.pronta
+                        ? "success"
+                        : "warning"
+                  }
+                  showIcon
+                  style={{ marginBottom: 12 }}
+                  title={
+                    resumoHabilitacao.total === 0
+                      ? "Nenhum documento de habilitação anexado"
+                      : `${resumoHabilitacao.total} documento(s) de habilitação entram neste kit`
+                  }
+                  description={
+                    resumoHabilitacao.vencidos > 0
+                      ? `${resumoHabilitacao.vencidos} está(ão) vencido(s). Substitua na aba Habilitação antes de gerar.`
+                      : resumoHabilitacao.categoriasFaltando.length > 0
+                        ? `Falta anexar: ${resumoHabilitacao.categoriasFaltando
+                            .map((categoria) => categoria.nome)
+                            .join(", ")}.`
+                        : "Habilitação completa e dentro da validade."
+                  }
+                />
+                {pendencias && (
+                  <Alert
+                    type="warning"
+                    showIcon
+                    icon={<WarningOutlined />}
+                    closable
+                    onClose={() => setPendencias(null)}
+                    style={{ marginBottom: 12 }}
+                    title={
+                      pendencias.pendencias.length
+                        ? `Kit gerado com ${pendencias.pendencias.length} campo(s) a preencher à mão`
+                        : "Kit gerado com ressalvas"
+                    }
+                    description={
+                      <>
+                        {pendencias.pendencias.length > 0 && (
+                          <div style={{ fontSize: 11 }}>
+                            Procure por <b>A INFORMAR</b> nas peças:{" "}
+                            {pendencias.pendencias.slice(0, 6).join(", ")}
+                            {pendencias.pendencias.length > 6 &&
+                              ` e mais ${pendencias.pendencias.length - 6}`}
+                            .
+                          </div>
+                        )}
+                        {pendencias.avisos.map((aviso) => (
+                          <div key={aviso} style={{ fontSize: 11, marginTop: 4 }}>
+                            {aviso}
+                          </div>
+                        ))}
+                        <div style={{ fontSize: 11, marginTop: 4 }}>
+                          A lista completa está em <b>PENDENCIAS.txt</b>, dentro
+                          do ZIP.
+                        </div>
+                      </>
+                    }
+                  />
+                )}
                 <Checkbox
                   checked={archive}
                   onChange={(event) => setArchive(event.target.checked)}

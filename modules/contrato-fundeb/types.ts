@@ -120,4 +120,12 @@ export interface ContratosFundebData {
   foroUF?: string;
   fundoCNPJ?: string;
   exercicio?: string;
+  /**
+   * A via da contratação direta: `"dispensa"` (Art. 75) ou
+   * `"inexigibilidade"` (Art. 74). Decide a nomenclatura de todas as peças e
+   * o fundamento do parecer — ver `core/domain/contratacao-direta.ts`.
+   */
+  via?: "dispensa" | "inexigibilidade";
+  /** O inciso/alínea escolhido dentro da via, ex.: `"75-II"`. */
+  fundamentoId?: string;
 }

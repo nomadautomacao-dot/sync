@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getSessionUser } from "@/core/lib/auth";
 import { firebaseAuth } from "@/core/lib/firebase-admin";
+import { registrarAcesso } from "@/core/lib/acessos-registro";
 import { registrarErro } from "@/core/lib/structured-log";
 import {
   claimsCabem,
@@ -101,6 +102,26 @@ export async function PATCH(request: Request, contexto: Contexto) {
     await auth.setCustomUserClaims(uid, claims);
     if (desativar !== undefined) await auth.updateUser(uid, { disabled: desativar });
 
+    const papelAnterior = normalizarPapel(registro.customClaims?.groupRole);
+    await registrarAcesso({
+      groupId: sessionUser.groupId,
+      atorUid: sessionUser.id,
+      atorEmail: sessionUser.email,
+      acao:
+        desativar === true
+          ? "acesso.desativado"
+          : desativar === false
+            ? "acesso.reativado"
+            : "acesso.editado",
+      alvo: uid,
+      detalhe:
+        desativar !== undefined
+          ? `${registro.email ?? uid} ${desativar ? "desativada" : "reativada"}.`
+          : papelAnterior === papel
+            ? `Permissões de ${registro.email ?? uid} ajustadas.`
+            : `Papel de ${registro.email ?? uid}: ${papelAnterior} → ${papel}.`,
+    });
+
     const atualizado = await auth.getUser(uid);
     return NextResponse.json({
       usuaria: usuariaDoRegistro(atualizado as unknown as RegistroFirebase),
@@ -141,6 +162,16 @@ export async function POST(_request: Request, contexto: Contexto) {
         { status: 404 },
       );
     }
+
+    await registrarAcesso({
+      groupId: sessionUser.groupId,
+      atorUid: sessionUser.id,
+      atorEmail: sessionUser.email,
+      acao: "acesso.link_de_senha_reenviado",
+      alvo: uid,
+      // O link em si nunca entra no detalhe — ver a nota no topo do lib.
+      detalhe: `Novo link de definição de senha gerado para ${registro.email}.`,
+    });
 
     return NextResponse.json({
       linkDeSenha: await auth.generatePasswordResetLink(registro.email),

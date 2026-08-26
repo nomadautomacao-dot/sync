@@ -58,8 +58,9 @@ import {
 
 import { ContractGenerator } from "./_components/contract-generator";
 import { DocumentUploadDialog } from "./_components/document-upload-dialog";
+import { Habilitacao } from "./_components/habilitacao";
 
-type WorkspaceTab = "acervo" | "gerar";
+type WorkspaceTab = "acervo" | "habilitacao" | "gerar";
 
 /**
  * Parâmetros que o formulário de busca embutido do `ProTable` devolve. A
@@ -642,6 +643,17 @@ export default function DocumentosPage() {
                 )}
               </Flex>
             ),
+          },
+          {
+            /* Entre o acervo (documentos dos municípios) e a geração: é o que
+               a Global precisa ter em ordem *antes* de montar qualquer kit. */
+            key: "habilitacao",
+            label: (
+              <span>
+                <SafetyCertificateOutlined /> Habilitação
+              </span>
+            ),
+            children: <Habilitacao />,
           },
           {
             key: "gerar",

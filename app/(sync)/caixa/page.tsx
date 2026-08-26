@@ -28,6 +28,7 @@ import {
   Segmented,
   Space,
   Statistic,
+  Tabs,
   Tag,
   Typography,
   theme,
@@ -38,6 +39,8 @@ import { listCities } from "@/core/lib/cities-firestore";
 import { useAuth } from "@/core/providers/auth-provider";
 import { listCityReports } from "@/modules/cidades/city-reports-firestore";
 import { listCityDocuments } from "@/modules/documentos/documentos-firestore";
+
+import { Mural } from "./_components/mural";
 
 const { Text, Title } = Typography;
 const FONTE_MONO = "var(--font-sync-mono)";
@@ -142,12 +145,19 @@ export default function CaixadeentradaPage() {
 
     // Cidades criadas/atualizadas
     for (const city of cities) {
-      const dt = new Date(city.lastActivityAt || Date.now());
+      /* Cidade sem atividade registrada não recebe a hora de agora: fingir o
+         instante da leitura a colocaria no topo do histórico como se algo
+         tivesse acabado de acontecer. Ausência aqui é "—", igual ao ramo dos
+         documentos logo acima. */
+      const registradoEm = city.lastActivityAt ?? "";
+      const dt = registradoEm ? new Date(registradoEm) : null;
       list.push({
         id: `city-${city.id}`,
-        timestamp: city.lastActivityAt || new Date().toISOString(),
-        formattedDate: dt.toLocaleDateString("pt-BR"),
-        formattedTime: dt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }),
+        timestamp: registradoEm,
+        formattedDate: dt ? dt.toLocaleDateString("pt-BR") : "—",
+        formattedTime: dt
+          ? dt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+          : "—",
         type: "cidade",
         typeLabel: "Município",
         title: `${city.name} / ${city.uf}`,
@@ -263,10 +273,11 @@ export default function CaixadeentradaPage() {
             />
             <div>
               <Title level={4} style={{ margin: 0 }}>
-                Caixa de Entrada & Auditoria
+                Caixa de entrada
               </Title>
               <Text type="secondary" style={{ fontSize: 12 }}>
-                Histórico cronológico de eventos, emissões e alterações no workspace do grupo.
+                O mural da equipe — recados, perguntas e arquivos — e o histórico
+                do que o sistema registrou.
               </Text>
             </div>
           </Flex>
@@ -276,92 +287,114 @@ export default function CaixadeentradaPage() {
         </Flex>
       </Card>
 
-      {/* Cards de Métricas */}
-      <Row gutter={[14, 14]}>
-        <Col xs={24} sm={12} md={6}>
-          <Card size="small">
-            <Statistic
-              title="Total de Eventos"
-              value={events.length}
-              prefix={<HistoryOutlined style={{ color: token.colorPrimary }} />}
-              styles={{ content: { fontFamily: FONTE_MONO } }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card size="small">
-            <Statistic
-              title="Relatórios Emitidos"
-              value={reports.length}
-              prefix={<FileTextOutlined style={{ color: token.purple }} />}
-              styles={{ content: { fontFamily: FONTE_MONO } }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card size="small">
-            <Statistic
-              title="Acervo de Documentos"
-              value={documents.length}
-              prefix={<SafetyCertificateOutlined style={{ color: token.colorInfo }} />}
-              styles={{ content: { fontFamily: FONTE_MONO } }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} md={6}>
-          <Card size="small">
-            <Statistic
-              title="Municípios na Carteira"
-              value={cities.length}
-              prefix={<CheckCircleOutlined style={{ color: token.colorSuccess }} />}
-              styles={{ content: { fontFamily: FONTE_MONO } }}
-            />
-          </Card>
-        </Col>
-      </Row>
+      {/* Duas naturezas na mesma tela, e a ordem diz qual manda: o mural é
+          onde as pessoas escrevem; a auditoria é o que o sistema registrou.
+          Fundir as duas faria o recado de alguém disputar espaço com trinta
+          linhas de emissão automática — e a conversa sempre perde. */}
+      <Tabs
+        defaultActiveKey="mural"
+        items={[
+          {
+            key: "mural",
+            label: "Mural da equipe",
+            children: <Mural />,
+          },
+          {
+            key: "auditoria",
+            label: `Auditoria (${events.length})`,
+            children: (
+              <Flex vertical gap={14}>
+          {/* Cards de Métricas */}
+          <Row gutter={[14, 14]}>
+            <Col xs={24} sm={12} md={6}>
+              <Card size="small">
+                <Statistic
+                  title="Total de Eventos"
+                  value={events.length}
+                  prefix={<HistoryOutlined style={{ color: token.colorPrimary }} />}
+                  styles={{ content: { fontFamily: FONTE_MONO } }}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} md={6}>
+              <Card size="small">
+                <Statistic
+                  title="Relatórios Emitidos"
+                  value={reports.length}
+                  prefix={<FileTextOutlined style={{ color: token.purple }} />}
+                  styles={{ content: { fontFamily: FONTE_MONO } }}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} md={6}>
+              <Card size="small">
+                <Statistic
+                  title="Acervo de Documentos"
+                  value={documents.length}
+                  prefix={<SafetyCertificateOutlined style={{ color: token.colorInfo }} />}
+                  styles={{ content: { fontFamily: FONTE_MONO } }}
+                />
+              </Card>
+            </Col>
+            <Col xs={24} sm={12} md={6}>
+              <Card size="small">
+                <Statistic
+                  title="Municípios na Carteira"
+                  value={cities.length}
+                  prefix={<CheckCircleOutlined style={{ color: token.colorSuccess }} />}
+                  styles={{ content: { fontFamily: FONTE_MONO } }}
+                />
+              </Card>
+            </Col>
+          </Row>
 
-      {/* Tabela Principal de Auditoria */}
-      <Card size="small">
-        <Flex justify="space-between" align="center" style={{ marginBottom: 12 }} wrap="wrap" gap={10}>
-          <Segmented
-            value={filterType}
-            onChange={(val) => setFilterType(val as string)}
-            options={[
-              { label: "Todos os eventos", value: "todos" },
-              { label: "Documentos", value: "documento" },
-              { label: "Relatórios", value: "relatorio" },
-              { label: "Municípios", value: "cidade" },
-            ]}
-          />
-          <Text type="secondary" style={{ fontSize: 12 }}>
-            {filteredEvents.length} registro(s) encontrado(s)
-          </Text>
-        </Flex>
-
-        <ProTable<AuditEvent>
-          rowKey="id"
-          size="small"
-          loading={isPending}
-          dataSource={filteredEvents}
-          columns={columns}
-          pagination={{ pageSize: 15 }}
-          search={false}
-          options={{
-            density: false,
-            fullScreen: false,
-            reload: handleRefresh,
-            setting: false,
-          }}
-          locale={{
-            emptyText: (
-              <Empty
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-                description="Nenhum evento registrado até o momento."
+          {/* Tabela Principal de Auditoria */}
+          <Card size="small">
+            <Flex justify="space-between" align="center" style={{ marginBottom: 12 }} wrap="wrap" gap={10}>
+              <Segmented
+                value={filterType}
+                onChange={(val) => setFilterType(val as string)}
+                options={[
+                  { label: "Todos os eventos", value: "todos" },
+                  { label: "Documentos", value: "documento" },
+                  { label: "Relatórios", value: "relatorio" },
+                  { label: "Municípios", value: "cidade" },
+                ]}
               />
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                {filteredEvents.length} registro(s) encontrado(s)
+              </Text>
+            </Flex>
+
+            <ProTable<AuditEvent>
+              rowKey="id"
+              size="small"
+              loading={isPending}
+              dataSource={filteredEvents}
+              columns={columns}
+              pagination={{ pageSize: 15 }}
+              search={false}
+              options={{
+                density: false,
+                fullScreen: false,
+                reload: handleRefresh,
+                setting: false,
+              }}
+              locale={{
+                emptyText: (
+                  <Empty
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    description="Nenhum evento registrado até o momento."
+                  />
+                ),
+              }}
+            />
+          </Card>
+              </Flex>
             ),
-          }}
-        />
-      </Card>
+          },
+        ]}
+      />
     </Flex>
   );
 }

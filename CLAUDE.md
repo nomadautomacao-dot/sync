@@ -1,7 +1,7 @@
 # CLAUDE.md — Sync
 
 > Fonte única de verdade para qualquer agente de IA trabalhando neste projeto.
-> Atualizado: 2026-07-22.
+> Atualizado: 2026-08-14.
 
 ---
 
@@ -25,7 +25,7 @@ em `kit_padrao_pdf/empresa.py` para os geradores ReportLab.
 |---------|-----------|
 | **Consultor de campo** | Usa o app em tablets/notebooks durante reuniões com gestores municipais |
 | **Gestor municipal** | Recebe relatórios e propostas gerados pelo sistema |
-| **Admin do grupo** | Visão completa de todas as empresas, módulos e funcionários |
+| **Admin do grupo** | Visão completa de módulos, pessoas e operação |
 | **Coordenador de módulo** | Opera dentro de módulo específico (FUNDEB, Consultoria) |
 
 ### Stack tecnológico
@@ -66,7 +66,7 @@ Sync/
 │   ├── layout.tsx                # Root layout (Inter + JetBrains Mono, AppProviders)
 │   ├── globals.css               # Base tipográfica mínima
 │   ├── (auth)/                   # Login — /entrar
-│   ├── (sync)/                   # A aplicação: painel, cidades, empresas,
+│   ├── (sync)/                   # A aplicação: painel, cidades,
 │   │                             #   pessoas, modulos, documentos, caixa,
 │   │                             #   pipeline, ajustes (ver seção 4)
 │   ├── [[...path]]/              # Catch-all → /entrar
@@ -84,6 +84,7 @@ Sync/
 ├── modules/                      # Lógica de negócio consumida pelas rotas
 │   ├── levantamento-fundeb/      # types + utils (cálculos, ptbr, relatório)
 │   ├── contrato-fundeb/          # services (agent, docx, collectors) + types
+│   ├── contratos/                # Proposta por dispensa — docx-js, sem template (seção 5)
 │   └── propostas/                # types + utils de cálculo
 │
 ├── scripts/                      # Ferramentas — ver seção 8
@@ -120,7 +121,7 @@ fontes brutas vivem em `../Sync-Arquivos/`, pasta irmã fora do git.
 
 ```
 Sync-Arquivos/
-├── assets-contratos/     Anexos_DOCX, Anexos_TXT, Habilitacao_PRIME  → CONTRATOS_ASSETS_DIR
+├── assets-contratos/     Anexos_DOCX, Anexos_TXT, Habilitacao (fallback Habilitacao_PRIME)  → CONTRATOS_ASSETS_DIR
 ├── dados-brutos/         XLSX do INEP, sinopses, payloads            → DADOS_BRUTOS_DIR
 ├── kits-entregues/       kits de inexigibilidade por município
 ├── relatorios-gerados/   saída dos geradores de PDF
@@ -152,17 +153,26 @@ Todas as rotas estão em `app/api/`. Autenticação obrigatória via `getSession
 **Autenticação:** não há rotas de login no Next. O Firebase Auth cuida disso no
 cliente; as rotas apenas verificam o ID token. Ver seção 3.2.
 
-**Organizacional:**
-| Rota | Método | Descrição |
-|------|--------|-----------|
-| `/api/companies/upload-logo` | POST | Upload de logo da empresa (Supabase Storage) |
+**Organizacional:** não há rota. Colaboradores, auditoria e configurações do
+workspace são lidos e escritos direto no Firestore pela interface
+(`collaborators`, `audit`, `workspace_settings`), com as regras em
+`firestore.rules`. As rotas equivalentes existiam sobre o Postgres, nunca
+tiveram consumidor e foram removidas.
 
-> Empresas, funcionários, colaboradores, auditoria, dashboard executivo e
-> configurações do workspace **não têm rota de API**. A interface lê e escreve
-> essas coleções direto no Firestore (`companies`, `employees`, `collaborators`,
-> `audit`, `workspace_settings`), com as regras em `firestore.rules`. As rotas
-> equivalentes existiam sobre o Postgres, nunca tiveram consumidor e foram
-> removidas.
+> **A Global é a única empresa, e isso é decisão de produto — daí o nome.**
+> Em 2026-08-13 saíram a tela `/empresas`, as coleções `companies` e
+> `employees`, os `core/lib/compan*` e a rota `/api/companies/upload-logo`
+> (última consumidora do Storage do Supabase, e sem consumidor próprio).
+>
+> O que motivou não foi enxugar tela: eram **duas identidades de empresa
+> concorrentes**. `core/domain/empresa.ts` tem a Global fixa no código e é a que
+> contrato, proposta e kit leem; a coleção `companies` alimentava só a própria
+> tela. Editar o CNPJ lá dava a impressão de mudar os documentos, e não mudava
+> nada — o tipo de armadilha que só se descobre com a peça na mão do cliente.
+>
+> Funcionário e colaborador são a mesma coisa aqui, e todos são da Global:
+> quem responde por eles é `collaborators`, com `collaboratorType` separando
+> equipe interna de consultor parceiro. A pessoa é parceira; a empresa, não.
 
 **Municípios:**
 | Rota | Método | Descrição |
@@ -197,10 +207,11 @@ cliente; as rotas apenas verificam o ID token. Ver seção 3.2.
 | `/api/modulos/slides` | GET | Templates de apresentação |
 | `/api/modulos/slides/gerar` | POST | Gera o deck em PDF |
 | `/api/contratos-fundeb/agent` | POST | Agent de coleta de dados do contrato |
-| `/api/contratos-fundeb/generate-kit` | POST | Kit documental (rota legada) |
+| `/api/contratos-fundeb/generate-kit` | POST | Kit documental — **rota viva**: é a que a aba Gerar contrato de `/documentos` chama |
 | `/api/modulos/contrato-fundeb/gerar-kit` | POST | Kit documental parcial |
-| `/api/modulos/contrato-fundeb/gerar-kit-completo` | POST | Kit completo (15 anexos) |
-| `/api/modulos/contrato-fundeb/gerar-proposta` | POST | Proposta comercial |
+| `/api/modulos/contrato-fundeb/gerar-kit-completo` | POST | Kit completo (14 anexos; a proposta sai à parte — seção 5) |
+| `/api/modulos/contrato-fundeb/gerar-proposta` | POST | Proposta comercial (inexigibilidade) |
+| `/api/modulos/contratos/proposta-dispensa` | POST | Proposta Comercial por dispensa (Art. 75) — DOCX gerado por código, sem template (seção 5) |
 
 > **As rotas `dossies/*` são de outra família.** Nos demais PDFs a contagem de
 > folhas é contrato (`PAGINAS_ESPERADAS`) e o conteúdo é cortado por
@@ -241,6 +252,60 @@ account fica em `FIREBASE_SERVICE_ACCOUNT` (`.env.local`), nunca versionada.
 > Contexto da transição: `docs/superpowers/specs/2026-07-22-migracao-firebase-design.md`.
 > Auth e **dados** já estão no Firebase; o Postgres saiu do código.
 
+### Entrar com Google
+
+O provedor `google.com` está habilitado no projeto e o botão vive em `/entrar`,
+ao lado do formulário de senha. Quatro coisas que não são óbvias:
+
+1. **Autenticar não é autorizar.** Entrar com Google prova que a pessoa é dona
+   daquele e-mail, e nada mais. Quem decide se ela usa o Sync continua sendo a
+   claim `groupId`, concedida em Pessoas › Acesso ao sistema. Sem essa
+   separação, qualquer conta Google do mundo viraria usuária.
+2. **A ordem não importa.** O projeto está com uma conta por e-mail
+   (`allowDuplicateEmails` desligado) e o Google verifica a posse do endereço,
+   então o Firebase liga o provedor à conta que já existir com aquele e-mail,
+   mantendo o `uid` e as claims. Liberar antes e entrar depois, ou o contrário,
+   dá no mesmo — `/api/acessos` procura por e-mail antes de criar.
+3. **Não há botão de "habilitar Google" por pessoa**, e a ficha diz isso. O
+   provedor é do projeto; o que liga a conta Google ao acesso é o e-mail ser o
+   mesmo. Entrar com a conta pessoal em vez da institucional produz um e-mail
+   diferente, sem claim, e um "sem acesso" que parece defeito — daí o
+   `prompt: "select_account"`, que força a escolha explícita.
+4. **`UsuariaDeAcesso.metodos` mostra como cada pessoa entra.** Lista vazia é
+   informação, não falha: a conta existe e ninguém entrou ainda. Sem essa
+   distinção, a administradora gera um segundo link de senha achando que o
+   primeiro falhou.
+
+> **Domínio não autorizado = login que falha só em produção.** A lista de
+> domínios autorizados do Firebase Auth precisa conter **`127.0.0.1`** (a origem
+> do app desktop, que serve na 51737) e o host do Cloud Run. `localhost` não
+> cobre `127.0.0.1`: são hostnames diferentes para o Firebase.
+
+No app desktop o `signInWithPopup` exigiu abrir uma exceção em
+`desktop/main.js`: toda janela nova vai para o navegador do sistema, e o popup
+do Firebase conversa com a janela-mãe por `postMessage` — mandado para fora, o
+login acontece e o app fica esperando para sempre. `desktop/login-google.js`
+decide o que pode abrir dentro, por **host exato e só HTTPS**; comparar por
+`includes` deixaria `accounts.google.com.exemplo-malicioso.com` abrir uma tela
+de senha do Google dentro do app.
+
+**A sessão persiste por padrão.** `browserLocalPersistence` é o padrão do
+`signIn` em `core/providers/auth-provider.tsx`: quem entrou uma vez não digita a
+senha de novo, nem ao fechar a aba, nem ao reabrir o app desktop.
+`browserSessionPersistence` — que morre com a aba — virou a exceção, escolhida
+ao desmarcar "Manter sessão ativa neste dispositivo" na tela de login. Duas
+consequências que andam junto com isso:
+
+1. **Abrir sem rede deixou de ser hipotético.** A sessão volta a cada abertura,
+   inclusive num notebook sem sinal dentro de uma prefeitura, e ali o
+   `getIdTokenResult(true)` — que força ida à rede — rejeita. Por isso há queda
+   para o token em cache, e por isso "não deu para saber" **não** desloga:
+   deslogar apagaria a sessão gravada e cobraria a senha assim que a rede
+   voltasse, que é o oposto do que a persistência promete.
+2. **O e-mail da última entrada bem-sucedida fica em `localStorage`**
+   (`core/lib/ultimo-email.ts`) e volta preenchido na tela de login, com o foco
+   já na senha. Só o e-mail — senha não passa pelo sistema (seção 11).
+
 ### 3.3 core/lib/ — Arquivos e funções
 
 | Arquivo | Descrição |
@@ -252,8 +317,8 @@ account fica em `FIREBASE_SERVICE_ACCOUNT` (`.env.local`), nunca versionada.
 | `assets-paths.ts` | Resolve `CONTRATOS_ASSETS_DIR` |
 | `firebase-client.ts` | Web SDK do Firebase (`getFirebaseDb`, `getFirebaseAuth`) |
 | `cities-firestore.ts` | CRUD da coleção `cities` (carteira e pipeline) |
-| `companies-firestore.ts` | CRUD da coleção `companies` |
 | `collaborators-firestore.ts` | CRUD da coleção `collaborators` |
+| `contratos-firestore.ts` | CRUD da coleção `contratos` (seção 5) |
 | `city-types.ts`, `company-types.ts`, `people-types.ts` | Tipos e conversores dos documentos do Firestore |
 | `govia-compat.ts` (48KB) | Camada de compatibilidade com sistema legado GovIA |
 | `fundeb-fnde.ts` (12KB) | Integração com dados FNDE (repasses FUNDEB) |
@@ -279,13 +344,14 @@ escreve pelo Web SDK; as Cloud Functions em `functions/` escrevem pelo Admin SDK
 
 | Coleção | Conteúdo |
 |---------|----------|
-| `companies` | Empresas do grupo |
-| `employees` | Vínculo pessoa ↔ empresa |
 | `collaborators` | Parceiros e articuladores |
 | `collaboratorDocuments` | Documentos do colaborador |
 | `cities` | Carteira e pipeline de municípios |
 | `cities/{id}/profitSnapshots` | Receita/custo/lucro por competência |
+| `cities/{id}/eventos` | Linha do tempo do município (seção 13) |
+| `cities/{id}/eventos/{id}/comentarios` | A conversa em cima de cada acontecimento |
 | `cityDocuments`, `cityReports` | Kit documental e relatórios arquivados |
+| `contratos` | Contratos por cidade — `minuta`/`assinado`/`encerrado`/`cancelado`, `delete` proibido (seção 5) |
 | `commissionRules`, `commissionAccruals`, `commissionPayouts` | Comissionamento |
 | `workspace_settings` | Configurações do workspace, por `groupId` |
 | `audit` | Log de auditoria |
@@ -320,12 +386,12 @@ a regra correspondente em `firestore.rules` — sem regra, o acesso é negado.
 | `/entrar` | `app/(auth)/entrar/page.tsx` | Login email/senha |
 | `/painel` | `app/(sync)/painel/page.tsx` | Home com KPIs |
 | `/cidades` | `app/(sync)/cidades/page.tsx` | Carteira de municípios |
-| `/cidades/[cityId]` | `app/(sync)/cidades/[cityId]/page.tsx` | Ficha da cidade + relatórios arquivados |
+| `/cidades/[cityId]` | `app/(sync)/cidades/[cityId]/page.tsx` | Ficha da cidade — abre na linha do tempo (seção 13); aba **Contrato** (seção 5) |
 | `/pipeline` | `app/(sync)/pipeline/page.tsx` | Pipeline comercial por estágio |
-| `/empresas` | `app/(sync)/empresas/page.tsx` | CRUD com detalhe e funcionários |
 | `/pessoas` | `app/(sync)/pessoas/page.tsx` | Colaboradores cross-empresa |
 | `/modulos` | `app/(sync)/modulos/page.tsx` | Catálogo de módulos |
 | `/modulos/levantamento-fundeb` | `app/(sync)/modulos/levantamento-fundeb/page.tsx` | Os três relatórios (seção 5) |
+| `/modulos/contratos` | `app/(sync)/modulos/contratos/page.tsx` | Porta do módulo Contrato: escolhe a cidade e leva à aba da ficha (seção 5) |
 | `/documentos` | `app/(sync)/documentos/page.tsx` | Kit documental |
 | `/caixa` | `app/(sync)/caixa/page.tsx` | Inbox / auditoria |
 | `/ajustes` | `app/(sync)/ajustes/page.tsx` | Configurações do workspace + aba **Acessos** (seção 11), visível só para owner/admin |
@@ -366,13 +432,117 @@ saíram do projeto inteiro em 2026-08-01, com as dependências desinstaladas.
 | **Consultoria** | `consultoria` | Gestão de projetos, contratos e entregas |
 | **Consultoria FUNDEB** | `fundeb` | Pipeline de municípios, projeção de faturamento |
 | **Levantamento FUNDEB** | `levantamento-fundeb` | Diagnóstico automático por código IBGE |
-| **Contrato FUNDEB** | `contrato-fundeb` | Processo administrativo com 15 anexos (Lei 14.133/21) |
+| **Contrato FUNDEB** | `contrato-fundeb` | Kit de inexigibilidade: processo administrativo com 14 anexos + proposta à parte (Lei 14.133/21, Art. 74) |
+| **Contrato** | — | Proposta por dispensa (Art. 75) + acompanhamento do contrato na ficha da cidade (abaixo) |
 | **Propostas** | `propostas` | Propostas comerciais padronizadas |
 
-> **Case de Sucesso** (`case-de-sucesso`) continua no `moduleCatalog`, mas não
-> tem rota nem tela: as duas rotas que existiam liam a tabela `CaseSucessoFundeb`
-> do Postgres, não tinham consumidor e saíram junto com o Prisma. Reimplementar
-> significa escolher uma fonte no Firestore.
+### Case de Sucesso
+
+| Onde | O quê |
+|---|---|
+| `/modulos/case-de-sucesso` | Tela: busca o município, define a janela de atuação linha a linha, mostra a prévia e emite |
+| `/api/modulos/case-de-sucesso` | `GET` apura (prévia) · `POST` emite o deck em PDF |
+| `modules/case-de-sucesso/` | `montarCaseSucesso()` — a apuração, coberta por teste |
+| `core/lib/case-sucesso-{template,pdf}.ts` | HTML 16:9 e Chromium → PDF |
+
+Fonte única: `data/fnde/receitas-*.csv`, pelo `loadFundebReceitasByYear()`. A
+emissão **não vai à rede**. O deck cresce com o número de municípios — quatro
+fichas por folha, e as folhas de placar e de série paginam sozinhas.
+
+Três coisas para não quebrar:
+
+1. **A janela de atuação é por município, e é o que o documento reivindica.**
+   Cada linha tem o seu último exercício, e ele é o último ano em que a Global
+   esteve na rede — não o exercício mais recente que existe. Serra do Ramalho
+   fecha em 2025 por isso. Reivindicar ano a mais é o tipo de afirmação que uma
+   consulta ao portal do FNDE desmonta na frente do cliente.
+2. **O percentil é apurado na janela do próprio município.** Comparar uma rede
+   de 2024–2025 com o universo de 2024–2026 mediria períodos diferentes.
+3. **O nome vem do IBGE, não do FNDE.** As portarias trazem "SAO FELIX DO
+   CORIBE", sem acento; a tela envia o nome acentuado junto do código.
+
+O contrato do gerador é **caber**, não completude: a folha tem altura fixa e
+`overflow:hidden`, então conteúdo que passa de 1080px **some** do PDF em vez de
+transbordar. `case-sucesso-pdf.ts` mede cada folha antes de imprimir e falha com
+o número — foi assim que se pegou uma folha de 1.219px cuja fileira de baixo não
+existia no arquivo.
+
+> O tom é comercial por decisão do dono: uma versão explicava a escada da
+> EC 108/2020 e descontava esse efeito num contrafactual. Saiu — responder a
+> objeção que ninguém fez enfraquece a peça. O que ficou da comparação é a
+> posição ("entre as 2% que mais cresceram no Brasil"), que vende e continua
+> conferível.
+
+### Contrato (dispensa, Art. 75)
+
+O caminho comercial simples, ao lado do kit de inexigibilidade (Art. 74). O
+escopo da peça é a educação inteira — sistemas, treinamento e assessoria aos
+programas MEC/FNDE —, não só FUNDEB.
+
+| Onde | O quê |
+|---|---|
+| `/api/modulos/contratos/proposta-dispensa` | `POST` — emite a Proposta Comercial em DOCX |
+| `modules/contratos/` | Texto e montagem (`proposta-dispensa.ts` + `proposta-dispensa-docx.ts`), com teste |
+| `/cidades/[cityId]` › aba **Contrato** | `_components/contrato-da-cidade.tsx` — gera a proposta e registra e acompanha o contrato |
+| `/modulos/contratos` | A porta pelo catálogo: só pergunta "de qual cidade?" e leva à aba, sem duplicar o fluxo (entrada na lista `MODULOS` de `app/(sync)/modulos/page.tsx`) |
+| `core/domain/contrato-cidade.ts` | Estados e regras puras, cobertas por teste |
+| `core/lib/contratos-firestore.ts` | CRUD da coleção `contratos` |
+
+**A proposta é gerada por código (`docx`), sem template em disco** — de
+propósito, e é o oposto do kit: template em `Sync-Arquivos/` fica fora do git,
+não viaja para a nuvem, e a geração quebraria em qualquer máquina sem a pasta.
+Por código, a peça sai igual no Cloud Run, no desktop e em dev. E sai **DOCX,
+não PDF**: a prefeitura pede ajuste de última hora, e DOCX o setor de compras
+edita.
+
+**A coleção `contratos` registra fato, não rascunho.** Estados
+`minuta → assinado → encerrado`, com `cancelado` para a negociação que morre —
+e `delete` é `false` para todo mundo na regra (já publicada): a história do que
+valeu, e do que quase valeu, fica.
+
+### Kit de inexigibilidade — templates da era Global
+
+Os templates DOCX do kit foram reconstruídos em 2026-08-14 com a identidade da
+Global Company e **vivem no repositório**, em `assets/contratos/Anexos_DOCX/`
+(exceção declarada ao `*.docx` do `.gitignore`). O mapa é `TEMPLATES_MAP` em
+`modules/contrato-fundeb/services/contrato-docx-generator.ts`. Seis coisas para
+não quebrar:
+
+1. **A contagem é 14 anexos + proposta.** A Proposta Técnica e Comercial (00)
+   saiu do ZIP e é gerada à parte, para assinatura; o kit são os anexos 01 a 10,
+   com o 02 desdobrado em 02.1–02.5.
+2. **Os nomes 06–10 são neutros de propósito.** Os arquivos da era Rocha Prime
+   traziam ano e marca no nome, e cada virada de exercício quebrava o mapa.
+3. **Template faltando aborta a geração.** Antes virava um `.txt` de aviso
+   dentro do ZIP — um kit aparentemente completo com peça faltando, que ninguém
+   percebia antes de protocolar. Peça de processo administrativo incompleta é
+   pior que geração nenhuma: o erro sobe.
+4. **A pasta de habilitação é `Habilitacao`**, com `Habilitacao_PRIME` aceita
+   como retrocompatibilidade de quem ainda tem a pasta antiga montada.
+5. **Certidão fica fora do git; template, dentro — e o motivo é onde o kit
+   precisa sair.** Até 2026-08-20 os dois moravam em `Sync-Arquivos/`, e o kit
+   só saía nesta máquina: no app desktop instalado e no Cloud Run a geração
+   respondia "Falha ao gerar o kit de contratos" porque a pasta não existe lá
+   (o servidor empacotado nem recebe `CONTRATOS_ASSETS_DIR` — ela não está na
+   lista branca de `desktop/ambiente.js`). São 1,9 MB que mudam de ano em ano,
+   contra dezenas de MB de certidão que vence. `templatesDeContrato()`, em
+   `core/lib/assets-paths.ts`, ainda prefere a pasta externa quando ela existe,
+   para quem estiver montando modelo novo — **template aprovado tem de ser
+   copiado para `assets/contratos/Anexos_DOCX/`**, senão o kit sai diferente
+   aqui e no campo. E vale a dupla de sempre: `COPY` no `Dockerfile` e entrada
+   em `COMPLEMENTOS` de `scripts/desktop/preparar-servidor.mjs`.
+6. **Dado faltando não aborta — peça faltando, sim.** Campo que nenhuma fonte
+   preencheu sai como `A INFORMAR` no papel (maiúsculo, para `Ctrl+F` achar) e
+   entra no `PENDENCIAS.txt` que vai dentro do ZIP; a rota devolve a mesma
+   lista no cabeçalho `X-Kit-Resumo`, em Base64, e a tela avisa. Certidão do
+   acervo que não desce virou aviso pelo mesmo motivo — antes derrubava o kit
+   inteiro, deixando sem nada quem está dentro da prefeitura. Dado público de
+   município pequeno falta o tempo todo (CPF e RG de prefeito não estão em
+   fonte consultável): kit que só sai com as 61 informações é kit que não sai.
+   Antes de marcar pendência, `completarDados()` deduz tudo que o sistema sabe
+   — identidade da Global, números de processo, datas do fluxo, valor por
+   extenso, foro —, e campo vazio do chamador **não** apaga o que o coletor
+   sabe preencher.
 
 > `modules/` guarda apenas lógica server-side consumida pelas rotas de API.
 > A interface de cada módulo é uma página em `app/(sync)/modulos/<nome>/`.
@@ -598,10 +768,10 @@ NODE_ENV: "production"
 ```
 
 `DATABASE_URL` e `DIRECT_URL` não são mais usadas — podem ser removidas do
-serviço no Cloud Run. Se o Supabase for desligado de vez, note que
-`/api/companies/upload-logo` ainda usa o **Storage** dele (`SUPABASE_URL` +
-`SUPABASE_SERVICE_ROLE_KEY`); é outro serviço, não o Postgres, e essa rota
-também não tem consumidor hoje.
+serviço no Cloud Run. **O Supabase pode ser desligado inteiro**: a única coisa
+que ainda o usava era o Storage em `/api/companies/upload-logo`, que saiu com a
+tela de Empresas. `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY` não são lidas por
+nada.
 
 ### Comandos
 
@@ -802,7 +972,17 @@ Playwright instalado escolhe, então acompanha a atualização sozinho.
 | Arquivo | Papel |
 |---|---|
 | `desktop/main.js` | Janela, downloads, links externos, instância única |
-| `desktop/servidor.js` | Sobe o standalone em `127.0.0.1` numa **porta efêmera** e espera `/api/health` |
+| `desktop/servidor.js` | Sobe o standalone em `127.0.0.1` e espera `/api/health` |
+| `desktop/porta.js` | Escolhe a porta: a **preferida (51737)**, ou uma efêmera se ela estiver ocupada |
+
+**A porta deixou de ser efêmera pura, e o motivo é a sessão.** A origem do
+browser inclui a porta, e é a origem que separa o `IndexedDB` onde o Firebase
+Auth grava quem está logado — porta nova a cada abertura significava
+armazenamento novo a cada abertura, e o app pedia a senha todo dia por mais que
+a configuração dissesse "manter sessão ativa". Hoje tenta a 51737 e só cai para
+a efêmera se ela estiver ocupada (o `listen` é de verdade, então colisão vira
+fallback e nunca `EADDRINUSE` na cara do usuário). **Trocar esse número desloga
+todo mundo uma vez.** O caminho de exceção é coberto por `desktop/porta.test.ts`.
 
 A espera por `/api/health` é **paciente de propósito**: 15s por tentativa, e não
 2s. A primeira requisição custa 0,2s num servidor solto e passa de 2s dentro do
@@ -893,6 +1073,22 @@ app pronto.
 
 Quem entra no Sync e até onde vai. Aba visível só para `owner`/`admin`, em
 `core/components/ajustes/acessos.tsx`, servida por `app/api/acessos/`.
+
+**São duas portas para a mesma sala.** Ajustes › Acessos olha o grupo inteiro
+("quem entra aqui?"); a aba **Acesso ao sistema** na ficha de Pessoas olha uma
+pessoa só ("esta que acabei de cadastrar, entra? até onde?") —
+`core/components/acessos/acesso-da-pessoa.tsx`. As duas chamam as mesmas rotas,
+compartilham a chave `["acessos"]` do TanStack Query (conceder de um lado
+atualiza o outro) e **usam a mesma `GradeDePermissoes`**, em
+`core/components/acessos/`. A grade mora fora das duas telas de propósito: uma
+segunda cópia seria uma segunda chance de deixar de aplicar a trava de Ajustes
+num refactor, e a que esquecesse viraria caminho de escalar privilégio.
+
+O elo entre os dois mundos é o **e-mail** — `collaborators` é documento do
+Firestore, a conta é registro do Auth, e não há chave estrangeira ligando os
+dois. Trocar o e-mail da ficha desfaz o vínculo aparente e deixa o acesso antigo
+de pé com o e-mail velho; por isso o painel diz, na tela, qual e-mail está
+consultando.
 
 | Rota | Método | O que faz |
 |---|---|---|
@@ -1037,3 +1233,269 @@ Fall back to Grep/Glob/Read **only** when the graph doesn't cover what you need.
 2. Use `detect_changes_tool` for code review.
 3. Use `get_affected_flows_tool` to understand impact.
 4. Use `query_graph_tool` pattern="tests_for" to check coverage.
+
+---
+
+## 13. Linha do tempo da cidade
+
+O que aconteceu num município, em ordem, e quem fez. É a aba de entrada de
+`/cidades/[cityId]` — quem abre uma cidade quer saber o que se passou nela, não
+editar o funil.
+
+| Onde | O quê |
+|---|---|
+| `core/domain/cidade-eventos.ts` | Tipos e regras puras, cobertas por teste |
+| `core/lib/city-events-firestore.ts` | Leitura e escrita da subcoleção |
+| `app/(sync)/cidades/[cityId]/_components/linha-do-tempo.tsx` | A tela |
+
+### Um tipo só, e não cinco
+
+Reunião, visita, ligação, relatório de campo, documento anexado, etapa concluída
+e nota são **tipos** de acontecimento, não seções. Cinco coleções separadas
+dariam cinco abas, e ninguém entende uma cidade abrindo cinco lugares — que é o
+que este app existe para resolver.
+
+### Compromisso e acontecimento são o mesmo documento
+
+A reunião marcada para quinta é o mesmo registro que, na sexta, tem o relato
+dentro: muda o `estado` (`marcado` → `realizado`), não a identidade.
+
+Modelar como duas entidades ("agendamentos" e "registros") parece mais arrumado
+e **perde a única pergunta que uma equipe faz**: *o que foi marcado e ficou sem
+desfecho*. Com entidades separadas, a reunião que não aconteceu não vira nada —
+some. `estaPendente()` é essa pergunta, e é uma linha porque o modelo a permite.
+
+Corolário no formulário: ligação, nota e relatório de campo **nunca** nascem
+`marcado`, porque se registram depois de acontecer — nasceriam pendentes no
+instante seguinte ao de serem escritos.
+
+### Três travas
+
+1. **Só o autor edita, e isso é regra do Firestore.** Esconder o botão é
+   conveniência; o que impede reescrever o registro de outra pessoa é
+   `resource.data.autorUid == request.auth.uid || isAdmin()`. A autoria não se
+   transfere nem quando um admin corrige o texto.
+2. **`delete` é `false` para todo mundo.** Acontecimento registrado é fato, e
+   apagar fato de uma base compartilhada é pior que corrigi-lo. Cancelar é um
+   estado do próprio evento.
+3. **Comentar mexe no contador do evento alheio.** A regra abre exceção para
+   isso com `diff().affectedKeys().hasOnly(['comentarios'])` — sem ela, quem
+   comentasse levava "permissão negada", e a mensagem culparia a pessoa por um
+   erro de modelagem.
+
+### Cadastrar um município enfileira o acervo inteiro
+
+`ensureCity` cria a cidade e a tela enfileira os **treze** documentos do
+catálogo. A fila é sequencial e sobrevive a fechar a janela, então acontece por
+trás: quem cadastrou já cai na ficha e os PDFs vão chegando.
+
+Duas travas que não são detalhe:
+
+1. **Readicionar não reemite.** `ensureCity` é idempotente e não conta se criou
+   ou reencontrou, então a tela confere antes pelo código IBGE. Sem isso,
+   readicionar um município gastaria meia hora de chamadas às fontes de governo
+   para produzir cópias do que já existe.
+2. **Sem código IBGE, avisa.** Todo documento é montado a partir dele.
+
+> O comentário em `documentos-emissiveis.ts` defende o contrário — enfileirar só
+> os quatro de sempre, deixando os oito dossiês de fora, porque cada um consulta
+> as fontes vivas por conta própria. Foi decisão do dono passar a enfileirar
+> tudo (2026-08-13). Voltar atrás é trocar `DOCUMENTOS` por `RELATORIOS_PADRAO`
+> em `app/(sync)/cidades/page.tsx`.
+
+### Responsável, e a coluna que mostra quem parou
+
+O cadastro pergunta **quem responde pelo município** (`collaboratorId` +
+`collaboratorName`, copiado para a carteira não fazer uma leitura por linha).
+Cidade sem responsável aparece na carteira em cor de alerta: num app cujo
+propósito é a equipe se entender, cidade sem dono é cidade que ninguém sabe se
+está sendo trabalhada.
+
+A coluna **última atividade** mostra "há 3 dias", não uma data — a pergunta é
+*qual cidade está parada*, e ninguém subtrai datas de cabeça varrendo vinte
+linhas. A partir de duas semanas o texto fica em cor de alerta.
+
+Para isso funcionar, **`createCityEvent` carimba `lastActivityAt` da cidade no
+mesmo lote**. Antes só o pipeline o atualizava: uma cidade com reunião ontem e
+estágio intocado há um mês apareceria como abandonada, e a coluna mentiria
+justamente sobre os municípios em que a equipe mais trabalha.
+
+O cadastro também pergunta **início da implantação** — só a partir do estágio
+contratual, porque antes não há implantação para datar. Ele vira `implantacaoInicio`
+e chega preenchido no diálogo que semeia o cronograma: quem assinou em março e
+cria o cronograma em agosto não lembra o dia, e o que se lembra em vez de
+consultar vira cronograma inteiro cinco meses fora do lugar.
+
+**Receita estimada e próximo passo comercial só aparecem para quem tem
+Pipeline.** Cadastrar um município é exatamente o momento em que a consultora
+está com o notebook virado para o gestor.
+
+### Panorama — o retrato que se desenha sozinho
+
+A aba "Visão geral" (um formulário de pipeline com três contadores ao lado) deu
+lugar ao **Panorama**: identidade do município, implantação em fluxo, matrícula
+da rede, série do IDEB, movimento da equipe e acervo.
+`_components/panorama.tsx`, servido por `/api/municipios/[codigoIbge]/panorama`.
+
+**Por que não é um canvas livre.** A ideia original era um quadro de caixas
+arrastáveis por cidade. Descartada por duas razões que valem mais que o esforço
+de construí-lo: um canvas **começa vazio em toda cidade da carteira** e precisa
+de alguém para desenhá-lo município por município — na segunda semana são duas
+cidades bonitas e dezoito em branco; e cada pessoa arruma as caixas do seu jeito,
+o que destrói a comparação entre cidades e a pergunta que atravessa a carteira
+("quais estão atrasadas?"). Canvas guarda desenho, não responde pergunta.
+
+O que sobrou da intuição de fluxograma tem casa legítima: **o cronograma já é um
+fluxo**, e `_components/fluxo-do-cronograma.tsx` o desenha com a posição vindo da
+ordem das etapas e a cor vindo do estado real — ninguém arruma nada.
+
+**A rota não vai à rede.** Tudo sai dos JSON de `data/` (IBGE, TSE, INEP, IDEB).
+Fonte viva é para relatório emitido, não para tela que fica aberta o dia inteiro
+— e o painel abre na frente do secretário, onde meia dúzia de "N/D" custa caro.
+
+**Gráficos são próprios, e isso é exceção declarada.** Ver
+`core/components/graficos/README.md`: o Ant não tem gráfico, o pacote da casa
+carrega o AntV inteiro, e a seção 7 deste arquivo documenta produção parada três
+dias por memória de build. São quatro tipos de gráfico; a biblioteca custaria a
+folga recuperada. Tudo por `theme.useToken()`, sem hexadecimal.
+
+Duas decisões de leitura embutidas nos gráficos: a barra escala pelo **maior
+valor**, não pela soma (senão as fatias pequenas somem contra a margem), e a
+série do IDEB **não começa no zero** (numa faixa de 3,9 a 4,8 a régua de 0 a 10
+achata a evolução que o gráfico existe para mostrar).
+
+### A ficha FUNDEB e as três projeções
+
+O levantamento arquiva **três leituras do mesmo município**, e confundi-las foi
+a causa de "a ficha não bate com o relatório". Medido na emissão de Nossa
+Senhora do Livramento (5106109, exercício 2026):
+
+| Bloco | Ganho | Multiplicador | Natureza |
+|---|---|---|---|
+| `projecaoRecuperavel` | R$ 300.651,13 (+1,52%) | 1,02 | só o que as bases já evidenciam |
+| `projecaoComercial` | R$ 14.789.005,01 (+75%) | 1,75 | teto de benchmark interno |
+| `upsideCondicionado` | R$ 14.488.353,88 (+73,48%) | — | depende de validação documental |
+
+Não é divergência de cálculo: são perguntas diferentes. A ficha mostrava só a
+recuperável, **sem dizer qual era**, enquanto o relatório e a proposta lideram
+pela comercial — daí a impressão de número errado.
+
+Hoje as duas aparecem, cada uma com a `ressalva` que o próprio JSON carrega. A
+do benchmark não é decorativa: *"não deve ser tratado como ganho recuperável sem
+validação documental"* é exatamente a frase que falta numa reunião, e é esse o
+número que vai para a conversa de proposta.
+
+**VAAF e VAAT zerados são fato, não defeito de leitura.** Muitos municípios só
+recebem VAAR; o JSON registra a ressalva ("tratados como potencial condicionado,
+sem monetização direta"). Zero aqui é dado.
+
+### Um relatório por vez, e o painel certo para cada um
+
+A aba lia **qualquer** relatório com JSON arquivado usando o gabarito do
+levantamento. Um dossiê lido assim não dá erro — dá VAAF e VAAT em R$ 0,00
+porque esses campos não existem nele, e "Não informado" na identificação
+inteira. Número plausível e errado numa tela que sustenta proposta é pior que
+tela vazia.
+
+Duas perguntas separadas, em `modules/cidades/ficha-fundeb.ts` com teste:
+*qual relatório abrir* (qualquer um — o Raio-X e os dossiês guardam dezenas de
+blocos que só existiam no PDF) e *se o painel FUNDEB aparece* (só
+`diagnostico_fundeb`). O título e o seletor nomeiam o relatório aberto.
+
+> **As rotas de geração não exigem sessão.** É o que permite ao smoke test
+> emitir, e o que permitiu diagnosticar isto por fora: um `POST` em
+> `/api/modulos/levantamento-fundeb/pdf?tipo=levantamento` com
+> `response_format: "bundle"` devolve o mesmo JSON que vai para o arquivo.
+
+### Acervo: emitir, arquivar e comentar no mesmo lugar
+
+A aba "Levantamento FUNDEB" virou **"FUNDEB e documentos"** e ganhou a mesa de
+emissão (`_components/documentos-da-cidade.tsx`): os treze documentos do
+catálogo, com a data da última emissão de cada um para aquele município e o
+botão para emitir. A ficha do último levantamento continua abaixo.
+
+O catálogo saiu de `app/(sync)/modulos/.../_components/documentos.ts` para
+`modules/cidades/documentos-emissiveis.ts` — dois lugares o consomem agora, e
+`_components` é pasta privada de rota.
+
+**A emissão daqui entra na fila (`useFilaDeEmissao`), nunca dispara direto.**
+Cada relatório abre um Chromium no servidor e consulta uma dúzia de fontes
+públicas: dois em paralelo competem por memória e multiplicam a chance de a
+fonte responder com bloqueio. A fila também sobrevive a fechar a janela.
+
+**Tudo que entra na cidade vira acontecimento.** `registrarArquivoNaLinhaDoTempo`
+anota cada documento anexado, com autor, data e link. O título diz o que a
+pessoa fez — *"Análise anexada ao Raio-X Municipal"* —, não o nome do arquivo:
+quem lê a linha do tempo quer saber que houve uma análise.
+
+**Falha ao anotar não desfaz o upload.** O arquivo já está salvo e íntegro
+quando a anotação roda; quem chama trata a falha como aviso. O desequilíbrio é
+deliberado nesta direção — evento apontando para arquivo que não subiu seria um
+link quebrado no meio do histórico, e perder o trabalho de quem subiu o arquivo
+por causa de uma anotação seria pior que a anotação faltar.
+
+**`CityDocument.relatorioId` é o que faz uma análise ser *sobre* algo.** A aba
+Relatórios agrupa por ele e mostra, sob cada relatório, o que a equipe anexou.
+Sem o campo, o vínculo dependeria de alguém nomear o arquivo direito.
+
+**"Baixar todos" busca e salva um a um**, em vez de abrir as URLs: o navegador
+bloqueia a partir da segunda janela, e o usuário ficaria com um PDF e a
+impressão de que os outros falharam.
+
+### Cronograma de implantação
+
+Subcoleção `cities/{id}/etapas`, aba própria na ficha. Modelo padrão em
+`core/domain/cronograma.ts`, acesso em `core/lib/city-schedule-firestore.ts`.
+
+**O modelo é semente, não configuração.** As etapas padrão são uma constante do
+arquivo, copiadas para a cidade no dia em que a implantação começa. Guardá-las
+numa coleção editável pareceria mais flexível e faria mudar o modelo mexer — ou
+divergir — do cronograma de cidades que já rodam há meses. Corolário aceito de
+propósito: **revisar o modelo não conserta cidade que já começou**; vale para as
+próximas.
+
+**O cronograma nasce vazio e a semeadura é um ato.** Semear toda cidade da
+carteira encheria de prazos vencidos as que estão só em prospecção. A pessoa diz
+quando começou, e os prazos saem dali — dias corridos, todos ajustáveis depois.
+
+**Etapa não tem dono, ao contrário de evento.** Qualquer pessoa da equipe conclui
+qualquer etapa: é o estado combinado do trabalho, não registro de autoria. Quem
+está na cidade hoje conclui o que a colega marcou semana passada, e isso é o uso
+normal. Por isso a regra de `etapas` não tem a trava de autor que `eventos` tem.
+
+**Concluir escreve na linha do tempo, no mesmo lote.** Soltas, a segunda escrita
+podia falhar e deixar uma etapa concluída que a linha do tempo desconhece — e é
+a linha do tempo que a equipe lê para saber o que andou. É também por isso que
+`etapa` é um tipo de evento que ninguém escolhe no formulário: nasce de um fato
+do cronograma. Reabrir **não apaga** o evento da conclusão: `delete` é `false`
+nos eventos, e voltar a pendente é fato novo, não desaparecimento do anterior.
+
+**Datas em UTC, sempre.** `somarDias` monta `new Date("YYYY-MM-DDT00:00:00Z")`.
+Montar em horário local faria um fuso a oeste de Greenwich devolver o dia
+anterior na volta para texto — prazo que anda um dia sozinho é defeito que
+ninguém reporta e todo mundo desconta da confiança na ferramenta. E `estaAtrasada`
+compara com `<`: etapa que vence hoje tem o dia inteiro.
+
+### O bloco comercial sai da tela de quem não tem Pipeline
+
+Estágio, probabilidade e receita estimada dependem de `podeVer(permissoes,
+"pipeline")`. Não é zelo abstrato: a consultora abre a cidade na frente do
+secretário municipal, girando o notebook na mesa. Amarrar à permissão que já
+existe, em vez de criar uma nova, faz com que quem não vê o funil no menu também
+não o veja aqui — sem uma segunda regra para alguém esquecer de manter.
+
+### O cache do Firestore passou a ser persistente
+
+`getFirebaseDb()` usa `initializeFirestore` com `persistentLocalCache`, e não
+mais `getFirestore()` puro. O motivo é esta seção: a consultora digita o relato
+da reunião dentro da prefeitura, sem sinal. Com cache de memória a escrita
+morria com o processo, **sem aviso** — e relatório perdido assim não gera
+reclamação, gera alguém que nunca mais confia no app.
+
+Duas armadilhas contornadas em `firebase-client.ts`: não há IndexedDB no
+servidor (o módulo é importado em Server Components), e `initializeFirestore`
+estoura se já houver instância — o que acontece a cada recarga do HMR.
+
+> **Regra nova exige `npm run firebase:regras`.** Coleção sem regra é acesso
+> negado por padrão: enquanto o deploy não roda, a linha do tempo lê e escreve
+> nada, em produção e no desktop.

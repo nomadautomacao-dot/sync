@@ -21,6 +21,8 @@ import {
 import { getFirebaseDb } from "@/core/lib/firebase-client";
 import { useAuth } from "@/core/providers/auth-provider";
 import { listCityReports } from "@/modules/cidades/city-reports-firestore";
+import { DOCUMENTOS } from "@/modules/cidades/documentos-emissiveis";
+import { useFilaDeEmissao } from "@/core/providers/fila-emissao-provider";
 import { listCityDocuments } from "@/modules/documentos/documentos-firestore";
 
 import { NewCityDialog } from "../pipeline/_components/new-city-dialog";
@@ -48,6 +50,7 @@ export default function CidadesPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { token } = theme.useToken();
+  const { enfileirar } = useFilaDeEmissao();
   const [newCityOpen, setNewCityOpen] = useState(false);
 
   const {
@@ -72,14 +75,60 @@ export default function CidadesPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: (
-      input: Partial<CityAccount> & { name: string; uf: string },
-    ) => ensureCity(getFirebaseDb(), user!.groupId, input),
-    onSuccess: (city) => {
+    mutationFn: async (input: Partial<CityAccount> & { name: string; uf: string }) => {
+      /* `ensureCity` é idempotente e não conta se criou ou reencontrou. A
+         diferença importa aqui: enfileirar o acervo de uma cidade que alguém
+         readicionou reemitiria treze documentos que já existem, gastando meia
+         hora de chamadas às fontes de governo para produzir cópias. */
+      const jaExistia = cities.some((atual) =>
+        input.codigoIbge
+          ? atual.codigoIbge === input.codigoIbge
+          : atual.name.trim().toLocaleLowerCase("pt-BR") ===
+              input.name.trim().toLocaleLowerCase("pt-BR") &&
+            atual.uf.toUpperCase() === input.uf.toUpperCase(),
+      );
+      const city = await ensureCity(getFirebaseDb(), user!.groupId, input);
+      return { city, jaExistia };
+    },
+    onSuccess: async ({ city, jaExistia }) => {
       queryClient.invalidateQueries({ queryKey: ["cities"] });
       queryClient.invalidateQueries({ queryKey: ["pipeline-cities"] });
       setNewCityOpen(false);
-      message.success(`${city.name} está pronta na carteira.`);
+
+      /* O acervo inteiro entra na fila junto com a cidade. A fila é sequencial
+         e sobrevive a fechar a janela, então isto acontece por trás: quem
+         cadastrou já cai na ficha do município e os documentos vão chegando.
+
+         Sem código do IBGE não há o que emitir — todo documento é montado a
+         partir dele —, e a mensagem diz isso em vez de falhar em silêncio. */
+      if (!jaExistia && city.codigoIbge) {
+        try {
+          const criados = await enfileirar(
+            {
+              cityId: city.id,
+              cityName: city.name,
+              cityUf: city.uf,
+              codigoIbge: city.codigoIbge,
+              regiao: city.region,
+            },
+            DOCUMENTOS.map((documento) => documento.id),
+          );
+          message.success(
+            `${city.name} está na carteira. ${criados} documentos entraram na fila e serão emitidos em segundo plano.`,
+          );
+        } catch {
+          message.warning(
+            `${city.name} entrou na carteira, mas os relatórios não foram enfileirados. Emita pela aba "FUNDEB e documentos".`,
+          );
+        }
+      } else if (!city.codigoIbge) {
+        message.warning(
+          `${city.name} entrou na carteira sem código IBGE — sem ele não dá para emitir documento nenhum.`,
+        );
+      } else {
+        message.success(`${city.name} já estava na carteira.`);
+      }
+
       router.push(`/cidades/${city.id}`);
     },
     onError: (error) =>
@@ -96,6 +145,8 @@ export default function CidadesPage() {
       contagem.set(city.id, { documentos: 0, relatorios: 0 });
     }
     for (const documento of documents) {
+      // Documento é o que a equipe anexa; o PDF emitido já conta em "Relat.".
+      if (documento.source !== "upload") continue;
       const atual = contagem.get(documento.cityId);
       if (atual) atual.documentos += 1;
     }
@@ -154,6 +205,10 @@ export default function CidadesPage() {
     {
       title: "Município",
       dataIndex: "name",
+      /* Largura própria, e não flexível: esta era a única coluna sem largura,
+         e quando a soma das fixas passa do espaço ela é espremida até sumir —
+         justamente o nome, que é a coluna que dá sentido às outras. */
+      width: 220,
       ellipsis: true,
       sorter: (a, b) => a.name.localeCompare(b.name, "pt-BR"),
       render: (_, linha) => (
@@ -172,6 +227,49 @@ export default function CidadesPage() {
           {linha.codigoIbge || "—"}
         </span>
       ),
+    },
+    {
+      title: "Parceiro",
+      dataIndex: "parceiroName",
+      width: 150,
+      ellipsis: true,
+      responsive: ["xl"],
+      sorter: (a, b) =>
+        (a.parceiroName ?? "").localeCompare(b.parceiroName ?? "", "pt-BR"),
+      render: (_, linha) =>
+        linha.parceiroName ? (
+          <span style={{ fontSize: 12 }}>{linha.parceiroName}</span>
+        ) : (
+          <span style={{ fontSize: 12, color: token.colorTextQuaternary }}>—</span>
+        ),
+    },
+    {
+      title: "Resp. técnico",
+      dataIndex: "collaboratorName",
+      width: 160,
+      ellipsis: true,
+      responsive: ["lg"],
+      sorter: (a, b) =>
+        (a.collaboratorName ?? "").localeCompare(b.collaboratorName ?? "", "pt-BR"),
+      render: (_, linha) =>
+        linha.collaboratorName ? (
+          <span style={{ fontSize: 12 }}>{linha.collaboratorName}</span>
+        ) : (
+          /* Sem responsável é o estado que precisa saltar: cidade sem dono é
+             cidade que ninguém sabe se está sendo trabalhada. Parceiro vazio é
+             "—" porque nem toda cidade chegou por parceiro. */
+          <span style={{ fontSize: 12, color: token.colorWarningText }}>sem responsável</span>
+        ),
+    },
+    {
+      title: "Última atividade",
+      dataIndex: "lastActivityAt",
+      width: 140,
+      align: "right",
+      search: false,
+      responsive: ["lg"],
+      sorter: (a, b) => (a.lastActivityAt ?? "").localeCompare(b.lastActivityAt ?? ""),
+      render: (_, linha) => <UltimaAtividade iso={linha.lastActivityAt} />,
     },
     {
       title: "Estágio",
@@ -264,7 +362,9 @@ export default function CidadesPage() {
         /* A carteira inteira à vista é o ponto: rolar é melhor que paginar
            quando a pergunta é "quais municípios eu tenho". */
         pagination={false}
-        scroll={{ x: 900 }}
+        /* A soma das larguras fixas: menor que isso, a tabela espreme as
+           colunas em vez de rolar. */
+        scroll={{ x: 1400 }}
         search={{ labelWidth: "auto" }}
         options={{ density: false, fullScreen: false }}
         dateFormatter="string"
@@ -276,8 +376,8 @@ export default function CidadesPage() {
               styles={{ content: { fontSize: 16, fontFamily: "var(--font-sync-mono)" } }}
             />
             <Statistic
-              title="Documentos"
-              value={documents.length}
+              title="Documentos anexados"
+              value={documents.filter((documento) => documento.source === "upload").length}
               styles={{ content: { fontSize: 16, fontFamily: "var(--font-sync-mono)" } }}
             />
             <Statistic
@@ -309,5 +409,42 @@ export default function CidadesPage() {
         }}
       />
     </>
+  );
+}
+
+/**
+ * "há 3 dias" em vez de uma data.
+ *
+ * A pergunta que esta coluna responde é *qual cidade está parada*, e ninguém
+ * subtrai datas de cabeça ao varrer vinte linhas. A partir de duas semanas o
+ * texto fica em cor de alerta — é onde "faz tempo" vira "alguém precisa olhar".
+ */
+function UltimaAtividade({ iso }: { iso?: string }) {
+  const { token } = theme.useToken();
+
+  if (!iso) {
+    // Nunca teve atividade é ausência, não zero dias.
+    return <span style={{ fontFamily: FONTE_MONO, color: token.colorTextQuaternary }}>—</span>;
+  }
+
+  const quando = new Date(iso);
+  if (Number.isNaN(quando.getTime())) {
+    return <span style={{ fontFamily: FONTE_MONO, color: token.colorTextQuaternary }}>—</span>;
+  }
+
+  const dias = Math.floor((Date.now() - quando.getTime()) / 86_400_000);
+  const texto =
+    dias <= 0 ? "hoje" : dias === 1 ? "ontem" : dias < 30 ? `há ${dias} dias` : `há ${Math.floor(dias / 30)} meses`;
+
+  return (
+    <span
+      style={{
+        fontFamily: FONTE_MONO,
+        fontSize: 12,
+        color: dias >= 14 ? token.colorWarningText : token.colorText,
+      }}
+    >
+      {texto}
+    </span>
   );
 }

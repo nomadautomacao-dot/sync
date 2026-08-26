@@ -126,7 +126,7 @@ export function DialogoUsuario({
             type={papel.irrestrito ? "warning" : "info"}
             showIcon
             style={{ marginBottom: 24 }}
-            message={papel.rotulo}
+            title={papel.rotulo}
             description={
               papel.irrestrito
                 ? `${papel.descricao} Este papel enxerga todas as prefeituras do ${sistema.nome}, não só a vinculada.`

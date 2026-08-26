@@ -29,6 +29,8 @@ const validDocument = {
   cityUf: 'GO',
   title: 'Contrato 001/2026',
   storagePath: 'city-documents/grupo-1/cidade-1/contrato.pdf',
+  downloadUrl: 'https://example.com/contrato.pdf',
+  createdBy: 'u1',
 };
 
 test('membro cria e le documento municipal do proprio grupo', async () => {
@@ -51,18 +53,51 @@ test('usuario nao le nem exclui documento de outro grupo', async () => {
   await assertFails(deleteDoc(doc(db, 'cityDocuments/d3')));
 });
 
-test('metadados sao imutaveis depois do upload', async () => {
+test('metadados sao editaveis depois do upload', async () => {
   await env.withSecurityRulesDisabled(async (context) => {
     await setDoc(doc(context.firestore(), 'cityDocuments/d4'), validDocument);
   });
   const db = ctx('u1', 'grupo-1');
-  await assertFails(updateDoc(doc(db, 'cityDocuments/d4'), { title: 'Alterado' }));
+  await assertSucceeds(updateDoc(doc(db, 'cityDocuments/d4'), {
+    title: 'Contrato 001/2026 (retificado)',
+    expiresAt: '2027-01-31',
+  }));
 });
 
-test('membro exclui documento do proprio grupo', async () => {
+test('arquivo e autoria continuam imutaveis', async () => {
+  await env.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'cityDocuments/d4b'), validDocument);
+    await setDoc(doc(context.firestore(), 'cityDocuments/d4c'), validDocument);
+  });
+  const db = ctx('u1', 'grupo-1');
+  await assertFails(updateDoc(doc(db, 'cityDocuments/d4b'), {
+    storagePath: 'city-documents/grupo-1/cidade-1/outro.pdf',
+  }));
+  await assertFails(updateDoc(doc(db, 'cityDocuments/d4c'), {
+    createdBy: 'u2',
+  }));
+});
+
+test('autor exclui o proprio documento', async () => {
   await env.withSecurityRulesDisabled(async (context) => {
     await setDoc(doc(context.firestore(), 'cityDocuments/d5'), validDocument);
   });
   const db = ctx('u1', 'grupo-1');
   await assertSucceeds(deleteDoc(doc(db, 'cityDocuments/d5')));
+});
+
+test('membro nao exclui documento de outra pessoa', async () => {
+  await env.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'cityDocuments/d6'), validDocument);
+  });
+  const db = ctx('u2', 'grupo-1');
+  await assertFails(deleteDoc(doc(db, 'cityDocuments/d6')));
+});
+
+test('admin exclui documento de qualquer autor', async () => {
+  await env.withSecurityRulesDisabled(async (context) => {
+    await setDoc(doc(context.firestore(), 'cityDocuments/d7'), validDocument);
+  });
+  const db = ctx('u3', 'grupo-1', 'admin');
+  await assertSucceeds(deleteDoc(doc(db, 'cityDocuments/d7')));
 });

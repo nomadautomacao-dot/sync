@@ -88,6 +88,8 @@ function documentFromSnapshot(
     createdByName: stringValue(data.createdByName),
     createdAt: timestampToIso(data.createdAt),
     source: data.source === "generated" ? "generated" : "upload",
+    relatorioId: optionalString(data.relatorioId),
+    relatorioTitulo: optionalString(data.relatorioTitulo),
   };
 }
 
@@ -177,6 +179,11 @@ export async function uploadCityDocument(
       contractNumber: input.contractNumber?.trim() || null,
       signedAt: input.signedAt || null,
       expiresAt: input.expiresAt || null,
+      // `...input` traria `undefined` nestes dois quando o documento for
+      // avulso, e o Firestore recusa `undefined` — vira `null`, que é como o
+      // resto da coleção representa ausência.
+      relatorioId: input.relatorioId || null,
+      relatorioTitulo: input.relatorioTitulo || null,
       title: input.title.trim(),
       fileName: file.name,
       fileSize: file.size,
@@ -193,6 +200,8 @@ export async function uploadCityDocument(
       contractNumber: payload.contractNumber ?? undefined,
       signedAt: payload.signedAt ?? undefined,
       expiresAt: payload.expiresAt ?? undefined,
+      relatorioId: payload.relatorioId ?? undefined,
+      relatorioTitulo: payload.relatorioTitulo ?? undefined,
       createdAt: new Date().toISOString(),
     };
   } catch (error) {

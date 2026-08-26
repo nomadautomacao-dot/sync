@@ -133,7 +133,7 @@ export default function SistemaPage({ params }: { params: Promise<{ sistema: str
           <Alert
             type="warning"
             showIcon
-            message="Quem tiver este link define a senha da conta."
+            title="Quem tiver este link define a senha da conta."
             description="O Sync não envia e-mail: a entrega é sua. Mande por um canal direto e não guarde o link depois."
           />
         </Space>
@@ -482,7 +482,7 @@ export default function SistemaPage({ params }: { params: Promise<{ sistema: str
         <Alert
           type="error"
           showIcon
-          message="O banco deste sistema não respondeu"
+          title="O banco deste sistema não respondeu"
           description={sistema.erro}
         />
       )}
@@ -500,7 +500,7 @@ export default function SistemaPage({ params }: { params: Promise<{ sistema: str
                   <Alert
                     type="error"
                     showIcon
-                    message="Falha ao listar prefeituras"
+                    title="Falha ao listar prefeituras"
                     description={mensagemDe(prefeiturasQuery.error, "Erro desconhecido.")}
                     action={
                       <Button size="small" onClick={() => prefeiturasQuery.refetch()}>
@@ -575,7 +575,7 @@ export default function SistemaPage({ params }: { params: Promise<{ sistema: str
                   <Alert
                     type="error"
                     showIcon
-                    message="Falha ao listar usuários"
+                    title="Falha ao listar usuários"
                     description={mensagemDe(usuariosQuery.error, "Erro desconhecido.")}
                     action={
                       <Button size="small" onClick={() => usuariosQuery.refetch()}>
@@ -589,7 +589,7 @@ export default function SistemaPage({ params }: { params: Promise<{ sistema: str
                   <Alert
                     type="info"
                     showIcon
-                    message="Cadastre uma prefeitura primeiro"
+                    title="Cadastre uma prefeitura primeiro"
                     description="Todo usuário do sistema é vinculado a um município — é esse vínculo que decide o que ele enxerga."
                   />
                 )}

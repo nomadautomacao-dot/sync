@@ -2,27 +2,29 @@
 
 import { useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import dayjs from "dayjs";
 import {
   ArrowLeftOutlined,
   BankOutlined,
+  CalendarOutlined,
   CheckCircleOutlined,
+  ContactsOutlined,
   DatabaseOutlined,
   DownloadOutlined,
+  EditOutlined,
   EnvironmentOutlined,
   EyeOutlined,
+  FileDoneOutlined,
   FileOutlined,
   FileTextOutlined,
   FolderOutlined,
+  HistoryOutlined,
   MoreOutlined,
   PaperClipOutlined,
-  RightOutlined,
   RiseOutlined,
   RobotOutlined,
   RocketOutlined,
-  SaveOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
 import { ProTable } from "@ant-design/pro-components";
@@ -33,16 +35,12 @@ import {
   Button,
   Card,
   Col,
-  DatePicker,
   Descriptions,
   Dropdown,
   Empty,
   Flex,
-  Input,
-  InputNumber,
   Result,
   Row,
-  Select,
   Skeleton,
   Space,
   Statistic,
@@ -57,19 +55,17 @@ import { VisualizadorPdf } from "@/core/components/visualizador-pdf";
 import {
   deleteCity,
   getCity,
-  updateCityPipeline,
 } from "@/core/lib/cities-firestore";
 import {
-  STAGE_KEYS,
   STAGE_LABELS,
   formatCurrency,
   stagePastelTone,
-  stageProbability,
   type CityAccount,
-  type StageKey,
 } from "@/core/lib/city-types";
 import { getFirebaseDb, getFirebaseStorage } from "@/core/lib/firebase-client";
+import { registrarArquivoNaLinhaDoTempo } from "@/core/lib/city-events-firestore";
 import { useAuth } from "@/core/providers/auth-provider";
+import { baixarPdf } from "@/modules/cidades/emissao";
 import { listCityReports } from "@/modules/cidades/city-reports-firestore";
 import {
   CITY_REPORT_TYPE_LABELS,
@@ -85,13 +81,30 @@ import type {
   CreateCityDocumentInput,
 } from "@/modules/documentos/types";
 
+import { podeEditar, podeVer } from "@/core/domain/rbac";
+
 import { DocumentUploadDialog } from "../../documentos/_components/document-upload-dialog";
 import { DeleteCityDialog } from "./_components/delete-city-dialog";
+import { ResponsaveisDialog } from "./_components/responsaveis-dialog";
+import { Contatos } from "./_components/contatos";
+import { ContratoDaCidade } from "./_components/contrato-da-cidade";
+import { Cronograma } from "./_components/cronograma";
+import { DocumentosDaCidade } from "./_components/documentos-da-cidade";
+import { Panorama } from "./_components/panorama";
 import { FundebDataTab } from "./_components/fundeb-data-tab";
+import { LinhaDoTempo } from "./_components/linha-do-tempo";
 
 const { Text, Title } = Typography;
 
-type CityTab = "visao-geral" | "dados-fundeb" | "relatorios" | "documentos";
+type CityTab =
+  | "linha-do-tempo"
+  | "contatos"
+  | "cronograma"
+  | "contrato"
+  | "panorama"
+  | "dados-fundeb"
+  | "relatorios"
+  | "documentos";
 
 export default function CidadeDetailPage() {
   const { message } = App.useApp();
@@ -101,9 +114,30 @@ export default function CidadeDetailPage() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const { token } = theme.useToken();
-  const [tab, setTab] = useState<CityTab>("visao-geral");
+  /* A linha do tempo é a aba de entrada: quem abre uma cidade quer saber o que
+     se passou nela, não editar o funil. `?aba=` existe para as portas de fora
+     — o catálogo de módulos manda direto para a aba de contrato. */
+  const searchParams = useSearchParams();
+  const [tab, setTab] = useState<CityTab>(() => {
+    const pedida = searchParams.get("aba");
+    const validas: CityTab[] = [
+      "linha-do-tempo",
+      "contatos",
+      "cronograma",
+      "contrato",
+      "panorama",
+      "dados-fundeb",
+      "relatorios",
+      "documentos",
+    ];
+    return validas.includes(pedida as CityTab) ? (pedida as CityTab) : "linha-do-tempo";
+  });
   const [uploadOpen, setUploadOpen] = useState(false);
+  /* Quando o upload é uma análise sobre um relatório, e não um documento
+     avulso. Guarda o relatório para vincular e para nomear o acontecimento. */
+  const [anexarAoRelatorio, setAnexarAoRelatorio] = useState<CityReport | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [responsaveisOpen, setResponsaveisOpen] = useState(false);
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
 
   const {
@@ -131,8 +165,16 @@ export default function CidadeDetailPage() {
     queryFn: () => listCityDocuments(getFirebaseDb(), user!.groupId),
     enabled: Boolean(user?.groupId),
   });
+  /* Relatório é o que o sistema emite; documento é o que a equipe anexa. A
+     emissão grava o PDF gerado também em `cityDocuments` (source "generated"),
+     e sem este filtro cada relatório aparecia duas vezes — uma na aba de
+     Relatórios e outra contada como "documento", inflando a pasta da cidade
+     com cópias do que a aba ao lado já mostra. */
   const documents = useMemo(
-    () => allDocuments.filter((document) => document.cityId === cityId),
+    () =>
+      allDocuments.filter(
+        (document) => document.cityId === cityId && document.source === "upload",
+      ),
     [allDocuments, cityId],
   );
 
@@ -153,10 +195,37 @@ export default function CidadeDetailPage() {
         createdBy: user!.id,
         createdByName: user!.name,
       }),
-    onSuccess: () => {
+    onSuccess: async (documento) => {
       queryClient.invalidateQueries({ queryKey: ["city-documents"] });
       setUploadOpen(false);
+      setAnexarAoRelatorio(null);
       message.success("Documento anexado à cidade.");
+
+      /* O arquivo entrou; agora ele vira acontecimento, com autor e data, para
+         que a equipe veja a contribuição sem abrir a aba de Documentos.
+         Falha aqui é aviso, não erro: o documento já está salvo e íntegro —
+         desfazer o upload por causa da anotação seria perder o trabalho de
+         quem subiu o arquivo. */
+      try {
+        await registrarArquivoNaLinhaDoTempo(
+          getFirebaseDb(),
+          user!.groupId,
+          cityId,
+          {
+            titulo: documento.title,
+            url: documento.downloadUrl,
+            documentoId: documento.id,
+            relatorioTitulo: documento.relatorioTitulo,
+            descricao: documento.description,
+          },
+          { uid: user!.id, nome: user!.name },
+        );
+        queryClient.invalidateQueries({ queryKey: ["city-events", cityId] });
+      } catch {
+        message.warning(
+          "O documento foi salvo, mas não entrou na linha do tempo. Registre-o à mão se for importante para a equipe.",
+        );
+      }
     },
   });
 
@@ -213,6 +282,14 @@ export default function CidadeDetailPage() {
 
   const tone = stagePastelTone(city.stage);
 
+  /* Receita estimada, probabilidade e estágio saem da tela de quem não tem
+     Pipeline — e isso não é zelo abstrato: a consultora abre a cidade na frente
+     do secretário municipal, girando o notebook na mesa. Amarrar à permissão
+     que já existe, em vez de criar uma nova, faz com que quem não vê o funil no
+     menu também não o veja aqui, sem uma segunda regra para manter. */
+  const verComercial = user ? podeVer(user.permissoes, "pipeline") : false;
+  const editarCidade = user ? podeEditar(user.permissoes, "cidades") : false;
+
   const handleUpload = async (
     file: File,
     input: Omit<
@@ -220,7 +297,19 @@ export default function CidadeDetailPage() {
       "groupId" | "createdBy" | "createdByName"
     >,
   ) => {
-    await uploadMutation.mutateAsync({ file, input });
+    /* O vínculo com o relatório entra aqui, e não no diálogo: o formulário de
+       upload é o mesmo da tela de Documentos, que não conhece relatório nenhum.
+       Quem sabe que este upload é uma análise é quem abriu o diálogo. */
+    await uploadMutation.mutateAsync({
+      file,
+      input: anexarAoRelatorio
+        ? {
+            ...input,
+            relatorioId: anexarAoRelatorio.id,
+            relatorioTitulo: anexarAoRelatorio.title,
+          }
+        : input,
+    });
   };
 
   const optionsMenu: MenuProps["items"] = [
@@ -238,30 +327,62 @@ export default function CidadeDetailPage() {
      era antes da migração. */
   const tabPanels: { key: CityTab; label: string; icon: ReactNode; content: ReactNode }[] = [
     {
-      key: "visao-geral",
-      label: "Visão geral",
+      key: "linha-do-tempo",
+      label: "Linha do tempo",
+      icon: <HistoryOutlined />,
+      content: <LinhaDoTempo cityId={city.id} />,
+    },
+    {
+      /* Logo depois da linha do tempo: quem abre a cidade para ligar na
+         prefeitura quer o telefone do secretário, não o funil. */
+      key: "contatos",
+      label: "Contatos",
+      icon: <ContactsOutlined />,
+      content: <Contatos cityId={city.id} />,
+    },
+    {
+      key: "cronograma",
+      label: "Cronograma",
+      icon: <CalendarOutlined />,
+      content: <Cronograma cityId={city.id} inicioSugerido={city.implantacaoInicio} />,
+    },
+    {
+      key: "contrato",
+      label: "Contrato",
+      icon: <FileDoneOutlined />,
+      content: <ContratoDaCidade city={city} />,
+    },
+    {
+      key: "panorama",
+      label: "Panorama",
       icon: <RiseOutlined />,
       content: (
-        <OverviewTab
+        <Panorama
           city={city}
           reports={reports}
           documents={documents}
-          onOpenReports={() => setTab("relatorios")}
+          verComercial={verComercial}
         />
       ),
     },
     {
       key: "dados-fundeb",
-      label: "Levantamento FUNDEB",
+      label: "FUNDEB e documentos",
       icon: <DatabaseOutlined />,
       content: (
-        <FundebDataTab
-          city={city}
-          reports={reports}
-          pending={reportsPending}
-          selected={selectedReport}
-          onSelect={setSelectedReportId}
-        />
+        /* A mesa de emissão vem primeiro, e a ficha do último levantamento
+           abaixo: quem abre esta aba quer saber o que já existe e o que falta
+           emitir antes de conferir número. */
+        <Flex vertical gap={14}>
+          <DocumentosDaCidade city={city} reports={reports} />
+          <FundebDataTab
+            city={city}
+            reports={reports}
+            pending={reportsPending}
+            selected={selectedReport}
+            onSelect={setSelectedReportId}
+          />
+        </Flex>
       ),
     },
     {
@@ -272,10 +393,15 @@ export default function CidadeDetailPage() {
         <ReportsTab
           city={city}
           reports={reports}
+          documents={documents}
           pending={reportsPending}
           error={reportsError}
           selected={selectedReport}
           onSelect={setSelectedReportId}
+          onAnexarAnalise={(report) => {
+            setAnexarAoRelatorio(report);
+            setUploadOpen(true);
+          }}
         />
       ),
     },
@@ -306,16 +432,18 @@ export default function CidadeDetailPage() {
                 <Title level={3} style={{ margin: 0 }}>
                   {city.name}
                 </Title>
-                <Tag
-                  style={{
-                    backgroundColor: tone.bg,
-                    color: tone.text,
-                    border: "none",
-                    borderRadius: 999,
-                  }}
-                >
-                  {STAGE_LABELS[city.stage]}
-                </Tag>
+                {verComercial && (
+                  <Tag
+                    style={{
+                      backgroundColor: tone.bg,
+                      color: tone.text,
+                      border: "none",
+                      borderRadius: 999,
+                    }}
+                  >
+                    {STAGE_LABELS[city.stage]}
+                  </Tag>
+                )}
               </Flex>
               <Text
                 type="secondary"
@@ -329,6 +457,47 @@ export default function CidadeDetailPage() {
                   : `${reports.length} relatórios`}{" "}
                 · {documents.length} documentos
               </Text>
+              {/* Os dois papéis da cidade: quem abriu a porta e quem responde
+                  pela operação. Faltar é o estado que precisa saltar — cidade
+                  sem responsável é cidade que ninguém sabe se está sendo
+                  trabalhada. */}
+              <Flex align="center" gap={6} wrap="wrap" style={{ marginTop: 2 }}>
+                <Text style={{ fontSize: 12 }}>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    Parceiro:
+                  </Text>{" "}
+                  {city.parceiroName ? (
+                    city.parceiroName
+                  ) : (
+                    <Text style={{ fontSize: 12, color: token.colorWarningText }}>
+                      não definido
+                    </Text>
+                  )}
+                </Text>
+                <Text type="secondary">·</Text>
+                <Text style={{ fontSize: 12 }}>
+                  <Text type="secondary" style={{ fontSize: 12 }}>
+                    Resp. técnico:
+                  </Text>{" "}
+                  {city.collaboratorName ? (
+                    city.collaboratorName
+                  ) : (
+                    <Text style={{ fontSize: 12, color: token.colorWarningText }}>
+                      não definido
+                    </Text>
+                  )}
+                </Text>
+                {editarCidade && (
+                  <Button
+                    size="small"
+                    type="text"
+                    icon={<EditOutlined />}
+                    aria-label="Editar responsáveis da cidade"
+                    title="Editar responsáveis"
+                    onClick={() => setResponsaveisOpen(true)}
+                  />
+                )}
+              </Flex>
             </div>
           </Flex>
 
@@ -381,10 +550,17 @@ export default function CidadeDetailPage() {
           initialCityId={city.id}
           uploading={uploadMutation.isPending}
           onClose={() => {
-            if (!uploadMutation.isPending) setUploadOpen(false);
+            if (!uploadMutation.isPending) {
+              setUploadOpen(false);
+              setAnexarAoRelatorio(null);
+            }
           }}
           onSubmit={handleUpload}
         />
+      )}
+
+      {responsaveisOpen && (
+        <ResponsaveisDialog city={city} onClose={() => setResponsaveisOpen(false)} />
       )}
 
       {deleteOpen && (
@@ -401,333 +577,62 @@ export default function CidadeDetailPage() {
   );
 }
 
-function OverviewTab({
-  city,
-  reports,
-  documents,
-  onOpenReports,
-}: {
-  city: CityAccount;
-  reports: CityReport[];
-  documents: CityDocument[];
-  onOpenReports: () => void;
-}) {
-  const { message } = App.useApp();
-  const queryClient = useQueryClient();
-  const { token } = theme.useToken();
-  const [stage, setStage] = useState<StageKey>(city.stage);
-  const [probability, setProbability] = useState(city.probability);
-  const [revenue, setRevenue] = useState(city.estimatedAnnualRevenue);
-  const [nextStep, setNextStep] = useState(city.nextStepDescription ?? "");
-  const [dueDate, setDueDate] = useState(city.nextStepDueDate ?? "");
-
-  const saveMutation = useMutation({
-    mutationFn: () =>
-      updateCityPipeline(getFirebaseDb(), city.id, {
-        stage,
-        probability,
-        estimatedAnnualRevenue: revenue,
-        nextStepDescription: nextStep,
-        nextStepDueDate: dueDate,
-        lastActivityAt: new Date().toISOString(),
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["city", city.id] });
-      queryClient.invalidateQueries({ queryKey: ["cities"] });
-      queryClient.invalidateQueries({ queryKey: ["pipeline-cities"] });
-      message.success("Pipeline da cidade atualizado.");
-    },
-    onError: (error) =>
-      message.error(
-        error instanceof Error
-          ? error.message
-          : "Não foi possível salvar o pipeline.",
-      ),
-  });
-
-  const latestActivities = [
-    ...reports.map((report) => ({
-      id: `report-${report.id}`,
-      title: report.title,
-      meta: `Relatório ${report.exercise}`,
-      date: report.generatedAt,
-      icon: RobotOutlined,
-      background: token.colorSuccessBg,
-      color: token.colorSuccess,
-    })),
-    ...documents.map((document) => ({
-      id: `document-${document.id}`,
-      title: document.title,
-      meta: "Documento anexado",
-      date: document.createdAt,
-      icon: PaperClipOutlined,
-      background: token.colorInfoBg,
-      color: token.colorInfo,
-    })),
-  ]
-    .sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""))
-    .slice(0, 5);
-
-  return (
-    <Row gutter={[14, 14]}>
-      <Col xs={24} xl={15}>
-        <Card>
-          <Flex justify="space-between" align="flex-start">
-            <div>
-              <Title level={5} style={{ margin: 0 }}>
-                Pipeline e próxima ação
-              </Title>
-              <Text type="secondary" style={{ fontSize: 11 }}>
-                Este status alimenta o Kanban e o painel comercial.
-              </Text>
-            </div>
-            <Text
-              type="secondary"
-              style={{ fontFamily: "var(--font-sync-mono)", fontSize: 11 }}
-            >
-              {probability}% probabilidade
-            </Text>
-          </Flex>
-
-          <Row gutter={[16, 16]} style={{ marginTop: 20 }}>
-            <Col xs={24} sm={12}>
-              <Flex vertical gap={6}>
-                <Text strong style={{ fontSize: 11 }}>
-                  Estágio atual
-                </Text>
-                <Select<StageKey>
-                  value={stage}
-                  onChange={(value) => {
-                    setStage(value);
-                    setProbability(stageProbability(value));
-                  }}
-                  options={STAGE_KEYS.map((key) => ({
-                    value: key,
-                    label: STAGE_LABELS[key],
-                  }))}
-                />
-              </Flex>
-            </Col>
-            <Col xs={24} sm={12}>
-              <Flex vertical gap={6}>
-                <Text strong style={{ fontSize: 11 }}>
-                  Probabilidade (%)
-                </Text>
-                <InputNumber
-                  min={0}
-                  max={100}
-                  value={probability}
-                  onChange={(value) => setProbability(value ?? 0)}
-                  style={{ width: "100%" }}
-                />
-              </Flex>
-            </Col>
-            <Col xs={24} sm={12}>
-              <Flex vertical gap={6}>
-                <Text strong style={{ fontSize: 11 }}>
-                  Receita anual estimada
-                </Text>
-                <InputNumber
-                  min={0}
-                  step={1000}
-                  value={revenue}
-                  onChange={(value) => setRevenue(value ?? 0)}
-                  style={{ width: "100%" }}
-                  prefix="R$"
-                />
-              </Flex>
-            </Col>
-            <Col xs={24} sm={12}>
-              <Flex vertical gap={6}>
-                <Text strong style={{ fontSize: 11 }}>
-                  Prazo da próxima ação
-                </Text>
-                <DatePicker
-                  value={dueDate ? dayjs(dueDate) : null}
-                  onChange={(date) =>
-                    setDueDate(date ? date.format("YYYY-MM-DD") : "")
-                  }
-                  style={{ width: "100%" }}
-                  format="DD/MM/YYYY"
-                />
-              </Flex>
-            </Col>
-          </Row>
-
-          <Flex vertical gap={6} style={{ marginTop: 16 }}>
-            <Text strong style={{ fontSize: 11 }}>
-              Próxima ação
-            </Text>
-            <Input.TextArea
-              value={nextStep}
-              onChange={(event) => setNextStep(event.target.value)}
-              rows={3}
-              placeholder="Ex.: Apresentar diagnóstico ao secretário de educação"
-            />
-          </Flex>
-
-          <Flex justify="flex-end" style={{ marginTop: 20 }}>
-            <Button
-              type="primary"
-              icon={<SaveOutlined />}
-              loading={saveMutation.isPending}
-              onClick={() => saveMutation.mutate()}
-            >
-              Salvar acompanhamento
-            </Button>
-          </Flex>
-        </Card>
-      </Col>
-
-      <Col xs={24} xl={9}>
-        <Flex vertical gap={14}>
-          <Card>
-            <Title level={5} style={{ margin: 0 }}>
-              Resumo da cidade
-            </Title>
-            <Row style={{ marginTop: 16 }}>
-              <Col span={8}>
-                <Statistic
-                  title="relatórios"
-                  value={reports.length}
-                  styles={{ content: {
-                    fontFamily: "var(--font-sync-mono)",
-                    fontSize: 16,
-                  } }}
-                />
-              </Col>
-              <Col span={8}>
-                <Statistic
-                  title="documentos"
-                  value={documents.length}
-                  styles={{ content: {
-                    fontFamily: "var(--font-sync-mono)",
-                    fontSize: 16,
-                  } }}
-                />
-              </Col>
-              <Col span={8}>
-                <Statistic
-                  title="probabilidade"
-                  value={`${city.probability}%`}
-                  styles={{ content: {
-                    fontFamily: "var(--font-sync-mono)",
-                    fontSize: 16,
-                  } }}
-                />
-              </Col>
-            </Row>
-
-            <div
-              style={{
-                marginTop: 16,
-                padding: 12,
-                borderRadius: token.borderRadiusLG,
-                background: token.colorFillTertiary,
-              }}
-            >
-              <Text
-                type="secondary"
-                style={{ fontSize: 9, fontWeight: 700, textTransform: "uppercase" }}
-              >
-                Receita estimada
-              </Text>
-              <Title
-                level={4}
-                style={{ margin: "4px 0 0", fontFamily: "var(--font-sync-mono)" }}
-              >
-                {formatCurrency(city.estimatedAnnualRevenue)}
-              </Title>
-            </div>
-
-            {reports[0] && (
-              <Button
-                block
-                type="text"
-                onClick={onOpenReports}
-                style={{ marginTop: 12, height: "auto", padding: 12, textAlign: "left" }}
-              >
-                <Flex justify="space-between" align="center" style={{ width: "100%" }}>
-                  <div style={{ minWidth: 0 }}>
-                    <Text strong style={{ fontSize: 11, display: "block" }}>
-                      {reports[0].title}
-                    </Text>
-                    <Text type="secondary" style={{ fontSize: 9 }}>
-                      Último relatório · {formatDate(reports[0].generatedAt)}
-                    </Text>
-                  </div>
-                  <RightOutlined style={{ color: token.colorTextTertiary }} />
-                </Flex>
-              </Button>
-            )}
-          </Card>
-
-          <Card style={{ flex: 1 }}>
-            <Title level={5} style={{ margin: 0 }}>
-              Atividade recente
-            </Title>
-            {latestActivities.length ? (
-              <Flex vertical gap={4} style={{ marginTop: 8 }}>
-                {latestActivities.map((activity, index) => {
-                  const Icon = activity.icon;
-                  return (
-                    <Flex key={index} align="center" gap={10} style={{ padding: "8px 0", width: "100%" }}>
-                      <Flex
-                        align="center"
-                        justify="center"
-                        style={{
-                          width: 28,
-                          height: 28,
-                          flex: "0 0 auto",
-                          borderRadius: token.borderRadius,
-                          background: activity.background,
-                          color: activity.color,
-                        }}
-                      >
-                        <Icon style={{ fontSize: 13 }} />
-                      </Flex>
-                      <div style={{ minWidth: 0, flex: 1 }}>
-                        <Text strong ellipsis style={{ fontSize: 10, display: "block" }}>
-                          {activity.title}
-                        </Text>
-                        <Text type="secondary" style={{ fontSize: 8.5 }}>
-                          {activity.meta} · {formatDate(activity.date)}
-                        </Text>
-                      </div>
-                    </Flex>
-                  );
-                })}
-              </Flex>
-            ) : (
-              <Empty
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-                description="A atividade aparecerá quando um relatório ou documento for salvo."
-                style={{ marginTop: 16 }}
-              />
-            )}
-          </Card>
-        </Flex>
-      </Col>
-    </Row>
-  );
-}
-
 function ReportsTab({
   city,
   reports,
+  documents,
   pending,
   error,
   selected,
   onSelect,
+  onAnexarAnalise,
 }: {
   city: CityAccount;
   reports: CityReport[];
+  /** Todos os da cidade; o que interessa aqui são os vinculados a relatório. */
+  documents: CityDocument[];
   pending: boolean;
   error: unknown;
   selected?: CityReport;
   onSelect: (id: string) => void;
+  onAnexarAnalise: (report: CityReport) => void;
 }) {
   const { token } = theme.useToken();
+  const { message } = App.useApp();
+  const [baixandoTodos, setBaixandoTodos] = useState(false);
+
+  const comPdf = reports.filter((report) => report.downloadUrl);
+
+  /**
+   * Baixa um por um, em vez de abrir todas as URLs de uma vez.
+   *
+   * Abrir dez links seguidos é o caminho curto, e o navegador bloqueia a partir
+   * do segundo — o usuário ficaria com um PDF e a impressão de que os outros
+   * nove falharam. Buscar o arquivo e salvar o blob passa por cima disso, e no
+   * app desktop cada um cai direto na pasta de relatórios.
+   *
+   * Um que falhe não interrompe os demais: a contagem do fim diz quantos foram.
+   */
+  const baixarTodos = async () => {
+    setBaixandoTodos(true);
+    let baixados = 0;
+    for (const report of comPdf) {
+      try {
+        const resposta = await fetch(report.downloadUrl!);
+        if (!resposta.ok) continue;
+        baixarPdf(await resposta.blob(), report.fileName ?? `${report.title}.pdf`);
+        baixados += 1;
+      } catch {
+        // Contabilizado pela ausência; o aviso do fim diz o total.
+      }
+    }
+    setBaixandoTodos(false);
+    if (baixados === comPdf.length) {
+      message.success(`${baixados} relatório(s) baixado(s).`);
+    } else {
+      message.warning(`${baixados} de ${comPdf.length} baixados. Tente os que faltaram um a um.`);
+    }
+  };
 
   if (pending) {
     return (
@@ -774,7 +679,41 @@ function ReportsTab({
   }
 
   return (
-    <Row gutter={[14, 14]}>
+    <Flex vertical gap={14}>
+      <Card>
+        <Flex justify="space-between" align="center" wrap="wrap" gap={12}>
+          <div>
+            <Text strong style={{ fontSize: 13 }}>
+              {reports.length} relatório(s) desta cidade
+            </Text>
+            <div>
+              <Text type="secondary" style={{ fontSize: 11.5 }}>
+                {comPdf.length} com PDF arquivado
+                {comPdf.length < reports.length
+                  ? ` · ${reports.length - comPdf.length} só na versão navegável`
+                  : ""}
+              </Text>
+            </div>
+          </div>
+          <Space wrap>
+            <Button
+              icon={<DownloadOutlined />}
+              loading={baixandoTodos}
+              disabled={comPdf.length === 0}
+              onClick={baixarTodos}
+            >
+              {baixandoTodos ? "Baixando…" : `Baixar todos (${comPdf.length})`}
+            </Button>
+            <Link href={`/modulos/levantamento-fundeb?ibge=${city.codigoIbge}`}>
+              <Button type="primary" icon={<RocketOutlined />}>
+                Emitir novo
+              </Button>
+            </Link>
+          </Space>
+        </Flex>
+      </Card>
+
+      <Row gutter={[14, 14]}>
       <Col xs={24} xl={7}>
         <Card size="small" title="Histórico de versões">
           <Flex vertical gap={6}>
@@ -846,9 +785,91 @@ function ReportsTab({
       </Col>
 
       <Col xs={24} xl={17}>
-        {selected && <ReportPreview report={selected} />}
+        {selected && (
+          <Flex vertical gap={14}>
+            <ReportPreview report={selected} />
+            <AnalisesDoRelatorio
+              report={selected}
+              analises={documents.filter((doc) => doc.relatorioId === selected.id)}
+              onAnexar={() => onAnexarAnalise(selected)}
+            />
+          </Flex>
+        )}
       </Col>
-    </Row>
+      </Row>
+    </Flex>
+  );
+}
+
+/**
+ * O que a equipe acrescentou em cima de um relatório.
+ *
+ * É a diferença entre um acervo e uma conversa: o PDF emitido é o que o sistema
+ * produziu, e estas análises são o que as pessoas concluíram a partir dele.
+ * Cada uma delas também vira acontecimento na linha do tempo — com autor — para
+ * que a contribuição apareça sem ninguém precisar abrir esta aba.
+ */
+function AnalisesDoRelatorio({
+  report,
+  analises,
+  onAnexar,
+}: {
+  report: CityReport;
+  analises: CityDocument[];
+  onAnexar: () => void;
+}) {
+  const { token } = theme.useToken();
+
+  return (
+    <Card
+      size="small"
+      title={`Análises sobre "${report.title}"`}
+      extra={
+        <Button size="small" icon={<PaperClipOutlined />} onClick={onAnexar}>
+          Anexar análise
+        </Button>
+      }
+    >
+      {analises.length === 0 ? (
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description={
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              Ninguém anexou análise a este relatório ainda. O que for anexado
+              aqui aparece na linha do tempo da cidade.
+            </Text>
+          }
+        />
+      ) : (
+        <Flex vertical gap={8}>
+          {analises.map((analise) => (
+            <Flex key={analise.id} justify="space-between" align="center" gap={12} wrap="wrap">
+              <Flex vertical gap={0} style={{ minWidth: 0 }}>
+                <Text strong style={{ fontSize: 12 }}>
+                  {analise.title}
+                </Text>
+                <Text
+                  type="secondary"
+                  style={{ fontSize: 11, fontFamily: "var(--font-sync-mono)" }}
+                >
+                  {analise.createdByName} · {formatDate(analise.createdAt)} ·{" "}
+                  {formatFileSize(analise.fileSize)}
+                </Text>
+              </Flex>
+              <Button
+                size="small"
+                icon={<DownloadOutlined />}
+                href={analise.downloadUrl}
+                target="_blank"
+                style={{ color: token.colorPrimary }}
+              >
+                Abrir
+              </Button>
+            </Flex>
+          ))}
+        </Flex>
+      )}
+    </Card>
   );
 }
 

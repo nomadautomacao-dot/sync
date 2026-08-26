@@ -2,7 +2,7 @@ import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
-import { DOCUMENTOS } from "@/app/(sync)/modulos/levantamento-fundeb/_components/documentos";
+import { DOCUMENTOS } from "@/modules/cidades/documentos-emissiveis";
 import { CITY_REPORT_TYPES, CITY_REPORT_TYPE_LABELS } from "@/modules/cidades/reports-types";
 import { PAGINAS_ESPERADAS_RAIO_X } from "@/core/lib/municipal-xray-pdf";
 import { PAGINAS_ESPERADAS_HISTORICO_CENSO } from "@/core/lib/censo-historico-pdf";

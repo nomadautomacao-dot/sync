@@ -89,7 +89,7 @@ export default function SistemasPage() {
         <Alert
           type="error"
           showIcon
-          message="Não foi possível carregar o catálogo"
+          title="Não foi possível carregar o catálogo"
           description={error instanceof Error ? error.message : "Erro desconhecido."}
           action={
             <Button size="small" onClick={() => refetch()}>
@@ -177,7 +177,7 @@ export default function SistemasPage() {
                     não. Os números vão a zero, mas o card continua acessível —
                     a falha pode ser só o banco ainda não existir. */}
                 {sistema.erro ? (
-                  <Alert type="warning" showIcon message="Banco não respondeu" description={sistema.erro} />
+                  <Alert type="warning" showIcon title="Banco não respondeu" description={sistema.erro} />
                 ) : (
                   <Row>
                     <Col span={12}>

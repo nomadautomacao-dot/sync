@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import {
-  CopyOutlined,
   KeyOutlined,
   StopOutlined,
   UndoOutlined,
@@ -20,12 +19,10 @@ import {
   Input,
   Modal,
   Popconfirm,
-  Radio,
   Result,
   Select,
   Skeleton,
   Space,
-  Table,
   Tag,
   Tooltip,
   Typography,
@@ -35,20 +32,22 @@ import {
 import { apiFetch } from "@/core/lib/api-client";
 import type { UsuariaDeAcesso } from "@/core/lib/acessos";
 import {
+  GradeDePermissoes,
+  contarLiberadas,
+  papeisDisponiveis,
+  resumoDeAreas,
+} from "@/core/components/acessos/grade-de-permissoes";
+import { ModalDoLink } from "@/core/components/acessos/modal-do-link";
+import {
   AREAS,
-  GROUP_ROLES,
   GROUP_ROLE_LABELS,
-  NIVEIS,
-  NIVEL_LABELS,
   ajustesParaClaim,
   permissoesPadrao,
-  type Area,
   type GroupRole,
-  type NivelAcesso,
   type Permissoes,
 } from "@/core/domain/rbac";
 
-const { Text, Paragraph } = Typography;
+const { Text } = Typography;
 const FONTE_MONO = "var(--font-sync-mono)";
 
 interface RespostaLista {
@@ -392,7 +391,7 @@ function ModalDeConcessao({
           type="info"
           showIcon
           style={{ marginBottom: 16 }}
-          message="A senha não passa por aqui"
+          title="A senha não passa por aqui"
           description="O sistema cria a conta sem senha e devolve um link para ela mesma definir a dela. Se já houver conta com esse e-mail, ela é vinculada ao grupo e a senha atual não é tocada."
         />
 
@@ -502,151 +501,7 @@ function ModalDePermissoes({
   );
 }
 
-// ── A grade ──────────────────────────────────────────────────────────────
-
-/**
- * Uma linha por área, um nível por linha.
- *
- * `Table` do Ant e não `ProTable`: aqui não há dado que cresça nem que se
- * ordene — são as nove áreas do catálogo, sempre as mesmas, e o que a tabela
- * carrega são controles de formulário.
- */
-function GradeDePermissoes({
-  papel,
-  valor,
-  aoMudar,
-}: {
-  papel: GroupRole;
-  valor: Permissoes;
-  aoMudar: (novo: Permissoes) => void;
-}) {
-  const { token } = theme.useToken();
-  const padrao = permissoesPadrao(papel);
-  const donaDeTudo = papel === "owner";
-
-  return (
-    <Flex vertical gap={8}>
-      {donaDeTudo && (
-        <Alert
-          type="warning"
-          showIcon
-          message="Dona alcança tudo, sempre"
-          description="O papel de dona ignora restrição por área — é o que garante que sempre exista alguém capaz de destravar o sistema. Para limitar o alcance de alguém, use Administradora ou Colaboradora."
-        />
-      )}
-      <Table<Area>
-        rowKey="key"
-        size="small"
-        pagination={false}
-        dataSource={[...AREAS]}
-        columns={[
-          {
-            title: "Área",
-            dataIndex: "rotulo",
-            render: (_, area) => (
-              <Flex vertical gap={0}>
-                <Text strong style={{ fontSize: 13 }}>
-                  {area.rotulo}
-                </Text>
-                <Text type="secondary" style={{ fontSize: 11.5 }}>
-                  {area.descricao}
-                </Text>
-              </Flex>
-            ),
-          },
-          {
-            title: "Acesso",
-            width: 290,
-            align: "right",
-            render: (_, area) => {
-              const trava = papel !== "owner" && papel !== "admin" && area.key === "ajustes";
-              return (
-                <Flex vertical align="flex-end" gap={2}>
-                  <Radio.Group
-                    size="small"
-                    optionType="button"
-                    buttonStyle="solid"
-                    disabled={donaDeTudo}
-                    value={donaDeTudo ? "editar" : valor[area.key]}
-                    onChange={(e) =>
-                      aoMudar({ ...valor, [area.key]: e.target.value as NivelAcesso })
-                    }
-                    options={NIVEIS.filter(
-                      (nivel) => !(trava && nivel === "editar"),
-                    ).map((nivel) => ({ value: nivel, label: NIVEL_LABELS[nivel] }))}
-                  />
-                  {!donaDeTudo && valor[area.key] !== padrao[area.key] && (
-                    <Text style={{ fontSize: 10.5, color: token.colorWarningText }}>
-                      fora do padrão do papel
-                    </Text>
-                  )}
-                </Flex>
-              );
-            },
-          },
-        ]}
-      />
-      <Text type="secondary" style={{ fontSize: 11.5 }}>
-        Editar Ajustes é conceder acesso — por isso só Dona e Administradora
-        chegam a esse nível.
-      </Text>
-    </Flex>
-  );
-}
-
-// ── O link de senha ──────────────────────────────────────────────────────
-
-function ModalDoLink({
-  email,
-  link,
-  aoFechar,
-}: {
-  email: string;
-  link: string;
-  aoFechar: () => void;
-}) {
-  const { message } = App.useApp();
-
-  return (
-    <Modal open title="Link para definir a senha" onCancel={aoFechar} onOk={aoFechar} okText="Fechar" cancelButtonProps={{ style: { display: "none" } }} width={620}>
-      <Paragraph type="secondary" style={{ fontSize: 12 }}>
-        Envie este link para <Text strong>{email}</Text>. Ela define a própria
-        senha — nem você nem o sistema chegam a vê-la. O link expira; se passar
-        do prazo, gere outro pelo botão da chave.
-      </Paragraph>
-      <Input.TextArea value={link} readOnly autoSize={{ minRows: 3, maxRows: 5 }} style={{ fontFamily: FONTE_MONO, fontSize: 11.5 }} />
-      <Button
-        icon={<CopyOutlined />}
-        style={{ marginTop: 10 }}
-        onClick={async () => {
-          await navigator.clipboard.writeText(link);
-          message.success("Link copiado.");
-        }}
-      >
-        Copiar link
-      </Button>
-    </Modal>
-  );
-}
-
 // ── Apoio ────────────────────────────────────────────────────────────────
-
-function papeisDisponiveis(papelDeQuemEdita: GroupRole): GroupRole[] {
-  // Só a dona cria outra dona — mesma regra que a rota aplica no servidor.
-  return GROUP_ROLES.filter((p) => p !== "owner" || papelDeQuemEdita === "owner");
-}
-
-function contarLiberadas(permissoes: Permissoes): number {
-  return AREAS.filter((a) => permissoes[a.key] !== "nenhum").length;
-}
-
-function resumoDeAreas(permissoes: Permissoes): string {
-  const liberadas = AREAS.filter((a) => permissoes[a.key] !== "nenhum");
-  if (liberadas.length === 0) return "Nenhuma área liberada.";
-  return liberadas
-    .map((a) => `${a.rotulo}: ${NIVEL_LABELS[permissoes[a.key]].toLowerCase()}`)
-    .join(" · ");
-}
 
 function formatarData(iso: string): string {
   const data = new Date(iso);

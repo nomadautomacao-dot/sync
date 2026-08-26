@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getSessionUser } from "@/core/lib/auth";
 import { firebaseAuth } from "@/core/lib/firebase-admin";
+import { registrarAcesso } from "@/core/lib/acessos-registro";
 import { registrarErro } from "@/core/lib/structured-log";
 import {
   claimsCabem,
@@ -151,6 +152,16 @@ export async function POST(request: Request) {
 
     const linkDeSenha = await auth.generatePasswordResetLink(email);
     const atualizado = await auth.getUser(registro.uid);
+
+    await registrarAcesso({
+      groupId: sessionUser.groupId,
+      atorUid: sessionUser.id,
+      atorEmail: sessionUser.email,
+      acao: "acesso.concedido",
+      alvo: registro.uid,
+      // O link de senha nunca entra no detalhe — ver a nota no topo do lib.
+      detalhe: `${email} entrou como ${papel}${existente ? " (conta já existia)" : ""}.`,
+    });
 
     return NextResponse.json({
       usuaria: usuariaDoRegistro(atualizado as unknown as RegistroFirebase),

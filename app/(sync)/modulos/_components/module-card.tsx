@@ -7,7 +7,12 @@ import { Avatar, Flex, Typography, theme } from "antd";
 
 export interface DocumentoDoModulo {
   nome: string;
-  paginas: number;
+  /**
+   * Opcional porque nem todo documento tem tamanho fixo: o Case de Sucesso
+   * cresce com o número de municípios, e anunciar um número redondo ali seria
+   * anunciar uma contagem que muda a cada emissão.
+   */
+  paginas?: number;
 }
 
 interface ModuleCardProps {
@@ -91,12 +96,14 @@ export function ModuleCard({ href, icone: Icone, nome, descricao, fontes, docume
                 <Typography.Text strong style={{ fontSize: 12.5 }}>
                   {doc.nome}
                 </Typography.Text>
-                <Typography.Text
-                  type="secondary"
-                  style={{ fontFamily: "var(--font-sync-mono)", fontSize: 10.5 }}
-                >
-                  {doc.paginas} pg
-                </Typography.Text>
+                {doc.paginas !== undefined && (
+                  <Typography.Text
+                    type="secondary"
+                    style={{ fontFamily: "var(--font-sync-mono)", fontSize: 10.5 }}
+                  >
+                    {doc.paginas} pg
+                  </Typography.Text>
+                )}
               </Flex>
             ))}
           </Flex>

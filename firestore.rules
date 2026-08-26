@@ -15,38 +15,69 @@ service cloud.firestore {
       return isSignedIn() && myRole() in ['owner', 'admin'];
     }
 
+    // Permissao fina por area (roadmap multiusuario, fase 1).
+    //
+    // A matriz padrao de cada papel e as travas (owner/admin tem tudo; abaixo
+    // de admin, sistemas nao abre e ajustes nao edita) sao copia fiel de
+    // `permissoesPadrao`/`permissoesEfetivas` em core/domain/rbac.ts — a fonte
+    // de verdade e la: mudou la, muda aqui. A claim `perm` carrega so os
+    // DESVIOS do padrao do papel (ver claimsDeAcesso em core/lib/acessos.ts).
+    //
+    // Mapeamento area -> colecoes com escrita enforceada:
+    //   cidades:    cities (+ eventos, etapas, contatos, comentarios),
+    //               contratos, cityReports, reportJobs
+    //   documentos: cityDocuments, empresaDocumentos
+    //   pessoas:    collaborators, collaboratorDocuments
+    //   caixa:      mural (+ respostas)
+    //   ajustes:    workspace_settings (a trava do rbac ja a limita a admin)
+    // Writes exigem nivel 'editar' na area; leituras seguem exigindo so o grupo.
+
+    // O padrao do papel para a area, antes de qualquer ajuste da claim.
+    function nivelPadrao(area) {
+      return myRole() in ['owner', 'admin'] ? 'editar'
+        : myRole() == 'member'
+          ? (area in ['ajustes', 'sistemas'] ? 'nenhum'
+            : (area == 'pessoas' ? 'ver' : 'editar'))
+        : myRole() == 'viewer'
+          ? (area in ['ajustes', 'sistemas'] ? 'nenhum' : 'ver')
+        : 'nenhum';
+    }
+
+    // O nivel que vale: ajuste da claim por cima do padrao, com as travas
+    // aplicadas por ultimo — nenhum ajuste consegue fura-las.
+    function nivelArea(area) {
+      let configurado = 'perm' in request.auth.token
+        ? request.auth.token.perm.get(area, nivelPadrao(area))
+        : nivelPadrao(area);
+      return isAdmin() ? 'editar'
+        : area == 'sistemas' ? 'nenhum'
+        : (area == 'ajustes' && configurado == 'editar' ? 'ver' : configurado);
+    }
+
+    function podeEditarArea(area) {
+      return isSignedIn() && nivelArea(area) == 'editar';
+    }
+
     match /collaborators/{id} {
       allow read: if isSignedIn() && resource.data.groupId == myGroupId();
-      allow create: if isAdmin() && request.resource.data.groupId == myGroupId();
-      allow update: if isAdmin()
+      allow create: if podeEditarArea('pessoas') && request.resource.data.groupId == myGroupId();
+      allow update: if podeEditarArea('pessoas')
                     && resource.data.groupId == myGroupId()
                     && request.resource.data.groupId == myGroupId();
       // Sem delete real: exclusao e soft delete (update de deletedAt).
       allow delete: if false;
     }
 
-    match /companies/{id} {
-      allow read: if isSignedIn() && resource.data.groupId == myGroupId();
-      allow create: if isAdmin() && request.resource.data.groupId == myGroupId();
-      allow update: if isAdmin()
-                    && resource.data.groupId == myGroupId()
-                    && request.resource.data.groupId == myGroupId();
-      allow delete: if false;
-    }
-
-    match /employees/{id} {
-      allow read: if isSignedIn() && resource.data.groupId == myGroupId();
-      allow create: if isAdmin() && request.resource.data.groupId == myGroupId();
-      allow update: if isAdmin()
-                    && resource.data.groupId == myGroupId()
-                    && request.resource.data.groupId == myGroupId();
-      allow delete: if false;
-    }
+    // `companies` e `employees` sairam em 2026-08-13, com a tela de Empresas.
+    // A Global e a unica empresa, e a identidade dela vive em
+    // `core/domain/empresa.ts` — que e de onde contrato e PDF leem. Sem regra,
+    // o acesso e negado: os documentos que ficaram no banco continuam la, mas
+    // ninguem os le. Repor a regra os traz de volta.
 
     match /cities/{id} {
       allow read: if isSignedIn() && resource.data.groupId == myGroupId();
-      allow create: if isSignedIn() && request.resource.data.groupId == myGroupId();
-      allow update: if isSignedIn()
+      allow create: if podeEditarArea('cidades') && request.resource.data.groupId == myGroupId();
+      allow update: if podeEditarArea('cidades')
                     && resource.data.groupId == myGroupId()
                     && request.resource.data.groupId == myGroupId()
                     && (
@@ -63,15 +94,196 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    // O inbox da equipe (roadmap multiusuario, fase 2). Não há coleção de
+    // usuários para fan-out: `destinatarioUid: null` é o aviso para o grupo
+    // inteiro, e um uid é o aviso para uma pessoa só.
+    //
+    // Leitura: as minhas e as do grupo. Update: só o campo `lida`, e só na
+    // própria — a notificação de grupo é compartilhada e o estado de leitura
+    // dela é o carimbo em `workspace_settings/{groupId}/leituras/{uid}`, não
+    // este documento. Delete não existe: aviso lido fica para trás sozinho,
+    // como e-mail arquivado.
+    match /notifications/{id} {
+      allow read: if isSignedIn()
+                  && resource.data.groupId == myGroupId()
+                  && (resource.data.destinatarioUid == null
+                      || resource.data.destinatarioUid == request.auth.uid);
+      allow create: if isSignedIn()
+                    && request.resource.data.groupId == myGroupId()
+                    && request.resource.data.keys().hasOnly([
+                         'groupId', 'destinatarioUid', 'tipo', 'titulo', 'resumo',
+                         'link', 'lida', 'criadoEm', 'origemUid', 'origemNome'
+                       ])
+                    && (request.resource.data.destinatarioUid == null
+                        || request.resource.data.destinatarioUid is string)
+                    && request.resource.data.tipo in [
+                         'pergunta_mural', 'comentario_evento', 'etapa_atribuida',
+                         'emissao_concluida', 'emissao_erro'
+                       ]
+                    && request.resource.data.titulo is string
+                    && request.resource.data.titulo.size() > 0
+                    && request.resource.data.titulo.size() <= 200
+                    && request.resource.data.lida == false
+                    && request.resource.data.criadoEm is string
+                    && request.resource.data.origemUid == request.auth.uid;
+      allow update: if isSignedIn()
+                    && resource.data.groupId == myGroupId()
+                    && resource.data.destinatarioUid == request.auth.uid
+                    && request.resource.data.diff(resource.data)
+                         .affectedKeys().hasOnly(['lida']);
+      allow delete: if false;
+    }
+
+    // Carimbo de leitura das notificações de grupo: cada pessoa guarda o seu,
+    // e só o seu. O doc do grupo é compartilhado — o "já vi" não cabe nele.
+    match /workspace_settings/{groupId}/leituras/{uid} {
+      allow read: if isSignedIn() && groupId == myGroupId() && uid == request.auth.uid;
+      allow create, update: if isSignedIn()
+                            && groupId == myGroupId()
+                            && uid == request.auth.uid
+                            && request.resource.data.keys().hasOnly(['ultimaLeituraEm'])
+                            && request.resource.data.ultimaLeituraEm is string;
+      allow delete: if false;
+    }
+
     match /audit/{id} {
       allow read: if isSignedIn() && resource.data.groupId == myGroupId();
       // Escrita de auditoria só via backend confiavel (Cloud Functions), nunca cliente.
       allow write: if false;
     }
 
+    // A linha do tempo do municipio. Quem escreve e a equipe inteira — e por
+    // isso a regra de edicao e aqui, e nao na tela: esconder o botao e
+    // conveniencia, o que impede alguem de reescrever o registro de outra
+    // pessoa e esta linha. Sem ela, o historico que a equipe usa para se
+    // entender poderia ser alterado por qualquer um, sem rastro.
+    //
+    // Delete nao existe para ninguem: acontecimento registrado e fato, e
+    // apagar fato de uma base compartilhada e pior que corrigi-lo. Cancelar e
+    // um estado do proprio evento.
+    // O mural da equipe. Conversa, nao registro de sistema.
+    //
+    // Editar so o proprio texto, e nem admin reescreve fala alheia: mural em
+    // que a chefia corrige o que os outros disseram deixa de ser lugar onde as
+    // pessoas dizem o que pensam. Admin apaga (spam, dado sensivel no lugar
+    // errado) — apagar e assumido, reescrever e silencioso.
+    //
+    // A excecao do `resolvidoEm` existe porque encerrar pergunta e ato de quem
+    // perguntou **ou** de quem administra, e sem ela um admin nao conseguiria
+    // fechar pergunta de alguem que saiu da empresa.
+    match /mural/{postId} {
+      allow read: if isSignedIn() && resource.data.groupId == myGroupId();
+      allow create: if podeEditarArea('caixa')
+                    && request.resource.data.groupId == myGroupId()
+                    && request.resource.data.autorUid == request.auth.uid
+                    && request.resource.data.texto is string;
+      allow update: if podeEditarArea('caixa')
+                    && resource.data.groupId == myGroupId()
+                    && request.resource.data.groupId == resource.data.groupId
+                    && request.resource.data.autorUid == resource.data.autorUid
+                    && (
+                         resource.data.autorUid == request.auth.uid
+                         // Encerrar/reabrir pergunta e responder mexem so
+                         // nesses campos.
+                         || isAdmin()
+                         || request.resource.data.diff(resource.data)
+                              .affectedKeys().hasOnly(['respostas'])
+                         || request.resource.data.diff(resource.data)
+                              .affectedKeys().hasOnly(['resolvidoEm', 'resolvidoPor'])
+                       );
+      allow delete: if isAdmin() && resource.data.groupId == myGroupId();
+    }
+
+    match /mural/{postId}/respostas/{respostaId} {
+      allow read: if isSignedIn() && resource.data.groupId == myGroupId();
+      allow create: if podeEditarArea('caixa')
+                    && request.resource.data.groupId == myGroupId()
+                    && request.resource.data.autorUid == request.auth.uid;
+      allow update: if podeEditarArea('caixa')
+                    && resource.data.autorUid == request.auth.uid
+                    && request.resource.data.autorUid == resource.data.autorUid;
+      allow delete: if isAdmin() && resource.data.groupId == myGroupId();
+    }
+
+    match /cities/{cityId}/eventos/{eventoId} {
+      allow read: if isSignedIn() && resource.data.groupId == myGroupId();
+      allow create: if podeEditarArea('cidades')
+                    && request.resource.data.groupId == myGroupId()
+                    && request.resource.data.autorUid == request.auth.uid;
+      allow update: if podeEditarArea('cidades')
+                    && resource.data.groupId == myGroupId()
+                    && request.resource.data.groupId == myGroupId()
+                    // Autoria nao se transfere: quem escreveu continua sendo
+                    // quem escreveu, mesmo quando um admin corrige o texto.
+                    && request.resource.data.autorUid == resource.data.autorUid
+                    && (
+                         resource.data.autorUid == request.auth.uid
+                         || isAdmin()
+                         // Comentar no evento de outra pessoa adianta o contador
+                         // dela, e so ele. Sem esta clausula, quem comentasse
+                         // levava "permissao negada" — e a mensagem culparia a
+                         // pessoa por um erro de modelagem.
+                         || request.resource.data.diff(resource.data)
+                              .affectedKeys().hasOnly(['comentarios'])
+                       );
+      allow delete: if false;
+    }
+
+    // O cronograma de implantacao. Aqui, ao contrario dos eventos, qualquer
+    // pessoa da equipe edita qualquer etapa: etapa nao e registro de autoria, e
+    // sim o estado combinado do trabalho — quem esta na cidade hoje conclui a
+    // etapa que a colega marcou semana passada, e isso e o uso normal.
+    //
+    // Delete existe porque etapa avulsa criada por engano nao e fato registrado,
+    // e deixa-la de pe suja o processo de todo mundo. So admin apaga.
+    match /cities/{cityId}/etapas/{etapaId} {
+      allow read: if isSignedIn() && resource.data.groupId == myGroupId();
+      allow create: if podeEditarArea('cidades') && request.resource.data.groupId == myGroupId();
+      allow update: if podeEditarArea('cidades')
+                    && resource.data.groupId == myGroupId()
+                    && request.resource.data.groupId == myGroupId();
+      allow delete: if isAdmin() && resource.data.groupId == myGroupId();
+    }
+
+    // Contatos sao diretorio, nao fato: a pessoa muda de cargo, o telefone
+    // muda de dono, a eleicao troca a prefeitura inteira. Por isso qualquer
+    // pessoa do grupo edita e apaga — a trava de autor dos eventos nao se
+    // aplica, e o historico que merece registro mora na linha do tempo.
+    match /cities/{cityId}/contatos/{contatoId} {
+      allow read: if isSignedIn() && resource.data.groupId == myGroupId();
+      allow create: if podeEditarArea('cidades') && request.resource.data.groupId == myGroupId();
+      allow update: if podeEditarArea('cidades')
+                    && resource.data.groupId == myGroupId()
+                    && request.resource.data.groupId == myGroupId();
+      allow delete: if podeEditarArea('cidades') && resource.data.groupId == myGroupId();
+    }
+
+    match /cities/{cityId}/eventos/{eventoId}/comentarios/{comentarioId} {
+      allow read: if isSignedIn() && resource.data.groupId == myGroupId();
+      allow create: if podeEditarArea('cidades')
+                    && request.resource.data.groupId == myGroupId()
+                    && request.resource.data.autorUid == request.auth.uid;
+      allow update: if podeEditarArea('cidades')
+                    && resource.data.autorUid == request.auth.uid
+                    && request.resource.data.autorUid == resource.data.autorUid;
+      allow delete: if false;
+    }
+
     match /cities/{cityId}/profitSnapshots/{competencia} {
       allow read:  if isSignedIn() && resource.data.groupId == myGroupId();
       allow write: if false; // so Cloud Functions (Admin SDK) via registrarProfitSnapshot
+    }
+
+    // Contrato registrado e fato: negociacao que morre vira "cancelado", nao
+    // apaga. Por isso delete e false para todo mundo — a historia do que
+    // valeu (e do que quase valeu) fica.
+    match /contratos/{id} {
+      allow read: if isSignedIn() && resource.data.groupId == myGroupId();
+      allow create: if podeEditarArea('cidades') && request.resource.data.groupId == myGroupId();
+      allow update: if podeEditarArea('cidades')
+                    && resource.data.groupId == myGroupId()
+                    && request.resource.data.groupId == myGroupId();
+      allow delete: if false;
     }
 
     match /commissionRules/{id} {
@@ -91,41 +303,76 @@ service cloud.firestore {
 
     match /collaboratorDocuments/{id} {
       allow read:   if isSignedIn() && resource.data.groupId == myGroupId();
-      allow create: if isSignedIn() && request.resource.data.groupId == myGroupId();
-      allow delete: if isSignedIn() && resource.data.groupId == myGroupId();
+      allow create: if podeEditarArea('pessoas') && request.resource.data.groupId == myGroupId();
+      allow delete: if podeEditarArea('pessoas') && resource.data.groupId == myGroupId();
       allow update: if false; // metadado e imutavel apos criado; para trocar, apaga e sobe de novo
     }
 
+    // Habilitacao da empresa: documentos da Global, sem cidade dona. Update
+    // existe (ao contrario de cityDocuments) porque renovar certidao e mudar
+    // a data de validade — o caso de uso central desta colecao. Delete tambem:
+    // certidao vencida substituida e papel velho, nao historia.
+    match /empresaDocumentos/{id} {
+      allow read: if isSignedIn() && resource.data.groupId == myGroupId();
+      allow create: if podeEditarArea('documentos')
+                    && request.resource.data.groupId == myGroupId()
+                    && request.resource.data.categoria is string
+                    && request.resource.data.titulo is string
+                    && request.resource.data.storagePath is string;
+      allow update: if podeEditarArea('documentos')
+                    && resource.data.groupId == myGroupId()
+                    && request.resource.data.groupId == myGroupId();
+      allow delete: if podeEditarArea('documentos') && resource.data.groupId == myGroupId();
+    }
+
+    // Metadado editavel (corrigir titulo, data de validade), arquivo e autoria
+    // imutaveis — a lista de campos editaveis espelha CityDocument em
+    // modules/documentos/types.ts. Apagar e ato do autor ou de quem administra:
+    // documento apagado nao tem "cancelado" como contrato tem.
     match /cityDocuments/{id} {
       allow read: if isSignedIn() && resource.data.groupId == myGroupId();
-      allow create: if isSignedIn()
+      allow create: if podeEditarArea('documentos')
                     && request.resource.data.groupId == myGroupId()
                     && request.resource.data.cityId is string
                     && request.resource.data.title is string
                     && request.resource.data.storagePath is string;
-      allow delete: if isSignedIn() && resource.data.groupId == myGroupId();
-      allow update: if false;
+      allow update: if podeEditarArea('documentos')
+                    && resource.data.groupId == myGroupId()
+                    && request.resource.data.groupId == myGroupId()
+                    && request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['title', 'description', 'category',
+                                   'contractNumber', 'signedAt', 'expiresAt']);
+      allow delete: if isSignedIn()
+                    && resource.data.groupId == myGroupId()
+                    && (isAdmin()
+                        || (nivelArea('documentos') == 'editar'
+                            && resource.data.createdBy == request.auth.uid));
     }
 
     match /cityReports/{id} {
       allow read: if isSignedIn() && resource.data.groupId == myGroupId();
-      allow create: if isSignedIn()
+      allow create: if podeEditarArea('cidades')
                     && request.resource.data.groupId == myGroupId()
                     && request.resource.data.cityId is string
                     && request.resource.data.codigoIbge is string
                     && request.resource.data.title is string
                     // A lista precisa acompanhar CITY_REPORT_TYPES
-                    // (modules/cidades/reports-types.ts). Ela ficou com os três
-                    // tipos originais enquanto o catálogo cresceu para doze, e
-                    // o efeito era silencioso: o PDF era gerado, o upload ia ao
-                    // Storage e só a gravação do JSON era negada aqui.
+                    // (modules/cidades/reports-types.ts). Ja divergiu duas
+                    // vezes, e o efeito e silencioso ate o fim: o PDF e gerado,
+                    // o upload vai ao Storage e so a gravacao do JSON e negada
+                    // aqui — o usuario ve "Missing or insufficient permissions"
+                    // depois de esperar a emissao inteira.
+                    //
+                    // O comentario nao bastou nas duas vezes. Agora quem cobra
+                    // e `modules/cidades/regras-relatorios.test.ts`, que le este
+                    // arquivo e compara com o codigo.
                     && request.resource.data.type in [
-                         'raio_x', 'diagnostico_fundeb', 'historico_censo',
-                         'oficio_documentos', 'dossie_escolas',
-                         'dossie_conformidade', 'dossie_matricula',
-                         'dossie_dinheiro', 'dossie_aprendizagem',
-                         'dossie_demanda', 'dossie_equidade',
-                         'dossie_comparativo'
+                         'raio_x', 'diagnostico_fundeb', 'dever_de_casa',
+                         'historico_censo', 'oficio_documentos',
+                         'dossie_escolas', 'dossie_conformidade',
+                         'dossie_matricula', 'dossie_dinheiro',
+                         'dossie_aprendizagem', 'dossie_demanda',
+                         'dossie_equidade', 'dossie_comparativo'
                        ]
                     && request.resource.data.generationId is string
                     && request.resource.data.snapshot is map
@@ -142,16 +389,16 @@ service cloud.firestore {
     // exatamente uma sequência de updates de status.
     match /reportJobs/{id} {
       allow read: if isSignedIn() && resource.data.groupId == myGroupId();
-      allow create: if isSignedIn()
+      allow create: if podeEditarArea('cidades')
                     && request.resource.data.groupId == myGroupId()
                     && request.resource.data.cityId is string
                     && request.resource.data.documentoId is string
                     && request.resource.data.status in ['pendente', 'gerando', 'concluido', 'erro'];
-      allow update: if isSignedIn()
+      allow update: if podeEditarArea('cidades')
                     && resource.data.groupId == myGroupId()
                     && request.resource.data.groupId == resource.data.groupId
                     && request.resource.data.status in ['pendente', 'gerando', 'concluido', 'erro'];
-      allow delete: if isSignedIn() && resource.data.groupId == myGroupId();
+      allow delete: if podeEditarArea('cidades') && resource.data.groupId == myGroupId();
     }
   }
 }

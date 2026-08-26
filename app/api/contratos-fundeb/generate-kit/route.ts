@@ -17,9 +17,37 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { executeContratoAgent } from "@/modules/contrato-fundeb/services/contrato-agent";
-import { gerarKitContratoZip } from "@/modules/contrato-fundeb/services/contrato-docx-generator";
+import {
+  gerarKitContratoZip,
+  rotuloDoCampo,
+  type AnexoDeHabilitacao,
+} from "@/modules/contrato-fundeb/services/contrato-docx-generator";
 import type { ContratosFundebData } from "@/modules/contrato-fundeb/types";
 import { registrarErro } from "@/core/lib/structured-log";
+import { codificarResumoDoKit } from "@/core/domain/kit-resumo";
+
+/**
+ * A habilitação chega do cliente já resolvida (caminho + URL do Storage), e
+ * não é lida aqui do Firestore: quem tem sessão é o browser, e esta rota
+ * atende também o smoke test, sem login. Só aceitamos URLs do Storage do
+ * projeto — um `caminho`/`url` arbitrário viraria o servidor num buscador de
+ * qualquer endereço que alguém mandasse.
+ */
+function anexosDeHabilitacao(valor: unknown): AnexoDeHabilitacao[] {
+  if (!Array.isArray(valor)) return [];
+  return valor.flatMap((item) => {
+    if (!item || typeof item !== "object") return [];
+    const { caminho, url } = item as Record<string, unknown>;
+    if (typeof caminho !== "string" || typeof url !== "string") return [];
+    if (!caminho.startsWith("Habilitacao/") || caminho.includes("..")) return [];
+    if (
+      !/^https:\/\/(firebasestorage\.googleapis\.com|storage\.googleapis\.com)\//.test(url)
+    ) {
+      return [];
+    }
+    return [{ caminho, url }];
+  });
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -65,14 +93,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Gerar o ZIP com 14 DOCXs
-    const zipBuffer = await gerarKitContratoZip(contratoData);
+    // Gerar o ZIP com 14 DOCXs + a habilitação anexada da empresa
+    const { buffer: zipBuffer, pendencias, avisos } = await gerarKitContratoZip(
+      contratoData,
+      anexosDeHabilitacao(body.habilitacao),
+    );
 
-    const nomeArquivo = `Kit_Inexigibilidade_FUNDEB_${(contratoData.municipioNome || "municipio")
+    // O nome do arquivo acompanha a via: um processo de dispensa entregue num
+    // ZIP chamado "Kit_Inexigibilidade" começa contradizendo a própria capa.
+    const nomeDaVia = contratoData.via === "inexigibilidade" ? "Inexigibilidade" : "Dispensa";
+    const nomeArquivo = `Kit_${nomeDaVia}_FUNDEB_${(contratoData.municipioNome || "municipio")
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .replace(/\s+/g, "_")
       .toLowerCase()}.zip`;
+
+    /* O corpo é o ZIP, então o que a tela precisa saber viaja em cabeçalho.
+       Os dois vão em Base64 porque cabeçalho HTTP é ASCII e nome de campo com
+       acento ("Secretário") derrubaria a resposta inteira — a mesma armadilha
+       do Content-Disposition com nome de município acentuado.
+
+       `Access-Control-Expose-Headers` não é decoração: sem ele o `fetch` do
+       browser esconde qualquer cabeçalho fora da lista padrão, e a tela leria
+       `null` achando que não há pendência nenhuma. */
+    const resumo = codificarResumoDoKit({
+      pendencias: pendencias.map(rotuloDoCampo),
+      avisos,
+    });
 
     return new NextResponse(new Uint8Array(zipBuffer), {
       status: 200,
@@ -80,6 +127,8 @@ export async function POST(request: NextRequest) {
         "Content-Type": "application/zip",
         "Content-Disposition": `attachment; filename="${nomeArquivo}"`,
         "Content-Length": String(zipBuffer.length),
+        "X-Kit-Resumo": resumo,
+        "Access-Control-Expose-Headers": "X-Kit-Resumo, Content-Disposition",
       },
     });
   } catch (error) {

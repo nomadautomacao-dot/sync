@@ -7,15 +7,19 @@ export async function POST(request: NextRequest) {
   try {
     const data = (await request.json()) as ContratosFundebData;
 
-    if (!data.municipioNome || !data.empresaRazaoSocial) {
+    /* Só o município é obrigatório. A razão social da contratada saiu da
+       exigência porque ela não vem de quem pede: é constante da Global, em
+       `core/domain/empresa.ts`, e o gerador a preenche sozinho — cobrá-la aqui
+       barrava o kit por um campo que o próprio servidor conhece. */
+    if (!data.municipioNome) {
       return NextResponse.json(
-        { success: false, error: "Nome do município e Razão Social da empresa contratada são obrigatórios." },
+        { success: false, error: "Nome do município é obrigatório." },
         { status: 400 },
       );
     }
 
-    // Gerar o buffer binário do ZIP contendo os 15 anexos modularizados
-    const zipBuffer = await gerarKitContratoZip(data);
+    // Gerar o buffer binário do ZIP contendo os 14 anexos modularizados
+    const { buffer: zipBuffer } = await gerarKitContratoZip(data);
 
     // Slugify o nome do município para o nome do arquivo ZIP
     const slugMunicipio = data.municipioNome

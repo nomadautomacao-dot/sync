@@ -69,7 +69,7 @@ describe("ofício de solicitação de documentos", () => {
     const saida = render();
 
     expect(saida).toContain("Adriel Pereira Tavares");
-    expect(saida).toContain("(77) 99700-5880");
+    expect(saida).toContain("(61) 98155-1533");
     expect(saida).toContain("globalconsultorias@icloud.com");
   });
 

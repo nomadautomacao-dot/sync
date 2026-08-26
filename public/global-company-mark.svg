@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" role="img" aria-label="Global Company">
+  <!--
+    O símbolo da Global Company, em vetor.
+
+    Mesmo desenho do ícone do Global Sync — ladrilho arredondado, degradê
+    verde→turquesa, anel branco atravessado por uma lâmina — redesenhado como
+    SVG para escalar sem interpolar: a fonte anterior tinha 298×300 e saía
+    borrada em qualquer uso impresso.
+
+    Tudo dentro do grupo girado a 45°: ali a lâmina é vertical, e os cortes do
+    anel viram dois retângulos simples no topo e na base. Desenhar na diagonal
+    exigiria trigonometria em cada coordenada, e o primeiro ajuste de espessura
+    quebraria o alinhamento.
+  -->
+  <defs>
+    <linearGradient id="gc-tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5BD3A0" />
+      <stop offset="0.52" stop-color="#26B9AC" />
+      <stop offset="1" stop-color="#0C97B0" />
+    </linearGradient>
+
+    <!-- O anel é contínuo; a máscara abre as duas passagens da lâmina. -->
+    <mask id="gc-ring-cut">
+      <rect width="300" height="300" fill="#fff" />
+      <g transform="rotate(45 150 150)">
+        <rect x="127" y="34" width="46" height="46" fill="#000" />
+        <rect x="127" y="220" width="46" height="46" fill="#000" />
+      </g>
+    </mask>
+  </defs>
+
+  <rect width="300" height="300" rx="66" fill="url(#gc-tile)" />
+
+  <g transform="rotate(45 150 150)">
+    <circle
+      cx="150"
+      cy="150"
+      r="88"
+      fill="none"
+      stroke="#fff"
+      stroke-width="26"
+      mask="url(#gc-ring-cut)"
+    />
+    <!-- A lâmina: pontas agudas fora do anel, ventre no centro. -->
+    <path d="M150 12 Q186 150 150 288 Q114 150 150 12 Z" fill="#fff" />
+  </g>
+</svg>

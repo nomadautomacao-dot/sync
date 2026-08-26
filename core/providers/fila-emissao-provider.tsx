@@ -33,7 +33,7 @@ import {
   type AlvoDaFila,
   type JobDeEmissao,
 } from "@/modules/cidades/fila-emissao-firestore";
-import { DOCUMENTOS } from "@/app/(sync)/modulos/levantamento-fundeb/_components/documentos";
+import { DOCUMENTOS } from "@/modules/cidades/documentos-emissiveis";
 
 /**
  * O processador da fila de emissão.

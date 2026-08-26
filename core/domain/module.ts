@@ -80,7 +80,7 @@ export const moduleCatalog: ModuleDefinition[] = [
   {
     key: "contrato-fundeb",
     label: "Contrato FUNDEB",
-    description: "Geracao modular de processo administrativo e contrato (15 anexos) sob a Lei 14.133/21.",
+    description: "Geracao modular de processo administrativo e contrato (14 anexos) sob a Lei 14.133/21.",
     color: "var(--sync-status-active)",
   },
   {

@@ -63,6 +63,11 @@ export function collectDefaults(opcoes?: {
     representanteQualificacao: EMPRESA.representante.qualificacao,
 
     // Constantes legais
+    /* Fallback só: quem manda na base legal é a via escolhida na geração
+       (`camposDaVia`, em core/domain/contratacao-direta.ts), que sobrescreve
+       este valor. Ele fica para o agente não devolver campo vazio — mas um
+       kit emitido com este texto sem passar pela escolha estaria fundamentando
+       dispensa com artigo de inexigibilidade. */
     baseLegal: `Art. 74, inciso III, alínea "f", da Lei Federal nº 14.133/2021`,
     percentualInsumos: 40,
     percentualPessoal: 60,

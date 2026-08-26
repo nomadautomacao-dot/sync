@@ -425,7 +425,15 @@ function parseHabilitacaoCsv(csvText: string) {
   return map;
 }
 
-async function loadFundebReceitasByYear(exercicio: number) {
+/**
+ * A tabela inteira do exercício, município a município.
+ *
+ * Exportada porque o Case de Sucesso precisa do **universo**, não de uma linha:
+ * dizer que uma rede está entre as 10% que mais cresceram exige comparar com as
+ * outras 3.554. O cache por exercício é o que torna isso barato — a tabela é
+ * lida uma vez por processo e serve todas as comparações.
+ */
+export async function loadFundebReceitasByYear(exercicio: number) {
   const cached = receitasCache.get(exercicio);
   if (cached) {
     return cached;

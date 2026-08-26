@@ -80,7 +80,7 @@ export const EMPRESA: IdentidadeJuridica = {
   cidade: "Santa Maria da Vitória",
   uf: "BA",
   cep: "47640-058",
-  telefone: "(77) 9700-5880",
+  telefone: "(61) 98155-1533",
   email: "globalconsultorias@icloud.com",
   site: "",
   representante: {

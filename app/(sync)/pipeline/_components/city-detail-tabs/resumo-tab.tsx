@@ -40,9 +40,13 @@ export function ResumoTab({ city, onSave }: ResumoTabProps) {
         <Row label="Data próx. passo" value={formatDate(city.nextStepDueDate)} />
       </Section>
 
-      <Section title="Responsável">
-        <Row label="Nome" value={city.collaboratorName || "—"} />
-        <Row label="ID" value={city.collaboratorId || "—"} />
+      <Section title="Responsáveis">
+        <Row label="Parceiro (agenciou)" value={city.parceiroName || "—"} />
+        <Row
+          label="Resp. técnico"
+          value={city.collaboratorName || "—"}
+          warn={!city.collaboratorName}
+        />
       </Section>
 
       <Section title="Última atividade" last>

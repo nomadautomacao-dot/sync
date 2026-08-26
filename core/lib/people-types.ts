@@ -60,6 +60,57 @@ export function statusTone(status: string): { bg: string; fg: string } {
   return { bg: 'bg-surface-subtle', fg: 'text-body' };
 }
 
+/**
+ * O WhatsApp de quem só tem um número — que é quase todo mundo.
+ *
+ * O celular do colaborador **é** o WhatsApp na prática. Manter os dois campos
+ * independentes fazia a ficha mostrar "—" logo abaixo de um número perfeitamente
+ * utilizável, e ninguém ia preencher o mesmo dado duas vezes. O campo próprio
+ * continua existindo para quem tem dois números; quando está vazio, o telefone
+ * responde por ele.
+ *
+ * Devolve `null`, e não string vazia, quando não há número nenhum: ausência não
+ * é dado, e é a tela que decide como mostrar o que falta.
+ */
+export function whatsappDoColaborador(pessoa: {
+  phone?: string;
+  whatsapp?: string;
+}): { numero: string; mesmoDoTelefone: boolean } | null {
+  const proprio = pessoa.whatsapp?.trim();
+  if (proprio) return { numero: proprio, mesmoDoTelefone: false };
+
+  const telefone = pessoa.phone?.trim();
+  if (telefone) return { numero: telefone, mesmoDoTelefone: true };
+
+  return null;
+}
+
+/**
+ * O número no formato do `wa.me`: só dígitos, com o código do país na frente.
+ *
+ * Devolve `null` para o que não tem cara de telefone brasileiro. Link montado
+ * na base do "vai que dá" abre conversa com um desconhecido — pior que não ter
+ * link, porque a consultora só descobre depois de mandar a mensagem.
+ */
+export function linkDeWhatsapp(numero: string): string | null {
+  const digitos = numero.replace(/\D/g, "");
+  const brasileiroComCodigo =
+    (digitos.length === 12 || digitos.length === 13) && digitos.startsWith("55");
+
+  /* O `+` é declaração de código de país, e precisa ser respeitada. Sem esta
+     checagem, `+1 415 555 0100` — onze dígitos, como um celular daqui — ganhava
+     um 55 na frente e virava link para um número brasileiro que não é de
+     ninguém conhecido. Foi o teste que pegou. */
+  if (numero.trim().startsWith("+")) {
+    return brasileiroComCodigo ? `https://wa.me/${digitos}` : null;
+  }
+
+  // Sem código: fixo com DDD (10) ou celular com DDD (11).
+  if (digitos.length === 10 || digitos.length === 11) return `https://wa.me/55${digitos}`;
+
+  return brasileiroComCodigo ? `https://wa.me/${digitos}` : null;
+}
+
 export function collaboratorInitials(name: string): string {
   if (!name) return '??';
   const parts = name

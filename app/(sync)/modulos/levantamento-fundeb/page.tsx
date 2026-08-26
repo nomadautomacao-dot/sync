@@ -36,7 +36,7 @@ import { CabecalhoMunicipio } from "./_components/cabecalho-municipio";
 import { LinhaDocumento } from "./_components/linha-documento";
 import { PainelCenso } from "./_components/painel-censo";
 import { PainelProjecao } from "./_components/painel-projecao";
-import { DOCUMENTOS, RELATORIOS_PADRAO } from "./_components/documentos";
+import { DOCUMENTOS, RELATORIOS_PADRAO } from "@/modules/cidades/documentos-emissiveis";
 import type { RespostaLevantamento } from "./_components/tipos";
 
 type Documento =

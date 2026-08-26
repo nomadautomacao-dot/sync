@@ -37,6 +37,8 @@ import type { MenuProps } from "antd";
 import { AREAS, areasVisiveis, type AreaKey } from "@/core/domain/rbac";
 import { useAuth } from "@/core/providers/auth-provider";
 
+import { SinoDeNotificacoes } from "./notificacoes-inbox";
+
 const { Sider } = Layout;
 const { useBreakpoint } = Grid;
 const { Text, Paragraph } = Typography;
@@ -65,7 +67,6 @@ const ICONES: Record<AreaKey, React.ComponentType> = {
   caixa: InboxOutlined,
   cidades: EnvironmentOutlined,
   pipeline: RiseOutlined,
-  empresas: BankOutlined,
   pessoas: TeamOutlined,
   documentos: FolderOpenOutlined,
   modulos: AppstoreOutlined,
@@ -189,6 +190,11 @@ export function SyncSidebar({ abertaNoMobile, aoFecharNoMobile }: SyncSidebarPro
       />
 
       <div style={{ padding: 8, display: "flex", flexDirection: "column", gap: 8 }}>
+        {/* O sino mora aqui e não no header porque a lateral está em todas as
+            telas e o header, só no painel — o inbox precisa ser alcançável de
+            qualquer lugar. Decisão registrada em `notificacoes-inbox.tsx`. */}
+        <SinoDeNotificacoes aparencia="lateral" compacta={compacta} />
+
         <Popover
           open={ajudaAberta}
           onOpenChange={setAjudaAberta}
