@@ -55,7 +55,14 @@ steps:
   - name: 'gcr.io/cloud-builders/docker'
     id: 'build'
     args: ['build', '--build-arg', 'NODE_OPTIONS=--max-old-space-size=4096', '-t', 'gcr.io/$PROJECT_ID/sync-app:${BUILD_ID}', '-t', 'gcr.io/$PROJECT_ID/sync-app:latest', '.']
-    timeout: '1800s'
+    # 2400s, e nao 1800s: este e o unico passo de CPU cheia, e desde
+    # 2026-08-26 ele roda na maquina padrao, de dois nucleos. Os 1800s davam
+    # 4,8x sobre os 375s medidos com oito nucleos; com dois, essa folga cairia
+    # para ~1,6x. Estouro de teto aqui nao aparece como defeito: o build morre,
+    # a revisao anterior continua respondendo, e "esta no ar" fica
+    # indistinguivel de "seu commit esta no ar" — foi assim que a producao ficou
+    # parada de 2 a 5 de agosto.
+    timeout: '2400s'
 
   # 3. Push da imagem para o Container Registry
   - name: 'gcr.io/cloud-builders/docker'
@@ -130,19 +137,36 @@ images:
   - 'gcr.io/$PROJECT_ID/sync-app:latest'
 
 # Teto global do build (testes + build da imagem + deploy + smoke test).
-# Soma dos tetos por passo: 900 (test) + 1800 (build) + push/deploy + 900
-# (smoke). O teto anterior, 3600s, ficaria menor que a soma depois do smoke.
-timeout: '4500s'
+# Soma dos tetos por passo: 900 (test) + 2400 (build) + push/deploy + 900
+# (smoke). Ele acompanha essa soma: se um teto por passo subir e este ficar
+# para tras, o passo mais lento e cortado pelo teto global antes de bater no
+# proprio, e a mensagem culpa o build inteiro em vez do passo que demorou.
+timeout: '5100s'
 
 options:
-  # E2_HIGHCPU_8: oito vCPU e **oito** GB (a familia HIGHCPU da 1 GB por vCPU).
+  # **Sem `machineType`, de proposito** — e a linha mais barata do arquivo.
   #
-  # `E2_HIGHCPU_32` seria o caminho obvio e **nao esta disponivel**: o projeto
-  # nao tem cota para esse tipo de maquina nesta regiao, e o Cloud Build recusa
-  # antes de comecar — "due to quota restrictions". Pior, o gatilho recusa em
-  # silencio: o push simplesmente nao gera build nenhum. Se um dia a suite
-  # deixar de caber aqui, o caminho e pedir cota, nao trocar a linha abaixo.
-  machineType: 'E2_HIGHCPU_8'
+  # Escolher uma maquina explicita abre mao dos 2.500 minutos gratuitos por mes
+  # que o Google da na maquina padrao. A padrao (`e2-standard-2`) tem **os
+  # mesmos 8 GB** da `E2_HIGHCPU_8` que estava aqui: muda o numero de nucleos,
+  # nao a memoria — e memoria era o unico motivo de ter escolhido a outra.
+  #
+  # So deu para tirar depois que os JSON sairam do `import` em 2026-08-06. Antes
+  # disso a suite pedia 4.886 MB e o `next build` somava 8.519 MB, e nada cabia
+  # em maquina nenhuma; os oito nucleos eram muleta para um problema que estava
+  # no `resolveJsonModule`. Hoje a suite pica em 2.502 MB com quatro processos.
+  #
+  # Medido no build 22332f17 (2026-08-26), ainda na E2_HIGHCPU_8:
+  #   test 54s · build 375s · push 49s · deploy 30s · smoke 47s — 9,3 min
+  # Com dois nucleos em vez de oito o gargalo e o passo `build`, que e o unico
+  # de CPU cheia. Mesmo a 3x ele fica em ~19 min, e ~25 min de build inteiro
+  # cabem folgados nos 2.500 minutos: sao 100 builds por mes, e fazemos ~15.
+  #
+  # Guardado do que veio antes: **`E2_HIGHCPU_32` nao esta disponivel** — o
+  # projeto nao tem cota nesta regiao, e a recusa e silenciosa do lado do
+  # gatilho: o push simplesmente nao gera build nenhum, sem erro em lugar
+  # algum. Se a suite um dia deixar de caber, o caminho e consertar o peso ou
+  # pedir cota — nunca voltar a fixar uma maquina paga por reflexo.
   # O build roda como 621901234263-compute@developer.gserviceaccount.com (a
   # conta default do projeto, que já tem Editor). Nesse modo o Cloud Build
   # recusa o build se o destino dos logs não for explícito. Os logs ficam no
