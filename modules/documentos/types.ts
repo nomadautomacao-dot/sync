@@ -22,6 +22,10 @@ export const DOCUMENT_CATEGORY_LABELS: Record<DocumentCategory, string> = {
   outro: "Outro",
 };
 
+import type { VersaoDoDocumento } from "@/core/domain/documento-versoes";
+
+export type { VersaoDoDocumento };
+
 export interface CityDocument {
   id: string;
   groupId: string;
@@ -53,6 +57,22 @@ export interface CityDocument {
    */
   relatorioId?: string;
   relatorioTitulo?: string;
+  /**
+   * A iniciativa a que este arquivo pertence: a capacitação, o projeto.
+   *
+   * Mesmo papel de `relatorioId` um nível acima — aquele diz *sobre qual
+   * relatório* o arquivo fala; este diz *de qual assunto da cidade* ele é. O
+   * cartaz e o certificado da capacitação de outubro chegam por aqui, e é o
+   * que os junta ao que a linha do tempo já conta sobre ela.
+   */
+  iniciativaId?: string;
+  /**
+   * A versão vigente. Ausente em documento anterior a este campo: é a 1.
+   * Os campos de arquivo acima são sempre os da versão vigente.
+   */
+  versao?: number;
+  /** As versões que já foram substituídas. Nenhuma é apagada do Storage. */
+  versoesAnteriores?: VersaoDoDocumento[];
 }
 
 export interface CreateCityDocumentInput {
@@ -71,6 +91,7 @@ export interface CreateCityDocumentInput {
   source?: CityDocument["source"];
   relatorioId?: string;
   relatorioTitulo?: string;
+  iniciativaId?: string;
 }
 
 export interface ContractAgentStats {

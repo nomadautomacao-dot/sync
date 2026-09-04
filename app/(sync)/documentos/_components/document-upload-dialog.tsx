@@ -121,7 +121,12 @@ export function DocumentUploadDialog({
       }}
       closable={!uploading}
       mask={{ closable: !uploading }}
+      /* Centrado, e o corpo limitado à janela. Ancorado no topo, o formulário
+         de anexo passava da altura de um notebook e o botão de enviar ficava
+         fora da tela. */
+      centered
       width={680}
+      styles={{ body: { maxHeight: "calc(100vh - 220px)", overflowY: "auto" } }}
       footer={[
         <Button key="cancelar" onClick={onClose} disabled={uploading}>
           Cancelar

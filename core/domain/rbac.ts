@@ -84,6 +84,65 @@ export function podeAdministrarAcessos(papel: GroupRole): boolean {
   return papelAlcanca(papel, "admin");
 }
 
+/**
+ * Quem enxerga o administrativo: contrato, valores e remuneração.
+ *
+ * ## Por que não é uma décima área
+ *
+ * `AREAS` é o catálogo da barra lateral — `NAV_ITEMS` é derivado dele —, então
+ * uma área nova criaria um item de menu apontando para uma rota que não
+ * existe. E o administrativo não é um lugar do sistema: é uma **faixa de dado**
+ * que atravessa telas que a colaboradora precisa abrir de qualquer jeito. A
+ * ficha da cidade é a mesma ficha, com ou sem a aba Contrato.
+ *
+ * Área responde "que telas esta pessoa alcança"; isto responde "o que ela vê
+ * dentro de uma tela que ela alcança". São perguntas diferentes, e espremer a
+ * segunda no catálogo da primeira é o que produziria a área fantasma.
+ *
+ * ## Por que nome próprio, com a mesma régua
+ *
+ * `admin`, igual a `podeAdministrarAcessos` e `podeAdministrarSistemas`. O nome
+ * é próprio pelo mesmo motivo que o daqueles dois: são poderes distintos que
+ * hoje calham de exigir o mesmo papel, e fundi-los faria afrouxar um afrouxar
+ * os outros sem ninguém perceber.
+ *
+ * ## A trava que vale não é esta
+ *
+ * Esta função decide se o dado aparece na tela. Quem impede de alcançá-lo é
+ * `firestore.rules`, onde `contratos` e as coleções de comissão exigem o mesmo
+ * papel na **leitura** — e não só na escrita, como o resto da base. Sem aquela
+ * metade, esconder a aba tira o contrato da vista e não do alcance de quem
+ * abrir o SDK no navegador.
+ */
+export function podeVerAdministrativo(papel: GroupRole | undefined | null): boolean {
+  if (!papel) return false;
+  return papelAlcanca(papel, "admin");
+}
+
+/**
+ * Quem apaga de vez: só a dona.
+ *
+ * ## Por que não é `admin`, como as outras travas
+ *
+ * As outras três perguntam "quem tem poder de operar". Esta pergunta outra
+ * coisa: "quem pode destruir". Apagar um documento remove o arquivo do Storage
+ * e o registro do Firestore — não há lixeira, não há desfazer, e a auditoria
+ * não recupera o binário. É a única ação do sistema que não deixa rastro
+ * recuperável.
+ *
+ * Antes disto, a autora do upload apagava o próprio documento. Parecia justo e
+ * é o caminho pelo qual se perde arquivo numa equipe: quem subiu por engano
+ * apaga meia hora depois o que já virou anexo de processo, e ninguém sabe que
+ * sumiu porque quem apagou tinha direito.
+ *
+ * O corolário aceito é que a dona vira gargalo de limpeza. É a troca: numa
+ * base que sustenta processo administrativo, arquivo a mais custa espaço e
+ * arquivo a menos custa o processo.
+ */
+export function podeApagarDefinitivamente(papel: GroupRole | undefined | null): boolean {
+  return papel === "owner";
+}
+
 // ── Áreas ────────────────────────────────────────────────────────────────
 
 export type AreaKey =

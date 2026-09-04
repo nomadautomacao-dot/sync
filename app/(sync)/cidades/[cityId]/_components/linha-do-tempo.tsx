@@ -2,33 +2,49 @@
 
 import { useMemo, useState } from "react";
 import {
-  CheckCircleOutlined,
   CommentOutlined,
   EditOutlined,
-  EnvironmentOutlined,
-  FileTextOutlined,
-  FormOutlined,
   PaperClipOutlined,
-  PhoneOutlined,
   PlusOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { App, Alert, Button, Card, Empty, Flex, Result, Skeleton, Space, Tag, Timeline, Typography, theme } from "antd";
+import {
+  App,
+  Alert,
+  Avatar,
+  Badge,
+  Button,
+  Card,
+  Empty,
+  Flex,
+  Result,
+  Skeleton,
+  Space,
+  Tag,
+  Timeline,
+  Tooltip,
+  Typography,
+  theme,
+} from "antd";
 
 import {
   definicaoDoTipo,
   podeEditarEvento,
   repartirLinhaDoTempo,
   type EventoDaCidade,
-  type TipoDeEvento,
 } from "@/core/domain/cidade-eventos";
+import { eventosDaIniciativa } from "@/core/domain/cidade-iniciativas";
+
+import { COR_DO_TIPO, IconeDoTipo } from "./aparencia-do-evento";
 import {
   createCityEvent,
   listCityEvents,
   updateCityEvent,
 } from "@/core/lib/city-events-firestore";
 import { getFirebaseDb } from "@/core/lib/firebase-client";
+import { useVisualizador } from "@/core/components/usar-visualizador";
+import { extensaoDoArquivo } from "@/core/components/visualizador-de-arquivo";
 import { useAuth } from "@/core/providers/auth-provider";
 
 import { ComentariosDoEvento } from "./comentarios-do-evento";
@@ -37,15 +53,6 @@ import { EventoDialog, type ValoresDoEvento } from "./evento-dialog";
 const { Text, Title } = Typography;
 const FONTE_MONO = "var(--font-sync-mono)";
 
-const ICONES: Record<TipoDeEvento, React.ComponentType> = {
-  reuniao: TeamOutlined,
-  visita: EnvironmentOutlined,
-  ligacao: PhoneOutlined,
-  relatorio_campo: FileTextOutlined,
-  nota: FormOutlined,
-  documento: PaperClipOutlined,
-  etapa: CheckCircleOutlined,
-};
 
 /**
  * O que aconteceu nesta cidade, em ordem, e quem fez.
@@ -59,10 +66,26 @@ const ICONES: Record<TipoDeEvento, React.ComponentType> = {
  * pergunta que um mural de avisos não responderia — *o que foi marcado e ficou
  * sem desfecho* — e é o que faz alguém abrir esta tela de manhã.
  */
-export function LinhaDoTempo({ cityId }: { cityId: string }) {
+export function LinhaDoTempo({
+  cityId,
+  iniciativaId = null,
+}: {
+  cityId: string;
+  /**
+   * Quando presente, a linha mostra só o que pertence a esta iniciativa — e o
+   * que for registrado daqui já nasce com o fio.
+   *
+   * É o que faz a aba Projetos ser uma **lente** sobre esta tela em vez de uma
+   * segunda linha do tempo: o componente é o mesmo, a consulta é a mesma, e o
+   * cache do TanStack é compartilhado (mesma `queryKey`) — registrar dentro de
+   * um projeto atualiza a linha do tempo da cidade sem uma segunda leitura.
+   */
+  iniciativaId?: string | null;
+}) {
   const { message } = App.useApp();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const { token } = theme.useToken();
 
   const [dialogoAberto, setDialogoAberto] = useState(false);
   const [emEdicao, setEmEdicao] = useState<EventoDaCidade | null>(null);
@@ -70,7 +93,7 @@ export function LinhaDoTempo({ cityId }: { cityId: string }) {
   const chave = ["city-events", cityId];
 
   const {
-    data: eventos = [],
+    data: todosOsEventos = [],
     isPending,
     error,
     refetch,
@@ -79,6 +102,11 @@ export function LinhaDoTempo({ cityId }: { cityId: string }) {
     queryFn: () => listCityEvents(getFirebaseDb(), user!.groupId, cityId),
     enabled: Boolean(user?.groupId && cityId),
   });
+
+  const eventos = useMemo(
+    () => eventosDaIniciativa(todosOsEventos, iniciativaId),
+    [todosOsEventos, iniciativaId],
+  );
 
   /* `new Date()` a cada render mudaria a repartição no meio de uma interação —
      e um evento pularia de "agenda" para "pendências" enquanto a pessoa lê.
@@ -92,10 +120,13 @@ export function LinhaDoTempo({ cityId }: { cityId: string }) {
 
   const registrar = useMutation({
     mutationFn: (valores: ValoresDoEvento) =>
-      createCityEvent(getFirebaseDb(), user!.groupId, cityId, valores, {
-        uid: user!.id,
-        nome: user!.name,
-      }),
+      createCityEvent(
+        getFirebaseDb(),
+        user!.groupId,
+        cityId,
+        { ...valores, ...(iniciativaId ? { iniciativaId } : {}) },
+        { uid: user!.id, nome: user!.name },
+      ),
     onSuccess: () => {
       invalidar();
       setDialogoAberto(false);
@@ -151,6 +182,8 @@ export function LinhaDoTempo({ cityId }: { cityId: string }) {
     // `icon` e `content`, não `dot` e `children`: no antd 6 as props antigas
     // ainda funcionam e avisam no console a cada render.
     icon: <IconeDoTipo tipo={evento.tipo} />,
+    // A cor do ponto é a do tipo: é o que deixa a coluna varrível sem leitura.
+    color: COR_DO_TIPO[evento.tipo](token),
     content: (
       <ItemDaLinha
         evento={evento}
@@ -221,18 +254,22 @@ export function LinhaDoTempo({ cityId }: { cityId: string }) {
 
           {linha.agenda.length > 0 && (
             <Card>
-              <Title level={5} style={{ marginTop: 0 }}>
-                Por vir
-              </Title>
+              <TituloDaSecao
+                texto="Por vir"
+                quantidade={linha.agenda.length}
+                cor={token.colorPrimary}
+              />
               <Timeline items={linha.agenda.map(item)} />
             </Card>
           )}
 
           {linha.historico.length > 0 && (
             <Card>
-              <Title level={5} style={{ marginTop: 0 }}>
-                Já aconteceu
-              </Title>
+              <TituloDaSecao
+                texto="Já aconteceu"
+                quantidade={linha.historico.length}
+                cor={token.colorTextTertiary}
+              />
               <Timeline items={linha.historico.map(item)} />
             </Card>
           )}
@@ -264,9 +301,43 @@ export function LinhaDoTempo({ cityId }: { cityId: string }) {
   );
 }
 
-function IconeDoTipo({ tipo }: { tipo: TipoDeEvento }) {
-  const Icone = ICONES[tipo];
-  return <Icone />;
+/**
+ * Título de bloco com a contagem ao lado.
+ *
+ * O número responde antes da leitura — "tenho três coisas por vir" — e é o que
+ * uma lista sem contagem obriga a descobrir rolando até o fim do bloco.
+ */
+function TituloDaSecao({
+  texto,
+  quantidade,
+  cor,
+}: {
+  texto: string;
+  quantidade: number;
+  cor: string;
+}) {
+  return (
+    <Space size={8} align="center" style={{ marginBottom: 14 }}>
+      <Title level={5} style={{ margin: 0 }}>
+        {texto}
+      </Title>
+      <Badge
+        count={quantidade}
+        showZero
+        style={{ backgroundColor: cor, fontFamily: FONTE_MONO, fontSize: 10 }}
+      />
+    </Space>
+  );
+}
+
+
+/** As iniciais de quem escreveu, para o avatar. */
+function iniciais(nome: string): string {
+  const partes = nome.trim().split(/\s+/).filter(Boolean);
+  if (partes.length === 0) return "?";
+  const primeira = partes[0]![0] ?? "";
+  const ultima = partes.length > 1 ? (partes[partes.length - 1]![0] ?? "") : "";
+  return (primeira + ultima).toUpperCase();
 }
 
 function ItemDaLinha({
@@ -281,68 +352,136 @@ function ItemDaLinha({
   aoEditar: () => void;
 }) {
   const { token } = theme.useToken();
+  const { abrir: abrirArquivo, visor } = useVisualizador();
   const [comentariosAbertos, setComentariosAbertos] = useState(false);
+  const cor = COR_DO_TIPO[evento.tipo](token);
+  const cancelado = evento.estado === "cancelado";
 
   return (
-    <Flex vertical gap={4} style={{ paddingBottom: 8 }}>
+    /* Cartão em vez de texto solto, com uma faixa da cor do tipo à esquerda.
+       Numa lista de dezenas de registros é o que separa um acontecimento do
+       seguinte sem exigir que a pessoa leia para descobrir onde um termina. */
+    <Flex
+      vertical
+      gap={8}
+      style={{
+        marginBottom: 12,
+        padding: "10px 14px",
+        borderRadius: token.borderRadiusLG,
+        border: `1px solid ${token.colorBorderSecondary}`,
+        borderInlineStartWidth: 3,
+        borderInlineStartColor: cor,
+        background: token.colorBgContainer,
+        opacity: cancelado ? 0.6 : 1,
+      }}
+    >
       <Flex justify="space-between" align="flex-start" gap={12} wrap="wrap">
-        <Flex vertical gap={2} style={{ minWidth: 0 }}>
+        <Flex vertical gap={3} style={{ minWidth: 0 }}>
           <Space size={8} wrap>
-            <Text strong style={{ fontSize: 13 }}>
+            <Text
+              strong
+              style={{
+                fontSize: 13.5,
+                textDecoration: cancelado ? "line-through" : undefined,
+              }}
+            >
               {evento.titulo}
             </Text>
-            <Tag>{definicaoDoTipo(evento.tipo).rotulo}</Tag>
-            {evento.estado === "cancelado" && <Tag color="default">Cancelado</Tag>}
+            <Tag
+              style={{
+                color: cor,
+                background: `${cor}14`,
+                borderColor: `${cor}33`,
+                fontSize: 10.5,
+                marginInlineEnd: 0,
+              }}
+            >
+              {definicaoDoTipo(evento.tipo).rotulo}
+            </Tag>
+            {cancelado && <Tag>Cancelado</Tag>}
             {evento.estado === "marcado" && <Tag color="processing">Marcado</Tag>}
           </Space>
-          <Text type="secondary" style={{ fontSize: 11.5, fontFamily: FONTE_MONO }}>
-            {formatarQuando(evento.quando)} · {evento.autorNome}
-            {evento.atualizadoEm ? " · editado" : ""}
-          </Text>
+
+          <Space size={6} align="center">
+            <Tooltip title={evento.autorNome}>
+              <Avatar size={18} style={{ backgroundColor: cor, fontSize: 8.5 }}>
+                {iniciais(evento.autorNome)}
+              </Avatar>
+            </Tooltip>
+            <Text type="secondary" style={{ fontSize: 11, fontFamily: FONTE_MONO }}>
+              {formatarQuando(evento.quando)} · {evento.autorNome}
+              {evento.atualizadoEm ? " · editado" : ""}
+            </Text>
+          </Space>
         </Flex>
 
         {podeEditar && (
-          <Button size="small" icon={<EditOutlined />} onClick={aoEditar}>
+          <Button size="small" type="text" icon={<EditOutlined />} onClick={aoEditar}>
             Editar
           </Button>
         )}
       </Flex>
 
       {evento.participantes && (
-        <Text type="secondary" style={{ fontSize: 12 }}>
-          Com: {evento.participantes}
-        </Text>
+        <Space size={6} wrap>
+          <TeamOutlined style={{ color: token.colorTextTertiary, fontSize: 11 }} />
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            {evento.participantes}
+          </Text>
+        </Space>
       )}
 
       {evento.relato ? (
-        <Text style={{ fontSize: 13, whiteSpace: "pre-wrap" }}>{evento.relato}</Text>
+        /* O relato num bloco próprio, e não como mais uma linha de texto: é o
+           conteúdo do registro, e o que alguém volta aqui para reler. */
+        <div
+          style={{
+            padding: "8px 12px",
+            borderRadius: token.borderRadius,
+            background: token.colorFillQuaternary,
+          }}
+        >
+          <Text style={{ fontSize: 13, whiteSpace: "pre-wrap" }}>{evento.relato}</Text>
+        </div>
       ) : (
         /* Ausência de relato não é erro: o compromisso pode ainda não ter
            acontecido. Mas some quando já aconteceu, e aí vale dizer. */
         evento.estado === "realizado" && (
-          <Text style={{ fontSize: 12, color: token.colorTextQuaternary }}>
-            Sem relato.
-          </Text>
+          <Text style={{ fontSize: 12, color: token.colorTextQuaternary }}>Sem relato.</Text>
         )
       )}
 
       {evento.anexo && (
-        <Flex align="center" gap={6} wrap="wrap">
-          <PaperClipOutlined style={{ color: token.colorTextTertiary, fontSize: 12 }} />
-          <Typography.Link
-            href={evento.anexo.url}
-            target="_blank"
-            rel="noreferrer"
-            style={{ fontSize: 12 }}
+        <Button
+          size="small"
+          icon={<PaperClipOutlined />}
+          onClick={() =>
+            abrirArquivo({
+              url: evento.anexo!.url,
+              titulo: evento.anexo!.titulo,
+              detalhe: evento.anexo!.relatorioTitulo
+                ? `sobre ${evento.anexo!.relatorioTitulo}`
+                : undefined,
+            })
+          }
+          style={{ alignSelf: "flex-start", maxWidth: "100%" }}
+        >
+          <span
+            style={{
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
           >
             {evento.anexo.titulo}
-          </Typography.Link>
-          {evento.anexo.relatorioTitulo && (
-            <Text type="secondary" style={{ fontSize: 11 }}>
-              sobre {evento.anexo.relatorioTitulo}
-            </Text>
-          )}
-        </Flex>
+            {/* A extensão sai da URL: o anexo do evento guarda só título e
+                link, e o título não diz se é DOCX ou ZIP. */}
+            {extensaoDoArquivo(undefined, evento.anexo.url)
+              ? ` · ${extensaoDoArquivo(undefined, evento.anexo.url)}`
+              : ""}
+            {evento.anexo.relatorioTitulo ? ` · sobre ${evento.anexo.relatorioTitulo}` : ""}
+          </span>
+        </Button>
       )}
 
       <div>
@@ -351,6 +490,7 @@ function ItemDaLinha({
           type="text"
           icon={<CommentOutlined />}
           onClick={() => setComentariosAbertos((aberto) => !aberto)}
+          style={{ color: token.colorTextTertiary, paddingInline: 4 }}
         >
           {evento.comentarios ? `${evento.comentarios} comentários` : "Comentar"}
         </Button>
@@ -363,6 +503,8 @@ function ItemDaLinha({
           autorDoEvento={{ uid: evento.autorUid, nome: evento.autorNome }}
         />
       )}
+
+      {visor}
     </Flex>
   );
 }

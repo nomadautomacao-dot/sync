@@ -110,3 +110,6 @@ opencode.jsonc
 /dist-desktop/
 /desktop/icones/
 /desktop/.chromium/
+
+# cache do firebase-tools (gerado por `firebase deploy`)
+.firebase/

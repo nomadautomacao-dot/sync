@@ -28,6 +28,7 @@ export type TipoDeEvento =
   | "relatorio_campo"
   | "documento"
   | "etapa"
+  | "iniciativa"
   | "nota";
 
 export type EstadoDoEvento = "marcado" | "realizado" | "cancelado";
@@ -58,6 +59,14 @@ export interface EventoDaCidade {
    * `documentoId` viaja junto para quem precisar do documento inteiro.
    */
   anexo?: AnexoDoEvento;
+  /**
+   * De que assunto este acontecimento é: a capacitação, o projeto, o programa.
+   *
+   * Ausente é o caso comum e continua sendo — a maior parte do que acontece
+   * numa cidade não pertence a iniciativa nenhuma, e o filtro "tudo" da tela
+   * não pode escondê-los. Ver `eventosDaIniciativa` em `cidade-iniciativas.ts`.
+   */
+  iniciativaId?: string;
 }
 
 export interface AnexoDoEvento {
@@ -97,6 +106,10 @@ export const TIPOS_DE_EVENTO: readonly DefinicaoDeTipo[] = [
   { key: "nota", rotulo: "Nota", agendavel: false, manual: true },
   { key: "documento", rotulo: "Documento anexado", agendavel: false, manual: false },
   { key: "etapa", rotulo: "Etapa do cronograma", agendavel: false, manual: false },
+  // Nasce de abrir ou encerrar um projeto na aba Projetos, nunca do
+  // formulário: um "acontecimento do tipo iniciativa" escrito à mão não
+  // corresponderia a iniciativa nenhuma.
+  { key: "iniciativa", rotulo: "Projeto", agendavel: false, manual: false },
 ];
 
 export const TIPOS_MANUAIS = TIPOS_DE_EVENTO.filter((t) => t.manual);
@@ -205,6 +218,7 @@ export interface EntradaDeEvento {
   participantes?: string;
   relato?: string;
   anexo?: AnexoDoEvento;
+  iniciativaId?: string;
 }
 
 export interface Autor {
@@ -235,6 +249,7 @@ export function novoEvento(
     ...(relato ? { relato } : {}),
     ...(participantes ? { participantes } : {}),
     ...(entrada.anexo ? { anexo: entrada.anexo } : {}),
+    ...(entrada.iniciativaId ? { iniciativaId: entrada.iniciativaId } : {}),
     autorUid: autor.uid,
     autorNome: autor.nome,
     criadoEm: agora.toISOString(),

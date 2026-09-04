@@ -24,7 +24,7 @@ import {
   whatsappDoColaborador,
 } from "@/core/lib/people-types";
 import { AcessoDaPessoa } from "@/core/components/acessos/acesso-da-pessoa";
-import { podeAdministrarAcessos } from "@/core/domain/rbac";
+import { podeAdministrarAcessos, podeVerAdministrativo } from "@/core/domain/rbac";
 import { useAuth } from "@/core/providers/auth-provider";
 
 interface CollaboratorDetailPanelProps {
@@ -57,6 +57,16 @@ export function CollaboratorDetailPanel({
   /* A aba de acesso carrega a grade de áreas, que é uma tabela de duas colunas:
      em 450px ela espreme o rótulo da área contra os três botões de nível. */
   const administraAcessos = podeAdministrarAcessos(user?.groupRole ?? "viewer");
+  /* Remuneração, PIX e dados bancários são do mesmo eixo do contrato. A área
+     Pessoas continua aberta à colaboradora — ela precisa do telefone e do
+     WhatsApp da colega —, e o que sai é a faixa financeira dentro dela.
+
+     Aqui a trava é só de tela, e isso é limitação do Firestore, não escolha:
+     `pixKey` e `bankAccountInfo` são campos do documento de `collaborators`, e
+     regra de segurança concede ou nega o documento inteiro — não dá para
+     esconder campo na leitura. Fechar de verdade exige mover esses campos para
+     uma subcoleção própria, com migração dos cadastros que já existem. */
+  const veAdministrativo = podeVerAdministrativo(user?.groupRole);
 
   const abasDeAcesso: NonNullable<TabsProps["items"]> =
     collaborator && administraAcessos
@@ -175,15 +185,17 @@ export function CollaboratorDetailPanel({
                     ]}
                   />
                   <Descriptions
-                    title="Configuração de Comissão"
+                    title={veAdministrativo ? "Configuração de Comissão" : "Vínculo"}
                     column={1}
                     size="small"
                     items={[
-                      {
-                        key: "comissao",
-                        label: "Comissão Padrão",
-                        children: `${collaborator.defaultCommissionPercent}%`,
-                      },
+                      ...(veAdministrativo
+                        ? [{
+                            key: "comissao",
+                            label: "Comissão Padrão",
+                            children: `${collaborator.defaultCommissionPercent}%`,
+                          }]
+                        : []),
                       {
                         key: "tipo",
                         label: "Tipo de Colaborador",
@@ -194,7 +206,8 @@ export function CollaboratorDetailPanel({
                 </Flex>
               ),
             },
-            {
+            ...(veAdministrativo
+              ? [{
               key: "financeiro",
               label: "Financeiro & PIX",
               children: (
@@ -236,7 +249,8 @@ export function CollaboratorDetailPanel({
                   />
                 </Flex>
               ),
-            },
+            }]
+              : []),
             {
               key: "cidades",
               label: "Cidades",

@@ -11,6 +11,8 @@ import {
   permissoesPadrao,
   podeAdministrarAcessos,
   podeAdministrarSistemas,
+  podeApagarDefinitivamente,
+  podeVerAdministrativo,
   podeEditar,
   podeVer,
   type Permissoes,
@@ -181,5 +183,66 @@ describe("ida e volta das claims", () => {
   it("claim corrompida não vira acesso: cai no padrão do papel", () => {
     const p = permissoesEfetivas("viewer", ajustesDaClaim({ lixo: 1 }));
     expect(p).toEqual(permissoesPadrao("viewer"));
+  });
+});
+
+describe("eixo administrativo", () => {
+  it("dona e administradora enxergam; colaboradora e visitante, não", () => {
+    expect(podeVerAdministrativo("owner")).toBe(true);
+    expect(podeVerAdministrativo("admin")).toBe(true);
+    expect(podeVerAdministrativo("member")).toBe(false);
+    expect(podeVerAdministrativo("viewer")).toBe(false);
+  });
+
+  it("sem papel não enxerga — sessão a meio carregar não abre contrato", () => {
+    expect(podeVerAdministrativo(undefined)).toBe(false);
+    expect(podeVerAdministrativo(null)).toBe(false);
+  });
+
+  /*
+   * A colaboradora opera a cidade inteira e não vê o administrativo dela. É o
+   * caso que motivou o eixo: quem organiza a capacitação precisa da ficha do
+   * município, e não do valor do contrato.
+   */
+  it("não se alcança pela permissão de área: editar Cidades não abre contrato", () => {
+    const permissoes = permissoesEfetivas("member");
+    expect(podeEditar(permissoes, "cidades")).toBe(true);
+    expect(podeVerAdministrativo("member")).toBe(false);
+  });
+
+  /*
+   * Ajuste de claim mexe em área, e o administrativo não é área. Uma claim que
+   * tentasse abri-lo não teria onde encostar — é o que esta expectativa fixa,
+   * para que ninguém transforme o eixo em chave configurável sem perceber que
+   * está mudando a régua combinada.
+   */
+  it("nenhum ajuste de área abre o administrativo para member", () => {
+    const permissoes = permissoesEfetivas("member", { pipeline: "editar", cidades: "editar" });
+    expect(podeVer(permissoes, "pipeline")).toBe(true);
+    expect(podeVerAdministrativo("member")).toBe(false);
+  });
+});
+
+describe("apagar definitivamente", () => {
+  it("só a dona; nem a administradora", () => {
+    expect(podeApagarDefinitivamente("owner")).toBe(true);
+    expect(podeApagarDefinitivamente("admin")).toBe(false);
+    expect(podeApagarDefinitivamente("member")).toBe(false);
+    expect(podeApagarDefinitivamente("viewer")).toBe(false);
+  });
+
+  it("sem papel não apaga", () => {
+    expect(podeApagarDefinitivamente(undefined)).toBe(false);
+    expect(podeApagarDefinitivamente(null)).toBe(false);
+  });
+
+  /*
+   * É a única trava mais dura que `admin`. Se um dia alguém a igualar às
+   * outras "para ficar consistente", este teste é o que explica por que ela
+   * não é: as outras dizem quem opera, esta diz quem destrói.
+   */
+  it("é mais dura que o eixo administrativo", () => {
+    expect(podeVerAdministrativo("admin")).toBe(true);
+    expect(podeApagarDefinitivamente("admin")).toBe(false);
   });
 });

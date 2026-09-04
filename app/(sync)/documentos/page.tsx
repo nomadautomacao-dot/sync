@@ -6,6 +6,8 @@ import {
   ClockCircleOutlined,
   DeleteOutlined,
   DownloadOutlined,
+  ExportOutlined,
+  EyeOutlined,
   FileExcelOutlined,
   FileOutlined,
   FileTextOutlined,
@@ -41,6 +43,12 @@ import {
 import { getFirebaseDb, getFirebaseStorage } from "@/core/lib/firebase-client";
 import { listCities } from "@/core/lib/cities-firestore";
 import type { CityAccount } from "@/core/lib/city-types";
+import { useVisualizador } from "@/core/components/usar-visualizador";
+import {
+  baixarArquivo,
+  extensaoDoArquivo,
+} from "@/core/components/visualizador-de-arquivo";
+import { podeApagarDefinitivamente } from "@/core/domain/rbac";
 import { useAuth } from "@/core/providers/auth-provider";
 import {
   deleteCityDocument,
@@ -82,6 +90,10 @@ interface DocumentSearchParams {
 export default function DocumentosPage() {
   const { message } = App.useApp();
   const { user } = useAuth();
+  /* Apagar é o único ato irreversível do sistema: tira o binário do Storage e
+     o registro do Firestore, sem lixeira. Só a dona. */
+  const apagaDefinitivamente = podeApagarDefinitivamente(user?.groupRole);
+  const { abrir: abrirArquivo, visor } = useVisualizador();
   const queryClient = useQueryClient();
   const { token } = theme.useToken();
   const [activeTab, setActiveTab] = useState<WorkspaceTab>("acervo");
@@ -272,6 +284,20 @@ export default function DocumentosPage() {
                 <Typography.Text strong style={{ fontSize: 12 }}>
                   {doc.title}
                 </Typography.Text>
+                {/* A extensão à vista: o título é escrito por quem sobe o
+                    arquivo, e não diz se o que está lá dentro é DOCX ou ZIP. */}
+                {extensaoDoArquivo(doc.fileName) && (
+                  <Tag
+                    style={{
+                      fontFamily: "var(--font-sync-mono)",
+                      fontSize: 9.5,
+                      marginInlineEnd: 0,
+                      lineHeight: "16px",
+                    }}
+                  >
+                    {extensaoDoArquivo(doc.fileName)}
+                  </Tag>
+                )}
                 {doc.source === "generated" && (
                   <Tooltip title="Gerado pelo sistema">
                     <RobotOutlined style={{ color: token.colorInfoText }} />
@@ -390,14 +416,28 @@ export default function DocumentosPage() {
             deleteMutation.isPending && deleteMutation.variables?.id === doc.id;
           return (
             <Space size={4}>
-              <Tooltip title="Baixar documento">
+              <Tooltip title="Abrir aqui">
+                <Button
+                  type="text"
+                  size="small"
+                  icon={<EyeOutlined />}
+                  onClick={() =>
+                    abrirArquivo({
+                      url: doc.downloadUrl,
+                      titulo: doc.title,
+                      nomeArquivo: doc.fileName,
+                      mimeType: doc.mimeType,
+                      detalhe: `${doc.cityName} · ${doc.fileName}`,
+                    })
+                  }
+                />
+              </Tooltip>
+              <Tooltip title="Baixar">
                 <Button
                   type="text"
                   size="small"
                   icon={<DownloadOutlined />}
-                  href={doc.downloadUrl}
-                  target="_blank"
-                  rel="noreferrer"
+                  onClick={() => baixarArquivo(doc.downloadUrl, doc.fileName)}
                 />
               </Tooltip>
               <Dropdown
@@ -406,15 +446,23 @@ export default function DocumentosPage() {
                   items: [
                     {
                       key: "abrir",
-                      label: "Abrir arquivo",
-                      icon: <DownloadOutlined />,
+                      label: "Abrir fora do app",
+                      icon: <ExportOutlined />,
                     },
-                    {
-                      key: "excluir",
-                      label: "Excluir do acervo",
-                      icon: <DeleteOutlined />,
-                      danger: true,
-                    },
+                    /* Excluir some para quem não é a dona. A trava que vale é
+                       a de `firestore.rules`; esconder o item evita oferecer
+                       uma ação que o servidor recusa — e o usuário levaria a
+                       culpa por um erro do sistema. */
+                    ...(apagaDefinitivamente
+                      ? [
+                          {
+                            key: "excluir",
+                            label: "Excluir do acervo",
+                            icon: <DeleteOutlined />,
+                            danger: true,
+                          },
+                        ]
+                      : []),
                   ],
                   onClick: ({ key }) => {
                     if (key === "abrir") {
@@ -436,7 +484,15 @@ export default function DocumentosPage() {
         },
       },
     ],
-    [cityValueEnum, categoryValueEnum, token, deleteMutation, confirmDelete],
+    [
+      cityValueEnum,
+      categoryValueEnum,
+      token,
+      deleteMutation,
+      confirmDelete,
+      apagaDefinitivamente,
+      abrirArquivo,
+    ],
   );
 
   /** A busca embutida do ProTable filtra `documents` localmente — a coleção já
@@ -683,6 +739,8 @@ export default function DocumentosPage() {
           onSubmit={handleUpload}
         />
       )}
+
+      {visor}
     </Flex>
   );
 }

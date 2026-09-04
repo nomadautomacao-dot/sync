@@ -68,6 +68,7 @@ export function eventoDoDoc(id: string, dados: Record<string, unknown>): EventoD
     atualizadoEm: texto(dados.atualizadoEm),
     comentarios: typeof dados.comentarios === "number" ? dados.comentarios : 0,
     anexo: anexoDoDoc(dados.anexo),
+    iniciativaId: texto(dados.iniciativaId),
   };
 }
 

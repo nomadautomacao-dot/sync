@@ -16,19 +16,16 @@ import {
   EnvironmentOutlined,
   EyeOutlined,
   FileDoneOutlined,
-  FileOutlined,
   FileTextOutlined,
   FolderOutlined,
   HistoryOutlined,
   MoreOutlined,
   PaperClipOutlined,
+  ProjectOutlined,
   RiseOutlined,
-  RobotOutlined,
   RocketOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
-import { ProTable } from "@ant-design/pro-components";
-import type { ProColumns } from "@ant-design/pro-components";
 import {
   Alert,
   App,
@@ -36,6 +33,7 @@ import {
   Card,
   Col,
   Descriptions,
+  Drawer,
   Dropdown,
   Empty,
   Flex,
@@ -51,7 +49,8 @@ import {
 } from "antd";
 import type { MenuProps } from "antd";
 
-import { VisualizadorPdf } from "@/core/components/visualizador-pdf";
+import { useVisualizador } from "@/core/components/usar-visualizador";
+import { VisualizadorDeArquivo } from "@/core/components/visualizador-de-arquivo";
 import {
   deleteCity,
   getCity,
@@ -64,6 +63,8 @@ import {
 } from "@/core/lib/city-types";
 import { getFirebaseDb, getFirebaseStorage } from "@/core/lib/firebase-client";
 import { registrarArquivoNaLinhaDoTempo } from "@/core/lib/city-events-firestore";
+import type { IniciativaDaCidade } from "@/core/domain/cidade-iniciativas";
+import { listIniciativas } from "@/core/lib/city-initiatives-firestore";
 import { useAuth } from "@/core/providers/auth-provider";
 import { baixarPdf } from "@/modules/cidades/emissao";
 import { listCityReports } from "@/modules/cidades/city-reports-firestore";
@@ -81,9 +82,11 @@ import type {
   CreateCityDocumentInput,
 } from "@/modules/documentos/types";
 
-import { podeEditar, podeVer } from "@/core/domain/rbac";
+import { podeEditar, podeVer, podeVerAdministrativo } from "@/core/domain/rbac";
 
 import { DocumentUploadDialog } from "../../documentos/_components/document-upload-dialog";
+import { PastaDaCidade } from "./_components/pasta-da-cidade";
+import { ProjetosDaCidade } from "./_components/projetos-da-cidade";
 import { DeleteCityDialog } from "./_components/delete-city-dialog";
 import { ResponsaveisDialog } from "./_components/responsaveis-dialog";
 import { Contatos } from "./_components/contatos";
@@ -101,10 +104,10 @@ type CityTab =
   | "contatos"
   | "cronograma"
   | "contrato"
+  | "projetos"
   | "panorama"
   | "dados-fundeb"
-  | "relatorios"
-  | "documentos";
+  | "relatorios";
 
 export default function CidadeDetailPage() {
   const { message } = App.useApp();
@@ -125,17 +128,30 @@ export default function CidadeDetailPage() {
       "contatos",
       "cronograma",
       "contrato",
+      "projetos",
       "panorama",
       "dados-fundeb",
       "relatorios",
-      "documentos",
     ];
     return validas.includes(pedida as CityTab) ? (pedida as CityTab) : "linha-do-tempo";
   });
+  /* A pasta saiu da barra de abas e virou gaveta no menu de três pontos: ela
+     não é um lugar por onde se trabalha, é o arquivo — consulta-se e fecha-se,
+     de dentro de qualquer aba, sem perder o que estava aberto.
+
+     `?aba=documentos` continua valendo como porta de fora e abre a gaveta, em
+     vez de cair em silêncio na linha do tempo. */
+  const [pastaAberta, setPastaAberta] = useState(
+    () => searchParams.get("aba") === "documentos",
+  );
   const [uploadOpen, setUploadOpen] = useState(false);
   /* Quando o upload é uma análise sobre um relatório, e não um documento
      avulso. Guarda o relatório para vincular e para nomear o acontecimento. */
   const [anexarAoRelatorio, setAnexarAoRelatorio] = useState<CityReport | null>(null);
+  /* Quando o upload é de um projeto — o cartaz e o certificado da capacitação.
+     Mesmo mecanismo do relatório: quem sabe a que o arquivo pertence é quem
+     abriu o diálogo, não o formulário. */
+  const [anexarAoProjeto, setAnexarAoProjeto] = useState<IniciativaDaCidade | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [responsaveisOpen, setResponsaveisOpen] = useState(false);
   const [selectedReportId, setSelectedReportId] = useState<string | null>(null);
@@ -178,6 +194,27 @@ export default function CidadeDetailPage() {
     [allDocuments, cityId],
   );
 
+  /* A pasta mostra **tudo** que tem esta cidade — inclusive o que o sistema
+     emitiu. O filtro acima existe para as outras telas, onde relatório e
+     documento são coisas separadas; aqui a pergunta é "o que existe desta
+     cidade", e um Raio-X emitido é documento dela como qualquer outro.
+
+     O que resolvia o problema da contagem dupla agora é a coluna Origem: em
+     vez de esconder o arquivo, a pasta diz de onde ele veio. */
+  const documentosDaPasta = useMemo(
+    () => allDocuments.filter((document) => document.cityId === cityId),
+    [allDocuments, cityId],
+  );
+
+  /* Só para nomear a origem na pasta: o documento guarda `iniciativaId`, e o
+     nome do projeto mora na iniciativa. Mesma `queryKey` da aba Projetos — o
+     TanStack serve as duas com uma leitura só. */
+  const { data: iniciativas = [] } = useQuery({
+    queryKey: ["city-initiatives", cityId],
+    queryFn: () => listIniciativas(getFirebaseDb(), user!.groupId, cityId),
+    enabled: Boolean(user?.groupId && cityId),
+  });
+
   const uploadMutation = useMutation({
     mutationFn: ({
       file,
@@ -199,6 +236,7 @@ export default function CidadeDetailPage() {
       queryClient.invalidateQueries({ queryKey: ["city-documents"] });
       setUploadOpen(false);
       setAnexarAoRelatorio(null);
+      setAnexarAoProjeto(null);
       message.success("Documento anexado à cidade.");
 
       /* O arquivo entrou; agora ele vira acontecimento, com autor e data, para
@@ -288,6 +326,11 @@ export default function CidadeDetailPage() {
      que já existe, em vez de criar uma nova, faz com que quem não vê o funil no
      menu também não o veja aqui, sem uma segunda regra para manter. */
   const verComercial = user ? podeVer(user.permissoes, "pipeline") : false;
+  /* Contrato, valores e remuneração são do administrativo — e a régua é o
+     papel, não a área: a colaboradora que organiza a capacitação precisa da
+     ficha inteira do município e não do valor contratado. Esconder a aba é
+     metade do trabalho; a outra é o `allow read` de `contratos` nas rules. */
+  const verAdministrativo = podeVerAdministrativo(user?.groupRole);
   const editarCidade = user ? podeEditar(user.permissoes, "cidades") : false;
 
   const handleUpload = async (
@@ -302,17 +345,24 @@ export default function CidadeDetailPage() {
        Quem sabe que este upload é uma análise é quem abriu o diálogo. */
     await uploadMutation.mutateAsync({
       file,
-      input: anexarAoRelatorio
-        ? {
-            ...input,
-            relatorioId: anexarAoRelatorio.id,
-            relatorioTitulo: anexarAoRelatorio.title,
-          }
-        : input,
+      input: {
+        ...input,
+        ...(anexarAoRelatorio
+          ? { relatorioId: anexarAoRelatorio.id, relatorioTitulo: anexarAoRelatorio.title }
+          : {}),
+        ...(anexarAoProjeto ? { iniciativaId: anexarAoProjeto.id } : {}),
+      },
     });
   };
 
   const optionsMenu: MenuProps["items"] = [
+    {
+      key: "pasta",
+      icon: <FolderOutlined />,
+      label: `Pasta de documentos (${documentosDaPasta.length})`,
+      onClick: () => setPastaAberta(true),
+    },
+    { type: "divider" },
     {
       key: "excluir",
       danger: true,
@@ -346,11 +396,33 @@ export default function CidadeDetailPage() {
       icon: <CalendarOutlined />,
       content: <Cronograma cityId={city.id} inicioSugerido={city.implantacaoInicio} />,
     },
+    ...(verAdministrativo
+      ? [
+          {
+            key: "contrato" as const,
+            label: "Contrato",
+            icon: <FileDoneOutlined />,
+            content: <ContratoDaCidade city={city} />,
+          },
+        ]
+      : []),
     {
-      key: "contrato",
-      label: "Contrato",
-      icon: <FileDoneOutlined />,
-      content: <ContratoDaCidade city={city} />,
+      /* Logo depois do cronograma: as duas abas respondem "o que está andando
+         aqui" — o cronograma pelo processo da Global, esta pelo que a equipe
+         abriu dentro do município. */
+      key: "projetos",
+      label: "Projetos",
+      icon: <ProjectOutlined />,
+      content: (
+        <ProjetosDaCidade
+          city={city}
+          documents={documents}
+          onAnexar={(iniciativa) => {
+            setAnexarAoProjeto(iniciativa);
+            setUploadOpen(true);
+          }}
+        />
+      ),
     },
     {
       key: "panorama",
@@ -405,19 +477,15 @@ export default function CidadeDetailPage() {
         />
       ),
     },
-    {
-      key: "documentos",
-      label: `Documentos (${documents.length})`,
-      icon: <FolderOutlined />,
-      content: (
-        <DocumentsTab
-          documents={documents}
-          pending={documentsPending}
-          onUpload={() => setUploadOpen(true)}
-        />
-      ),
-    },
   ];
+
+  /* A aba pedida pode não existir para quem está olhando: `/modulos/contratos`
+     manda para `?aba=contrato`, e quem não é do administrativo não tem essa
+     aba. Sem esta queda, o link entregaria cabeçalho sem conteúdo e sem aba
+     acesa — que se lê como app quebrado, não como acesso negado. */
+  const abaAtiva = tabPanels.some((painel) => painel.key === tab)
+    ? tab
+    : "linha-do-tempo";
 
   return (
     <Flex vertical gap={14}>
@@ -526,7 +594,7 @@ export default function CidadeDetailPage() {
         </Flex>
 
         <Tabs
-          activeKey={tab}
+          activeKey={abaAtiva}
           onChange={(key) => setTab(key as CityTab)}
           style={{ marginTop: 4, marginBottom: -16 }}
           items={tabPanels.map(({ key, label, icon }) => ({
@@ -541,7 +609,25 @@ export default function CidadeDetailPage() {
         />
       </Card>
 
-      {tabPanels.find((panel) => panel.key === tab)?.content}
+      {tabPanels.find((panel) => panel.key === abaAtiva)?.content}
+
+      <Drawer
+        open={pastaAberta}
+        onClose={() => setPastaAberta(false)}
+        title={`Pasta de documentos · ${city.name}`}
+        /* `size`, e não `width`: o antd 6 depreciou `width` e avisa no console
+           a cada render. `size` aceita valor de CSS além de "default"/"large". */
+        size="min(920px, 100vw)"
+        destroyOnHidden
+      >
+        <PastaDaCidade
+          cityName={city.name}
+          documents={documentosDaPasta}
+          pending={documentsPending}
+          iniciativas={iniciativas}
+          onUpload={() => setUploadOpen(true)}
+        />
+      </Drawer>
 
       {uploadOpen && (
         <DocumentUploadDialog
@@ -553,6 +639,7 @@ export default function CidadeDetailPage() {
             if (!uploadMutation.isPending) {
               setUploadOpen(false);
               setAnexarAoRelatorio(null);
+              setAnexarAoProjeto(null);
             }
           }}
           onSubmit={handleUpload}
@@ -819,6 +906,7 @@ function AnalisesDoRelatorio({
   onAnexar: () => void;
 }) {
   const { token } = theme.useToken();
+  const { abrir: abrirArquivo, visor } = useVisualizador();
 
   return (
     <Card
@@ -858,9 +946,18 @@ function AnalisesDoRelatorio({
               </Flex>
               <Button
                 size="small"
-                icon={<DownloadOutlined />}
-                href={analise.downloadUrl}
-                target="_blank"
+                icon={<EyeOutlined />}
+                /* Abre dentro do app. Um `href` aqui contradiz o próprio
+                   rótulo: o botão diz "Abrir" e o navegador baixava. */
+                onClick={() =>
+                  abrirArquivo({
+                    url: analise.downloadUrl,
+                    titulo: analise.title,
+                    nomeArquivo: analise.fileName,
+                    mimeType: analise.mimeType,
+                    detalhe: `${analise.createdByName} · ${formatFileSize(analise.fileSize)}`,
+                  })
+                }
                 style={{ color: token.colorPrimary }}
               >
                 Abrir
@@ -869,6 +966,8 @@ function AnalisesDoRelatorio({
           ))}
         </Flex>
       )}
+
+      {visor}
     </Card>
   );
 }
@@ -929,7 +1028,7 @@ function ReportPreview({ report }: { report: CityReport }) {
       </Flex>
 
       {pdfAberto && report.downloadUrl && (
-        <VisualizadorPdf
+        <VisualizadorDeArquivo
           url={report.downloadUrl}
           titulo={CITY_REPORT_TYPE_LABELS[report.type] ?? report.title}
           nomeArquivo={report.fileName}
@@ -1103,160 +1202,6 @@ function PreviewBlock({
   );
 }
 
-function DocumentsTab({
-  documents,
-  pending,
-  onUpload,
-}: {
-  documents: CityDocument[];
-  pending: boolean;
-  onUpload: () => void;
-}) {
-  const { token } = theme.useToken();
-  /* Só PDF abre por dentro: o visor embutido é o do Chromium, e DOCX ou XLSX
-     nele viram tela em branco. Para esses, baixar continua sendo o caminho. */
-  const [aberto, setAberto] = useState<CityDocument | null>(null);
-
-  const columns: ProColumns<CityDocument>[] = [
-    {
-      title: "Documento",
-      dataIndex: "title",
-      search: false,
-      sorter: (a, b) => a.title.localeCompare(b.title, "pt-BR"),
-      render: (_, document) => (
-        <Flex align="center" gap={10}>
-          <Flex
-            align="center"
-            justify="center"
-            style={{
-              width: 30,
-              height: 30,
-              flex: "0 0 auto",
-              borderRadius: token.borderRadius,
-              background: token.colorFillTertiary,
-            }}
-          >
-            {document.source === "generated" ? (
-              <RobotOutlined style={{ color: token.colorPrimary }} />
-            ) : (
-              <FileOutlined style={{ color: token.colorTextSecondary }} />
-            )}
-          </Flex>
-          <div style={{ minWidth: 0 }}>
-            <Text strong style={{ fontSize: 11, display: "block" }}>
-              {document.title}
-            </Text>
-            <Text
-              type="secondary"
-              style={{ fontFamily: "var(--font-sync-mono)", fontSize: 8.5 }}
-            >
-              {document.fileName} · {formatFileSize(document.fileSize)} ·{" "}
-              {formatDate(document.createdAt)}
-            </Text>
-          </div>
-        </Flex>
-      ),
-    },
-    {
-      title: "Categoria",
-      dataIndex: "category",
-      width: 160,
-      search: false,
-      sorter: (a, b) => a.category.localeCompare(b.category, "pt-BR"),
-      render: (_, document) => <Tag>{document.category.replaceAll("_", " ")}</Tag>,
-    },
-    {
-      title: "",
-      key: "acoes",
-      width: 110,
-      align: "right",
-      search: false,
-      render: (_, document) => (
-        <Space size={4}>
-          {ehPdf(document) && (
-            <Button
-              size="small"
-              icon={<EyeOutlined />}
-              onClick={() => setAberto(document)}
-              aria-label={`Abrir ${document.title} no app`}
-            >
-              Abrir
-            </Button>
-          )}
-          <Button
-            size="small"
-            type="text"
-            icon={<DownloadOutlined />}
-            href={document.downloadUrl}
-            target="_blank"
-            rel="noreferrer"
-            aria-label={`Baixar ${document.title}`}
-            title="Baixar"
-          />
-        </Space>
-      ),
-    },
-  ];
-
-  return (
-    <Card>
-      <Flex justify="space-between" align="center" wrap="wrap" gap={12}>
-        <div>
-          <Title level={5} style={{ margin: 0 }}>
-            Pasta digital da cidade
-          </Title>
-          <Text type="secondary" style={{ fontSize: 10 }}>
-            Contratos, relatórios, ofícios, planilhas e qualquer outro arquivo.
-          </Text>
-        </div>
-        <Button type="primary" icon={<PaperClipOutlined />} onClick={onUpload}>
-          Anexar
-        </Button>
-      </Flex>
-
-      <div style={{ marginTop: 16 }}>
-        {pending ? (
-          <Skeleton active paragraph={{ rows: 6 }} />
-        ) : documents.length ? (
-          <ProTable<CityDocument>
-            rowKey="id"
-            size="small"
-            search={false}
-            toolBarRender={false}
-            options={false}
-            pagination={false}
-            dateFormatter="string"
-            dataSource={documents}
-            columns={columns}
-          />
-        ) : (
-          <Empty
-            description="Nenhum documento anexado — use o botão Anexar para iniciar a pasta digital."
-            style={{ padding: "60px 0" }}
-          />
-        )}
-      </div>
-
-      {aberto && (
-        <VisualizadorPdf
-          url={aberto.downloadUrl}
-          titulo={aberto.title}
-          nomeArquivo={aberto.fileName}
-          detalhe={`${aberto.cityName} · ${aberto.fileName} · ${formatFileSize(aberto.fileSize)}`}
-          onFechar={() => setAberto(null)}
-        />
-      )}
-    </Card>
-  );
-}
-
-/** O visor embutido só entende PDF — o resto continua sendo download. */
-function ehPdf(documento: CityDocument): boolean {
-  return (
-    documento.mimeType === "application/pdf" ||
-    documento.fileName.toLowerCase().endsWith(".pdf")
-  );
-}
 
 function stringField(
   object: Record<string, unknown> | undefined,

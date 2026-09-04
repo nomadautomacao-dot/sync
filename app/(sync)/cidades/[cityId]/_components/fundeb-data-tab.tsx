@@ -25,6 +25,7 @@ import {
 import { ProTable } from "@ant-design/pro-components";
 import type { ProColumns } from "@ant-design/pro-components";
 
+import { useVisualizador } from "@/core/components/usar-visualizador";
 import { formatCurrency, type CityAccount } from "@/core/lib/city-types";
 import {
   CITY_REPORT_TYPE_LABELS,
@@ -136,6 +137,7 @@ export function FundebDataTab({
   onSelect,
 }: FundebDataTabProps) {
   const { token } = theme.useToken();
+  const { abrir: abrirArquivo, visor } = useVisualizador();
 
   if (pending) {
     return (
@@ -386,9 +388,16 @@ export function FundebDataTab({
             </Flex>
             {active.downloadUrl && (
               <Button
-                href={active.downloadUrl}
-                target="_blank"
-                rel="noreferrer"
+                /* Abre por dentro. `href` mandava para outra aba — e quem está
+                   com o gestor na mesa perde a tela que estava mostrando. */
+                onClick={() =>
+                  abrirArquivo({
+                    url: active.downloadUrl!,
+                    titulo: CITY_REPORT_TYPE_LABELS[active.type] ?? active.title,
+                    nomeArquivo: active.fileName,
+                    detalhe: `exercício ${active.exercise}`,
+                  })
+                }
                 icon={<ArrowUpOutlined />}
               >
                 Abrir PDF
@@ -695,6 +704,8 @@ export function FundebDataTab({
           }))}
         />
       </Card>
+
+      {visor}
     </Flex>
   );
 }

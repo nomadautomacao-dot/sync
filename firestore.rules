@@ -14,6 +14,15 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn() && myRole() in ['owner', 'admin'];
     }
+    // Apagar de vez e so da dona — nem a administradora.
+    //
+    // As outras travas perguntam "quem opera"; esta pergunta "quem destroi".
+    // Remover um documento tira o binario do Storage e o registro daqui: nao ha
+    // lixeira, nao ha desfazer, e auditoria nao recupera arquivo. Copia fiel de
+    // `podeApagarDefinitivamente` em core/domain/rbac.ts.
+    function isOwner() {
+      return isSignedIn() && myRole() == 'owner';
+    }
 
     // Permissao fina por area (roadmap multiusuario, fase 1).
     //
@@ -56,6 +65,23 @@ service cloud.firestore {
 
     function podeEditarArea(area) {
       return isSignedIn() && nivelArea(area) == 'editar';
+    }
+
+    // O eixo administrativo: contrato, valores e remuneracao.
+    //
+    // Nao e area — area e o catalogo da barra lateral, e este dado atravessa
+    // telas que a colaboradora precisa abrir de qualquer jeito. Copia fiel de
+    // `podeVerAdministrativo` em core/domain/rbac.ts: mudou la, muda aqui.
+    //
+    // Nome proprio, mesma regra de isAdmin(), pelo mesmo motivo de
+    // podeAdministrarAcessos/podeAdministrarSistemas no dominio: sao poderes
+    // distintos que hoje calham de exigir o mesmo papel, e fundi-los faria
+    // afrouxar um afrouxar os outros sem ninguem perceber.
+    //
+    // ESTE e o unico lugar onde a restricao vale. Esconder a aba na tela tira
+    // o contrato da vista e nao do alcance de quem abrir o SDK no navegador.
+    function veAdministrativo() {
+      return isSignedIn() && myRole() in ['owner', 'admin'];
     }
 
     match /collaborators/{id} {
@@ -249,6 +275,31 @@ service cloud.firestore {
     // muda de dono, a eleicao troca a prefeitura inteira. Por isso qualquer
     // pessoa do grupo edita e apaga — a trava de autor dos eventos nao se
     // aplica, e o historico que merece registro mora na linha do tempo.
+    // Projetos, capacitacoes, programas e servicos abertos no municipio.
+    //
+    // Area `cidades`, e nao o eixo administrativo: quem organiza a capacitacao
+    // e a colaboradora que esta na prefeitura — e o proposito da aba e
+    // justamente dar a ela um lugar para trabalhar sem passar pelo contrato.
+    //
+    // `delete` e false, como em eventos e contratos: iniciativa aberta e fato,
+    // e cancelar e um estado dela. Apagar tiraria da historia da cidade o
+    // projeto que a equipe combinou e desfez, que e o que alguem vai querer
+    // reler seis meses depois.
+    match /cities/{cityId}/iniciativas/{iniciativaId} {
+      allow read: if isSignedIn() && resource.data.groupId == myGroupId();
+      allow create: if podeEditarArea('cidades')
+                    && request.resource.data.groupId == myGroupId()
+                    && request.resource.data.autorUid == request.auth.uid;
+      allow update: if podeEditarArea('cidades')
+                    && resource.data.groupId == myGroupId()
+                    && request.resource.data.groupId == myGroupId()
+                    // Autoria nao se transfere, como nos eventos: quem abriu
+                    // continua sendo quem abriu, mesmo quando outra pessoa
+                    // encerra — e encerrar por outra pessoa e o uso normal.
+                    && request.resource.data.autorUid == resource.data.autorUid;
+      allow delete: if false;
+    }
+
     match /cities/{cityId}/contatos/{contatoId} {
       allow read: if isSignedIn() && resource.data.groupId == myGroupId();
       allow create: if podeEditarArea('cidades') && request.resource.data.groupId == myGroupId();
@@ -278,26 +329,39 @@ service cloud.firestore {
     // apaga. Por isso delete e false para todo mundo — a historia do que
     // valeu (e do que quase valeu) fica.
     match /contratos/{id} {
-      allow read: if isSignedIn() && resource.data.groupId == myGroupId();
-      allow create: if podeEditarArea('cidades') && request.resource.data.groupId == myGroupId();
-      allow update: if podeEditarArea('cidades')
+      // Leitura restrita, ao contrario do resto da base. O unico consumidor e
+      // a aba Contrato da ficha da cidade, que ja nao aparece para quem nao
+      // alcanca o administrativo — travar aqui nao tira funcionalidade de
+      // ninguem e fecha o caminho de ler pelo SDK sem passar pela tela.
+      allow read: if veAdministrativo() && resource.data.groupId == myGroupId();
+      // Escrita pelo mesmo eixo, e nao por podeEditarArea('cidades'): `member`
+      // nasce com 'editar' em cidades, e sem esta troca a colaboradora nao so
+      // lia como criava e alterava contrato.
+      allow create: if veAdministrativo() && request.resource.data.groupId == myGroupId();
+      allow update: if veAdministrativo()
                     && resource.data.groupId == myGroupId()
                     && request.resource.data.groupId == myGroupId();
       allow delete: if false;
     }
 
     match /commissionRules/{id} {
-      allow read:  if isSignedIn() && resource.data.groupId == myGroupId();
+      // Remuneracao e administrativo. Nenhuma tela le esta colecao: quem a
+      // consome sao as Cloud Functions pelo Admin SDK, que ignora estas regras.
+      allow read:  if veAdministrativo() && resource.data.groupId == myGroupId();
       allow write: if false; // regras sao criadas por admin via console/Function futura
     }
 
     match /commissionAccruals/{id} {
-      allow read:  if isSignedIn() && resource.data.groupId == myGroupId();
+      // Remuneracao e administrativo. Nenhuma tela le esta colecao: quem a
+      // consome sao as Cloud Functions pelo Admin SDK, que ignora estas regras.
+      allow read:  if veAdministrativo() && resource.data.groupId == myGroupId();
       allow write: if false; // so fecharCompetencia (Admin SDK)
     }
 
     match /commissionPayouts/{id} {
-      allow read:  if isSignedIn() && resource.data.groupId == myGroupId();
+      // Remuneracao e administrativo. Nenhuma tela le esta colecao: quem a
+      // consome sao as Cloud Functions pelo Admin SDK, que ignora estas regras.
+      allow read:  if veAdministrativo() && resource.data.groupId == myGroupId();
       allow write: if false; // totais so via onAccrualWrite (Admin SDK)
     }
 
@@ -329,6 +393,27 @@ service cloud.firestore {
     // imutaveis — a lista de campos editaveis espelha CityDocument em
     // modules/documentos/types.ts. Apagar e ato do autor ou de quem administra:
     // documento apagado nao tem "cancelado" como contrato tem.
+    // Os tipos de projeto que a equipe criou ("Formacao continuada",
+    // "Assessoria"). Area `cidades`, e nao `ajustes`: quem precisa de um tipo
+    // novo e quem esta montando o projeto na prefeitura, e workspace_settings
+    // exige isAdmin() — um "+" que da permissao negada para a pessoa a quem ele
+    // foi feito e pior que nao ter o "+".
+    //
+    // Delete existe, ao contrario de quase tudo aqui, porque tipo nao e fato: e
+    // vocabulario. E apagar um nao derruba projeto nenhum —
+    // `definicaoDaIniciativa` devolve rotulo neutro para chave desconhecida.
+    match /tiposDeIniciativa/{id} {
+      allow read: if isSignedIn() && resource.data.groupId == myGroupId();
+      allow create: if podeEditarArea('cidades')
+                    && request.resource.data.groupId == myGroupId()
+                    && request.resource.data.key is string
+                    && request.resource.data.rotulo is string;
+      allow update: if podeEditarArea('cidades')
+                    && resource.data.groupId == myGroupId()
+                    && request.resource.data.groupId == myGroupId();
+      allow delete: if podeEditarArea('cidades') && resource.data.groupId == myGroupId();
+    }
+
     match /cityDocuments/{id} {
       allow read: if isSignedIn() && resource.data.groupId == myGroupId();
       allow create: if podeEditarArea('documentos')
@@ -336,17 +421,39 @@ service cloud.firestore {
                     && request.resource.data.cityId is string
                     && request.resource.data.title is string
                     && request.resource.data.storagePath is string;
+      // Metadado e troca de versao. Os campos de arquivo entraram aqui porque
+      // substituir o arquivo e um update, nao um documento novo — e a lista de
+      // chaves permitidas continua fechada: quem edita nao alcanca `cityId`,
+      // `groupId`, `createdBy` nem `source`.
       allow update: if podeEditarArea('documentos')
                     && resource.data.groupId == myGroupId()
                     && request.resource.data.groupId == myGroupId()
                     && request.resource.data.diff(resource.data).affectedKeys()
                          .hasOnly(['title', 'description', 'category',
-                                   'contractNumber', 'signedAt', 'expiresAt']);
-      allow delete: if isSignedIn()
-                    && resource.data.groupId == myGroupId()
-                    && (isAdmin()
-                        || (nivelArea('documentos') == 'editar'
-                            && resource.data.createdBy == request.auth.uid));
+                                   'contractNumber', 'signedAt', 'expiresAt',
+                                   'fileName', 'fileSize', 'mimeType',
+                                   'storagePath', 'downloadUrl',
+                                   'versao', 'versoesAnteriores'])
+                    // Versao so anda para frente, e o historico so cresce.
+                    // Sem isto, "substituir" poderia devolver o documento a uma
+                    // versao anterior e descartar o que ja estava guardado —
+                    // apagar pela porta dos fundos, sem passar por isOwner().
+                    //
+                    // Os dois `get` com padrao existem porque a maioria dos
+                    // updates nao toca em versao nenhuma (renomear titulo,
+                    // trocar categoria): ler o campo direto rejeitaria essas
+                    // edicoes com "permissao negada" num documento que nunca
+                    // foi versionado.
+                    && (!request.resource.data.diff(resource.data).affectedKeys()
+                          .hasAny(['versao', 'versoesAnteriores'])
+                        || (request.resource.data.get('versao', 0)
+                              > resource.data.get('versao', 0)
+                            && request.resource.data.get('versoesAnteriores', []).size()
+                              > resource.data.get('versoesAnteriores', []).size()));
+      // So a dona apaga. Antes, a autora do upload apagava o proprio
+      // documento — e e assim que se perde arquivo numa equipe: quem subiu por
+      // engano apaga meia hora depois o que ja virou anexo de processo.
+      allow delete: if isOwner() && resource.data.groupId == myGroupId();
     }
 
     match /cityReports/{id} {

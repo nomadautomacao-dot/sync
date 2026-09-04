@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { DownloadOutlined, RocketOutlined, SyncOutlined } from "@ant-design/icons";
+import { EyeOutlined, RocketOutlined, SyncOutlined } from "@ant-design/icons";
 import {
   Alert,
   App,
@@ -20,6 +20,7 @@ import {
 import { DOCUMENTOS, RELATORIOS_PADRAO } from "@/modules/cidades/documentos-emissiveis";
 import type { CityAccount } from "@/core/lib/city-types";
 import type { CityReport } from "@/modules/cidades/reports-types";
+import { useVisualizador } from "@/core/components/usar-visualizador";
 import { useFilaDeEmissao } from "@/core/providers/fila-emissao-provider";
 
 const { Text, Title } = Typography;
@@ -60,6 +61,7 @@ export function DocumentosDaCidade({
 }) {
   const { token } = theme.useToken();
   const { message } = App.useApp();
+  const { abrir: abrirArquivo, visor } = useVisualizador();
   const { jobs, processando, enfileirar } = useFilaDeEmissao();
   const [enfileirando, setEnfileirando] = useState(false);
 
@@ -205,9 +207,17 @@ export function DocumentosDaCidade({
                   <Tooltip title="Abrir o PDF arquivado">
                     <Button
                       size="small"
-                      icon={<DownloadOutlined />}
-                      href={linha.ultimo.downloadUrl}
-                      target="_blank"
+                      icon={<EyeOutlined />}
+                      /* Abre dentro do app: `href` aqui mandava o consultor
+                         para o navegador do sistema no meio da reunião. */
+                      onClick={() =>
+                        abrirArquivo({
+                          url: linha.ultimo!.downloadUrl!,
+                          titulo: linha.documento.nome,
+                          nomeArquivo: linha.ultimo!.fileName,
+                          detalhe: `${city.name} · ${city.uf}`,
+                        })
+                      }
                     />
                   </Tooltip>
                 )}
@@ -244,6 +254,8 @@ export function DocumentosDaCidade({
           rowExpandable: (linha) => Boolean(linha.erro),
         }}
       />
+
+      {visor}
     </Card>
   );
 }

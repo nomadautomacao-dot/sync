@@ -8,6 +8,7 @@ import {
   getDocs,
   query,
   serverTimestamp,
+  updateDoc,
   where,
   type DocumentData,
   type Firestore,
@@ -21,6 +22,11 @@ import {
   type FirebaseStorage,
 } from "firebase/storage";
 
+import {
+  caminhoColide,
+  promoverNovaVersao,
+  type VersaoDoDocumento,
+} from "@/core/domain/documento-versoes";
 import type {
   CityDocument,
   CreateCityDocumentInput,
@@ -90,6 +96,11 @@ function documentFromSnapshot(
     source: data.source === "generated" ? "generated" : "upload",
     relatorioId: optionalString(data.relatorioId),
     relatorioTitulo: optionalString(data.relatorioTitulo),
+    iniciativaId: optionalString(data.iniciativaId),
+    versao: typeof data.versao === "number" ? data.versao : undefined,
+    versoesAnteriores: Array.isArray(data.versoesAnteriores)
+      ? (data.versoesAnteriores as VersaoDoDocumento[])
+      : undefined,
   };
 }
 
@@ -184,6 +195,7 @@ export async function uploadCityDocument(
       // resto da coleção representa ausência.
       relatorioId: input.relatorioId || null,
       relatorioTitulo: input.relatorioTitulo || null,
+      iniciativaId: input.iniciativaId || null,
       title: input.title.trim(),
       fileName: file.name,
       fileSize: file.size,
@@ -202,8 +214,79 @@ export async function uploadCityDocument(
       expiresAt: payload.expiresAt ?? undefined,
       relatorioId: payload.relatorioId ?? undefined,
       relatorioTitulo: payload.relatorioTitulo ?? undefined,
+      iniciativaId: payload.iniciativaId ?? undefined,
       createdAt: new Date().toISOString(),
     };
+  } catch (error) {
+    await deleteObject(storageRef).catch(() => undefined);
+    throw error;
+  }
+}
+
+/**
+ * Troca o arquivo de um documento, guardando o anterior.
+ *
+ * O arquivo novo vai para um **caminho novo** no Storage e o antigo desce para
+ * `versoesAnteriores` com a URL viva. Nada é sobrescrito e nada é removido:
+ * "substituir" aqui significa "passar a apontar para outro", não "apagar".
+ *
+ * A peça vai para processo administrativo. Descobrir em novembro que a versão
+ * protocolada em outubro era a anterior, e não ter mais a anterior, é uma perda
+ * que nenhum log conserta — e é o caso que este caminho existe para evitar.
+ *
+ * Se a gravação no Firestore falhar, o objeto recém-subido é removido: sem
+ * isso, cada tentativa frustrada deixaria um arquivo pago e órfão no bucket,
+ * fora de qualquer documento e invisível na interface.
+ */
+export async function substituirArquivoDoDocumento(
+  db: Firestore,
+  storage: FirebaseStorage,
+  file: File,
+  documento: CityDocument,
+  autor: { uid: string; nome: string; groupId: string },
+  nota?: string,
+): Promise<void> {
+  const validationError = validateCityDocumentFile(file);
+  if (validationError) throw new Error(validationError);
+
+  const objectName = `${Date.now()}-${crypto.randomUUID()}-${safeFileName(file.name)}`;
+  const storagePath = `city-documents/${autor.groupId}/${documento.cityId}/${objectName}`;
+
+  /* Cinto e suspensório: `uploadBytes` sobrescreve em silêncio se o caminho
+     colidir, e a perda seria irreversível e invisível — o histórico apontaria
+     para um objeto que já é a versão nova. O caminho tem timestamp e UUID, mas
+     "praticamente impossível" não é o critério para uma perda silenciosa. */
+  if (caminhoColide(documento, storagePath)) {
+    throw new Error("Caminho de arquivo repetido. Tente novamente.");
+  }
+
+  const storageRef = ref(storage, storagePath);
+  const mimeType = normalizedMimeType(file);
+  await uploadBytes(storageRef, file, {
+    contentType: mimeType,
+    customMetadata: {
+      groupId: autor.groupId,
+      cityId: documento.cityId,
+      category: documento.category,
+    },
+  });
+
+  try {
+    const downloadUrl = await getDownloadURL(storageRef);
+    const patch = promoverNovaVersao(
+      documento,
+      {
+        fileName: file.name,
+        fileSize: file.size,
+        mimeType,
+        storagePath,
+        downloadUrl,
+        nota,
+      },
+      { uid: autor.uid, nome: autor.nome },
+      new Date(),
+    );
+    await updateDoc(doc(db, COLLECTION, documento.id), patch);
   } catch (error) {
     await deleteObject(storageRef).catch(() => undefined);
     throw error;
