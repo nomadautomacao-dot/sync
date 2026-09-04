@@ -1,7 +1,7 @@
 # CLAUDE.md — Sync
 
 > Fonte única de verdade para qualquer agente de IA trabalhando neste projeto.
-> Atualizado: 2026-08-14.
+> Atualizado: 2026-09-04.
 
 ---
 
@@ -317,6 +317,8 @@ consequências que andam junto com isso:
 | `assets-paths.ts` | Resolve `CONTRATOS_ASSETS_DIR` |
 | `firebase-client.ts` | Web SDK do Firebase (`getFirebaseDb`, `getFirebaseAuth`) |
 | `cities-firestore.ts` | CRUD da coleção `cities` (carteira e pipeline) |
+| `city-initiatives-firestore.ts` | CRUD de `cities/{id}/iniciativas` — abre, encerra e cumpre a etapa do cronograma no mesmo lote (seção 14) |
+| `tipos-iniciativa-firestore.ts` | Tipos de projeto que a equipe criou, por grupo (seção 14) |
 | `collaborators-firestore.ts` | CRUD da coleção `collaborators` |
 | `contratos-firestore.ts` | CRUD da coleção `contratos` (seção 5) |
 | `city-types.ts`, `company-types.ts`, `people-types.ts` | Tipos e conversores dos documentos do Firestore |
@@ -349,15 +351,23 @@ escreve pelo Web SDK; as Cloud Functions em `functions/` escrevem pelo Admin SDK
 | `cities` | Carteira e pipeline de municípios |
 | `cities/{id}/profitSnapshots` | Receita/custo/lucro por competência |
 | `cities/{id}/eventos` | Linha do tempo do município (seção 13) |
+| `cities/{id}/iniciativas` | Projetos, capacitações, programas e serviços abertos na cidade (seção 14) |
+| `tiposDeIniciativa` | Tipos de projeto criados pela equipe, por `groupId` (seção 14) |
 | `cities/{id}/eventos/{id}/comentarios` | A conversa em cima de cada acontecimento |
 | `cityDocuments`, `cityReports` | Kit documental e relatórios arquivados |
-| `contratos` | Contratos por cidade — `minuta`/`assinado`/`encerrado`/`cancelado`, `delete` proibido (seção 5) |
-| `commissionRules`, `commissionAccruals`, `commissionPayouts` | Comissionamento |
+| `contratos` | Contratos por cidade — `minuta`/`assinado`/`encerrado`/`cancelado`, `delete` proibido. **Leitura restrita ao eixo administrativo** (seção 9) |
+| `commissionRules`, `commissionAccruals`, `commissionPayouts` | Comissionamento. **Leitura restrita ao eixo administrativo**; escrita só por Cloud Function |
 | `workspace_settings` | Configurações do workspace, por `groupId` |
 | `audit` | Log de auditoria |
 
 Os índices ficam em `firestore.indexes.json`. Para criar uma coleção nova, some
 a regra correspondente em `firestore.rules` — sem regra, o acesso é negado.
+
+> **Leitura deixou de ser aberta ao grupo em três coleções.** O resto da base
+> segue a regra antiga (`allow read: if isSignedIn() && groupId == myGroupId()`),
+> mas `contratos` e as três de comissão exigem `veAdministrativo()` também na
+> **leitura** — antes qualquer pessoa do grupo as lia pelo SDK do navegador,
+> sem passar por tela nenhuma. Ver seção 9.
 
 ---
 
@@ -386,7 +396,7 @@ a regra correspondente em `firestore.rules` — sem regra, o acesso é negado.
 | `/entrar` | `app/(auth)/entrar/page.tsx` | Login email/senha |
 | `/painel` | `app/(sync)/painel/page.tsx` | Home com KPIs |
 | `/cidades` | `app/(sync)/cidades/page.tsx` | Carteira de municípios |
-| `/cidades/[cityId]` | `app/(sync)/cidades/[cityId]/page.tsx` | Ficha da cidade — abre na linha do tempo (seção 13); aba **Contrato** (seção 5) |
+| `/cidades/[cityId]` | `app/(sync)/cidades/[cityId]/page.tsx` | Ficha da cidade — abre na linha do tempo (seção 13); abas **Projetos** (seção 14) e **Contrato** (esta só para o eixo administrativo — seção 9). A pasta de documentos saiu da barra de abas e vive no menu de três pontos (seção 15) |
 | `/pipeline` | `app/(sync)/pipeline/page.tsx` | Pipeline comercial por estágio |
 | `/pessoas` | `app/(sync)/pessoas/page.tsx` | Colaboradores cross-empresa |
 | `/modulos` | `app/(sync)/modulos/page.tsx` | Catálogo de módulos |
@@ -914,7 +924,7 @@ No fluxo normal não se usa nenhum dos dois.
   local — não há store global no projeto.
 - Imports: `@/core/`, `@/modules/`, `@/data/`
 
-### RBAC — duas camadas
+### RBAC — duas camadas, e dois eixos por fora
 
 Tudo em `core/domain/rbac.ts`, com teste em `rbac.test.ts`.
 
@@ -936,6 +946,51 @@ haja alguém capaz de destravar o sistema:
 consome não sabe que existe claim, e não há um segundo lugar onde alguém possa
 esquecer de aplicar a trava.
 
+#### O eixo administrativo, e por que não virou uma décima área
+
+`podeVerAdministrativo(papel)` — régua `admin` — governa **contrato, valores de
+contrato, comissão, chave PIX e dados bancários**. Área responde "que telas esta
+pessoa alcança"; isto responde "o que ela vê **dentro** de uma tela que ela
+alcança". A ficha da cidade é a mesma ficha, com ou sem a aba Contrato.
+
+Não virou área porque `NAV_ITEMS` é **derivado** de `AREAS` (`sidebar.tsx`): uma
+décima área criaria um item de menu apontando para rota que não existe.
+
+O que ele mudou, em 2026-09-04:
+
+| | Antes | Depois |
+|---|---|---|
+| Aba Contrato na ficha | visível a todos | só `owner`/`admin` |
+| Ler `contratos` | **qualquer pessoa do grupo** | eixo, na regra |
+| Criar/alterar contrato | `member` podia (nasce com `editar` em cidades) | eixo, na regra |
+| Ler `commission*` | qualquer pessoa do grupo | eixo, na regra |
+| PIX, banco e comissão em Pessoas | visíveis | escondidos na tela |
+
+> **PIX e dados bancários só estão escondidos na tela, e isso é limitação do
+> Firestore.** Eles são campos do documento de `collaborators`, e regra de
+> segurança concede ou nega o **documento inteiro** — não há como esconder campo
+> na leitura. Fechar de verdade exige movê-los para uma subcoleção própria, com
+> migração dos cadastros existentes. Contrato e comissão, que são coleções
+> separadas, ficaram fechados de verdade.
+
+#### Apagar é só da dona
+
+`podeApagarDefinitivamente(papel)` exige **`owner`** — nem a administradora. É a
+única trava mais dura que `admin` no projeto, e a razão é outra: as demais
+perguntam *quem opera*, esta pergunta *quem destrói*. Apagar um documento remove
+o binário do Storage e o registro do Firestore; não há lixeira e auditoria não
+recupera arquivo.
+
+Antes, a autora do upload apagava o próprio documento. Parecia justo e é o
+caminho pelo qual se perde arquivo numa equipe: quem subiu por engano apaga meia
+hora depois o que já virou anexo de processo, e ninguém percebe porque quem
+apagou tinha direito. O corolário aceito é que a dona vira gargalo de limpeza.
+
+Os dois eixos têm **nome próprio** ao lado de `podeAdministrarAcessos` e
+`podeAdministrarSistemas` pelo mesmo motivo daqueles: são poderes distintos que
+hoje calham de exigir papéis parecidos, e fundi-los faria afrouxar um afrouxar
+os outros sem ninguém perceber.
+
 A barra lateral é **derivada** de `AREAS` — área nova sem ícone não compila, e
 item de menu sem regra de permissão deixou de ser possível. Esconder o item é
 conveniência; a guarda que vale é a de `app/(sync)/layout.tsx`, que confere
@@ -948,7 +1003,7 @@ conveniência; a guarda que vale é a de `app/(sync)/layout.tsx`, que confere
 ### O que NÃO está implementado
 - Módulos: Terceirização, Formação, Atas, Tecnologia, RH, Financeiro — existem
   como chaves no `moduleCatalog` (a tela `/modulos` as exibe), sem rota nem tela
-- Testes de ponta a ponta na suíte (ela é de unidade/integração: 717 testes,
+- Testes de ponta a ponta na suíte (ela é de unidade/integração: 1088 testes,
   Vitest). O caminho ponta a ponta existe fora dela, no smoke test — seção 7.1
 - **Staging separado de produção** — o deploy da `main` vai direto ao ar
 - Monitoramento de APM / tracing (Sentry, Axiom). O que existe é erro
@@ -1296,8 +1351,8 @@ editar o funil.
 
 ### Um tipo só, e não cinco
 
-Reunião, visita, ligação, relatório de campo, documento anexado, etapa concluída
-e nota são **tipos** de acontecimento, não seções. Cinco coleções separadas
+Reunião, visita, ligação, relatório de campo, documento anexado, etapa concluída,
+projeto aberto ou encerrado, e nota são **tipos** de acontecimento, não seções. Cinco coleções separadas
 dariam cinco abas, e ninguém entende uma cidade abrindo cinco lugares — que é o
 que este app existe para resolver.
 
@@ -1488,6 +1543,10 @@ Sem o campo, o vínculo dependeria de alguém nomear o arquivo direito.
 bloqueia a partir da segunda janela, e o usuário ficaria com um PDF e a
 impressão de que os outros falharam.
 
+> A **pasta** de documentos da cidade saiu da barra de abas e vive no menu de
+> três pontos, com versões e coluna de origem — seção 15. E qualquer arquivo
+> listado nesta ficha abre **dentro** do app, não no navegador do sistema.
+
 ### Cronograma de implantação
 
 Subcoleção `cities/{id}/etapas`, aba própria na ficha. Modelo padrão em
@@ -1545,3 +1604,170 @@ estoura se já houver instância — o que acontece a cada recarga do HMR.
 > **Regra nova exige `npm run firebase:regras`.** Coleção sem regra é acesso
 > negado por padrão: enquanto o deploy não roda, a linha do tempo lê e escreve
 > nada, em produção e no desktop.
+
+---
+
+## 14. Projetos no município (`/cidades/[cityId]` › aba Projetos)
+
+O que a Global abriu dentro de uma cidade: capacitação, projeto, programa,
+serviço. Subcoleção `cities/{id}/iniciativas`.
+
+| Onde | O quê |
+|---|---|
+| `core/domain/cidade-iniciativas.ts` | Tipos, catálogo e regras puras, cobertas por teste |
+| `core/lib/city-initiatives-firestore.ts` | Abre, encerra e cumpre a etapa do cronograma |
+| `core/lib/tipos-iniciativa-firestore.ts` | Os tipos que a equipe criou, por grupo |
+| `_components/projetos-da-cidade.tsx` · `iniciativa-dialog.tsx` | A tela |
+
+### Não é uma segunda linha do tempo — é o fio
+
+`cidade-eventos.ts` abre com o argumento de que cinco coleções dariam cinco abas
+e ninguém entende uma cidade abrindo cinco lugares. Ele continua valendo, e é
+por isso que a iniciativa **não guarda acontecimento nenhum**: o evento continua
+em `eventos` e passa a carregar `iniciativaId`.
+
+A aba Projetos é uma **lente** sobre a linha do tempo que já existe — mesmo
+componente `LinhaDoTempo`, mesma `queryKey`, um `where` a mais. Registrar uma
+reunião dentro da capacitação aparece na linha do tempo da cidade sem segunda
+leitura, e sem que existam dois lugares para procurar a mesma reunião.
+
+É o movimento de `CityDocument.relatorioId` um nível acima: aquele campo
+transformou um arquivo solto numa *análise sobre* um relatório; este transforma
+seis registros soltos numa *capacitação*.
+
+**A regressão que o teste guarda:** `eventosDaIniciativa(eventos, null)` devolve
+**tudo**, inclusive o que nunca teve `iniciativaId`. Uma cidade tem dezenas de
+registros anteriores ao campo, e um filtro que o exigisse os faria sumir da tela
+em silêncio no dia do deploy — na aba de entrada da ficha.
+
+### Não é etapa de cronograma, mas cumpre uma
+
+O cronograma é o processo de implantação da Global: um por cidade, semeado uma
+vez, prazo contado do início. A iniciativa é uma **entrega dentro dele**, pode
+haver várias, e nasce quando alguém decide fazê-la.
+
+`MODELO_DE_IMPLANTACAO` já traz `capacitacao` no dia 90. A iniciativa aponta
+para uma etapa por `etapaModeloKey`, e **encerrar conclui a etapa no mesmo
+lote**. Sem esse elo, a mesma ficha mostraria a capacitação concluída em
+Projetos e a etapa pendente em Cronograma — duas telas do mesmo município se
+contradizendo, que é pior que não ter nenhuma das duas.
+
+Só **concluir** cumpre. Cancelar é decisão de não fazer, e marcar a etapa por
+causa dela seria registrar entrega que não houve.
+
+### Os tipos são do grupo, e a equipe cria os seus
+
+Quatro vêm com o sistema (capacitação, projeto, programa, serviço) e não se
+apagam — são o vocabulário comum entre municípios. O `+` no campo Tipo cria
+outros, guardados em `tiposDeIniciativa` por `groupId`.
+
+Quatro decisões que não são óbvias:
+
+1. **Do grupo, não da cidade.** "Formação continuada" criado em Juvenília serve
+   em São Félix. Por município, a mesma coisa nasceria com nome diferente em
+   cada uma e *"quantas capacitações fizemos este ano?"* deixaria de ter
+   resposta.
+2. **Coleção própria, e não `workspace_settings`.** Lá a escrita exige
+   `isAdmin()`, e quem precisa de um tipo novo é a colaboradora montando o
+   projeto na prefeitura. Um "+" que responde "permissão negada" para a pessoa a
+   quem ele foi feito é pior que não ter o "+". A régua aqui é a área `cidades`.
+3. **A chave é derivada do rótulo** (`chaveDoTipo`), sem acento nem espaço:
+   "Formação Continuada" e "formação continuada " viram a mesma chave, em vez de
+   dois tipos que a tela mostra iguais e a base separa. Criar é idempotente.
+4. **`definicaoDaIniciativa` nunca estoura.** Chave desconhecida devolve uma
+   definição neutra com o próprio nome por rótulo — é o que sustenta apagar um
+   tipo: o projeto que o usava continua abrindo. Um `throw` ali derrubaria a aba
+   inteira, e projeto antigo não pode sumir porque o vocabulário mudou.
+
+`temFormacao` é o único comportamento que varia entre tipos (carga horária e
+formador), e o `+` pergunta isso na criação. `criarIniciativa` recebe o catálogo
+porque é ele quem decide — sem passá-lo, o domínio olharia só os quatro do
+sistema e descartaria a carga horária que a pessoa acabou de digitar.
+
+### Perfil: consultora
+
+É a tela que ela abre na prefeitura, com o notebook virado para o gestor. Não há
+ali receita, comissão nem estágio comercial — nada do eixo administrativo.
+
+---
+
+## 15. Documentos: pasta, versões e o visualizador
+
+### A pasta saiu da barra de abas
+
+Ela não é um lugar por onde se trabalha — é o arquivo. Vive no menu de três
+pontos da ficha e abre em gaveta, para ser consultada de dentro de qualquer aba
+e fechada sem perder o que estava aberto. `_components/pasta-da-cidade.tsx`.
+
+Mostra **tudo** que tem a cidade, inclusive o que o sistema emitiu. O filtro
+`source === "upload"` que existia para evitar contagem dupla com a aba de
+Relatórios deu lugar à coluna **Origem**: em vez de esconder o arquivo, a pasta
+diz de onde ele veio — o projeto, o relatório que ele analisa, "Emitido" ou
+"Avulso". É o que a torna pasta em vez de lista.
+
+### Substituir não apaga
+
+`core/domain/documento-versoes.ts`. Trocar o arquivo manda o anterior para
+`versoesAnteriores` **com a URL viva** e sobe `versao`; o arquivo novo vai para
+um caminho novo no Storage. Nada é sobrescrito e nada é removido.
+
+O motivo é o uso: a peça vai para processo administrativo. Descobrir em novembro
+que a versão protocolada em outubro era a anterior, e não ter mais a anterior, é
+perda que nenhum log conserta.
+
+Três travas:
+
+1. **A autoria da versão antiga não se transfere** a quem substituiu. Quem subiu
+   a v1 continua sendo quem subiu a v1 — é a história de quem entregou o quê à
+   prefeitura.
+2. **`caminhoColide`** recusa caminho repetido. `uploadBytes` sobrescreve em
+   silêncio, e o histórico apontaria para um objeto que já é a versão nova, com
+   a tela jurando que a v1 está lá.
+3. Na regra, **versão só anda para frente e o histórico só cresce** — senão
+   "substituir" seria porta dos fundos para apagar sem passar por `isOwner()`.
+
+A lista de versões mora **dentro** do documento, e não numa subcoleção: a pasta
+abre inteira de uma vez, e subcoleção cobraria uma leitura por documento só para
+desenhar o rótulo "v3". Cada versão ocupa poucas centenas de bytes contra o teto
+de 1 MB do documento.
+
+### Qualquer arquivo abre dentro do app
+
+`core/components/visualizador-de-arquivo.tsx`, e o gancho
+`usar-visualizador.tsx` que seis telas consomem. PDF pelo visor do Chromium,
+imagem direto, **DOCX convertido por `mammoth` no próprio navegador**.
+
+A conversão local é escolha, não conveniência: o visualizador do Office e o do
+Google são uma linha de código e mandariam contrato e ofício de prefeitura para
+servidor de terceiro. A biblioteca entra por `import()` dinâmico — só baixa para
+quem abre um DOCX. A saída passa por `neutralizar()` antes de entrar na página:
+o mammoth não repassa marcação do autor, mas monta `<a href>` a partir do
+hiperlink do documento, e `javascript:` atravessa a conversão intacto.
+
+XLSX, ZIP e `.doc` antigo caem num aviso que **nomeia a extensão** — "Arquivo
+ZIP não abre aqui dentro". Por isso a extensão aparece como etiqueta ao lado do
+nome em toda listagem: o título é escrito por quem sobe o arquivo, e
+"Certificado da capacitação" não diz se o que está lá dentro é DOCX ou ZIP.
+
+> **O gancho existe para o link não voltar a divergir.** Arquivo aparece em seis
+> telas; cada uma com o próprio `useState` do visor seriam seis chances de
+> alguém acrescentar um `<a href>` e recriar o comportamento antigo — o arquivo
+> baixando em vez de abrir, ou saindo do Sync para o navegador do sistema no
+> meio de uma reunião.
+
+### CORS do bucket — sem ele, `fetch` de arquivo falha em silêncio
+
+O bucket `globalconsultorias.firebasestorage.app` **não tinha CORS** até
+2026-09-04. Liberado para as origens do Sync (`globalsync.web.app`, o
+`.firebaseapp.com`, o host do Cloud Run, `localhost:3100` e `127.0.0.1:51737` do
+desktop), só `GET` e `HEAD`.
+
+**O sintoma engana:** o `<iframe>` do visor de PDF não passa por CORS, então PDF
+sempre pareceu funcionar. Só quebra o que usa `fetch`/XHR — a conversão de DOCX
+e o download com nome certo, que caía no `catch` e abria uma aba (defeito antigo
+que ninguém tinha diagnosticado).
+
+A configuração **não está no git**: é estado do GCP. Conferir com
+`gcloud storage buckets describe gs://... --format=json` e olhar `cors_config`;
+`null` significa bloqueado. Origem nova (domínio próprio, outra porta do
+desktop) exige `gcloud storage buckets update --cors-file=...`.
