@@ -116,7 +116,7 @@ export async function emitirPdf(
   return {
     blob: pdfBlobFromBase64(bundle.pdfBase64),
     fileName: bundle.fileName,
-    contentType: resposta.headers.get("Content-Type") || "application/pdf",
+    contentType: bundle.mimeType,
     snapshot,
     generationId: bundle.archive.generationId,
     exercicio: Number(bundle.archive.exercise) || new Date().getFullYear(),

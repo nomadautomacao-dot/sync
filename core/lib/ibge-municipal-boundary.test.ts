@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   fetchMunicipalBoundary,
   municipalBoundaryFromGeoJson,
+  loadBundledMunicipalBoundary,
 } from "@/core/lib/ibge-municipal-boundary";
 
 describe("malha municipal para a capa do Raio-X", () => {
@@ -51,5 +52,21 @@ describe("malha municipal para a capa do Raio-X", () => {
     await expect(fetchMunicipalBoundary("não informado", fetcher as typeof fetch))
       .resolves.toBeNull();
     expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it("preserva o contorno real de Fortaleza quando a consulta falha na nuvem", async () => {
+    const fetcher = vi.fn<typeof fetch>(async () => { throw new Error('rede indisponível'); });
+    const boundary = await fetchMunicipalBoundary('2304400', fetcher);
+    expect(boundary).not.toBeNull();
+    expect(boundary?.path.length).toBeGreaterThan(2000);
+    expect(boundary?.source).toContain('cópia oficial');
+    expect(boundary).toEqual(loadBundledMunicipalBoundary('2304400'));
+  });
+
+  it("usa a malha embarcada também para resposta HTTP indisponível", async () => {
+    const fetcher = vi.fn<typeof fetch>(async () => new Response('', {status:503}));
+    expect((await fetchMunicipalBoundary('2924009', fetcher))?.path).toMatch(/^M /);
+    expect(loadBundledMunicipalBoundary('9999999')).toBeNull();
+    expect(loadBundledMunicipalBoundary('../2304400')).toBeNull();
   });
 });

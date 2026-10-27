@@ -144,6 +144,7 @@ COPY --from=builder /app/data/incra ./data/incra
 
 # Catálogo de municípios para busca e identificação sem rede.
 COPY --from=builder /app/data/ibge/municipios.json ./data/ibge/municipios.json
+COPY --from=builder /app/data/ibge/malhas ./data/ibge/malhas
 
 # Set permissions
 RUN chown -R nextjs:nodejs /app

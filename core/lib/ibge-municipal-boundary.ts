@@ -1,3 +1,5 @@
+import { lerJsonDeDados } from './dados-arquivo';
+
 export interface MunicipalBoundaryMap {
   path: string;
   viewBox: string;
@@ -153,6 +155,12 @@ export async function fetchMunicipalBoundary(
   const cached = cache.get(normalizedCode);
   if (cached) return cached;
 
+  const fallback = () => {
+    const boundary = loadBundledMunicipalBoundary(normalizedCode);
+    if (boundary) cache.set(normalizedCode, boundary);
+    return boundary;
+  };
+
   try {
     const url = new URL(
       `https://servicodados.ibge.gov.br/api/v3/malhas/municipios/${normalizedCode}`,
@@ -164,13 +172,26 @@ export async function fetchMunicipalBoundary(
       headers: { Accept: "application/vnd.geo+json" },
       signal: AbortSignal.timeout(6_000),
     });
-    if (!response.ok) return null;
+    if (!response.ok) return fallback();
 
     const boundary = municipalBoundaryFromGeoJson(await response.json());
     if (boundary) cache.set(normalizedCode, boundary);
-    return boundary;
+    return boundary ?? fallback();
   } catch {
-    // A capa possui fallback cartográfico; falha da malha nunca impede o PDF.
+    // A cópia oficial embarcada mantém o mapa quando a API não responde na nuvem.
+    return fallback();
+  }
+}
+
+/** Geometria oficial, separada por UF para não carregar o país inteiro em memória.
+ * Origem, data de coleta e hashes estão em data/ibge/malhas/fontes.json. */
+export function loadBundledMunicipalBoundary(ibgeCode: string): MunicipalBoundaryMap | null {
+  if (!/^\d{7}$/.test(ibgeCode)) return null;
+  try {
+    const geometrias = lerJsonDeDados<Record<string, GeoJsonGeometry>>(`data/ibge/malhas/${ibgeCode.slice(0, 2)}.json`);
+    const boundary = municipalBoundaryFromGeoJson(geometrias[ibgeCode]);
+    return boundary ? {...boundary, source: `${SOURCE} — cópia oficial embarcada`} : null;
+  } catch {
     return null;
   }
 }

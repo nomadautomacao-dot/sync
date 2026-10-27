@@ -1,0 +1,145 @@
+{
+  "schemaVersion": 1,
+  "url": "https://servicodados.ibge.gov.br/api/v3/malhas/paises/BR?intrarregiao=municipio&formato=application/vnd.geo+json&qualidade=maxima",
+  "qualidade": "maxima",
+  "coletadoEm": "2026-10-27T17:57:53.301Z",
+  "sha256": "79b9d6485dc782ac91b2663c9a69bc0f32a726000c4708f9e0f127f21a8bbd67",
+  "municipios": 5570,
+  "arquivos": [
+    {
+      "uf": "11",
+      "municipios": 52,
+      "sha256": "40d6a74fc93f4ea39bbfaafda076e343d4f31bee6315dc24bf4163d813dce349"
+    },
+    {
+      "uf": "12",
+      "municipios": 22,
+      "sha256": "9acfdd30763432e4f9cf77057670cb10746ff3aaa9643ac71a33fca66f0bc68b"
+    },
+    {
+      "uf": "13",
+      "municipios": 62,
+      "sha256": "009643cf91a2f59ba58ad392009271d96a69223848d32c9b5c1ec7e952436ba4"
+    },
+    {
+      "uf": "14",
+      "municipios": 15,
+      "sha256": "a0601724defd68a0baf700b772369cb06c68183b310cc2773040d5540b4cd993"
+    },
+    {
+      "uf": "15",
+      "municipios": 144,
+      "sha256": "5b0274a2d49164325bb15184919c7a7cf70a6bd9c40890e28a35d7092806c2e7"
+    },
+    {
+      "uf": "16",
+      "municipios": 16,
+      "sha256": "1750702b317cc391c75c9733836365e19b2dfb1f1a3c8d56935142660a6fadb2"
+    },
+    {
+      "uf": "17",
+      "municipios": 139,
+      "sha256": "503e2294c49af4a1f0209896a3582105d99ee8c6ea889c59d8ff4c8747c4f571"
+    },
+    {
+      "uf": "21",
+      "municipios": 217,
+      "sha256": "bcdccead238a73c5bbd45cb1c05d4f7b6ace0d93fa92e14a824e2523fd89d104"
+    },
+    {
+      "uf": "22",
+      "municipios": 224,
+      "sha256": "dce1a364beef922abb2a095c80ee9b1d6cc13b254401593257492a2b2e52c349"
+    },
+    {
+      "uf": "23",
+      "municipios": 184,
+      "sha256": "e0507068bc115d5ad264c3377a8119ba68ebd84e55f135c5888ac52f11695c8d"
+    },
+    {
+      "uf": "24",
+      "municipios": 167,
+      "sha256": "6914cb62a1abdf04114f893bda3647da58dfe8f88b39d55ce909f58422811cdd"
+    },
+    {
+      "uf": "25",
+      "municipios": 223,
+      "sha256": "78bfc5b39d9151208ae93923f62508269229d83a513f40c8c614b2f35a65887d"
+    },
+    {
+      "uf": "26",
+      "municipios": 185,
+      "sha256": "ca2c968f46be6b238be08f3899a1918adf419839562363a09a60446584c19258"
+    },
+    {
+      "uf": "27",
+      "municipios": 102,
+      "sha256": "0d1cb44dbe12d156d7c02fbbd055286ef5fd687e6ae6f1c415c08c7953eab5fa"
+    },
+    {
+      "uf": "28",
+      "municipios": 75,
+      "sha256": "2dfae76fa35c9375d80a3f5fa7facae2bacb8ba617eaa1d7d5d61de3c049166a"
+    },
+    {
+      "uf": "29",
+      "municipios": 417,
+      "sha256": "d17d13f06b50cf9eabd60dc9e82f06d06040d9775cb20637f35af1c783707071"
+    },
+    {
+      "uf": "31",
+      "municipios": 853,
+      "sha256": "a77778c059f3139f69bea9b8f7111680c770c87f728f761de5973eeeb41624ff"
+    },
+    {
+      "uf": "32",
+      "municipios": 78,
+      "sha256": "7b548594ec072b6094a152e1e171b9ab7de221208de853016c22b6b42a0bc380"
+    },
+    {
+      "uf": "33",
+      "municipios": 92,
+      "sha256": "02de26286fda892f8321ea197407728f0c59538ff2ac59c2d2868d72544aeb5f"
+    },
+    {
+      "uf": "35",
+      "municipios": 645,
+      "sha256": "b0c377fa2325fb5f4a316090a50a60c19d0c2781299011a7c068ea533fec6c5a"
+    },
+    {
+      "uf": "41",
+      "municipios": 399,
+      "sha256": "6f34afd666e5aea492ea8d25788c08ed1ddec1b11db877a57530dd4c5baa6fa1"
+    },
+    {
+      "uf": "42",
+      "municipios": 295,
+      "sha256": "f69d83f20b6f308d5b3b41b5ab1c416f97e99e09cb9762dc2b896b9051ae9250"
+    },
+    {
+      "uf": "43",
+      "municipios": 497,
+      "sha256": "459a986663188452cc882d6fa87f3259c46329c93f3a9e1db688ee1e1de244ac"
+    },
+    {
+      "uf": "50",
+      "municipios": 79,
+      "sha256": "76fe9be1cbd567960d1bf9703f5bd5ba821f2f874cb6dfcb91d191304b2e6869"
+    },
+    {
+      "uf": "51",
+      "municipios": 141,
+      "sha256": "70c4a5f587e081af9ddc76c885bed853913c24538dae622391f70580aae75291"
+    },
+    {
+      "uf": "52",
+      "municipios": 246,
+      "sha256": "82b565a382ae5b1633af392ae16127ce7e151deb6dc79d670e6e7216bb4d3533"
+    },
+    {
+      "uf": "53",
+      "municipios": 1,
+      "sha256": "0d1ea90c6d629bfe5d863f1824fae25e7db9754d71403cacf487495d5a46ab39"
+    }
+  ]
+}

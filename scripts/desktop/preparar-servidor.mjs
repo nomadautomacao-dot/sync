@@ -178,6 +178,7 @@ function enxugar() {
  */
 const COMPLEMENTOS = [
   ["data/ibge/municipios.json", "catálogo oficial de municípios do IBGE"],
+  ["data/ibge/malhas", "malhas oficiais para capas sem dependência da API ao vivo"],
   // Sobrescreve o pacote traçado, que perde `browsers.json`.
   ["node_modules/playwright", "o Playwright completo"],
   ["node_modules/playwright-core", "sem isto nenhum PDF sai"],
