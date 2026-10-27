@@ -42,3 +42,10 @@ cloudrun.env.yaml
 .DS_Store
 .claude
 .impeccable
+
+# Emissões, caches e verificações locais não pertencem à imagem.
+.cache
+tmp
+output
+coverage
+**/node_modules

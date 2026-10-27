@@ -62,7 +62,7 @@ describe("composição do total", () => {
       const soma = g.componentes.reduce((total, c) => total + c.valor, 0);
 
       expect(g.total, `município ${codigo}`).toBeCloseTo(soma, 2);
-      expect(g.componentes.every((c) => c.certeza === "apurado")).toBe(true);
+      expect(g.componentes.every((c) => c.certeza === "hipotese")).toBe(true);
     }
   });
 

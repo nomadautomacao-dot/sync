@@ -497,10 +497,16 @@ export async function coletarAssistencia(params: {
   const pctFemininoCadUnico = percentual(colunaPor(dadosSexo, /^feminino$/i), dadosSexo?.total ?? null);
 
   const bloco: BlocoAssistencia = {
+    familiasReferenciaPobreza: indicador(dadosRenda?.total ?? null, {
+      ano:dadosRenda?.ano ?? null, status:'em_execucao', fonte:fonteTabcad(dadosRenda), url:TABCAD_PAGINA,
+      unidade:'familias', universo:'familias_cadunico', periodo:dadosRenda?.referencia ?? null,
+    }),
     familiasCadastradas:
       dadosPainel && dadosPainel.familias !== null
         ? indicador(dadosPainel.familias, {
+            unidade:"familias", universo:"familias_cadunico",
             ano: dadosPainel.ano,
+            periodo:dadosPainel.referencia,
             // O CadÚnico é reprocessado todo mês: o número é a fotografia do mês
             // corrente, nunca um exercício fechado.
             status: "em_execucao",
@@ -512,7 +518,9 @@ export async function coletarAssistencia(params: {
     pessoasCadastradas:
       dadosPainel && dadosPainel.pessoas !== null
         ? indicador(dadosPainel.pessoas, {
+            unidade:"pessoas", universo:"pessoas_cadunico",
             ano: dadosPainel.ano,
+            periodo:dadosPainel.referencia,
             status: "em_execucao",
             fonte: fontePainel,
             url: PAINEL_URL,
@@ -522,6 +530,7 @@ export async function coletarAssistencia(params: {
     extremaPobreza:
       extremaPobreza !== null
         ? indicador(extremaPobreza, {
+            unidade:'familias', universo:'familias_cadunico', periodo:dadosRenda?.referencia ?? null,
             ano: dadosRenda?.ano ?? null,
             status: "em_execucao",
             fonte: `${fonteTabcad(dadosRenda)} — famílias na faixa de extrema pobreza`,

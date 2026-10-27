@@ -32,7 +32,7 @@ describe("malha municipal para a capa do Raio-X", () => {
     expect(boundary?.path).toContain(" Z");
   });
 
-  it("consulta a malha mínima pelo código IBGE", async () => {
+  it("consulta a malha detalhada pelo código IBGE", async () => {
     const fetcher = vi.fn<typeof fetch>(async () =>
       new Response(JSON.stringify(polygon), { status: 200 }));
 
@@ -42,7 +42,7 @@ describe("malha municipal para a capa do Raio-X", () => {
     expect(fetcher).toHaveBeenCalledOnce();
     const [url] = fetcher.mock.calls[0]!;
     expect(String(url)).toContain("/municipios/2930105");
-    expect(String(url)).toContain("qualidade=minima");
+    expect(String(url)).toContain("qualidade=maxima");
   });
 
   it("não tenta consultar código inválido", async () => {

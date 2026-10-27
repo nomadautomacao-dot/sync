@@ -44,18 +44,26 @@ export interface Indicador<T = number> {
   fonte: string;
   /** Endereço público para conferência. O relatório artesanal citava URL. */
   url: string | null;
+  unidade?: string;
+  universo?: string;
+  periodo?: string | null;
+  coletadoEm?: string;
+  estado?: import('../qualidade-dados').EstadoEvidencia;
+  formula?: string;
 }
 
 export function indicador<T>(
   valor: T | null,
-  meta: { ano: number | null; status: StatusDado; fonte: string; url?: string | null },
+  meta: { ano: number | null; status: StatusDado; fonte: string; url?: string | null } & Partial<Pick<Indicador<T>, 'unidade'|'universo'|'periodo'|'estado'|'formula'>>,
 ): Indicador<T> {
-  return { valor, ano: meta.ano, status: meta.status, fonte: meta.fonte, url: meta.url ?? null };
+  return { ...meta, valor, url: meta.url ?? null, periodo: meta.periodo ?? (meta.ano ? String(meta.ano) : null),
+    coletadoEm:new Date().toISOString(), estado:meta.estado ?? (valor===null?'indisponivel':valor===0?'zero_confirmado':'disponivel') };
 }
 
 /** Indicador ausente por falta de dado na fonte (a fonte respondeu). */
 export function semDado<T>(meta: { status: StatusDado; fonte: string; url?: string | null }): Indicador<T> {
-  return { valor: null, ano: null, status: meta.status, fonte: meta.fonte, url: meta.url ?? null };
+  return { valor: null, ano: null, status: meta.status, fonte: meta.fonte, url: meta.url ?? null,
+    periodo:null, coletadoEm:new Date().toISOString(), estado:'indisponivel' };
 }
 
 /** Fatia percentual de um total, usada em água, esgoto, lixo e moradia. */
@@ -217,6 +225,8 @@ export interface BlocoAssistencia {
   familiasCadastradas: Indicador;
   pessoasCadastradas: Indicador;
   extremaPobreza: Indicador;
+  /** Denominador da MESMA tabulação de famílias por renda, sem misturar o painel mensal. */
+  familiasReferenciaPobreza?: Indicador;
   responsavelFemininoPct: Indicador;
   rendaMediaFamiliar: Indicador;
 }

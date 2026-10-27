@@ -1,5 +1,7 @@
 export const CITY_REPORT_TYPES = [
   "raio_x",
+  "raio_x_visual",
+  "raio_x_atuacao",
   "diagnostico_fundeb",
   "dever_de_casa",
   "historico_censo",
@@ -18,6 +20,8 @@ export type CityReportType = (typeof CITY_REPORT_TYPES)[number];
 
 export const CITY_REPORT_TYPE_LABELS: Record<CityReportType, string> = {
   raio_x: "Raio-X Municipal",
+  raio_x_visual: "Raio-X Visual Executivo",
+  raio_x_atuacao: "Raio-X de Atuação",
   diagnostico_fundeb: "Diagnóstico FUNDEB",
   dever_de_casa: "Dever de Casa",
   historico_censo: "Histórico do Censo Escolar",
@@ -62,6 +66,8 @@ export interface GeneratedReportBundle {
 }
 
 export interface CityReportSnapshot {
+  /** Arquivo sem perdas quando a base ultrapassa o limite de um documento Firestore. */
+  compressedSnapshot?: { format: 'zip-base64'; data: string; originalBytes: number };
   /**
    * Versão 3 preserva o envelope exato da geração e o contexto adicional do
    * documento. Os campos abaixo continuam disponíveis para abrir relatórios

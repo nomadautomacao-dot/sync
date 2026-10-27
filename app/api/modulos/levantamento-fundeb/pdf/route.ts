@@ -5,7 +5,7 @@ import path from "node:path";
 
 import { buildFundebComparativeSnapshot } from "@/core/lib/fundeb-comparative";
 import { generateFundebPdfBuffer, isFundebPdfTipo } from "@/core/lib/fundeb-pdf";
-import { buildGoviaMunicipioCompleto } from "@/core/lib/govia-compat";
+import { buildRelatorioSnapshot } from "@/core/lib/relatorio-snapshot";
 import { generateLevantamentoHtml } from "@/core/lib/fundeb-levantamento-template";
 import { generateLevantamentoPdf } from "@/core/lib/fundeb-levantamento-pdf";
 import type { RelatorioFundeb } from "@/modules/levantamento-fundeb/types";
@@ -66,18 +66,20 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const dados = await buildGoviaMunicipioCompleto({
+      const snapshot = await buildRelatorioSnapshot({
         codigo_ibge: body.codigo_ibge,
         nome: body.nome,
         uf: body.uf,
         exercicio: body.exercicio,
       });
 
+      const dados=snapshot.current;
       if (!dados) {
         return NextResponse.json({ error: "Municipio nao encontrado." }, { status: 404 });
       }
 
       const html = generateLevantamentoHtml({
+        inteligencia: snapshot.inteligencia, qualidade: snapshot.qualidade,
         relatorio: dados.relatorio,
         payload: dados.payload,
         logoDataUri: await carregarLogo(),
@@ -112,6 +114,7 @@ export async function POST(request: NextRequest) {
                 primary: dados,
                 context: {
                   generator: "fundeb-levantamento-html",
+                  inteligencia: snapshot.inteligencia, qualidade: snapshot.qualidade,
                 },
               },
             },

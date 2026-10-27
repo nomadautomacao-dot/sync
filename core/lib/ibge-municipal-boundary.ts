@@ -158,7 +158,7 @@ export async function fetchMunicipalBoundary(
       `https://servicodados.ibge.gov.br/api/v3/malhas/municipios/${normalizedCode}`,
     );
     url.searchParams.set("formato", "application/vnd.geo+json");
-    url.searchParams.set("qualidade", "minima");
+    url.searchParams.set("qualidade", "maxima");
 
     const response = await fetcher(url, {
       headers: { Accept: "application/vnd.geo+json" },

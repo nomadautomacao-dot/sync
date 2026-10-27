@@ -1,3 +1,4 @@
+import { applyReportVisualTheme } from './report-visual-theme';
 import { chromium, type Browser } from "playwright";
 
 /**
@@ -20,6 +21,7 @@ export async function generateDeverDeCasaPdf(
     const page = await browser.newPage({ viewport: { width: 816, height: 1056 } });
     await page.setContent(htmlContent, { waitUntil: "networkidle" });
     await page.evaluate(() => document.fonts?.ready);
+    await applyReportVisualTheme(page, municipalitySlug);
 
     if (itensEsperados > 0) {
       const linhas = await page.locator("section.flow tr.item").count();

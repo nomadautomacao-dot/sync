@@ -75,15 +75,39 @@ function reportFromSnapshot(
   };
 }
 
-function serializedSnapshot(
+export async function serializedSnapshot(
   snapshot?: CityReportSnapshot,
-): { value: CityReportSnapshot | null; bytes: number } {
+): Promise<{ value: CityReportSnapshot | null; bytes: number }> {
   if (!snapshot) return { value: null, bytes: 0 };
   const json = JSON.stringify(snapshot);
+  const originalBytes = new TextEncoder().encode(json).byteLength;
+  if(originalBytes>800_000) {
+    const JSZip=(await import('jszip')).default;
+    const zip=new JSZip();zip.file('snapshot.json',json);
+    const data=await zip.generateAsync({type:'base64',compression:'DEFLATE',compressionOptions:{level:6}});
+    const value:CityReportSnapshot={schemaVersion:snapshot.schemaVersion,generation:snapshot.generation,identificacao:snapshot.identificacao,compressedSnapshot:{format:'zip-base64',data,originalBytes}};
+    const bytes=new TextEncoder().encode(JSON.stringify(value)).byteLength;
+    if(bytes>=900_000)throw new Error('Base excede o limite de arquivamento mesmo após compressão sem perdas. Exporte os dados antes de continuar.');
+    return {value,bytes};
+  }
   return {
     value: JSON.parse(json) as CityReportSnapshot,
     bytes: new TextEncoder().encode(json).byteLength,
   };
+}
+
+export async function restoreCityReportSnapshot(snapshot: CityReportSnapshot): Promise<CityReportSnapshot> {
+  const compressed=snapshot.compressedSnapshot;
+  if(!compressed)return snapshot;
+  if(compressed.format!=='zip-base64'||compressed.originalBytes>50*1024*1024)throw new Error('Formato ou tamanho de snapshot inválido.');
+  const JSZip=(await import('jszip')).default;
+  const zip=await JSZip.loadAsync(compressed.data,{base64:true,checkCRC32:true});
+  const file=zip.file('snapshot.json');if(!file)throw new Error('Arquivo do snapshot ausente.');
+  const json=await file.async('string');
+  if(new TextEncoder().encode(json).byteLength!==compressed.originalBytes)throw new Error('Integridade do snapshot inválida.');
+  const value=JSON.parse(json) as CityReportSnapshot;
+  if(value.compressedSnapshot)throw new Error('Snapshot aninhado inválido.');
+  return value;
 }
 
 export async function listCityReports(
@@ -94,19 +118,20 @@ export async function listCityReports(
   const snapshot = await getDocs(
     query(collection(db, COLLECTION), where("groupId", "==", groupId)),
   );
-  return snapshot.docs
+  const reports = snapshot.docs
     .map(reportFromSnapshot)
     .filter((report) => !cityId || report.cityId === cityId)
     .sort((a, b) =>
       (b.generatedAt ?? "").localeCompare(a.generatedAt ?? ""),
     );
+  return Promise.all(reports.map(async report=>({...report,snapshot:report.snapshot?await restoreCityReportSnapshot(report.snapshot):undefined})));
 }
 
 export async function createCityReport(
   db: Firestore,
   input: CreateCityReportInput,
 ): Promise<CityReport> {
-  const snapshot = serializedSnapshot(input.snapshot);
+  const snapshot = await serializedSnapshot(input.snapshot);
   const payload = {
     ...input,
     status: "ready" as const,

@@ -49,7 +49,7 @@ describe("gêmeos estatísticos", () => {
   });
 
   it("o fator médio da coorte fica na faixa possível dos fatores do fundo", () => {
-    const g = getMunicipiosGemeos("3550308")!;
+    const g = getMunicipiosGemeos("2930154")!;
     const fator = g.indicadores.find((i) => i.chave === "fatorMedio")!;
     for (const valor of [fator.valor, fator.medianaPorte, fator.medianaUf ?? fator.medianaPorte]) {
       expect(valor).toBeGreaterThanOrEqual(1);

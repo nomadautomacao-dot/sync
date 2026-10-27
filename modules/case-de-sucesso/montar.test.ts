@@ -21,9 +21,9 @@ describe("montarCaseSucesso", () => {
 
     // Valores das portarias do FNDE em data/fnde/receitas-{2024,2026}.csv.
     expect(coribe.totalInicio).toBeCloseTo(21_659_998.36, 2);
-    expect(coribe.totalFim).toBeCloseTo(47_356_333.59, 2);
-    expect(coribe.ganhoTotal).toBeCloseTo(25_696_335.23, 2);
-    expect(coribe.variacaoTotal).toBeCloseTo(118.6, 1);
+    expect(coribe.totalFim).toBeCloseTo(47_669_347.56, 2);
+    expect(coribe.ganhoTotal).toBeCloseTo(26_009_349.20, 2);
+    expect(coribe.variacaoTotal).toBeCloseTo(120.1, 1);
   });
 
   it("não deixa a série passar do último exercício reivindicado", async () => {
@@ -34,7 +34,8 @@ describe("montarCaseSucesso", () => {
     // a consultoria não estava lá naquele exercício.
     expect(serra.serie.map((s) => s.ano)).toEqual([2022, 2023, 2024, 2025]);
     expect(serra.fim).toBe(2025);
-    expect(serra.totalFim).toBeCloseTo(82_863_000, -4);
+    // Publicação revisada do exercício 2025, sem incorporar receita de 2026.
+    expect(serra.totalFim).toBeCloseTo(82_904_291.91, 2);
   });
 
   it("apura o percentil na janela do próprio município, não numa janela comum", async () => {

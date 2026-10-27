@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "exercicio": 2026,
+  "coletadoEm": "2026-10-26T13:18:30.120Z",
+  "pagina": "https://www.gov.br/fnde/pt-br/acesso-a-informacao/acoes-e-programas/financiamento/fundeb/2026",
+  "versao": "3ª publicação – Portaria MEC/MF nº 11, de 28 de agosto de 2026",
+  "anterior": "2026-10-26T13:14:28.482Z",
+  "arquivos": [
+    {
+      "id": "receitas",
+      "url": "https://www.gov.br/fnde/pt-br/acesso-a-informacao/acoes-e-programas/financiamento/fundeb/2026-1/publicacoes-2026/3-publicacoes/1-receita-total-do-fundeb-por-ente-federado-p-11.csv/@@download/file",
+      "municipios": 5569,
+      "sha256": "ef6f20188c8c3355a8910dcc8bb62ddf7ab02db240841bbd186d8fa0aaf10140"
+    },
+    {
+      "id": "vaat",
+      "url": "https://www.gov.br/fnde/pt-br/acesso-a-informacao/acoes-e-programas/financiamento/fundeb/2026-1/publicacoes-2026/3-publicacoes/3-vaat-vaat-min-e-complementacao-vaat-por-ente-federado-p11.pdf/@@display-file/file",
+      "municipios": 5546,
+      "sha256": "8b3e62bfec21d6e822261b58a2ecfd1c529ca6408375cf1994477c8f20e3520f"
+    }
+  ]
+}

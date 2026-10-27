@@ -48,6 +48,7 @@ import type { CityReportType } from "@/modules/cidades/reports-types";
  * pede aquele tópico.
  */
 export const RELATORIOS_PADRAO = [
+  "raio-x-visual",
   "raio-x",
   "levantamento",
   "historico-censo",
@@ -56,11 +57,23 @@ export const RELATORIOS_PADRAO = [
 
 export const DOCUMENTOS = [
   {
+    id: "raio-x-visual" as const,
+    reportType: "raio_x_visual" as CityReportType,
+    icone: GlobalOutlined,
+    nome: "Raio-X Visual Executivo",
+    paginas: 0,
+    variante: "primario" as const,
+    prefixoArquivo: "RaioX_Visual",
+    endpoint: "/api/modulos/levantamento-fundeb/raio-x-visual",
+    descricao: "Edição visual com mapa do município, gráficos, escolas e plano de atuação. Versão interativa disponível.",
+    conteudo: ["Mapa da rede", "Execução financeira", "VAAR", "Trajetória das matrículas", "Prioridades de atuação"],
+  },
+  {
     id: "raio-x" as const,
     reportType: "raio_x" as CityReportType,
     icone: ThunderboltOutlined,
     nome: "Raio-X Municipal",
-    paginas: 42,
+    paginas: 0,
     variante: "secundario" as const,
     prefixoArquivo: "RaioX_Municipal",
     endpoint: "/api/modulos/levantamento-fundeb/raio-x",
@@ -79,15 +92,15 @@ export const DOCUMENTOS = [
     reportType: "diagnostico_fundeb" as CityReportType,
     icone: FileTextOutlined,
     nome: "Diagnóstico FUNDEB",
-    paginas: 10,
+    paginas: 0,
     variante: "primario" as const,
     prefixoArquivo: "Levantamento_FUNDEB",
     endpoint: "/api/modulos/levantamento-fundeb/pdf?tipo=levantamento",
     descricao:
-      "O aprofundamento no fundo: repasses, projeção de ganho e plano de ação.",
+      "O aprofundamento no fundo: estimativa, execução financeira e plano de ação.",
     conteudo: [
       "VAAF / VAAT / VAAR",
-      "Projeção de ganho",
+      "Execução e evidências",
       "Censo Escolar INEP",
       "Série histórica",
       "Saúde fiscal",
@@ -114,6 +127,18 @@ export const DOCUMENTOS = [
       "Alfabetização e IDEB contra a régua",
       "O que o descumprimento custa",
     ],
+  },
+  {
+    id: "raio-x-atuacao" as const,
+    reportType: "raio_x_atuacao" as CityReportType,
+    icone: CheckSquareOutlined,
+    nome: "Raio-X de Atuação",
+    paginas: 0,
+    variante: "secundario" as const,
+    prefixoArquivo: "RaioX_Atuacao",
+    endpoint: "/api/modulos/levantamento-fundeb/raio-x-atuacao",
+    descricao: "Plano interno da consultoria: ações propostas a partir dos dados, com evidências, responsáveis sugeridos, documentos e critérios de conclusão.",
+    conteudo: ["Prioridades e limites de atuação", "Fichas de ação por evidência", "Entregas e responsabilidades", "Documentos necessários", "Calendário e dependências", "Manutenção e lacunas de dados"],
   },
   {
     id: "historico-censo" as const,

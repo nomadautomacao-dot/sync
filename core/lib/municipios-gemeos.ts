@@ -335,7 +335,7 @@ function vizinhos(
   quantidade: number,
 ): MetricasMunicipio[] {
   return universo
-    .filter((linha) => linha.codigo !== alvo.codigo)
+    .filter((linha) => linha.codigo !== alvo.codigo && linha.matriculas >= alvo.matriculas / 2 && linha.matriculas <= alvo.matriculas * 2)
     .sort((a, b) => Math.abs(a.matriculas - alvo.matriculas) - Math.abs(b.matriculas - alvo.matriculas))
     .slice(0, quantidade);
 }
@@ -353,6 +353,7 @@ export function getMunicipiosGemeos(codigoIBGE: string): MunicipiosGemeos | null
   if (!nacional || !alvo) return null;
 
   const coortePorte = vizinhos(nacional, alvo, COORTE_PORTE);
+  if (!coortePorte.length) return null;
   const coorteUf = vizinhos(nacional.filter((linha) => linha.uf === alvo.uf), alvo, COORTE_UF);
 
   const indicadores: IndicadorGemeos[] = [];

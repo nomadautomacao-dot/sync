@@ -104,14 +104,11 @@ export function levantarAchados(model: MunicipalXrayModel): Achado[] {
         ? "VAAR zerado pela reprovação do estado na Condicionalidade IV"
         : `VAAR zerado: reprovação ${v.failed.length === 1 ? "na condicionalidade" : "nas condicionalidades"} ${quais}`,
       valor: null,
-      medida:
-        v.stateMedian !== null
-          ? `R$ 0 recebidos · mediana dos habilitados da UF: ${moeda(v.stateMedian)}`
-          : "R$ 0 recebidos",
+      medida: 'VAAR estimado na publicação: R$ 0',
       mecanismo: v.stateWideFailure
-        ? "A Cond. IV é aferida no estado (ICMS educacional) e nenhum município da UF recebe — a correção é articulação estadual, não gestão local."
-        : "Reprovar em uma condicionalidade zera a parcela inteira. A aferição é anual e recomeça do zero, então o ciclo seguinte é recuperável.",
-      acao: "Levantar a condicionalidade reprovada item a item com a equipe pedagógica e montar o plano do ciclo seguinte — a aferição recomeça do zero todo exercício.",
+        ? 'Impedimento estadual: confirmar ato vigente e acompanhar providências do estado.'
+        : 'Conferir a condicionalidade e os indicadores do ciclo. Não há valor recuperável apurado nem resultado futuro garantido.',
+      acao: 'Validar o motivo oficial, os indicadores de atendimento e aprendizagem e as evidências necessárias ao plano de intervenção.',
       prazo: "ciclo de aferição em curso",
       onde: "Complementações da União",
     });
@@ -126,7 +123,7 @@ export function levantarAchados(model: MunicipalXrayModel): Achado[] {
       medida: t.complement === null ? t.status : null,
       mecanismo:
         "A condição é única e fiscal (art. 13, §4º): dados no Siconfi e no SIOPE até 31 de agosto. Inabilitado não tem o VAAT apurado.",
-      acao: "Fechar Siconfi e SIOPE antes de 31 de agosto. É a única condição, e ela é de calendário — não de mérito.",
+      acao: "Fechar Siconfi e SIOPE antes de 31 de agosto. Confirmar a lista oficial e as exigências do ciclo antes de concluir sobre habilitação.",
       prazo: "até 31 de agosto",
       onde: "Complementações da União",
     });
@@ -171,7 +168,7 @@ export function levantarAchados(model: MunicipalXrayModel): Achado[] {
       valor: null,
       medida: c.pendingEducation.map((p) => p.code).join(", "),
       mecanismo:
-        "São os itens em que o Tesouro confere a aplicação mínima e o Anexo 8 ao SIOPE — o mesmo envio que habilita ao VAAT. Custa a transferência voluntária e a complementação ao mesmo tempo.",
+        "São os itens em que o Tesouro confere a aplicação mínima e o Anexo 8 ao SIOPE — o mesmo envio que habilita ao VAAT. A pendência exige conferência; não comprova automaticamente perda da complementação.",
       acao: "Regularizar cada item nomeado com o órgão responsável antes do próximo vencimento do extrato.",
       prazo: "antes do próximo vencimento",
       onde: "Requisitos fiscais",
@@ -181,11 +178,11 @@ export function levantarAchados(model: MunicipalXrayModel): Achado[] {
   if (model.siope?.stale === true) {
     add({
       tier: TIERS.datado,
-      titulo: "Declaração ao SIOPE defasada — o outro lado do corte do VAAT",
+      titulo: "Referência do SIOPE antiga: conferir atualização e recibos",
       valor: null,
       medida: null,
       mecanismo:
-        "A trava exige os dados no Siconfi e no SIOPE. Siconfi em dia não salva a habilitação se o SIOPE não fechar.",
+        "Base antiga pode refletir atraso da fonte. Validar os recibos e a lista oficial antes de atribuir pendência ao município.",
       acao: "Transmitir a declaração do exercício de referência ao SIOPE e conferir o Anexo 8.",
       prazo: "até 31 de agosto",
       onde: "Requisitos fiscais",
@@ -197,11 +194,11 @@ export function levantarAchados(model: MunicipalXrayModel): Achado[] {
   if (fora !== null && model.peoples) {
     add({
       tier: TIERS.base,
-      titulo: `${int(fora)} matrículas indígenas declaradas fora do segmento que pondera`,
+      titulo: `${int(fora)} de diferença entre autodeclaração indígena e matrículas no segmento escolar`,
       valor: null,
       medida: `${int(fora)} matrículas · fator ${dec(model.peoples.factorMin)}–${dec(model.peoples.factorMax)}`,
       mecanismo:
-        "A ponderação segue a classificação da escola, não a cor/raça do aluno: declarado indígena em escola comum pondera como urbano comum. É registro, não autodeclaração alheia.",
+        "A ponderação segue a classificação da escola, não a cor/raça do aluno: declarado indígena em escola comum pondera como urbano comum. A diferença entre universos não comprova erro nem direito a reenquadramento.",
       acao: "Conferir, escola a escola, se a classificação declarada ao Censo corresponde ao território — a ponderação segue a escola, não o aluno.",
       prazo: "próxima coleta do Censo Escolar",
       onde: "Declaração étnica",
@@ -211,15 +208,15 @@ export function levantarAchados(model: MunicipalXrayModel): Achado[] {
   const d = model.demographics;
   if (d && d.crechePop > 0 && d.crecheEnrollment !== null) {
     const cobertura = (d.crecheEnrollment / d.crechePop) * 100;
-    if (cobertura < 50) {
+    if (cobertura < 60) {
       add({
         tier: TIERS.base,
-        titulo: `Creche em ${dec(cobertura)}% de cobertura — a meta 1 do PNE é 50%`,
+        titulo: `Creche municipal: razão de ${dec(cobertura)}% sobre a população de 0–3 de 2022`,
         valor: null,
-        medida: `${int(d.crechePop - d.crecheEnrollment)} crianças de 0 a 3 fora da rede municipal`,
+        medida: "Universos e períodos diferentes; não mede exclusão escolar",
         mecanismo:
-          "Creche pública integral pondera 1,55 no fundo — é a matrícula de maior valor disponível sem mudar o público que o município já atende.",
-        acao: "Mapear a demanda de 0 a 3 por bairro e planejar a captura para a rede, priorizando integral.",
+          "PNE 2026 (Lei 15.388): meta nacional de 60% em creche até o fim do decênio e atendimento da demanda manifesta. Validar idade, rede, residência, demanda e custo antes de ampliar.",
+        acao: "Mapear a demanda de 0 a 3 por bairro e planejar oferta, jornada e custo conforme a demanda comprovada.",
       prazo: "próxima coleta do Censo Escolar",
       onde: "Demografia e demanda futura",
       });
@@ -258,14 +255,14 @@ export function levantarAchados(model: MunicipalXrayModel): Achado[] {
   }
 
   const l = model.literacy;
-  if (l?.nextTarget && l.nextTarget.gapPoints > 0) {
+  if (l?.latest.target != null && l.latest.value < l.latest.target) {
     add({
       tier: TIERS.resultado,
-      titulo: `Alfabetização ${dec(l.nextTarget.gapPoints)} pontos abaixo da meta pactuada para ${l.nextTarget.year}`,
+      titulo: `Alfabetização ${dec(l.latest.target - l.latest.value)} pontos abaixo da meta do mesmo ano (${l.latest.year})`,
       valor: null,
-      medida: `${dec(l.latest.value)}% em ${l.latest.year} · meta ${dec(l.nextTarget.target)}%`,
+      medida: `${dec(l.latest.value)}% em ${l.latest.year} · meta ${dec(l.latest.target)}%`,
       mecanismo:
-        "É a única meta que o próprio município assinou, no CNCA. Criança não alfabetizada no 2º ano vira distorção idade-série e abandono adiante — que é o que a Cond. I do VAAR mede.",
+        "O resultado de alfabetização orienta o apoio pedagógico. A diferença para uma meta futura não comprova descumprimento no ano corrente. A Condicionalidade I do VAAR trata da seleção de gestores escolares.",
       acao: "Definir linha de base por turma e rotina de avaliação formativa no 1º e 2º ano, com apoio acionado por evidência.",
       prazo: "ano letivo",
       onde: "Alfabetização",
@@ -293,7 +290,7 @@ export function levantarAchados(model: MunicipalXrayModel): Achado[] {
         .filter(Boolean)
         .join(" · "),
       mecanismo:
-        "A Cond. I do VAAR mede evolução, não nível: rede que parte de baixo e sobe é premiada. A média municipal não diz onde intervir — a decisão é por escola.",
+        "O IDEB orienta o diagnóstico de aprendizagem; não comprova sozinho habilitação ou valor de VAAR. A Condicionalidade I trata da seleção de gestores escolares. A intervenção exige análise por escola.",
       acao: "Priorizar recomposição por habilidade e por escola, começando pelas de pior resultado na própria rede.",
       prazo: "ano letivo",
       onde: "Porte e resultado",
@@ -345,13 +342,6 @@ export function varreduraLimpa(model: MunicipalXrayModel): string[] {
     limpos.push("declaração ao SIOPE no exercício de referência");
   }
 
-  const d = model.demographics;
-  if (d && d.crechePop > 0 && d.crecheEnrollment !== null) {
-    if ((d.crecheEnrollment / d.crechePop) * 100 >= 50) {
-      limpos.push("creche acima da meta 1 do PNE");
-    }
-  }
-
   const rp = model.teacherPay;
   if (rp?.reliable && rp.belowPct === 0) limpos.push("magistério integralmente acima do piso");
 
@@ -379,12 +369,4 @@ export function varreduraLimpa(model: MunicipalXrayModel): string[] {
   }
 
   return limpos;
-}
-
-function moeda(valor: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-    maximumFractionDigits: 0,
-  }).format(valor);
 }

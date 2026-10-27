@@ -17,10 +17,10 @@
  * fundo que ele pode reverter por ato de gestão.
  */
 
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
-const ARQUIVO = join("data", "fnde", "vaar-2026.json");
+
 
 export type Condicionalidade = "I" | "II" | "III" | "IV" | "V";
 
@@ -101,18 +101,15 @@ interface ArquivoVaar {
 
 const CONDICIONALIDADES: Condicionalidade[] = ["I", "II", "III", "IV", "V"];
 
-let cache: ArquivoVaar | null | undefined;
-
-function carregar(): ArquivoVaar | null {
-  if (cache !== undefined) return cache;
+const arquivos = new Map<number, {mtime:number; dado:ArquivoVaar}>();
+function carregar(exercicio:number): ArquivoVaar | null {
   try {
-    cache = JSON.parse(readFileSync(join(process.cwd(), ARQUIVO), "utf8")) as ArquivoVaar;
-  } catch {
-    // Dataset ausente (clone sem `npm run dados:vaar`): o bloco some do
-    // relatório em vez de derrubar a geração inteira.
-    cache = null;
-  }
-  return cache;
+    const path=join(process.cwd(),'data','fnde',`vaar-${exercicio}.json`), mtime=statSync(path).mtimeMs;
+    const prev=arquivos.get(exercicio); if(prev?.mtime===mtime)return prev.dado;
+    const dado=JSON.parse(readFileSync(path,'utf8')) as ArquivoVaar;
+    if(dado.exercicio!==exercicio)return null;
+    arquivos.set(exercicio,{mtime,dado}); return dado;
+  }catch{return null;}
 }
 
 function mediana(valores: number[]): number {
@@ -134,7 +131,7 @@ interface Agregados {
   porUf: Map<string, { mediana: number; beneficiadas: number; avaliadas: number; condIVTodasReprovadas: boolean }>;
 }
 
-let agregados: Agregados | null | undefined;
+const agregadosPorArquivo = new WeakMap<ArquivoVaar,Agregados>();
 
 function calcularAgregados(arquivo: ArquivoVaar): Agregados {
   const nacional: number[] = [];
@@ -173,15 +170,16 @@ function calcularAgregados(arquivo: ArquivoVaar): Agregados {
   return { medianaNacional: mediana(nacional), porUf };
 }
 
-export function getSituacaoVaar(codigoIBGE: string): SituacaoVaar | null {
-  const arquivo = carregar();
+export function getSituacaoVaar(codigoIBGE: string, exercicio = new Date().getFullYear()): SituacaoVaar | null {
+  const arquivo = carregar(exercicio);
   if (!arquivo) return null;
 
   const digits = codigoIBGE.replace(/\D/g, "");
   const registro = arquivo.municipios?.[digits];
   if (!registro) return null;
 
-  if (agregados === undefined) agregados = calcularAgregados(arquivo);
+  const agregados = agregadosPorArquivo.get(arquivo) ?? calcularAgregados(arquivo);
+  agregadosPorArquivo.set(arquivo,agregados);
 
   const uf = registro.uf ?? "";
   const estatisticaUf = agregados?.porUf.get(uf);

@@ -22,7 +22,7 @@ const BLOCO = "saude";
 
 const FONTE_CNES = "CNES/DATASUS — API de Dados Abertos do Ministério da Saúde";
 const FONTE_APS = "e-Gestor Atenção Básica — Ministério da Saúde";
-const FONTE_IBGE = "IBGE — Panorama das Cidades (pesquisa 10058)";
+const FONTE_IBGE = "IBGE / DATASUS — Taxa de mortalidade infantil (pesquisa 39)";
 
 const CNES_ESTABELECIMENTOS = "https://apidadosabertos.saude.gov.br/cnes/estabelecimentos";
 const CNES_TIPOS_UNIDADE = "https://apidadosabertos.saude.gov.br/cnes/tipounidades";
@@ -302,8 +302,8 @@ interface IndicadorIbge {
   res?: Array<{ localidade?: string | null; res?: Record<string, string | null> | null }> | null;
 }
 
-/** Média do triênio de mortalidade infantil, por mil nascidos vivos. */
-const IBGE_MORTALIDADE_INFANTIL = 60033;
+/** Taxa anual de mortalidade infantil por mil nascidos vivos, conforme pesquisa 39. */
+const IBGE_MORTALIDADE_INFANTIL = 30279;
 /**
  * Internações por diarreia. Não tem campo em `BlocoSaude`, mas viaja de graça
  * na mesma requisição por ser o outro indicador de saúde da pesquisa 10058 —
@@ -469,6 +469,8 @@ export async function coletarSaude(params: {
         ? semDado({ status: "estrutural", fonte: FONTE_IBGE, url: mortalidade?.url ?? IBGE_INDICADORES })
         : indicador(mortalidade.valor, {
             ano: mortalidade.ano,
+            unidade:"obitos_por_mil_nascidos_vivos", universo:"residentes_municipio", periodo:String(mortalidade.ano),
+            formula:"óbitos de menores de 1 ano residentes ÷ nascidos vivos de mães residentes × 1.000",
             status: "estrutural",
             fonte: FONTE_IBGE,
             url: mortalidade.url,

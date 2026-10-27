@@ -2,6 +2,13 @@ import { normalizarIBGE } from "@/modules/levantamento-fundeb/utils/calculos";
 import type { ReceitasFundeb } from "@/modules/levantamento-fundeb/types";
 import { readFileSync } from "fs";
 import { join } from "path";
+import { conferirSoma, exigirQualidade } from './qualidade-dados';
+
+export function getFonteFundeb(exercicio:number) {
+  try { return JSON.parse(readFileSync(join(process.cwd(),`data/fnde/fontes-${exercicio}.json`),'utf8')) as {
+    versao:string; coletadoEm:string; pagina:string; arquivos:Array<{id:string;url:string;sha256:string}>;
+  }; } catch {return null;}
+}
 
 export interface FndeFundebReceitas extends ReceitasFundeb {
   codigoIBGE: string;
@@ -94,6 +101,11 @@ const FNDE_LOCAL_HABILITACAO: Record<number, string> = {
   2026: "data/fnde/habilitacao-vaat-2026.csv",
 };
 
+const versoesCache = new Map<number,string>();
+function invalidarSeAtualizado(ano:number){
+ const versao=JSON.stringify(getFonteFundeb(ano));
+ if(versoesCache.get(ano)!==versao){receitasCache.delete(ano);vaatCache.delete(ano);habilitacaoCache.delete(ano);versoesCache.set(ano,versao);}
+}
 const receitasCache = new Map<number, Promise<Map<string, FndeFundebReceitas>>>();
 const vaatCache = new Map<number, Promise<Map<string, Omit<FndeVaatContext, "habilitacao" | "pendencia">>>>();
 const habilitacaoCache = new Map<number, Promise<Map<string, Pick<FndeVaatContext, "habilitacao" | "pendencia">>>>();
@@ -173,7 +185,7 @@ async function fetchCsv(url: string, localFallback?: string) {
 }
 
 async function fetchPdfText(url: string): Promise<string> {
-  let PDFParse: any;
+  let PDFParse: typeof import("pdf-parse").PDFParse;
   try {
     // Use eval to bypass Next.js static module analysis — pdf-parse requires DOMMatrix
     // which is unavailable in serverless. This ensures the module is only loaded at call time.
@@ -220,7 +232,7 @@ function parseFundebReceitasCsv(csvText: string, sourceLabel: string) {
       continue;
     }
 
-    map.set(codigoIBGE, {
+    const receita = {
       codigoIBGE,
       municipio,
       uf,
@@ -230,7 +242,9 @@ function parseFundebReceitasCsv(csvText: string, sourceLabel: string) {
       complementacaoVAAR: parseBrazilianNumber(vAAR),
       totalReceitas: parseBrazilianNumber(total),
       fonte: sourceLabel,
-    });
+    };
+    exigirQualidade(conferirSoma(receita.totalReceitas,[receita.receitaContribuicaoMunicipal,receita.complementacaoVAAF,receita.complementacaoVAAT,receita.complementacaoVAAR],`FUNDEB_${codigoIBGE}`));
+    map.set(codigoIBGE,receita);
   }
 
   return map;
@@ -434,6 +448,7 @@ function parseHabilitacaoCsv(csvText: string) {
  * lida uma vez por processo e serve todas as comparações.
  */
 export async function loadFundebReceitasByYear(exercicio: number) {
+  invalidarSeAtualizado(exercicio);
   const cached = receitasCache.get(exercicio);
   if (cached) {
     return cached;
@@ -447,7 +462,8 @@ export async function loadFundebReceitasByYear(exercicio: number) {
   const promise = (async () => {
     try {
       if (source.kind === "csv") {
-        return parseFundebReceitasCsv(await fetchCsv(source.url, FNDE_LOCAL_RECEITAS[exercicio]), source.sourceLabel);
+        const manifest=getFonteFundeb(exercicio);
+        return parseFundebReceitasCsv(await fetchCsv(manifest?.arquivos.find(a=>a.id==='receitas')?.url ?? source.url, FNDE_LOCAL_RECEITAS[exercicio]), manifest?.versao ?? source.sourceLabel);
       }
 
       if (source.kind === "pdf-vaaf") {
@@ -466,6 +482,7 @@ export async function loadFundebReceitasByYear(exercicio: number) {
 }
 
 async function loadVaatByYear(exercicio: number) {
+  invalidarSeAtualizado(exercicio);
   const cached = vaatCache.get(exercicio);
   if (cached) {
     return cached;

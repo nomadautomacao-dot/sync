@@ -4,7 +4,7 @@ FROM node:22-slim AS base
 # Install dependencies only when needed
 FROM base AS deps
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 python3-pip python3-venv \
+    curl ca-certificates python3 python3-pip python3-venv \
     && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
 
@@ -56,7 +56,7 @@ RUN useradd --system --uid 1001 nextjs
 
 # Install runtime dependencies (Python for legacy PDF + Chromium for Playwright)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    python3 python3-pip \
+    curl ca-certificates python3 python3-pip \
     wget ca-certificates fonts-liberation libasound2 libatk-bridge2.0-0 \
     libatk1.0-0 libcups2 libdbus-1-3 libdrm2 libgbm1 libgtk-3-0 \
     libnspr4 libnss3 libx11-xcb1 libxcomposite1 libxdamage1 \
@@ -141,6 +141,9 @@ COPY --from=builder /app/data/inep-rendimento-municipal-2023.json ./data/inep-re
 COPY --from=builder /app/data/inep ./data/inep
 COPY --from=builder /app/data/ipea ./data/ipea
 COPY --from=builder /app/data/incra ./data/incra
+
+# Catálogo de municípios para busca e identificação sem rede.
+COPY --from=builder /app/data/ibge/municipios.json ./data/ibge/municipios.json
 
 # Set permissions
 RUN chown -R nextjs:nodejs /app

@@ -325,7 +325,7 @@ function julgarConciliacao(conciliacao: Conciliacao | null): ItemDever {
     id: "C1",
     titulo: "Censo e Portaria contando as mesmas crianças",
     criterio:
-      "O Censo Escolar preenchido pelo município e a Portaria que distribui o FUNDEB devem fechar — divergência é matrícula declarada que não virou ponderação.",
+      "Conciliar Censo e Portaria por ano, rede, etapa e regras de filtragem. Diferença de recorte não comprova omissão nem receita perdida.",
     fonte: "INEP — Censo Escolar × FNDE — Portaria de ponderação",
   };
   if (!conciliacao) {
@@ -347,7 +347,7 @@ function julgarCreche(faixa: FaixaCobertura | null): ItemDever {
   const base = {
     id: "C2",
     titulo: "Cobertura de creche rumo à meta do PNE",
-    criterio: "Meta 1 do PNE: 50% da população de 0 a 3 anos atendida em creche, somadas todas as redes.",
+    criterio: "Validar demanda manifesta, idade, residência, redes e meta vigente. A razão entre bases de anos diferentes não mede cobertura atual nem descumprimento.",
     fonte: "IBGE — demografia × INEP — Censo Escolar",
   };
   if (!faixa || faixa.coberturaTotal == null) {
@@ -519,39 +519,10 @@ export function calcularPlacar(blocos: BlocoDever[]): PlacarDever {
  * mesma promessa inflada que ele existe para substituir.
  */
 export function montarDinheiro(f: FontesDever): { naMesa: ParcelaDinheiro[]; potencial: ParcelaDinheiro[] } {
-  const naMesa: ParcelaDinheiro[] = [];
-  const potencial: ParcelaDinheiro[] = [];
-
-  if (f.vaar && f.vaar.complementacao === 0) {
-    const reprovadasLocais = f.vaar.reprovadas.filter((inc) => !(inc === "IV" && f.vaar!.condIVEstadual));
-    const referencia = f.vaar.referencia.medianaUf ?? f.vaar.referencia.medianaNacional;
-    if (reprovadasLocais.length > 0 && referencia > 0) {
-      naMesa.push({
-        rotulo: `Complementação VAAR não recebida (reprovado em ${reprovadasLocais.join(", ")})`,
-        valor: referencia,
-        estimativa: true,
-        nota: "Estimado pela mediana dos municípios beneficiados da UF (ou do país, sem UF beneficiada). O valor real dependeria do coeficiente.",
-      });
-    } else if (f.vaar.habilitadoSemRepasse) {
-      naMesa.push({
-        rotulo: "VAAR habilitado, mas sem repasse: não evoluiu em atendimento nem em aprendizagem",
-        valor: referencia,
-        estimativa: true,
-        nota: "Habilitação sem evolução vale zero — o rateio é proporcional ao avanço nos dois indicadores.",
-      });
-    }
-  }
-
-  if (f.contaCreche?.valorDerivado != null && f.contaCreche.valorDerivado > 0) {
-    potencial.push({
-      rotulo: `Receita derivada de fechar a meta de creche (${inteiro.format(f.contaCreche.matriculasAteMeta)} matrículas)`,
-      valor: f.contaCreche.valorDerivado,
-      estimativa: true,
-      nota: "Derivado pela aritmética da Portaria; entra no exercício seguinte e não paga sozinho o custo de abrir as vagas.",
-    });
-  }
-
-  return { naMesa, potencial };
+  // Fontes agregadas não comprovam demanda, custo ou receita atribuível.
+  // Preserva o contrato dos consumidores sem monetizar medianas e diferenças de universos.
+  void f;
+  return { naMesa: [], potencial: [] };
 }
 
 function fonteStatus(rotulo: string, ok: boolean, detalhe: string): FonteDever {

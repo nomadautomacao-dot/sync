@@ -1,6 +1,6 @@
+import { referenciaSemProjecao } from '@/core/lib/fundeb-simulacao';
 import type {
   CensoEscolar,
-  CronogramaVAAF,
   FonteColetaStatus,
   IDEBDado,
   MunicipioIdentificacao,
@@ -15,21 +15,6 @@ import type {
   VeiculoCaminhoEscola,
 } from "../types";
 import { buildFundebStateLayer } from "@/core/lib/fundeb-state-layer";
-
-const PERCENTUAIS_MENSAIS = [
-  { mes: "Janeiro", pct: 0.059 },
-  { mes: "Fevereiro", pct: 0.065 },
-  { mes: "Março", pct: 0.071 },
-  { mes: "Abril", pct: 0.076 },
-  { mes: "Maio", pct: 0.082 },
-  { mes: "Junho", pct: 0.088 },
-  { mes: "Julho", pct: 0.088 },
-  { mes: "Agosto", pct: 0.094 },
-  { mes: "Setembro", pct: 0.094 },
-  { mes: "Outubro", pct: 0.094 },
-  { mes: "Novembro", pct: 0.094 },
-  { mes: "Dezembro", pct: 0.094 },
-] as const;
 
 const IDEB_YEARS = [2005, 2007, 2009, 2011, 2013, 2015, 2017, 2019, 2021, 2023, 2025] as const;
 
@@ -107,44 +92,7 @@ function calcularReceitas(receitas: Partial<ReceitasFundeb>): ReceitasFundeb {
 }
 
 function calcularProjecao(receitas: ReceitasFundeb): ProjecaoFundeb {
-  const possuiComplementacao =
-    receitas.complementacaoVAAF > 0 || receitas.complementacaoVAAT > 0 || receitas.complementacaoVAAR > 0;
-
-  const vaafProjetado = receitas.complementacaoVAAF > 0 ? receitas.complementacaoVAAF * 1.4 : 0;
-  const vaatProjetado = receitas.complementacaoVAAT > 0 ? receitas.complementacaoVAAT * 1.3 : 0;
-  const vaarProjetado = receitas.complementacaoVAAR > 0 ? receitas.complementacaoVAAR * 1.25 : 0;
-  const totalProjetado =
-    receitas.receitaContribuicaoMunicipal + vaafProjetado + vaatProjetado + vaarProjetado;
-  const totalGanho = totalProjetado - receitas.totalReceitas;
-  const componentesZerados = [
-    receitas.complementacaoVAAF <= 0 ? "VAAF" : null,
-    receitas.complementacaoVAAT <= 0 ? "VAAT" : null,
-  ].filter(Boolean);
-
-  return {
-    vaafAtual: receitas.complementacaoVAAF,
-    vaafProjetado,
-    vaafGanho: vaafProjetado - receitas.complementacaoVAAF,
-    vaatAtual: receitas.complementacaoVAAT,
-    vaatProjetado,
-    vaatGanho: vaatProjetado - receitas.complementacaoVAAT,
-    vaarAtual: receitas.complementacaoVAAR,
-    vaarProjetado,
-    vaarGanho: vaarProjetado - receitas.complementacaoVAAR,
-    totalAtual: receitas.totalReceitas,
-    totalProjetado,
-    totalGanho,
-    ganhoPercentual: receitas.totalReceitas > 0 ? (totalGanho / receitas.totalReceitas) * 100 : 0,
-    possuiComplementacao,
-    metodologia:
-      "Projeção recuperável por componentes já evidenciados nas bases oficiais. Componentes zerados não foram monetizados nesta rodada.",
-    multiplicadorAplicado: receitas.totalReceitas > 0 ? totalProjetado / receitas.totalReceitas : null,
-    natureza: "recuperavel",
-    ressalva:
-      componentesZerados.length > 0
-        ? `${componentesZerados.join(" e ")} zerados foram tratados como potencial condicionado, sem monetizacao direta.`
-        : null,
-  };
+  return referenciaSemProjecao(receitas);
 }
 
 export function calcularProjecaoPorMultiplicador(
@@ -532,19 +480,7 @@ function round2(value: number) {
   return Math.round(value * 100) / 100;
 }
 
-function calcularCronogramaVAAF(vaafProjetado: number, totalFundeb: number): CronogramaVAAF[] {
-  if (vaafProjetado <= 0 || totalFundeb <= 0) {
-    return [];
-  }
 
-  const baseVAAF = vaafProjetado;
-
-  return PERCENTUAIS_MENSAIS.map((item) => ({
-    mes: item.mes,
-    valorProjetado: baseVAAF * item.pct,
-    percentual: item.pct * 100,
-  }));
-}
 
 function createDefaultSistemas(): SistemaHabilitacao[] {
   return [
@@ -697,7 +633,7 @@ export function hydrateRelatorioFundeb(input: Partial<RelatorioFundeb> & { ident
     perfilComercial: input.perfilComercial ?? null,
     cronogramaVAAF:
       input.cronogramaVAAF ??
-      calcularCronogramaVAAF(projecaoPrincipal.vaafProjetado, receitas.totalReceitas),
+      [],
     sistemas: input.sistemas ?? createDefaultSistemas(),
     obrasPAC2: input.obrasPAC2 ?? createDefaultObrasPAC2(),
     situacaoPAR: input.situacaoPAR ?? "Nao informado",

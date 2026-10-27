@@ -25,6 +25,7 @@ interface LinhaDocumentoProps {
   gerando: boolean;
   desabilitado: boolean;
   onGerar: () => void;
+  onInterativo?: () => void;
 }
 
 export function LinhaDocumento({
@@ -37,6 +38,7 @@ export function LinhaDocumento({
   gerando,
   desabilitado,
   onGerar,
+  onInterativo,
 }: LinhaDocumentoProps) {
   const { token } = theme.useToken();
   /* A descrição só cabe a partir de telas largas — abaixo disso ela empurraria
@@ -66,10 +68,10 @@ export function LinhaDocumento({
           </Text>
           <Text
             type="secondary"
-            ellipsis={{ tooltip: medida ?? `${paginas} páginas` }}
+            ellipsis={{ tooltip: medida ?? (paginas ? `${paginas} páginas` : "Extensão conforme a base") }}
             style={{ fontFamily: "var(--font-sync-mono)", fontSize: 9.5, display: "block" }}
           >
-            {medida ?? `${paginas} páginas`}
+            {medida ?? (paginas ? `${paginas} páginas` : "Extensão conforme a base")}
           </Text>
         </div>
 
@@ -83,6 +85,7 @@ export function LinhaDocumento({
           </Text>
         )}
 
+        {onInterativo && <Button size="small" disabled={desabilitado || gerando} onClick={onInterativo}>Interativo</Button>}
         <Button
           type={variante === "primario" ? "primary" : "default"}
           shape="round"

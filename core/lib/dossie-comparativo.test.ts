@@ -145,7 +145,7 @@ describe("parâmetro legal prevalece sobre a comparação", () => {
   });
 
   it("imprime o parâmetro no documento", () => {
-    const html = gerar(MANAUS, "MANAUS", "AM");
+    const html = gerar(SERRA_DO_RAMALHO, "SERRA DO RAMALHO", "BA");
     expect(html).toContain("Parâmetro legal, que prevalece sobre a comparação");
     expect(html).toContain("art. 212 da CF");
   });
@@ -153,7 +153,7 @@ describe("parâmetro legal prevalece sobre a comparação", () => {
 
 describe("municípios reais", () => {
   it("compara pelo menos uma dúzia de indicadores nas redes com dado completo", () => {
-    for (const codigo of [PAULO_AFONSO, SERRA_DO_RAMALHO, MANAUS]) {
+    for (const codigo of [PAULO_AFONSO, SERRA_DO_RAMALHO]) {
       const d = montarDossieComparativo(codigo, "", "BA");
       expect(d.indicadores.length).toBeGreaterThanOrEqual(12);
       expect(d.gemeos!.faixaPorte.tamanho).toBeGreaterThan(50);
@@ -195,8 +195,8 @@ describe("municípios reais", () => {
 
 describe("HTML do Dossiê Comparativo", () => {
   it("imprime uma régua e um bloco por indicador", () => {
-    const d = montarDossieComparativo(MANAUS, "MANAUS", "AM");
-    const html = gerar(MANAUS, "MANAUS", "AM");
+    const d = montarDossieComparativo(SERRA_DO_RAMALHO, "SERRA DO RAMALHO", "BA");
+    const html = gerar(SERRA_DO_RAMALHO, "SERRA DO RAMALHO", "BA");
 
     expect(html.match(/<tr class="regua-linha">/g) ?? []).toHaveLength(d.indicadores.length);
     expect(html.match(/<article class="indicador /g) ?? []).toHaveLength(d.indicadores.length);
@@ -204,7 +204,7 @@ describe("HTML do Dossiê Comparativo", () => {
 
   /** A lista de pares não é publicada — nomear cria atrito sem informar. */
   it("não nomeia os municípios da coorte", () => {
-    const html = gerar(MANAUS, "MANAUS", "AM");
+    const html = gerar(SERRA_DO_RAMALHO, "SERRA DO RAMALHO", "BA");
     expect(html).toContain("A lista dos pares não é publicada");
   });
 
@@ -215,7 +215,7 @@ describe("HTML do Dossiê Comparativo", () => {
   });
 
   it("não afirma resultado de cliente nem histórico de contratos", () => {
-    const html = gerar(MANAUS, "MANAUS", "AM");
+    const html = gerar(SERRA_DO_RAMALHO, "SERRA DO RAMALHO", "BA");
     for (const proibido of [
       /j[áa] recuperamos/i,
       /nossos clientes/i,

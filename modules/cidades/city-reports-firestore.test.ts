@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  serializedSnapshot,
+  restoreCityReportSnapshot,
   cityReportSnapshotFromUnknown,
   generatedReportBundleFromUnknown,
 } from "./city-reports-firestore";
@@ -154,5 +156,18 @@ describe("generatedReportBundleFromUnknown", () => {
 
     expect(bundle?.archive.municipality.codigoIbge).toBe("5220702");
     expect(generatedReportBundleFromUnknown({ pdfBase64: "" })).toBeNull();
+  });
+});
+
+
+describe("arquivamento sem perdas", () => {
+  it("comprime bases grandes e restaura exatamente todos os campos", async () => {
+    const original = { schemaVersion: 3 as const, identificacao: {municipioNome:"Fortaleza"}, generationContext: { dados: Array.from({length:12000},(_,i)=>({codigo:i,descricao:"Indicador escolar com período, universo e evidência",valor:i/10})) } };
+    const encoded = await serializedSnapshot(original);
+    expect(encoded.bytes).toBeLessThan(900000);
+    expect(encoded.value?.compressedSnapshot).toBeDefined();
+    expect(await restoreCityReportSnapshot(encoded.value!)).toEqual(original);
+    const invalid={...encoded.value!,compressedSnapshot:{...encoded.value!.compressedSnapshot!,originalBytes:1}};
+    await expect(restoreCityReportSnapshot(invalid)).rejects.toThrow('Integridade');
   });
 });

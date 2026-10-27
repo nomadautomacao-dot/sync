@@ -1,3 +1,4 @@
+import { applyReportVisualTheme } from './report-visual-theme';
 import { chromium, type Browser } from "playwright";
 
 import { LEVANTAMENTO_TOTAL_PAGINAS } from "./fundeb-levantamento-template";
@@ -25,13 +26,15 @@ export async function generateLevantamentoPdf(
     const page = await browser.newPage({ viewport: { width: 816, height: 1056 } });
     await page.setContent(htmlContent, { waitUntil: "networkidle" });
     await page.evaluate(() => document.fonts?.ready);
+    await applyReportVisualTheme(page, municipalitySlug);
 
     // O relatório tem contagem fixa. Divergência aqui significa seção que não
     // renderizou — melhor falhar do que entregar um documento incompleto.
     const pageCount = await page.locator("section.page").count();
-    if (pageCount !== LEVANTAMENTO_TOTAL_PAGINAS) {
+    const expected = Number(await page.locator("html").getAttribute("data-paginas-esperadas")) || LEVANTAMENTO_TOTAL_PAGINAS;
+    if (pageCount !== expected) {
       throw new Error(
-        `O template do Levantamento gerou ${pageCount} páginas; eram esperadas ${LEVANTAMENTO_TOTAL_PAGINAS}.`,
+        `O template do Levantamento gerou ${pageCount} páginas; eram esperadas ${expected}.`,
       );
     }
 

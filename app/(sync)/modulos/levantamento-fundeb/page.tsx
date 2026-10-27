@@ -34,6 +34,8 @@ import { uploadCityDocument } from "@/modules/documentos/documentos-firestore";
 import { BuscaMunicipio } from "./_components/busca-municipio";
 import { CabecalhoMunicipio } from "./_components/cabecalho-municipio";
 import { LinhaDocumento } from "./_components/linha-documento";
+import { PainelAtuacao } from "./_components/painel-atuacao";
+import { listarAcoes } from "@/modules/levantamento-fundeb/acompanhamento-firestore";
 import { PainelCenso } from "./_components/painel-censo";
 import { PainelProjecao } from "./_components/painel-projecao";
 import { DOCUMENTOS, RELATORIOS_PADRAO } from "@/modules/cidades/documentos-emissiveis";
@@ -41,8 +43,10 @@ import type { RespostaLevantamento } from "./_components/tipos";
 
 type Documento =
   | "raio-x"
+  | "raio-x-visual"
   | "levantamento"
   | "dever-de-casa"
+  | "raio-x-atuacao"
   | "historico-censo"
   | "oficio-documentos"
   | "dossie-escolas"
@@ -280,6 +284,8 @@ function Bancada() {
      numa grandeza diferente. Sem prévia o card diz "tamanho variável" em vez de
      mentir um número — falha de prévia não bloqueia a geração. */
   const medidaDoCard = (id: Documento): string | undefined => {
+    if (id === "raio-x-visual") return "edição executiva · PDF e interativo";
+    if (id === "raio-x-atuacao") return "uso interno · tamanho variável";
     if (id === "dever-de-casa") {
       if (!previaDever) return "tamanho variável";
       const nota =
@@ -425,6 +431,18 @@ function Bancada() {
     router.replace(pathname, { scroll: false });
   };
 
+  const baixarInterativo = async () => {
+    if (!municipio) return;
+    setGerando("raio-x-visual");
+    try {
+      const res = await fetch('/api/modulos/levantamento-fundeb/raio-x-visual', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({codigo_ibge:municipio.codigoIbge,exercicio:relatorio?.identificacao?.exercicio,response_format:'html'})});
+      if (!res.ok) throw new Error((await res.json()).error ?? 'Falha na edição interativa.');
+      const url=URL.createObjectURL(await res.blob());const link=document.createElement('a');link.href=url;link.download=`RAIO_X_INTERATIVO_${municipio.codigoIbge}.html`;link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+      message.success('Versão interativa baixada. Abra o arquivo no navegador.');
+    } catch(e) {message.error(e instanceof Error?e.message:'Falha na emissão.');}
+    finally {setGerando(null);}
+  };
+
   const gerarDocumento = async (documento: (typeof DOCUMENTOS)[number]) => {
     if (!municipio || isLoading || error || !resposta || !relatorio) {
       message.error(
@@ -437,6 +455,7 @@ function Bancada() {
 
     setGerando(documento.id);
     try {
+      const acompanhamento = documento.id === "raio-x-atuacao" && user?.groupId ? await listarAcoes(getFirebaseDb(), user.groupId, municipio.codigoIbge, (relatorio.identificacao?.exercicio ?? new Date().getFullYear())) : undefined;
       const res = await fetch(documento.endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -445,6 +464,8 @@ function Bancada() {
           nome: municipio.nome,
           uf: municipio.uf,
           response_format: "bundle",
+          exercicio: (relatorio.identificacao?.exercicio ?? new Date().getFullYear()),
+          ...(acompanhamento ? { acompanhamento } : {}),
         }),
       });
 
@@ -773,6 +794,7 @@ function Bancada() {
                       gerando={gerando === documento.id}
                       desabilitado={documentoDesabilitado}
                       onGerar={() => gerarDocumento(documento)}
+                      onInterativo={documento.id === "raio-x-visual" ? baixarInterativo : undefined}
                     />
                   ))}
                 </Flex>
@@ -799,6 +821,7 @@ function Bancada() {
             />
           ) : relatorio ? (
             <>
+              <PainelAtuacao key={`${municipio?.codigoIbge}-${(relatorio.identificacao?.exercicio ?? new Date().getFullYear())}`} codigoIbge={codigoIbge!} exercicio={(relatorio.identificacao?.exercicio ?? new Date().getFullYear())}/>
               <PainelProjecao
                 projecao={relatorio.projecao}
                 recuperavel={relatorio.projecaoRecuperavel}

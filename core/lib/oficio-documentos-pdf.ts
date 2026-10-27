@@ -1,3 +1,4 @@
+import { applyReportVisualTheme } from './report-visual-theme';
 import { chromium, type Browser } from "playwright";
 
 import { ajustarParaCaber, assertSemCorte } from "./pdf-corte";
@@ -18,6 +19,7 @@ export async function generateOficioDocumentosPdf(
     const page = await browser.newPage({ viewport: { width: 816, height: 1056 } });
     await page.setContent(htmlContent, { waitUntil: "networkidle" });
     await page.evaluate(() => document.fonts?.ready);
+    await applyReportVisualTheme(page, municipalitySlug);
 
     // 1 do ofício + 1 do detalhamento dos documentos + 2 do questionário.
     //

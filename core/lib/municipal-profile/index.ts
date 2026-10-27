@@ -63,6 +63,17 @@ export async function buildMunicipalProfile(params: {
     desempacotar(conformidade, "conformidade-educacional"),
   ] as const;
 
+  // Preserva a distinção entre falha técnica e ausência sem causa determinada.
+  for(const resultado of blocos){
+    function marcar(obj:unknown){
+      if(!obj||typeof obj!=='object')return;
+      const o=obj as Record<string,unknown>;
+      if('valor' in o && o.valor===null && resultado.falhas.some(f=>String(o.fonte??'').startsWith(f.fonte.split(' — ')[0])))o.estado='falha_consulta';
+      else for(const v of Object.values(o))marcar(v);
+    }
+    marcar(resultado.bloco);
+  }
+
   return {
     codigoIbge: params.codigoIbge,
     municipio: params.municipio,

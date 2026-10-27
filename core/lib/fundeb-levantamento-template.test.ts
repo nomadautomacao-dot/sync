@@ -272,9 +272,9 @@ describe("template do Levantamento FUNDEB", () => {
     expect(html).not.toContain("evidenciada");
     expect(html).not.toContain("sinalizado nas bases oficiais atuais");
 
-    expect(html).toContain("Ganho apurado");
+    expect(html).toContain("Hipótese por benchmark");
     expect(html).toContain("mediana nacional");
-    expect(html).toContain("Não é valor perdido comprovado");
+    expect(html).toContain("não representa saldo bancário");
   });
 
   it("distingue o cenário da apuração em vez de somá-los", () => {
@@ -287,15 +287,16 @@ describe("template do Levantamento FUNDEB", () => {
     // A nota de método passou a existir uma vez só, na Parte I: na página 2 ela
     // aparecia inteira de novo, e a peça gastava mais linha desmentindo o
     // próprio número de capa do que defendendo-o.
-    expect(html).toContain("não têm a mesma natureza");
-    expect(html).toContain("é premissa, não apuração");
-    expect(html.match(/não têm a mesma natureza/g)).toHaveLength(1);
+    expect(html).toContain("Três naturezas, três usos");
+    expect(html).toContain("Viabilidade ainda não apurada");
+    expect(html).not.toContain("500 matrículas existentes");
+    expect(html.match(/Três naturezas, três usos/g)).toHaveLength(1);
   });
 
   it("omite o ganho em vez de estimá-lo quando falta o dataset", () => {
     const html = gerar();
     expect(paginas(html)).toBe(LEVANTAMENTO_TOTAL_PAGINAS);
-    expect(html).toContain("prefere omitir o número a estimá-lo");
+    expect(html).toContain("Próximo exercício: não estimado");
   });
 
   it("não repete o percentual de ICMS que é tese local", () => {
@@ -379,7 +380,7 @@ describe("as páginas comerciais do Levantamento", () => {
 
     expect(html).toContain("O que acontece se nada for feito");
     expect(html).toContain("O custo de não decidir");
-    expect(html).toContain("30 dias da publicação");
+    expect(html).toContain("23/10/2026");
     expect(html).toContain("O próximo passo");
   });
 

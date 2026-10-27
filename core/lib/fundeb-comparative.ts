@@ -24,13 +24,7 @@ function calcAbsoluteDelta(base: number, current: number) {
   return current - base;
 }
 
-function roundToStep(value: number, step: number) {
-  if (!Number.isFinite(value) || step <= 0) {
-    return 0;
-  }
 
-  return Math.round(value / step) * step;
-}
 
 function getTempoIntegralTotal(record: InepCensoMunicipalRecord | null | undefined) {
   if (!record) {
@@ -133,10 +127,6 @@ function buildCenarioEstruturacao(
   relatorio: RelatorioFundeb,
   censoAtual: InepCensoMunicipalRecord | null | undefined,
 ) {
-  const totalPublico =
-    censoAtual?.matriculasPublicasTotal ??
-    relatorio.censoEscolar?.totalMatriculas ??
-    0;
   const matriculasMunicipais =
     censoAtual?.matriculasMunicipaisTotal ??
     relatorio.perfilComercial?.matriculasMunicipais ??
@@ -158,27 +148,18 @@ function buildCenarioEstruturacao(
     relatorio.censoEscolar?.matriculasEtapa.educacaoEspecial ??
     0;
 
-  const metaEja = Math.max(ejaAtual, roundToStep(Math.max(totalPublico * 0.23, ejaAtual * 1.7, 600), 25));
-  const metaIntegral = Math.max(integralAtual, roundToStep(Math.max(totalPublico * 0.24, integralAtual * 1.55, 800), 25));
-  const metaEspecial = Math.max(especialAtual, roundToStep(Math.max(totalPublico * 0.09, especialAtual * 1.12, 500), 25));
-
-  const deltaEja = Math.max(0, metaEja - ejaAtual);
-  const deltaIntegral = Math.max(0, metaIntegral - integralAtual);
-  const deltaEspecial = Math.max(0, metaEspecial - especialAtual);
-
-  const baseFinanceiraPorMatricula =
-    matriculasMunicipais > 0
-      ? relatorio.receitas.totalReceitas / matriculasMunicipais
-      : totalPublico > 0
-        ? relatorio.receitas.totalReceitas / totalPublico
-        : 0;
-
-  const pesoTecnico = deltaEja * 0.55 + deltaIntegral * 0.35 + deltaEspecial * 0.2;
-  const impactoMin = pesoTecnico * baseFinanceiraPorMatricula * 0.8;
-  const impactoMax = pesoTecnico * baseFinanceiraPorMatricula * 1.2;
+  // Metas dependem de demanda, capacidade e decisão local; não derivam do porte público.
+  const metaEja = ejaAtual;
+  const metaIntegral = integralAtual;
+  const metaEspecial = especialAtual;
+  const deltaEja = 0, deltaIntegral = 0, deltaEspecial = 0;
+  const baseFinanceiraPorMatricula = matriculasMunicipais > 0 ? relatorio.receitas.totalReceitas / matriculasMunicipais : 0;
+  const impactoMin = 0, impactoMax = 0;
 
   return {
     anoAlvo: relatorio.identificacao.exercicio + 1,
+    estimado: false,
+    motivo: "Demanda, capacidade, custos e elegibilidade ainda precisam ser validados. Categorias não aditivas.",
     baseAtual: {
       eja: ejaAtual,
       integral: integralAtual,
@@ -201,7 +182,7 @@ function buildCenarioEstruturacao(
       basePorMatricula: baseFinanceiraPorMatricula,
     },
     leituraExecutiva:
-      `Com agenda dirigida de EJA, tempo integral e educação especial, ${relatorio.identificacao.municipioNome} pode reverter a estagnação recente da base e entrar em ${relatorio.identificacao.exercicio + 1} com uma rede mais favorável para financiamento e leitura técnica do FUNDEB.`,
+      `Com agenda dirigida de EJA, tempo integral e educação especial, ${relatorio.identificacao.municipioNome} pode avaliar demanda, capacidade e custos para ${relatorio.identificacao.exercicio + 1} com uma rede mais favorável para financiamento e leitura técnica do FUNDEB.`,
     frentes: [
       "busca ativa e reorganização da oferta de EJA com apoio territorial",
       "expansão de jornada ampliada e oficinas em escolas com capacidade de absorção",
@@ -318,11 +299,6 @@ export async function buildFundebComparativeSnapshot(relatorio: RelatorioFundeb)
   const municipioCompleto = cleanDisplayText(relatorio.identificacao.municipio);
   const uf = cleanDisplayText(relatorio.identificacao.uf, "UF");
   const municipioLabel = municipioNome || municipioCompleto || "Município";
-  const municipioResumo =
-    municipioLabel.toUpperCase().includes(`/${uf.toUpperCase()}`) ||
-    municipioLabel.toUpperCase().includes(` - ${uf.toUpperCase()}`)
-      ? municipioLabel
-      : `${municipioLabel}/${uf}`;
   const idebRecord = getIdebMunicipalRecord(codigoIBGE);
   const censoHistory = getInepCensoMunicipalHistory(codigoIBGE).sort((a, b) => a.anoReferencia - b.anoReferencia);
   const [receitasHistoricas, qeduIndicators] = await Promise.all([

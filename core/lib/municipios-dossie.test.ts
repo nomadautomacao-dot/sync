@@ -4,8 +4,7 @@ import { dossieDoMunicipio } from "@/core/lib/municipios-dossie";
 
 /**
  * Só `dossieDoMunicipio` é exercitado aqui: ele é síncrono e lê dataset local.
- * `buscarMunicipios` bate na API do IBGE e não entra na suíte — teste que
- * depende de rede pública falha por motivo alheio ao código e vira ruído.
+ * A busca e a identificação sem rede são cobertas em `govia-municipios.test.ts`.
  */
 
 // Serra do Ramalho/BA — rede municipal grande para o porte, boa amostra.

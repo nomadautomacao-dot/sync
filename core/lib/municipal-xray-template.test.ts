@@ -53,12 +53,13 @@ describe("bloco do VAAR no Raio-X municipal", () => {
     expect(saida).not.toContain("por reprovação do estado");
   });
 
-  it("trata reprovação isolada como agenda de item único", () => {
+  it("trata reprovação isolada sem prometer habilitação ou repasse", () => {
     // Cacoal/RO reprovou apenas na Condicionalidade III.
     const saida = html("1100049");
 
     expect(saida).toContain("na condicionalidade");
-    expect(saida).toContain("a reprovação é isolada");
+    expect(saida).toContain("não garante habilitação nem receita futura");
+    expect(saida).not.toContain("a reprovação é isolada");
   });
 
   it("atribui ao estado a reprovação que cascateia", () => {
@@ -157,7 +158,7 @@ describe("páginas de ponderação e vinculações no Raio-X", () => {
   it("mostra o ganho apurado com origem e ressalva de conferência", () => {
     const saida = completo("2930154", "BA");
 
-    expect(saida).toContain("ganho apurado por ano");
+    expect(saida).toContain("hipótese por benchmark por ano");
     expect(saida).toContain("mediana nacional");
     expect(saida).toContain("Antes de tratar como recuperável");
     // A referência do VAAR nunca entra como componente somável.
@@ -188,9 +189,9 @@ describe("páginas de ponderação e vinculações no Raio-X", () => {
     expect(saida).toContain("Declaração ao SIOPE não localizada");
   });
 
-  it("gera as 42 páginas do contrato do renderer, com e sem dados", () => {
+  it("omite páginas sem dados e mantém o contrato de contagem", () => {
     const paginas = (html: string) => html.match(/<section class="page/g)?.length ?? 0;
-    expect(paginas(completo("2930154", "BA"))).toBe(42);
+    expect(paginas(completo("2930154", "BA"))).toBe(40);
     expect(
       paginas(
         generateMunicipalXrayHtml(
@@ -203,7 +204,7 @@ describe("páginas de ponderação e vinculações no Raio-X", () => {
           }),
         ),
       ),
-    ).toBe(42);
+    ).toBe(40);
   });
 
   it("numera as páginas sequencialmente a partir do contador", () => {
@@ -216,7 +217,7 @@ describe("páginas de ponderação e vinculações no Raio-X", () => {
 
     // A capa não tem rodapé numerado; o miolo vai de 2 até o total.
     expect(numeros[0]).toBe(2);
-    expect(numeros[numeros.length - 1]).toBe(42);
+    expect(numeros[numeros.length - 1]).toBe(40);
     for (let i = 1; i < numeros.length; i++) expect(numeros[i]).toBe(numeros[i - 1] + 1);
   });
 });
@@ -424,7 +425,7 @@ describe("contexto por escola no Raio-X", () => {
     expect(saida).toContain("comporta resultado melhor");
   });
 
-  it("liga o abandono por escola à Condicionalidade I do VAAR", () => {
+  it("não confunde abandono com a seleção de gestores do VAAR", () => {
     const saida = comContexto("1302603");
     expect(saida).toContain("Condicionalidade I do VAAR");
   });
@@ -471,7 +472,7 @@ describe("distribuição de proficiência no Raio-X", () => {
   it("liga a cauda insuficiente à Condicionalidade III do VAAR", () => {
     const saida = comProficiencia("2930154");
     expect(saida).toContain("Condicionalidade III do VAAR");
-    expect(saida).toContain("redução das desigualdades de aprendizagem");
+    expect(saida).toContain("redução de desigualdades socioeconômicas e raciais");
   });
 
   it("imprime a convenção de cortes para o número ser auditável", () => {
@@ -753,18 +754,18 @@ describe("ciclo político no Raio-X", () => {
     const saida = comCiclo({ ...base, anterior: null, situacao: "indeterminado" });
     expect(saida).toContain("2025–2028");
     expect(saida).toContain('Lei nº 9.504/1997, art. 73, VI, "a"');
-    expect(saida).toContain("LRF, art. 42 e art. 21");
+    expect(saida).toContain("LRF, arts. 42 e 21, II");
     expect(saida).toContain("três meses antes do pleito");
   });
 
-  it("alternância vira alerta sobre a declaração do primeiro Censo do mandato", () => {
+  it("não infere troca de equipe a partir de alternância partidária", () => {
     const saida = comCiclo({
       ...base,
       anterior: { prefeito: "Arthur Neto", partido: "PSDB", eleicao: 2020 },
       situacao: "alternancia",
     });
     expect(saida).toContain("a secretaria começou do zero");
-    expect(saida).toContain("declaração do Censo do primeiro ano");
+    expect(saida).toContain("A mudança partidária não comprova substituição");
     expect(saida).toContain("Arthur Neto");
   });
 
@@ -796,7 +797,7 @@ describe("ciclo político no Raio-X", () => {
     const saida = comCiclo({ ...base, anterior: null, situacao: "indeterminado" });
     expect(saida).toContain("1.760");
     expect(saida).toContain("2.501");
-    expect(saida).toContain("a descontinuidade administrativa a regra");
+    expect(saida).toContain("Alternância política e descontinuidade administrativa são fenômenos distintos");
   });
 
   it("sem resultado eleitoral, degrada sem inventar mandato", () => {
@@ -1122,7 +1123,7 @@ describe("demografia e demanda futura no Raio-X", () => {
     // 590 matrículas municipais ÷ 2.360 crianças de 0–3 = 25%.
     const saida = comDemografia({ educacao: { matriculas_creche: 590, matriculas_pre_escola: 980 } });
     expect(saida).toContain("25,0%");
-    expect(saida).toContain("meta PNE: 50%");
+    expect(saida).toContain("PNE 2026: 60% nacional");
     expect(saida).toContain("Piso = matrículas da <b>rede municipal</b>");
   });
 
@@ -1285,7 +1286,7 @@ describe("frequência do Bolsa Família no Raio-X", () => {
         generatedAt: new Date("2026-07-29T12:00:00.000Z"),
       }),
     );
-    expect(saida).toContain("Acompanhamento do PBF indisponível");
+    expect(saida).toContain("Frequência PBF: sem dado recuperado");
   });
 });
 
@@ -1983,8 +1984,8 @@ describe("estado nutricional no Raio-X", () => {
   it("degrada explicando que ausência não é ausência do problema", () => {
     const saida = render(null);
 
-    expect(saida).toContain("Estado nutricional indisponível");
-    expect(saida).toContain("cobertura baixa da atenção primária, não ausência do problema");
+    expect(saida).toContain("SISVAN: sem dado recuperado");
+    expect(saida).toContain("SISVAN: sem dado recuperado");
   });
 });
 
@@ -2064,7 +2065,7 @@ describe("porte da rede e resultado agregado no Raio-X", () => {
     expect(saida).toContain("5,5");
     expect(saida).toContain("<b>Anos iniciais:</b> +0,3 de 2019 a 2023.");
     // A etapa sem edição em 2019 vira travessão, não some a coluna.
-    expect(saida).toContain("Condicionalidade I do VAAR</b> mede evolução, não nível");
+    expect(saida).toContain("Condicionalidade I do VAAR</b> trata da seleção de gestores escolares");
   });
 
   it("omite a trajetória quando só existe uma edição — uma foto não é série", () => {

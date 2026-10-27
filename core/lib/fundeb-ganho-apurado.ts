@@ -23,9 +23,9 @@
  * equivalente na UF — conferido: em SE, BA e SP a razão entre cada segmento e
  * esse valor reproduz o fator de ponderação com quatro casas exatas.
  *
- * Monetizar ao VAAF é a leitura **conservadora**: quem recebe VAAT ou VAAR ganha
+ * Monetizar ao VAAF é uma hipótese estática: quem recebe VAAT ou VAAR ganha
  * mais por equivalente adicional, porque essas complementações usam o mesmo
- * denominador ponderado. O relatório prefere errar para baixo.
+ * denominador ponderado. Não é limite inferior nem garantia: o rateio e o VAAT podem alterar o resultado.
  *
  * ## O que entra no total, e o que fica de fora
  *
@@ -43,7 +43,7 @@ import { getValorAlunoAno } from "@/core/lib/fundeb-valor-aluno";
  * valor oficiais. `referencia` sai de mediana de outros entes — serve de ordem
  * de grandeza e não pode ser somada como se fosse do município.
  */
-export type CertezaGanho = "apurado" | "referencia";
+export type CertezaGanho = "hipotese" | "referencia";
 
 export interface ComponenteGanho {
   chave: "creche-integral" | "aee" | "vaar";
@@ -114,11 +114,11 @@ export function getGanhoApurado(
         chave: "creche-integral",
         titulo: "Creche declarada em jornada parcial",
         valor,
-        certeza: "apurado",
+        certeza: "hipotese",
         origem:
           `${contexto} Fechar essa distância são ${Math.round(oportunidade.matriculasAteMediana).toLocaleString("pt-BR")} ` +
           `matrículas saindo do fator 1,25 para 1,55 (art. 7º, §1º da Lei 14.113/2020), a ` +
-          `R$ ${moeda(valorPorEquivalente)} por matrícula-equivalente na sua UF.`,
+          `R$ ${moeda(valorPorEquivalente)} por matrícula-equivalente na sua UF, referência histórica da Portaria MEC/MF 14/2025 para 2026. Simulação estática, não receita recuperável comprovada.`,
         conferir:
           "Tempo integral exige 35h semanais ou média de 7h diárias (Decreto 10.656/2021, art. 11), " +
           "somando os tempos por turma. Escola que já pratica a jornada mas declara turno fixo perde o " +
@@ -133,7 +133,7 @@ export function getGanhoApurado(
         chave: "aee",
         titulo: "Educação especial sem AEE correspondente",
         valor,
-        certeza: "apurado",
+        certeza: "hipotese",
         origem:
           `${contexto} Fechar essa distância são ${Math.round(oportunidade.matriculasAteMediana).toLocaleString("pt-BR")} ` +
           `matrículas de AEE, que gera dupla matrícula (art. 8º, §3º, I) e pondera 1,40.`,

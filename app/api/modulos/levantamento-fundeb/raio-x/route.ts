@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
-import { buildGoviaMunicipioCompleto } from "@/core/lib/govia-compat";
-import { buildMunicipalProfile } from "@/core/lib/municipal-profile";
+import { buildRelatorioSnapshot } from "@/core/lib/relatorio-snapshot";
 import { markGoviaMunicipioAccess } from "@/core/lib/govia-storage";
 import { generateMunicipalXrayPdf } from "@/core/lib/municipal-xray-pdf";
 import { generateMunicipalXrayHtml, mapMunicipalXrayModel } from "@/core/lib/municipal-xray-template";
-import { fetchMunicipalBoundary } from "@/core/lib/ibge-municipal-boundary";
 import { registrarErro } from "@/core/lib/structured-log";
 
 export const maxDuration = 300;
@@ -55,34 +53,8 @@ export async function POST(request: NextRequest) {
       nome: body.nome,
       uf: body.uf,
     };
-    // O Perfil Municipal fala com bases que nada têm a ver com o FUNDEB
-    // (Censo, CNES, CAGED, CadÚnico, MUNIC), então roda junto com os dois
-    // exercícios em vez de esperar por eles.
-    const [currentResult, baseResult, profileResult, boundaryResult] = await Promise.allSettled([
-      buildGoviaMunicipioCompleto({ ...identifier, exercicio: currentYear }),
-      buildGoviaMunicipioCompleto({ ...identifier, exercicio: baseYear }),
-      buildMunicipalProfile({
-        codigoIbge: body.codigo_ibge ?? "",
-        uf: body.uf ?? "",
-        municipio: body.nome ?? "",
-      }),
-      hasCodigo
-        ? fetchMunicipalBoundary(body.codigo_ibge!.trim())
-        : Promise.resolve(null),
-    ]);
-    const current = currentResult.status === "fulfilled" ? currentResult.value : null;
-    if (!current) {
-      const reason = currentResult.status === "rejected" && currentResult.reason instanceof Error
-        ? currentResult.reason.message
-        : "Município não encontrado.";
-      return NextResponse.json({ error: reason }, { status: 404 });
-    }
-    const base = baseResult.status === "fulfilled" ? baseResult.value : null;
-    const boundary = boundaryResult.status === "fulfilled" && boundaryResult.value
-      ? boundaryResult.value
-      : !hasCodigo
-        ? await fetchMunicipalBoundary(current.payload.dados_basicos.codigo_ibge)
-        : null;
+    const snapshot=await buildRelatorioSnapshot({...identifier,exercicio:currentYear});
+    const {current,base,profile,boundary}=snapshot;
 
     await markGoviaMunicipioAccess({
       codigo_ibge: current.payload.dados_basicos.codigo_ibge,
@@ -91,9 +63,8 @@ export async function POST(request: NextRequest) {
       regiao: current.payload.dados_basicos.regiao,
     });
 
-    const profile =
-      profileResult.status === "fulfilled" ? profileResult.value : null;
     const model = mapMunicipalXrayModel({
+      inteligencia: snapshot.inteligencia, qualidade: snapshot.qualidade,
       basePayload: base?.payload ?? {},
       currentPayload: current.payload,
       baseYear,
@@ -122,7 +93,7 @@ export async function POST(request: NextRequest) {
            * para alertar quando o template está no limite — corte de verdade
            * já é erro em `assertSemCorte`, mas o auto-ajuste salva em silêncio.
            */
-          diagnostics: { paginasAjustadas: ajustadas },
+          diagnostics: { paginasAjustadas: ajustadas, paginasEsperadas: Number(html.match(/data-paginas-esperadas="(\d+)"/)?.[1]) },
           archive: {
             schemaVersion: 1,
             generationId: randomUUID(),
@@ -139,8 +110,6 @@ export async function POST(request: NextRequest) {
               context: {
                 baseYear,
                 currentYear,
-                baseReport: base,
-                municipalProfile: profile,
                 xrayModel: model,
               },
             },

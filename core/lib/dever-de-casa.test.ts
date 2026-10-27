@@ -134,7 +134,7 @@ describe("calcularPlacar", () => {
 });
 
 describe("montarDinheiro", () => {
-  it("VAAR zerado por reprovação local entra como estimativa pela mediana da UF", () => {
+  it("VAAR zerado não transforma mediana em perda apurada", () => {
     const f = fontesVazias();
     f.vaar = vaarBase({
       beneficiario: false,
@@ -143,9 +143,7 @@ describe("montarDinheiro", () => {
       reprovadas: ["I"],
     });
     const { naMesa } = montarDinheiro(f);
-    expect(naMesa).toHaveLength(1);
-    expect(naMesa[0].valor).toBe(750_000);
-    expect(naMesa[0].estimativa).toBe(true);
+    expect(naMesa).toHaveLength(0);
   });
 
   it("reprovação só na Cond. IV estadual não vira dinheiro na mesa", () => {
@@ -168,7 +166,7 @@ describe("montarDinheiro", () => {
     expect(naMesa).toHaveLength(0);
   });
 
-  it("potencial da creche fica separado da perda", () => {
+  it("diferença agregada da creche não vira potencial financeiro", () => {
     const f = fontesVazias();
     f.contaCreche = {
       populacao: 1000,
@@ -183,8 +181,6 @@ describe("montarDinheiro", () => {
     };
     const { naMesa, potencial } = montarDinheiro(f);
     expect(naMesa).toHaveLength(0);
-    expect(potencial).toHaveLength(1);
-    expect(potencial[0].valor).toBe(1_300_000);
-    expect(potencial[0].estimativa).toBe(true);
+    expect(potencial).toHaveLength(0);
   });
 });

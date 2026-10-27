@@ -4,7 +4,6 @@ import { describe, expect, it } from "vitest";
 
 import { DOCUMENTOS } from "@/modules/cidades/documentos-emissiveis";
 import { CITY_REPORT_TYPES, CITY_REPORT_TYPE_LABELS } from "@/modules/cidades/reports-types";
-import { PAGINAS_ESPERADAS_RAIO_X } from "@/core/lib/municipal-xray-pdf";
 import { PAGINAS_ESPERADAS_HISTORICO_CENSO } from "@/core/lib/censo-historico-pdf";
 import { PAGINAS_ESPERADAS_OFICIO } from "@/core/lib/oficio-documentos-pdf";
 
@@ -27,6 +26,12 @@ function arquivoDaRota(endpoint: string): string {
 }
 
 describe("catálogo de documentos da tela de emissão", () => {
+  it("expõe o Raio-X de Atuação como documento interno arquivável", () => {
+    expect(DOCUMENTOS.find(d => d.id === 'raio-x-atuacao')).toMatchObject({
+      reportType: 'raio_x_atuacao', paginas: 0,
+      endpoint: '/api/modulos/levantamento-fundeb/raio-x-atuacao',
+    });
+  });
   it("tem um card para cada dossiê e para os quatro relatórios originais", () => {
     expect(DOCUMENTOS.length).toBeGreaterThanOrEqual(12);
   });
@@ -89,7 +94,7 @@ describe("catálogo de documentos da tela de emissão", () => {
    */
   it("o que o card anuncia é o contrato do gerador", () => {
     const esperado: Record<string, number> = {
-      "raio-x": PAGINAS_ESPERADAS_RAIO_X,
+      "raio-x": 0,
       "historico-censo": PAGINAS_ESPERADAS_HISTORICO_CENSO,
       "oficio-documentos": PAGINAS_ESPERADAS_OFICIO,
     };

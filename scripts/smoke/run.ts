@@ -206,7 +206,7 @@ async function main(): Promise<number> {
       }
       try {
         const paginas = await contarPaginas(pdf);
-        verificacoes.push(avaliarContratoDeFolhas(paginas, PAGINAS_ESPERADAS_RAIO_X));
+        verificacoes.push(avaliarContratoDeFolhas(paginas, (bundle as {diagnostics?:{paginasEsperadas?:number}}).diagnostics?.paginasEsperadas ?? PAGINAS_ESPERADAS_RAIO_X));
       } catch (erro) {
         verificacoes.push({
           nome: "contrato de folhas",

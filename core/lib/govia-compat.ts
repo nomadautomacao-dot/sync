@@ -1,7 +1,7 @@
+import { lerJsonDeDados } from "@/core/lib/dados-arquivo";
 import {
   formatDateTime,
   hydrateRelatorioFundeb,
-  normalizarIBGE,
 } from "@/modules/levantamento-fundeb/utils/calculos";
 import type { FundebRelatorioParametros, RelatorioFundeb } from "@/modules/levantamento-fundeb/types";
 import {
@@ -173,11 +173,6 @@ interface GoviaOpportunity {
   acao_imediata?: string;
 }
 
-
-
-let municipiosCache: IbgeMunicipioResponse[] | null = null;
-let municipiosCacheTime = 0;
-
 function sanitizeFundebParametros(value: unknown): FundebRelatorioParametros | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return undefined;
@@ -213,23 +208,11 @@ function sanitizeFundebParametros(value: unknown): FundebRelatorioParametros | u
   return Object.keys(result).length > 0 ? result : undefined;
 }
 
+/** A identificação do município precisa funcionar mesmo sem acesso ao IBGE. */
 async function fetchAllIbgeMunicipios(): Promise<IbgeMunicipioResponse[]> {
-  const now = Date.now();
-  if (municipiosCache && now - municipiosCacheTime < 1000 * 60 * 60 * 12) {
-    return municipiosCache;
-  }
-
-  const response = await fetch("https://servicodados.ibge.gov.br/api/v1/localidades/municipios", {
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    throw new Error("Nao foi possivel consultar a base do IBGE.");
-  }
-
-  municipiosCache = (await response.json()) as IbgeMunicipioResponse[];
-  municipiosCacheTime = now;
-  return municipiosCache;
+  return lerJsonDeDados<{ municipios: IbgeMunicipioResponse[] }>(
+    "data/ibge/municipios.json",
+  ).municipios;
 }
 
 export async function searchGoviaMunicipios(query: string, uf?: string): Promise<GoviaMunicipioSuggestion[]> {
@@ -248,7 +231,8 @@ export async function searchGoviaMunicipios(query: string, uf?: string): Promise
       const municipioUf = getMunicipioUf(municipio).toUpperCase();
       const municipioNome = normalizeMunicipioName(municipio.nome);
       return (
-        Array.from(candidateQueries).some((candidate) => municipioNome.includes(candidate)) &&
+        (Array.from(candidateQueries).some((candidate) => municipioNome.includes(candidate)) ||
+          (/^\d+$/.test(normalizedQuery) && String(municipio.id).startsWith(normalizedQuery))) &&
         (!normalizedUf || municipioUf === normalizedUf)
       );
     })
@@ -309,32 +293,14 @@ export async function findGoviaMunicipio(params: GoviaBuscarMunicipioParams): Pr
   if (params.codigo_ibge) {
     const digits = params.codigo_ibge.replace(/\D/g, "");
 
-    if (digits.length === 7) {
-      const response = await fetch(`https://servicodados.ibge.gov.br/api/v1/localidades/municipios/${digits}`, {
-        next: { revalidate: 60 * 60 * 12 },
-      });
+    if (!/^\d{6,7}$/.test(digits)) return null;
 
-      if (response.ok) {
-        // Código inexistente devolve HTTP 200 com `[]`, não 404. Um array vazio
-        // é truthy: sem esta checagem ele viraria um "município" de id
-        // undefined e o relatório sairia intitulado "undefined - UF".
-        const dados = (await response.json().catch(() => null)) as unknown;
-        if (dados && !Array.isArray(dados) && typeof (dados as IbgeMunicipioResponse).id === "number") {
-          return dados as IbgeMunicipioResponse;
-        }
-      }
-
-      // 7 dígitos que não existem são erro de digitação, não código curto. Cair
-      // no prefixo aqui faria "2703209" virar Igreja Nova (2703205) — relatório
-      // da cidade errada, que é pior do que nenhum relatório.
-      return null;
-    }
-
-    // Só chega aqui com 6 dígitos (código sem o verificador), onde casar por
-    // prefixo é o comportamento correto.
-    const normalized = normalizarIBGE(digits);
     const municipios = await fetchAllIbgeMunicipios();
-    return municipios.find((municipio) => String(municipio.id).startsWith(normalized)) ?? null;
+    // Código completo exige igualdade: não trocar um dígito verificador
+    // inválido por outro município. Prefixo só vale para o código de 6 dígitos.
+    return municipios.find((municipio) => digits.length === 7
+      ? String(municipio.id) === digits
+      : String(municipio.id).startsWith(digits)) ?? null;
   }
 
   if (params.nome && params.uf) {
@@ -857,7 +823,7 @@ function buildRelatorioDirigidoBase({
     infraestruturaEscolar: inepRecord ? {
       disponivel: true,
       anoReferencia: inepRecord.anoReferencia,
-      totalEscolasPublicas: inepRecord.escolasPublicasTotal ?? inepRecord.escolasMunicipaisTotal,
+      totalEscolasPublicas: inepRecord.escolasInfraPublicasTotal ?? inepRecord.escolasPublicasTotal ?? inepRecord.escolasMunicipaisTotal,
       indicadores: [
         { nome: "Água potável", percentual: inepRecord.escolasComAguaPotavelPct ?? null, total: inepRecord.escolasComAguaPotavel ?? null },
         { nome: "Esgoto sanitário", percentual: inepRecord.escolasComEsgotoPct ?? null, total: inepRecord.escolasComEsgoto ?? null },
@@ -909,7 +875,7 @@ function buildRelatorioDirigidoBase({
      * Situação no VAAR. Também leitura local: o FNDE publica o status por
      * município num CSV que já baixamos para `data/fnde/vaar-2026.json`.
      */
-    vaar: getSituacaoVaar(ident.codigoIBGE),
+    vaar: getSituacaoVaar(ident.codigoIBGE, ident.exercicio),
     /**
      * Matrícula ponderada — o denominador que a receita do fundo realmente
      * usa. Ver `core/lib/fundeb-ponderacao.ts`.
@@ -1275,6 +1241,14 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
       }));
     })(),
   });
+  // A série observada é independente da lista de metas (encerrada em 2021).
+  const historiaIdeb = getIdebMunicipalHistorico(String(municipio.id));
+  for (const [campo, serie] of [
+    ['idebAnosIniciais', historiaIdeb?.anosIniciais],
+    ['idebAnosFinais', historiaIdeb?.anosFinais],
+  ] as const) {
+    if (serie?.length) relatorio[campo] = serie.map(item => ({ano:item.ano, idebVerificado:item.ideb, metaProjetada:null}));
+  }
   const oportunidades = buildGoviaOportunidades(relatorio);
   const analiseExecutiva = buildAnaliseExecutiva(relatorio);
   const comparativo = await buildFundebComparativeSnapshot(relatorio);
@@ -1365,8 +1339,8 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
       publica_fundamental_medio: relatorio.censoEscolar?.dadosPublicosTotal?.fundamentalMedio ?? 0,
       publica_eja: relatorio.censoEscolar?.dadosPublicosTotal?.eja ?? 0,
       publica_especial: relatorio.censoEscolar?.dadosPublicosTotal?.especial ?? 0,
-      matriculas_creche: inepRecord?.crechePublica ?? inepRecord?.crecheTotal ?? 0,
-      matriculas_pre_escola: inepRecord?.preEscolaPublica ?? inepRecord?.preEscolaTotal ?? 0,
+      matriculas_creche: inepRecord?.crecheMunicipal ?? null,
+      matriculas_pre_escola: inepRecord?.preEscolaMunicipal ?? null,
       matriculas_fundamental_ai: relatorio.censoEscolar?.matriculasDetalhadas.anosIniciais ?? 0,
       matriculas_fundamental_af: relatorio.censoEscolar?.matriculasDetalhadas.anosFinais ?? 0,
       matriculas_eja: relatorio.censoEscolar?.matriculasEtapa.eja ?? 0,

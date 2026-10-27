@@ -44,7 +44,11 @@
     "dados:ponderadas": "node --max-old-space-size=6144 scripts/dados/gerar-matriculas-ponderadas.mjs",
     "dados:trabalho-infantil": "node scripts/dados/gerar-trabalho-infantil.mjs",
     "firebase:regras": "npx --yes firebase-tools@latest deploy --only firestore:rules,firestore:indexes,storage",
-    "hosting": "npx --yes firebase-tools@latest deploy --only hosting --project opus-sec"
+    "hosting": "npx --yes firebase-tools@latest deploy --only hosting --project opus-sec",
+    "fundeb:monitorar": "node --import tsx scripts/dados/monitorar-relatorios.ts",
+    "fundeb:modelos": "node --import tsx scripts/pdf/gerar-modelos-validados.ts",
+    "fundeb:atuacao": "node --import tsx scripts/pdf/gerar-raio-x-atuacao.ts",
+    "fundeb:visual": "node --import tsx scripts/pdf/gerar-raio-x-visual.ts"
   },
   "dependencies": {
     "@ant-design/nextjs-registry": "^1.3.0",

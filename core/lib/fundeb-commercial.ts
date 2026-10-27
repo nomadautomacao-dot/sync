@@ -1,13 +1,13 @@
 import type { CensoEscolar, ReceitasFundeb } from "@/modules/levantamento-fundeb/types";
 import {
   calcularPerfilComercialFundeb,
-  calcularProjecaoPorMultiplicador,
   createEmptyCensoEscolar,
 } from "@/modules/levantamento-fundeb/utils/calculos";
 import type { PerfilComercialFundeb, ProjecaoFundeb } from "@/modules/levantamento-fundeb/types";
 import type { FndeVaatContext } from "@/core/lib/fundeb-fnde";
 import type { IbgeCidadeIndicators } from "@/core/lib/ibge-cidade-indicators";
 import type { InepCensoMunicipalRecord } from "@/core/lib/inep-censo";
+import { referenciaSemProjecao } from './fundeb-simulacao';
 
 export function buildCensoEscolarFromInep(record: InepCensoMunicipalRecord | null): CensoEscolar {
   if (!record) {
@@ -29,7 +29,7 @@ export function buildCensoEscolarFromInep(record: InepCensoMunicipalRecord | nul
   const creche = record.crecheMunicipal ?? record.crechePublica ?? record.crecheTotal;
   const preEscola = record.preEscolaMunicipal ?? record.preEscolaPublica ?? record.preEscolaTotal;
   let anosIniciais = record.anosIniciaisFundamentalMunicipal ?? record.anosIniciaisFundamentalPublica ?? record.anosIniciaisFundamentalTotal ?? 0;
-  let anosFinais = record.anosFinaisFundamentalMunicipal ?? record.anosFinaisFundamentalPublica ?? record.anosFinaisFundamentalTotal ?? 0;
+  const anosFinais = record.anosFinaisFundamentalMunicipal ?? record.anosFinaisFundamentalPublica ?? record.anosFinaisFundamentalTotal ?? 0;
   // When AI/AF breakdown is unavailable but total fundamental exists,
   // assign all to anos iniciais (typical for municipal networks that don't operate AF)
   const ensinoFundamentalRaw =
@@ -145,12 +145,7 @@ export function buildPerfilEProjecaoComercial(params: {
     ieiPercentual: params.vaatContext?.ieiPercentual ?? null,
   });
 
-  const projecao = calcularProjecaoPorMultiplicador(
-    params.receitas,
-    perfil.multiplicador,
-    `Benchmark comercial Global Sync (${perfil.faixa}) baseado em score ${perfil.score.toFixed(2)}.`,
-    { perfilComercial: perfil },
-  );
+  const projecao = referenciaSemProjecao(params.receitas);
 
   return { perfil, projecao };
 }

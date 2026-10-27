@@ -38,7 +38,7 @@ export interface ProjecaoFundeb {
   possuiComplementacao: boolean;
   metodologia?: string;
   multiplicadorAplicado?: number | null;
-  natureza?: "recuperavel" | "benchmark";
+  natureza?: "recuperavel" | "benchmark" | "referencia";
   ressalva?: string | null;
 }
 

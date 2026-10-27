@@ -74,12 +74,12 @@ describe("levantamento de achados do Raio-X", () => {
     expect(achados[achados.length - 1].tier).toBe(TIERS.resultado);
   });
 
-  it("nomeia a condicionalidade reprovada e usa a mediana da UF como régua", () => {
+  it("nomeia a condicionalidade sem tratar mediana como valor recuperável", () => {
     const achados = levantarAchados(modelo({ relatorio_dirigido_base: { vaar: VAAR_REPROVADO } }));
 
     expect(achados[0].titulo).toContain("III");
-    expect(achados[0].medida).toContain("R$ 0 recebidos");
-    expect(achados[0].medida).toContain("mediana dos habilitados da UF");
+    expect(achados[0].medida).toContain("VAAR estimado na publicação: R$ 0");
+    expect(achados[0].medida).not.toContain("mediana");
     expect(achados[0].valor).toBeNull();
   });
 
@@ -98,7 +98,7 @@ describe("levantamento de achados do Raio-X", () => {
     );
 
     expect(achados[0].titulo).toContain("reprovação do estado");
-    expect(achados[0].mecanismo).toContain("articulação estadual");
+    expect(achados[0].mecanismo).toContain("providências do estado");
   });
 
   it("todo achado traz ação, prazo e a seção que o prova", () => {

@@ -1,3 +1,4 @@
+import { applyReportVisualTheme } from './report-visual-theme';
 import { chromium, type Browser } from "playwright";
 
 import { ajustarParaCaber, assertSemCorte } from "./pdf-corte";
@@ -56,10 +57,12 @@ export async function generateMunicipalXrayPdf(
     const page = await browser.newPage({ viewport: { width: 816, height: 1056 } });
     await page.setContent(htmlContent, { waitUntil: "networkidle" });
     await page.evaluate(() => document.fonts?.ready);
+    await applyReportVisualTheme(page, municipalitySlug);
 
     const pageCount = await page.locator("section.page").count();
-    if (pageCount !== PAGINAS_ESPERADAS_RAIO_X) {
-      throw new Error(`O template do Raio-X gerou ${pageCount} páginas; eram esperadas ${PAGINAS_ESPERADAS_RAIO_X}.`);
+    const esperado=Number(await page.locator("html").getAttribute("data-paginas-esperadas")) || PAGINAS_ESPERADAS_RAIO_X;
+    if (!Number.isInteger(esperado) || esperado<40 || esperado>100 || pageCount !== esperado) {
+      throw new Error(`O template do Raio-X gerou ${pageCount} páginas; eram esperadas ${esperado}.`);
     }
 
     // O contrato acima conta seções; o que vem agora verifica se o conteúdo
