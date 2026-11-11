@@ -502,8 +502,8 @@ cenário da página 14. Hoje a Parte I abre a conta:
 | Cenário de matrículas | cenário | um ano no ritmo padrão da Parte V, pelo mecanismo do fundo |
 
 Senador Canedo ficou em +R$ 22,1 mi (11,0%), Serra do Ramalho em +R$ 7,9 mi
-(9,0%), Fortaleza em +R$ 240,7 mi (10,6%) e Senhor do Bonfim em +R$ 4,3 mi
-(1,9% — já recebe VAAR e já cresceu o que havia para crescer). Três coisas para
+(9,0%), Fortaleza em +R$ 241,1 mi (10,7%) e Senhor do Bonfim em +R$ 4,6 mi
+(2,1% — já recebe VAAR e já cresceu o que havia para crescer). Três coisas para
 não quebrar:
 
 1. **A referência do VAAR é por matrícula, não em reais.** A mediana em reais
@@ -536,10 +536,10 @@ redes); **acelerado**, o 9º decil (uma em cada dez):
 
 | Frente | Porte da base | Padrão | Acelerado |
 |---|---|---|---|
-| EJA | até 200 | +19% | +59% |
-| EJA | 200 a 1.000 | +9% | +31% |
-| EJA | mais de 1.000 | 0% | +14% |
-| Educação especial | até 200 | +34% | +53% |
+| EJA | até 200 | +18% | +65% |
+| EJA | 200 a 1.000 | +9% | +34% |
+| EJA | mais de 1.000 | +1% | +15% |
+| Educação especial | até 200 | +33% | +53% |
 | Educação especial | 200 a 1.000 | +28% | +40% |
 | Educação especial | mais de 1.000 | +26% | +34% |
 | Tempo integral | qualquer | +5% da rede | +11% da rede |
@@ -551,14 +551,19 @@ padrão. A capa usa o padrão de um ano. Quatro coisas para não quebrar:
    quantis sobre a base do Censo e falha se a tabela sair de perto. Quando o
    Censo de 2026 entrar, é ele que avisa — a alternativa é o relatório seguir
    imprimindo "uma em cada quatro redes fez" sobre um número que deixou de valer.
-2. **O Censo de 2022 fica fora da medição, e de qualquer comparação de EJA ou
-   educação especial.** `data/inep-censo-municipal-2022.json` conta as duas por
-   outro critério: a EJA municipal do país vai de 527 mil para 1,2 milhão de
-   2022 para 2023, e a educação especial de 278 mil para 1 milhão — o que não
-   aconteceu. Qualquer série que cruze 2022 com os anos seguintes nessas duas
-   modalidades mostra um salto que é do arquivo, não da rede. **Isso vale para o
-   Censo Histórico e para os "sinais de matrícula" da camada de inteligência**,
-   que ainda comparam; o conserto de verdade é regerar o arquivo de 2022.
+2. **A base de 2022 já esteve errada, e o mesmo teste guarda a série.**
+   `data/inep-censo-municipal-2022.json` tinha sido gerado lendo a aba errada da
+   sinopse do Inep: a numeração das abas muda entre edições (em 2022 a Educação
+   Profissional tem quatro tabelas, depois cinco), e o script lia "sexo e
+   cor/raça" onde esperava "localização e dependência". A EJA municipal do país
+   saía com 527 mil matrículas (são 1.245.459) e "dobrava" em 2023; a educação
+   especial "quadruplicava". Corrigido em 2026-11-11: o gerador
+   (`scripts/dados/build-inep-censo-municipal-dataset.py`) passou a achar a
+   tabela **pela seção**, não pelo número, e confere o cabeçalho antes de
+   confiar nas colunas — tabela errada com o mesmo número de colunas não dá
+   erro, dá número plausível e falso. O teste exige que a série nacional não
+   salte mais de 20% (EJA) ou 40% (educação especial) de um Censo para o outro.
+   A sinopse de 2022 ficou em `Sync-Arquivos/dados-brutos/`.
 3. **Matrícula vira receita pelo mecanismo do fundo, não por fração da receita
    média.** `valorDosEquivalentes()`: no fundo estadual cada matrícula-equivalente
    vale o valor aluno/ano da UF; em quem recebe VAAT, a União completa a rede até
@@ -570,9 +575,9 @@ padrão. A capa usa o padrão de um ano. Quatro coisas para não quebrar:
 
 > **Senhor do Bonfim/BA é o caso que explica por que a projeção importa.** A
 > receita foi de R$ 57 mi (2023) para R$ 221 mi (2026) — 22ª maior alta do país
-> —, com o VAAT saindo de zero para R$ 92,6 mi e a EJA municipal de 937 para
-> 3.842 matrículas em dois Censos. É muito além do ritmo acelerado: +156% de EJA
-> em um ano, onde uma em cada dez redes desse porte faz +14%. O levantamento não
+> —, com o VAAT saindo de zero para R$ 92,6 mi e a EJA municipal de 622 (2022)
+> para 937, 1.501 e 3.842 matrículas. É muito além do ritmo acelerado: +156% de
+> EJA em um ano, onde uma em cada dez redes desse porte faz +15%. O levantamento não
 > promete esse resultado; ele mostra o padrão e o acelerado, e a diferença para
 > o caso real é argumento de conversa, não número de capa.
 

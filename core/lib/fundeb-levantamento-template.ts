@@ -3026,7 +3026,7 @@ function paginaCenario(i: LevantamentoTemplateInput, pagina: number): string {
         <tr class="total"><td>Matrículas a mais</td><td class="r">&mdash;</td><td class="r">+${int(totalGanho)}</td><td class="r">${totalAcelerado > 0 ? `+${int(totalAcelerado)}` : "&mdash;"}</td><td class="r">${totalTresAnos > 0 ? `+${int(totalTresAnos)}` : "&mdash;"}</td><td></td></tr>
       </table>
       <p class="micro mt-1">As três modalidades se sobrepõem &mdash; um aluno de EJA pode estar em jornada integral &mdash;,
-      então base e meta não se somam entre linhas. Ritmos medidos nos Censos de 2023 a 2025. A coluna de três anos
+      então base e meta não se somam entre linhas. Ritmos medidos nos Censos de 2022 a 2025. A coluna de três anos
       repete o ritmo padrão por três coletas seguidas.</p>
     </div>
 

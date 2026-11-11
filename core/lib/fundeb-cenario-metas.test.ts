@@ -36,16 +36,19 @@ describe("a calibração bate com o que as redes do país fizeram", () => {
   const especial: number[][] = [[], [], []];
   const jornada: number[] = [];
   const totalEja = new Map<number, number>();
+  const totalEspecial = new Map<number, number>();
 
   const { municipios } = lerJsonDeDados<{ municipios: Array<{ id: number }> }>("data/ibge/municipios.json");
   for (const { id } of municipios) {
     const historia = getInepCensoMunicipalHistory(String(id)).sort((a, b) => a.anoReferencia - b.anoReferencia);
-    for (const r of historia) totalEja.set(r.anoReferencia, (totalEja.get(r.anoReferencia) ?? 0) + (r.ejaMunicipal ?? 0));
+    for (const r of historia) {
+      totalEja.set(r.anoReferencia, (totalEja.get(r.anoReferencia) ?? 0) + (r.ejaMunicipal ?? 0));
+      totalEspecial.set(r.anoReferencia, (totalEspecial.get(r.anoReferencia) ?? 0) + (r.educacaoEspecialMunicipal ?? 0));
+    }
     for (let k = 1; k < historia.length; k++) {
       const a = historia[k - 1];
       const b = historia[k];
-      // 2022 fica de fora — ver o teste da quebra de série, logo abaixo.
-      if (a.anoReferencia < 2023 || b.anoReferencia !== a.anoReferencia + 1) continue;
+      if (b.anoReferencia !== a.anoReferencia + 1) continue;
       if ((a.ejaMunicipal ?? 0) >= BASE_MINIMA && b.ejaMunicipal != null) eja[faixa(a.ejaMunicipal!)].push(b.ejaMunicipal / a.ejaMunicipal! - 1);
       if ((a.educacaoEspecialMunicipal ?? 0) >= BASE_MINIMA && b.educacaoEspecialMunicipal != null) {
         especial[faixa(a.educacaoEspecialMunicipal!)].push(b.educacaoEspecialMunicipal / a.educacaoEspecialMunicipal! - 1);
@@ -78,13 +81,27 @@ describe("a calibração bate com o que as redes do país fizeram", () => {
   });
 
   /**
-   * Por que 2022 não entra: a base local daquele ano conta EJA por outro
-   * critério. Se um dia o arquivo de 2022 for regerado no critério dos outros,
-   * este teste falha — e aí 2022 pode voltar para a medição.
+   * A base de 2022 já foi gerada lendo a aba errada da sinopse do Inep ("sexo e
+   * cor/raça" no lugar de "localização e dependência"): a EJA municipal do país
+   * saía com 527 mil matrículas e "dobrava" no ano seguinte, a educação especial
+   * "quadruplicava" — e todo quantil medido em cima disso saía inflado. Rede
+   * nenhuma do país muda tanto de um ano para o outro: se um arquivo novo trouxer
+   * um salto desses, é o arquivo.
    */
-  it("a base de 2022 conta EJA por outro critério", () => {
-    expect((totalEja.get(2023) ?? 0) / (totalEja.get(2022) ?? 1)).toBeGreaterThan(1.8);
-    expect(Math.abs((totalEja.get(2025) ?? 0) / (totalEja.get(2024) ?? 1) - 1)).toBeLessThan(0.1);
+  it("a série nacional não dá salto de arquivo entre um Censo e o seguinte", () => {
+    const anos = [...totalEja.keys()].sort();
+    expect(anos.length).toBeGreaterThanOrEqual(4);
+    for (let k = 1; k < anos.length; k++) {
+      const eja = (totalEja.get(anos[k]) ?? 0) / (totalEja.get(anos[k - 1]) ?? 1) - 1;
+      const esp = (totalEspecial.get(anos[k]) ?? 0) / (totalEspecial.get(anos[k - 1]) ?? 1) - 1;
+      expect(Math.abs(eja), `EJA municipal ${anos[k - 1]}→${anos[k]}`).toBeLessThan(0.2);
+      // A educação especial cresce cerca de 20% ao ano no país; 40% já é salto.
+      expect(esp, `educação especial municipal ${anos[k - 1]}→${anos[k]}`).toBeGreaterThan(0);
+      expect(esp, `educação especial municipal ${anos[k - 1]}→${anos[k]}`).toBeLessThan(0.4);
+    }
+    // O total de 2022 confere com a tabela 1.35 da sinopse do Inep (linha Brasil).
+    expect(totalEja.get(2022)).toBe(1_245_459);
+    expect(totalEspecial.get(2022)).toBe(829_117);
   });
 });
 
@@ -96,7 +113,7 @@ describe("metas do cenário de estruturação", () => {
 
     // Já saiu 7.800 (23% da matrícula pública). No ritmo padrão desta faixa: +9%.
     expect(m.eja.meta).toBe(680);
-    expect(m.eja.metaAcelerada).toBe(820);
+    expect(m.eja.metaAcelerada).toBe(840);
     expect(m.integral.meta).toBe(5_055);
     expect(m.educacaoEspecial.meta).toBe(1_630);
   });
@@ -112,22 +129,22 @@ describe("metas do cenário de estruturação", () => {
     }
   });
 
-  it("não promete crescimento de EJA no ritmo padrão a quem já tem mais de mil matrículas", () => {
-    // Senhor do Bonfim/BA: nessa faixa nem o quartil de cima cresce.
+  it("quase não promete crescimento de EJA a quem já tem mais de mil matrículas", () => {
+    // Senhor do Bonfim/BA: nessa faixa o quartil de cima cresce 1% ao ano.
     const m = calcularMetasCenario({ matriculasMunicipais: 12_519, eja: 3_842, integral: 3_942, educacaoEspecial: 1_246 });
 
-    expect(m.eja.ganho).toBe(0);
-    expect(m.eja.ganhoAcelerado).toBeGreaterThan(0);
-    expect(m.eja.criterio).toContain("não cresceram nem no quartil de cima");
+    expect(m.eja.ganho).toBeLessThanOrEqual(3_842 * 0.011 + 5);
+    expect(m.eja.ganhoAcelerado).toBeGreaterThan(m.eja.ganho);
+    expect(m.eja.criterio).toContain("+1% no ano");
   });
 
-  it("ritmo zero é meta igual à base, sem ganho de arredondamento", () => {
-    // Fortaleza/CE: 4.618 de EJA arredondava para 4.620 e "ganhava" 2 matrículas.
-    const m = calcularMetasCenario({ matriculasMunicipais: 224_060, eja: 4_618, integral: 148_087, educacaoEspecial: 27_185 });
+  it("não cria ganho de arredondamento onde a regra dá menos de uma matrícula", () => {
+    // Abaixo da base mínima a meta é a própria base — 47 não vira 45 nem 50.
+    const m = calcularMetasCenario({ matriculasMunicipais: 2_000, eja: 47, integral: 300, educacaoEspecial: 48 });
 
-    expect(m.eja.meta).toBe(4_618);
+    expect(m.eja.meta).toBe(47);
     expect(m.eja.ganho).toBe(0);
-    expect(m.eja.metaTresAnos).toBe(4_618);
+    expect(m.educacaoEspecial.metaTresAnos).toBe(48);
   });
 
   it("não inventa oferta onde a rede não declara base relevante", () => {

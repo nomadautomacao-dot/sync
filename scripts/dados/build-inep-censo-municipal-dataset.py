@@ -153,6 +153,53 @@ def find_sheet_path(sheet_map: dict[str, str], *patterns: str) -> str:
     raise KeyError(f"Nao foi possivel localizar a aba com padroes: {patterns!r}")
 
 
+def find_table_path(sheet_map: dict[str, str], number: str) -> str:
+    """Aba pelo numero EXATO da tabela ("1.35"), com ou sem o nome da secao na frente.
+
+    `find_sheet_path` casa por substring, e "1.5" tambem casa "1.50": serve para
+    achar a secao, nao a tabela.
+    """
+    for name, path in sheet_map.items():
+        normalized_name = normalize_text(name)
+        if normalized_name == number or normalized_name.endswith(f" {number}"):
+            return path
+    raise KeyError(f"Nao foi possivel localizar a tabela {number} na sinopse.")
+
+
+def section_table(sheet_map: dict[str, str], section: str, offset: int) -> str:
+    """Numero da tabela a `offset` posicoes da aba que abre uma secao de matriculas.
+
+    A numeracao das abas muda entre edicoes da sinopse: em 2022 a Educacao
+    Profissional tem quatro tabelas, de 2023 em diante tem cinco, e tudo que vem
+    depois anda uma posicao. O que nao muda e a ordem DENTRO de cada secao --
+    "localizacao e dependencia" e sempre a segunda tabela, "tempo integral" a
+    sexta. Enderecar pela secao em vez do numero fixo e o que impede ler, em
+    2022, "sexo e cor/raca" no lugar de "localizacao" -- foi assim que a EJA
+    municipal do pais saiu com 527 mil matriculas em vez de 1,25 milhao.
+    """
+    prefix = f"{normalize_text(section)} 1."
+    for name in sheet_map:
+        normalized_name = normalize_text(name)
+        if normalized_name.startswith(prefix) and normalized_name[len(prefix):].isdigit():
+            return f"1.{int(normalized_name[len(prefix):]) + offset}"
+    raise KeyError(f"Nao foi possivel localizar a secao {section!r} entre as abas de matriculas.")
+
+
+def require_header(rows: list[dict[int, str]], expected: str, table: str) -> list[dict[int, str]]:
+    """Confere o cabecalho antes de confiar nas colunas.
+
+    Tabela errada com o mesmo numero de colunas nao da erro: da numero plausivel
+    e falso. Melhor o gerador parar aqui do que publicar uma base assim.
+    """
+    header = " ".join(normalize_text(value) for row in rows[:10] for value in row.values())
+    if normalize_text(expected) not in header:
+        raise ValueError(
+            f"Tabela {table}: esperava cabecalho com {expected!r}. "
+            "A numeracao das abas desta edicao da sinopse nao e a conhecida; confira antes de gerar."
+        )
+    return rows
+
+
 def read_2025_location_metrics(row: dict[int, str]) -> tuple[int, int, int]:
     return to_int(row.get(4, "")), to_int(row.get(5, "")), to_int(row.get(8, ""))
 
@@ -463,16 +510,32 @@ def main() -> None:
             sheet_anos_finais = read_rows(zip_file, shared_strings, find_sheet_path(sheet_map, "1.21"))
             sheet_ensino_fundamental = read_rows(zip_file, shared_strings, find_sheet_path(sheet_map, "1.14"))
             sheet_ensino_medio = read_rows(zip_file, shared_strings, find_sheet_path(sheet_map, "1.26"))
-            sheet_eja = read_rows(zip_file, shared_strings, find_sheet_path(sheet_map, "1.36"))
-            sheet_educacao_especial_comum = read_rows(zip_file, shared_strings, find_sheet_path(sheet_map, "1.41"))
-            sheet_educacao_especial_exclusiva = read_rows(zip_file, shared_strings, find_sheet_path(sheet_map, "1.47"))
+            # Depois da Educacao Profissional a numeracao depende da edicao; ver `section_table`.
+            table_eja = section_table(sheet_map, "EJA", 1)
+            table_comum = section_table(sheet_map, "Classes Comuns", 1)
+            table_exclusiva = section_table(sheet_map, "Classes Exclusivas", 1)
+            table_ti_comum = section_table(sheet_map, "Classes Comuns", 5)
+            table_ti_exclusiva = section_table(sheet_map, "Classes Exclusivas", 5)
+            sheet_eja = require_header(
+                read_rows(zip_file, shared_strings, find_table_path(sheet_map, table_eja)),
+                "Localização e Dependência", table_eja)
+            sheet_educacao_especial_comum = require_header(
+                read_rows(zip_file, shared_strings, find_table_path(sheet_map, table_comum)),
+                "Localização e Dependência", table_comum)
+            sheet_educacao_especial_exclusiva = require_header(
+                read_rows(zip_file, shared_strings, find_table_path(sheet_map, table_exclusiva)),
+                "Localização e Dependência", table_exclusiva)
             sheet_ti_creche = read_rows(zip_file, shared_strings, find_sheet_path(sheet_map, "1.9"))
             sheet_ti_pre = read_rows(zip_file, shared_strings, find_sheet_path(sheet_map, "1.13"))
             sheet_ti_anos_iniciais = read_rows(zip_file, shared_strings, find_sheet_path(sheet_map, "1.19"))
             sheet_ti_anos_finais = read_rows(zip_file, shared_strings, find_sheet_path(sheet_map, "1.24"))
             sheet_ti_ensino_medio = read_rows(zip_file, shared_strings, find_sheet_path(sheet_map, "1.29"))
-            sheet_ti_educacao_especial_comum = read_rows(zip_file, shared_strings, find_sheet_path(sheet_map, "1.45"))
-            sheet_ti_educacao_especial_exclusiva = read_rows(zip_file, shared_strings, find_sheet_path(sheet_map, "1.51"))
+            sheet_ti_educacao_especial_comum = require_header(
+                read_rows(zip_file, shared_strings, find_table_path(sheet_map, table_ti_comum)),
+                "Tempo Integral", table_ti_comum)
+            sheet_ti_educacao_especial_exclusiva = require_header(
+                read_rows(zip_file, shared_strings, find_table_path(sheet_map, table_ti_exclusiva)),
+                "Tempo Integral", table_ti_exclusiva)
             sheet_docentes = read_rows(zip_file, shared_strings, find_sheet_path(sheet_map, "2.2"))
             sheet_escolas = read_rows(zip_file, shared_strings, find_sheet_path(sheet_map, "3.2"))
 

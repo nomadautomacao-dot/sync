@@ -15,12 +15,15 @@
  * - **padrão** — o 3º quartil: o que uma em cada quatro redes alcançou;
  * - **acelerado** — o 9º decil: o que uma em cada dez alcançou.
  *
- * Medido nas transições 2023→2024 e 2024→2025 do Censo (`inep-censo`). **O
- * Censo de 2022 fica de fora**: a base local daquele ano conta EJA e educação
- * especial por outro critério — a EJA municipal do país "dobra" de 2022 para
- * 2023, o que não aconteceu —, e incluí-lo inflava todos os quantis.
- * `fundeb-cenario-metas.test.ts` refaz a medição e falha se a tabela abaixo
- * sair de perto dela: quando entrar o Censo de 2026, é o teste que avisa.
+ * Medido nas três transições do Censo que a base tem, de 2022 a 2025
+ * (`inep-censo`). `fundeb-cenario-metas.test.ts` refaz a medição e falha se a
+ * tabela abaixo sair de perto dela: quando entrar o Censo de 2026, é o teste
+ * que avisa.
+ *
+ * A primeira medição saiu errada, e a causa não era a regra: a base de 2022
+ * tinha sido gerada lendo a aba errada da sinopse do Inep, e a EJA municipal do
+ * país "dobrava" de 2022 para 2023. O mesmo teste guarda a continuidade da
+ * série — um ano que salte assim de novo derruba a suíte antes de virar meta.
  *
  * A página imprime a regra ao lado da meta. Meta sem critério é palpite.
  */
@@ -48,14 +51,14 @@ export const FAIXAS_DE_PORTE = [
  * está no quartil de cima.
  */
 export const RITMO_EJA: readonly Ritmo[] = [
-  { padrao: 0.19, acelerado: 0.59 },
-  { padrao: 0.09, acelerado: 0.31 },
-  { padrao: 0.0, acelerado: 0.14 },
+  { padrao: 0.18, acelerado: 0.65 },
+  { padrao: 0.09, acelerado: 0.34 },
+  { padrao: 0.01, acelerado: 0.15 },
 ];
 
 /** Educação especial. Cresce em toda parte: a rede mediana faz +19% ao ano. */
 export const RITMO_ESPECIAL: readonly Ritmo[] = [
-  { padrao: 0.34, acelerado: 0.53 },
+  { padrao: 0.33, acelerado: 0.53 },
   { padrao: 0.28, acelerado: 0.4 },
   { padrao: 0.26, acelerado: 0.34 },
 ];
