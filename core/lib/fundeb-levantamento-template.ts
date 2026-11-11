@@ -251,12 +251,24 @@ export interface LevantamentoPayload {
       anoAlvo?: number | null;
       baseAtual?: Record<string, number> | null;
       metas?: Record<string, number> | null;
+      /** Um ano no ritmo que uma em cada dez redes alcançou. */
+      metasAceleradas?: Record<string, number> | null;
+      /** Três anos seguidos no ritmo padrão. */
+      metasTresAnos?: Record<string, number> | null;
       ganhosMatriculas?: Record<string, number> | null;
+      ganhosAcelerados?: Record<string, number> | null;
+      ganhosTresAnos?: Record<string, number> | null;
       /** A regra que gerou cada meta (`fundeb-cenario-metas.ts`). */
       criterios?: Record<string, string> | null;
       impactoFinanceiroIndicativo?: {
         minimo?: number | null;
         maximo?: number | null;
+        padrao?: number | null;
+        acelerado?: number | null;
+        tresAnos?: number | null;
+        porEquivalente?: number | null;
+        via?: "vaat" | "fundo" | "entra" | null;
+        mecanismo?: string | null;
         basePorMatricula?: number | null;
       } | null;
       leituraExecutiva?: string | null;
@@ -2955,6 +2967,8 @@ function paginaCenario(i: LevantamentoTemplateInput, pagina: number): string {
   const baseAtual = cenario?.baseAtual ?? {};
   const metas = cenario?.metas ?? {};
   const ganhos = cenario?.ganhosMatriculas ?? {};
+  const aceleradas = cenario?.metasAceleradas ?? {};
+  const tresAnos = cenario?.metasTresAnos ?? {};
 
   const frentes = [
     { nome: "EJA", chave: "eja" },
@@ -2968,18 +2982,27 @@ function paginaCenario(i: LevantamentoTemplateInput, pagina: number): string {
       base,
       meta,
       ganho: num(ganhos[f.chave]) || Math.max(0, meta - base),
+      acelerada: num(aceleradas[f.chave]) || meta,
+      emTresAnos: num(tresAnos[f.chave]) || meta,
       criterio: cenario?.criterios?.[f.chave] ?? "",
     };
   });
 
   const temCenario = frentes.some((f) => f.meta > 0);
   const totalGanho = num(ganhos.total) || frentes.reduce((s, f) => s + f.ganho, 0);
-  const variacao = (f: { base: number; ganho: number }) =>
-    f.ganho <= 0 ? "mantém" : f.base > 0 ? `+${pct((f.ganho / f.base) * 100, 0)}` : "nova";
+  const totalAcelerado = num(cenario?.ganhosAcelerados?.total);
+  const totalTresAnos = num(cenario?.ganhosTresAnos?.total);
+  // "+19%" ao lado da meta diz o tamanho do salto sem o leitor dividir de cabeça.
+  const salto = (base: number, meta: number) =>
+    meta <= base ? "mantém" : base > 0 ? `+${pct(((meta - base) / base) * 100, 0)}` : "nova";
+  const celulaMeta = (base: number, meta: number) =>
+    `<td class="r">${int(meta)}<div class="micro">${salto(base, meta)}</div></td>`;
 
   const impacto = cenario?.impactoFinanceiroIndicativo;
-  const faixaBaixa = num(impacto?.minimo);
-  const faixaAlta = num(impacto?.maximo);
+  // JSON arquivado antes da calibração traz só `minimo`/`maximo`.
+  const valorPadrao = num(impacto?.padrao) || num(impacto?.minimo);
+  const valorAcelerado = num(impacto?.acelerado) || num(impacto?.maximo);
+  const valorTresAnos = num(impacto?.tresAnos);
   const basePorMatricula = num(impacto?.basePorMatricula) || recursoAluno;
 
   return `<section class="page content-page">
@@ -2988,39 +3011,49 @@ function paginaCenario(i: LevantamentoTemplateInput, pagina: number): string {
     <div class="kicker">Parte V &middot; Cenário de estruturação ${id.exercicio + 1}</div>
     <h2>Onde a rede pode crescer<br>&mdash; e quanto isso vale</h2>
 
+    <p class="lede">As metas abaixo não são desejo: são o que as redes municipais do país <b>de fato fizeram</b>
+    de um Censo para o seguinte, medido por porte. O ritmo padrão é o de uma em cada quatro redes; o acelerado,
+    o de uma em cada dez.</p>
+
     <div class="mt-2">
       <table class="tb">
-        <tr><th>Modalidade</th><th class="r">Base atual</th><th class="r">Meta ${id.exercicio + 1}</th><th class="r">Ganho</th><th class="r">Variação</th><th style="width:2.7in">Como a meta foi fixada</th></tr>
+        <tr><th>Modalidade</th><th class="r">Base atual</th><th class="r">Meta ${id.exercicio + 1}<br><span style="font-weight:400;letter-spacing:0;text-transform:none">ritmo padrão</span></th><th class="r">${id.exercicio + 1}<br><span style="font-weight:400;letter-spacing:0;text-transform:none">acelerado</span></th><th class="r">${id.exercicio + 3}<br><span style="font-weight:400;letter-spacing:0;text-transform:none">três anos</span></th><th style="width:2.35in">Como a meta foi fixada</th></tr>
         ${frentes
           .map(
-            (f) => `<tr><td><b>${f.nome}</b></td><td class="r">${int(f.base)}</td><td class="r">${int(f.meta)}</td><td class="r"><b>${f.ganho > 0 ? `+${int(f.ganho)}` : "&mdash;"}</b></td><td class="r">${variacao(f)}</td><td class="micro" style="font-size:7.3pt;line-height:1.3">${esc(f.criterio)}</td></tr>`,
+            (f) => `<tr><td><b>${f.nome}</b></td><td class="r">${int(f.base)}</td>${celulaMeta(f.base, f.meta)}${celulaMeta(f.base, f.acelerada)}${celulaMeta(f.base, f.emTresAnos)}<td class="micro" style="font-size:7.3pt;line-height:1.3">${esc(f.criterio)}</td></tr>`,
           )
           .join("")}
-        <tr class="total"><td>Matrículas a mais</td><td class="r">&mdash;</td><td class="r">&mdash;</td><td class="r">+${int(totalGanho)}</td><td class="r"></td><td></td></tr>
+        <tr class="total"><td>Matrículas a mais</td><td class="r">&mdash;</td><td class="r">+${int(totalGanho)}</td><td class="r">${totalAcelerado > 0 ? `+${int(totalAcelerado)}` : "&mdash;"}</td><td class="r">${totalTresAnos > 0 ? `+${int(totalTresAnos)}` : "&mdash;"}</td><td></td></tr>
       </table>
       <p class="micro mt-1">As três modalidades se sobrepõem &mdash; um aluno de EJA pode estar em jornada integral &mdash;,
-      então base e meta não se somam entre linhas. Cada meta cabe em um exercício: é o que a rede consegue abrir
-      entre uma coleta do Censo e a seguinte, não o teto de longo prazo.</p>
+      então base e meta não se somam entre linhas. Ritmos medidos nos Censos de 2023 a 2025. A coluna de três anos
+      repete o ritmo padrão por três coletas seguidas.</p>
     </div>
 
-    <div class="card mt-1">
-      <h3>Ganho de matrículas por frente</h3>
-      ${barras(frentes.map((f) => ({ nome: f.nome, valor: f.ganho, rotulo: `+${int(f.ganho)}` })))}
+    <div class="sec-label" style="margin-top:.18in">Receita anual a mais &middot; a valores de ${id.exercicio}</div>
+    <div class="grid-3">
+      <div class="kpi hero"><em>Ritmo padrão &middot; um ano</em><b>${temCenario && valorPadrao > 0 ? `+${brlCompact(valorPadrao)}` : "—"}</b><span>${
+        temCenario && valorPadrao > 0 ? `${int(totalGanho)} matrículas a mais &middot; é a parcela que entra no potencial da Parte I` : "sem ganho de matrícula no ritmo padrão"
+      }</span></div>
+      ${kpi("Ritmo acelerado · um ano", valorAcelerado > 0 ? `+${brlCompact(valorAcelerado)}` : "—", totalAcelerado > 0 ? `${int(totalAcelerado)} matrículas a mais &middot; o que uma em cada dez redes fez` : "não calculado")}
+      ${kpi(`Ritmo padrão · até ${id.exercicio + 3}`, valorTresAnos > 0 ? `+${brlCompact(valorTresAnos)}` : "—", totalTresAnos > 0 ? `${int(totalTresAnos)} matrículas a mais ao fim de três anos` : "não calculado")}
     </div>
 
-    <div class="kpi hero mt-2"><em>Faixa indicativa de receita adicional &middot; se a reestruturação for bem executada</em>
-      <b>${temCenario && faixaAlta > 0 ? `${brlCompact(faixaBaixa)} &ndash; ${brlCompact(faixaAlta)}` : "—"}</b>
-      <span>${
-        temCenario && faixaAlta > 0
-          ? `${int(totalGanho)} matrículas a mais, cada uma pelo acréscimo de fator da sua frente (EJA 0,55 &middot; integral 0,35 &middot;
-             especial 0,20), sobre R$ ${brl(basePorMatricula)} por matrícula &middot; faixa de &plusmn;20%, sujeita a validação documental`
-          : "Cenário não calculado para este município — as bases do Censo não permitiram projetar as frentes."
-      }</span>
+    <div class="insight mt-1">
+      <p style="font-size:8pt;line-height:1.42"><span class="strong">Como cada matrícula vira receita:</span>
+      ${
+        impacto?.mecanismo
+          ? `${esc(impacto.mecanismo)}.`
+          : `R$ ${brl(basePorMatricula)} de receita por matrícula da rede, hoje.`
+      } A matrícula entra pelo acréscimo de fator da sua frente: EJA soma 1,00; jornada integral soma 0,40 sobre a
+      parcial; educação especial soma 0,40 sobre a etapa. Ficam de fora os acréscimos de campo e de quilombola e a
+      dupla matrícula do AEE &mdash; a conta erra para baixo.</p>
     </div>
 
-    <p class="micro mt-1">Esta faixa mede só o efeito de <b>mais matrícula</b> na rede. O <b>valor central</b> dela
-    é uma das parcelas do potencial da Parte I, ao lado do VAAR a recuperar e das lacunas de declaração &mdash;
-    três mecanismos distintos sobre a mesma receita, cada um com a sua validação.</p>
+    <p class="micro mt-1">O valor do ritmo padrão é uma das parcelas do potencial da Parte I, ao lado do VAAR a
+    recuperar e das lacunas de declaração. Matrícula só vira receita se resistir à conferência do Censo: cada
+    turma nova precisa de diário, frequência e ato de criação &mdash; é isso que sustenta a meta diante do Inep e
+    do tribunal de contas.</p>
 
     <div class="sec-label">Frentes de atuação</div>
     <div class="grid-2">

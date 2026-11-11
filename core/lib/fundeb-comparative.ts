@@ -1,4 +1,14 @@
-import { calcularMetasCenario } from "@/core/lib/fundeb-cenario-metas";
+import {
+  calcularMetasCenario,
+  equivalentesDoCenario,
+  matriculasDoCenario,
+  valorDosEquivalentes,
+  type Horizonte,
+  type MecanismoDoFundo,
+} from "@/core/lib/fundeb-cenario-metas";
+import { getFundebVaatContext } from "@/core/lib/fundeb-fnde";
+import { getPonderacaoMunicipal } from "@/core/lib/fundeb-ponderacao";
+import { getValorAlunoAno } from "@/core/lib/fundeb-valor-aluno";
 import type { RelatorioFundeb } from "@/modules/levantamento-fundeb/types";
 import { getFundebReceitasHistoricas } from "@/core/lib/fundeb-fnde";
 import {
@@ -123,10 +133,32 @@ function buildHistoricoCenso(history: InepCensoMunicipalRecord[]) {
   }));
 }
 
+/**
+ * O que o fundo paga por matrícula-equivalente neste município: o valor
+ * aluno/ano da UF e, para quem está habilitado, a posição no VAAT.
+ */
+async function mecanismoDoFundo(codigoIBGE: string, uf: string, exercicio: number): Promise<MecanismoDoFundo | null> {
+  const valorPorEquivalente = getValorAlunoAno(uf)?.fundamentalParcialAnosIniciais ?? 0;
+  if (!(valorPorEquivalente > 0)) return null;
+  const [vaat, ponderacao] = [await getFundebVaatContext(codigoIBGE, exercicio).catch(() => null), getPonderacaoMunicipal(codigoIBGE)];
+  return {
+    valorPorEquivalente,
+    vaat:
+      vaat && vaat.vaatMinimo && vaat.vaatAnterior > 0 && (ponderacao?.ponderadaVaat ?? 0) > 0
+        ? {
+            proprio: vaat.vaatAnterior,
+            minimo: vaat.vaatMinimo,
+            equivalentes: ponderacao?.ponderadaVaat ?? 0,
+            habilitado: !/inabilit|n[aã]o habilit/i.test(vaat.habilitacao),
+          }
+        : null,
+  };
+}
+
 function buildCenarioEstruturacao(
   relatorio: RelatorioFundeb,
   censoAtual: InepCensoMunicipalRecord | null | undefined,
-  historico: InepCensoMunicipalRecord[] = [],
+  mecanismo: MecanismoDoFundo | null,
 ) {
   const totalPublico =
     censoAtual?.matriculasPublicasTotal ??
@@ -153,26 +185,14 @@ function buildCenarioEstruturacao(
     relatorio.censoEscolar?.matriculasEtapa.educacaoEspecial ??
     0;
 
-  // As metas saem de `fundeb-cenario-metas.ts`: uma regra por frente, sobre a
-  // rede municipal, do tamanho que cabe em um ano. Ver o cabeçalho de lá.
-  const anoAtual = censoAtual?.anoReferencia ?? Number.POSITIVE_INFINITY;
-  const metasCenario = calcularMetasCenario({
+  // As metas saem de `fundeb-cenario-metas.ts`: o que as redes municipais do
+  // país fizeram de um Censo para o outro, por porte. Ver o cabeçalho de lá.
+  const metas = calcularMetasCenario({
     matriculasMunicipais,
     eja: ejaAtual,
     integral: integralAtual,
     educacaoEspecial: especialAtual,
-    ejaHistorico: historico
-      .filter((item) => item.anoReferencia < anoAtual)
-      .slice(-4)
-      .map((item) => item.ejaMunicipal ?? item.ejaPublica ?? item.ejaTotal ?? 0),
   });
-  const metaEja = metasCenario.eja.meta;
-  const metaIntegral = metasCenario.integral.meta;
-  const metaEspecial = metasCenario.educacaoEspecial.meta;
-
-  const deltaEja = metasCenario.eja.ganho;
-  const deltaIntegral = metasCenario.integral.ganho;
-  const deltaEspecial = metasCenario.educacaoEspecial.ganho;
 
   const baseFinanceiraPorMatricula =
     matriculasMunicipais > 0
@@ -181,37 +201,63 @@ function buildCenarioEstruturacao(
         ? relatorio.receitas.totalReceitas / totalPublico
         : 0;
 
-  const pesoTecnico = deltaEja * 0.55 + deltaIntegral * 0.35 + deltaEspecial * 0.2;
-  const impactoMin = pesoTecnico * baseFinanceiraPorMatricula * 0.8;
-  const impactoMax = pesoTecnico * baseFinanceiraPorMatricula * 1.2;
+  // Cada matrícula a mais vale o que o fundo paga por ela — o valor aluno/ano
+  // da UF, ou o VAAT-MIN inteiro em quem a União completa. Sem o valor da UF
+  // não há conta, e o cenário sai só em matrículas.
+  const valor = (horizonte: Horizonte) =>
+    mecanismo ? valorDosEquivalentes(equivalentesDoCenario(metas, horizonte), mecanismo) : null;
+  const padrao = valor("padrao");
+  const acelerado = valor("acelerado");
+  const tresAnos = valor("tresAnos");
+
+  const moeda = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const textoMecanismo = !padrao || !mecanismo
+    ? "valor aluno/ano da UF não disponível nesta emissão"
+    : padrao.via === "vaat"
+      ? `cada matrícula-equivalente a mais vale o VAAT-MIN (R$ ${moeda(mecanismo.vaat?.minimo ?? 0)}): a União completa a rede até ele`
+      : padrao.via === "entra"
+        ? `com mais matrícula ponderada a rede cruza o VAAT-MIN e passa a receber complementação — em média R$ ${moeda(padrao.porEquivalente)} por matrícula-equivalente`
+        : `cada matrícula-equivalente a mais vale R$ ${moeda(mecanismo.valorPorEquivalente)} no fundo de ${relatorio.identificacao.uf}`;
+
+  const porFrente = <K extends "meta" | "metaAcelerada" | "metaTresAnos" | "ganho" | "ganhoAcelerado" | "ganhoTresAnos">(campo: K) => ({
+    eja: metas.eja[campo],
+    integral: metas.integral[campo],
+    educacaoEspecial: metas.educacaoEspecial[campo],
+  });
 
   return {
     anoAlvo: relatorio.identificacao.exercicio + 1,
     baseAtual: {
-      eja: ejaAtual,
-      integral: integralAtual,
-      educacaoEspecial: especialAtual,
+      eja: metas.eja.base,
+      integral: metas.integral.base,
+      educacaoEspecial: metas.educacaoEspecial.base,
     },
-    metas: {
-      eja: metaEja,
-      integral: metaIntegral,
-      educacaoEspecial: metaEspecial,
-    },
-    ganhosMatriculas: {
-      eja: deltaEja,
-      integral: deltaIntegral,
-      educacaoEspecial: deltaEspecial,
-      total: deltaEja + deltaIntegral + deltaEspecial,
-    },
+    /** Um ano no ritmo que uma em cada quatro redes do país alcançou. */
+    metas: porFrente("meta"),
+    /** Um ano no ritmo que uma em cada dez alcançou. */
+    metasAceleradas: porFrente("metaAcelerada"),
+    /** Três anos seguidos no ritmo padrão. */
+    metasTresAnos: porFrente("metaTresAnos"),
+    ganhosMatriculas: { ...porFrente("ganho"), total: matriculasDoCenario(metas, "padrao") },
+    ganhosAcelerados: { ...porFrente("ganhoAcelerado"), total: matriculasDoCenario(metas, "acelerado") },
+    ganhosTresAnos: { ...porFrente("ganhoTresAnos"), total: matriculasDoCenario(metas, "tresAnos") },
     /** A regra que gerou cada meta — impressa ao lado dela no relatório. */
     criterios: {
-      eja: metasCenario.eja.criterio,
-      integral: metasCenario.integral.criterio,
-      educacaoEspecial: metasCenario.educacaoEspecial.criterio,
+      eja: metas.eja.criterio,
+      integral: metas.integral.criterio,
+      educacaoEspecial: metas.educacaoEspecial.criterio,
     },
     impactoFinanceiroIndicativo: {
-      minimo: impactoMin,
-      maximo: impactoMax,
+      // `minimo`/`maximo` continuam existindo para os geradores em Python: a
+      // faixa agora é padrão–acelerado, não ±20% em torno de um ponto.
+      minimo: padrao?.valor ?? 0,
+      maximo: acelerado?.valor ?? 0,
+      padrao: padrao?.valor ?? 0,
+      acelerado: acelerado?.valor ?? 0,
+      tresAnos: tresAnos?.valor ?? 0,
+      porEquivalente: padrao?.porEquivalente ?? 0,
+      via: padrao?.via ?? null,
+      mecanismo: textoMecanismo,
       basePorMatricula: baseFinanceiraPorMatricula,
     },
     leituraExecutiva:
@@ -352,7 +398,11 @@ export async function buildFundebComparativeSnapshot(relatorio: RelatorioFundeb)
   const [censoAnoBase1, censoAnoBase2] = pickCensoComparisonYears(codigoIBGE, exercicio);
   const matriculasComparativas = buildMatriculasComparativas(censoAnoBase1 ?? null, censoAnoBase2 ?? null);
   const historicoCenso = buildHistoricoCenso(censoHistory);
-  const cenarioEstruturacao = buildCenarioEstruturacao(relatorio, censoAnoBase2, censoHistory);
+  const cenarioEstruturacao = buildCenarioEstruturacao(
+    relatorio,
+    censoAnoBase2,
+    await mecanismoDoFundo(codigoIBGE, uf, relatorio.identificacao.exercicio),
+  );
   const deltaTotalPercent =
     receitaAnoBase1 && receitaAnoBase2
       ? calcPercentDelta(receitaAnoBase1.totalReceitas, receitaAnoBase2.totalReceitas)

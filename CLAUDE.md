@@ -499,10 +499,12 @@ cenário da página 14. Hoje a Parte I abre a conta:
 |---|---|---|
 | VAAR a recuperar | referência | mediana **por matrícula** dos habilitados do estado × matrículas da rede |
 | Lacunas de declaração | apurado | `fundeb-ganho-apurado.ts` — fator legal sobre a matrícula declarada |
-| Cenário de matrículas | cenário | valor central da faixa da Parte V |
+| Cenário de matrículas | cenário | um ano no ritmo padrão da Parte V, pelo mecanismo do fundo |
 
-Senador Canedo ficou em +R$ 20,9 mi (10,4%), Serra do Ramalho em +R$ 8,2 mi
-(9,3%) e Fortaleza em +R$ 179 mi (7,9%). Três coisas para não quebrar:
+Senador Canedo ficou em +R$ 22,1 mi (11,0%), Serra do Ramalho em +R$ 7,9 mi
+(9,0%), Fortaleza em +R$ 240,7 mi (10,6%) e Senhor do Bonfim em +R$ 4,3 mi
+(1,9% — já recebe VAAR e já cresceu o que havia para crescer). Três coisas para
+não quebrar:
 
 1. **A referência do VAAR é por matrícula, não em reais.** A mediana em reais
    dos habilitados é o valor de um município de porte mediano — R$ 528 mil em
@@ -520,22 +522,59 @@ município, mas o multiplicador não gera mais número nenhum no levantamento.
 **`core/lib/propostas-prefill.ts` ainda o usa** para pré-preencher proposta: é o
 único lugar onde o número antigo sobrevive, e vai divergir do levantamento.
 
-**As metas do cenário de matrículas cabem em um ano**
-(`core/lib/fundeb-cenario-metas.ts`, com teste). Já saíram do tamanho da rede
-pública inteira, com piso absoluto: EJA a 23% dela mandava Senador Canedo de 625
-para 7.800 matrículas, e o cenário valia R$ 37 a 56 milhões. Hoje cada frente
-tem uma regra de uma linha, impressa ao lado da meta — meta sem critério é
-palpite:
+**As metas do cenário de matrículas são medidas, não escolhidas**
+(`core/lib/fundeb-cenario-metas.ts`). A regra teve duas versões erradas pelo
+mesmo motivo — eram número de mesa. A primeira tirava a meta do tamanho da rede
+pública inteira (EJA a 23% dela: Senador Canedo ia de 625 para 7.800). A segunda
+pôs percentuais "razoáveis" (+25% de EJA, +10% de educação especial) que ninguém
+tinha medido: o de EJA estava acima do que três em cada quatro redes fazem, e o
+de educação especial abaixo do que a rede mediana faz sozinha.
 
-| Frente | Regra |
-|---|---|
-| EJA | +25% sobre a base; ou volta ao pico dos quatro censos anteriores, limitada a +50% |
-| Tempo integral | um terço da distância até 25% da rede municipal (meta 6 do PNE), no máximo 5% da rede por ano; quem já passou, mantém |
-| Educação especial | +10% sobre a base |
+Hoje a meta é o que as redes municipais do país fizeram de um Censo para o
+seguinte, por porte da base. **Padrão** é o 3º quartil (uma em cada quatro
+redes); **acelerado**, o 9º decil (uma em cada dez):
 
-Sem oferta declarada, a meta é zero: abrir EJA onde não há turma é decisão de
-política, não meta de consultoria. Senador Canedo ficou em 780 / 4.615 / 1.425,
-com faixa de R$ 2,5 a 3,8 milhões.
+| Frente | Porte da base | Padrão | Acelerado |
+|---|---|---|---|
+| EJA | até 200 | +19% | +59% |
+| EJA | 200 a 1.000 | +9% | +31% |
+| EJA | mais de 1.000 | 0% | +14% |
+| Educação especial | até 200 | +34% | +53% |
+| Educação especial | 200 a 1.000 | +28% | +40% |
+| Educação especial | mais de 1.000 | +26% | +34% |
+| Tempo integral | qualquer | +5% da rede | +11% da rede |
+
+A Parte V imprime os dois ritmos e um terceiro horizonte — três anos seguidos no
+padrão. A capa usa o padrão de um ano. Quatro coisas para não quebrar:
+
+1. **O teste refaz a medição.** `fundeb-cenario-metas.test.ts` recalcula os
+   quantis sobre a base do Censo e falha se a tabela sair de perto. Quando o
+   Censo de 2026 entrar, é ele que avisa — a alternativa é o relatório seguir
+   imprimindo "uma em cada quatro redes fez" sobre um número que deixou de valer.
+2. **O Censo de 2022 fica fora da medição, e de qualquer comparação de EJA ou
+   educação especial.** `data/inep-censo-municipal-2022.json` conta as duas por
+   outro critério: a EJA municipal do país vai de 527 mil para 1,2 milhão de
+   2022 para 2023, e a educação especial de 278 mil para 1 milhão — o que não
+   aconteceu. Qualquer série que cruze 2022 com os anos seguintes nessas duas
+   modalidades mostra um salto que é do arquivo, não da rede. **Isso vale para o
+   Censo Histórico e para os "sinais de matrícula" da camada de inteligência**,
+   que ainda comparam; o conserto de verdade é regerar o arquivo de 2022.
+3. **Matrícula vira receita pelo mecanismo do fundo, não por fração da receita
+   média.** `valorDosEquivalentes()`: no fundo estadual cada matrícula-equivalente
+   vale o valor aluno/ano da UF; em quem recebe VAAT, a União completa a rede até
+   o mínimo, então a receita cresce o **VAAT-MIN inteiro** por equivalente
+   (R$ 10.192 contra R$ 5.963 do fundo na Bahia, em 2026); quem está logo acima do
+   mínimo pode cruzá-lo e entrar na faixa. Uma fórmula cobre os três casos.
+4. **Abaixo de 50 matrículas não há ritmo medido, e a meta é a base.** Abrir EJA
+   onde não há turma é decisão de política, não meta de consultoria.
+
+> **Senhor do Bonfim/BA é o caso que explica por que a projeção importa.** A
+> receita foi de R$ 57 mi (2023) para R$ 221 mi (2026) — 22ª maior alta do país
+> —, com o VAAT saindo de zero para R$ 92,6 mi e a EJA municipal de 937 para
+> 3.842 matrículas em dois Censos. É muito além do ritmo acelerado: +156% de EJA
+> em um ano, onde uma em cada dez redes desse porte faz +14%. O levantamento não
+> promete esse resultado; ele mostra o padrão e o acelerado, e a diferença para
+> o caso real é argumento de conversa, não número de capa.
 
 **A capa é clara, com os números numa placa escura no pé**
 (`report-visual-theme.ts`, que vale para todos os relatórios). Já foi verde-escura

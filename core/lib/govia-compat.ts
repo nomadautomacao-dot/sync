@@ -1279,9 +1279,9 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
       : null,
     cenario: cenarioMatriculas
       ? {
-          minimo: cenarioMatriculas.impactoFinanceiroIndicativo.minimo,
-          maximo: cenarioMatriculas.impactoFinanceiroIndicativo.maximo,
+          valor: cenarioMatriculas.impactoFinanceiroIndicativo.padrao,
           matriculas: cenarioMatriculas.ganhosMatriculas.total,
+          mecanismo: cenarioMatriculas.impactoFinanceiroIndicativo.mecanismo,
         }
       : null,
   });

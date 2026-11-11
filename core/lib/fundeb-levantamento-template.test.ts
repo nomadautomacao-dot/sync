@@ -746,3 +746,72 @@ describe("os achados do município no sumário", () => {
     expect(paginas(gerar({ payload }))).toBe(LEVANTAMENTO_TOTAL_PAGINAS);
   });
 });
+
+/**
+ * A Parte V já teve metas tiradas do tamanho da rede pública e, depois,
+ * percentuais escolhidos à mesa. Hoje mostra o que as redes do país fizeram —
+ * em três horizontes — e diz por qual mecanismo a matrícula vira receita.
+ */
+describe("o cenário de matrículas em três horizontes", () => {
+  const payload = {
+    relatorio_dirigido_base: {
+      cenarioEstruturacao: {
+        anoAlvo: 2027,
+        baseAtual: { eja: 625, integral: 3_807, educacaoEspecial: 1_294 },
+        metas: { eja: 680, integral: 5_055, educacaoEspecial: 1_630 },
+        metasAceleradas: { eja: 820, integral: 6_550, educacaoEspecial: 1_735 },
+        metasTresAnos: { eja: 810, integral: 7_550, educacaoEspecial: 2_590 },
+        ganhosMatriculas: { eja: 55, integral: 1_248, educacaoEspecial: 336, total: 1_639 },
+        ganhosAcelerados: { eja: 195, integral: 2_743, educacaoEspecial: 441, total: 3_379 },
+        ganhosTresAnos: { eja: 185, integral: 3_743, educacaoEspecial: 1_296, total: 5_224 },
+        criterios: {
+          eja: "+9% no ano: o que uma em cada quatro redes com EJA deste porte (de 200 a 1.000 matrículas) fez de um Censo para o outro",
+          integral: "+5% da rede no ano: o que uma em cada quatro redes municipais ganhou em jornada integral",
+          educacaoEspecial: "+26% no ano: o que uma em cada quatro redes com educação especial deste porte fez",
+        },
+        impactoFinanceiroIndicativo: {
+          minimo: 4_391_000, maximo: 9_365_000, padrao: 4_391_000, acelerado: 9_365_000, tresAnos: 14_035_000,
+          porEquivalente: 6_377.3, via: "fundo",
+          mecanismo: "cada matrícula-equivalente a mais vale R$ 6.377,30 no fundo de GO",
+          basePorMatricula: 8_047.24,
+        },
+      },
+    },
+  } as LevantamentoTemplateInput["payload"];
+
+  it("mostra padrão, acelerado e três anos, com o salto de cada meta", () => {
+    const html = gerar({ payload });
+
+    expect(html).toContain("ritmo padrão");
+    expect(html).toContain("acelerado");
+    expect(html).toContain("três anos");
+    expect(html).toContain("+9%");
+    expect(html).toContain(`+R$\u00a04,39\u00a0mi`);
+    expect(html).toContain(`+R$\u00a09,37\u00a0mi`);
+    expect(html).toContain(`+R$\u00a014,04\u00a0mi`);
+    expect(html).toContain("+1.639");
+    expect(html).toContain("+5.224");
+  });
+
+  it("diz por qual mecanismo a matrícula vira receita", () => {
+    const html = gerar({ payload });
+
+    expect(html).toContain("cada matrícula-equivalente a mais vale R$ 6.377,30 no fundo de GO");
+    expect(html).toContain("a conta erra para baixo");
+    // E o que sustenta a meta diante de quem fiscaliza.
+    expect(html).toContain("diário, frequência e ato de criação");
+  });
+
+  it("lê relatório arquivado antes da calibração, que só traz mínimo e máximo", () => {
+    const antigo = structuredClone(payload)!;
+    const impacto = antigo.relatorio_dirigido_base!.cenarioEstruturacao!.impactoFinanceiroIndicativo!;
+    delete impacto.padrao;
+    delete impacto.acelerado;
+    delete impacto.tresAnos;
+    delete impacto.mecanismo;
+
+    const html = gerar({ payload: antigo });
+    expect(html).toContain(`+R$\u00a04,39\u00a0mi`);
+    expect(paginas(html)).toBe(LEVANTAMENTO_TOTAL_PAGINAS);
+  });
+});

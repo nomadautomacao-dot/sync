@@ -24,7 +24,8 @@ import { getInepCensoMunicipalRecord } from "@/core/lib/inep-censo";
  *    matrícula entre os habilitados do estado.
  * 2. **Lacunas de declaração** — `fundeb-ganho-apurado.ts`, fator legal sobre a
  *    matrícula que o município declarou.
- * 3. **Cenário de matrículas** — valor central da faixa da Parte V.
+ * 3. **Cenário de matrículas** — um ano no ritmo padrão da Parte V, valorizado
+ *    pelo mecanismo do fundo (`fundeb-cenario-metas.ts`).
  *
  * O número encolhe uma ordem de grandeza e passa a resistir à pergunta "de onde
  * vem isso?", que é a primeira que um secretário de finanças faz.
@@ -95,8 +96,8 @@ export interface EntradaGanhoComposto {
   vaar: ParcelaGanhoFundeb | null;
   /** Total de `getGanhoApurado` — lacunas de declaração monetizadas. */
   lacunas: { total: number; maiorTitulo?: string | null } | null;
-  /** Faixa indicativa do cenário de matrículas (Parte V). */
-  cenario: { minimo: number; maximo: number; matriculas: number } | null;
+  /** Cenário de matrículas no ritmo padrão (Parte V): valor de um ano e como foi apurado. */
+  cenario: { valor: number; matriculas: number; mecanismo?: string | null } | null;
 }
 
 export interface GanhoComposto {
@@ -170,12 +171,14 @@ export function comporGanho(e: EntradaGanhoComposto): GanhoComposto {
       : null;
   if (lacunas) parcelas.push(lacunas);
 
-  if (e.cenario && e.cenario.maximo > 0) {
+  if (e.cenario && e.cenario.valor > 0) {
     parcelas.push({
       chave: "matriculas",
       titulo: "Cenário de matrículas — EJA, tempo integral e educação especial",
-      valor: round2((e.cenario.minimo + e.cenario.maximo) / 2),
-      regra: `${inteiro(e.cenario.matriculas)} matrículas a mais em um ano, pelo acréscimo de fator de cada frente — valor central da faixa`,
+      valor: round2(e.cenario.valor),
+      regra:
+        `${inteiro(e.cenario.matriculas)} matrículas a mais em um ano, no ritmo que uma em cada quatro redes do país alcançou` +
+        (e.cenario.mecanismo ? `; ${e.cenario.mecanismo}` : ""),
       pagina: 14,
       natureza: "cenario",
     });

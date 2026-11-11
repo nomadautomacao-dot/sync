@@ -21,11 +21,14 @@ describe("ganho composto", () => {
   it("soma as parcelas e fecha componente por componente", () => {
     const g = comporGanho({
       receitas: canedo, vaar, lacunas: { total: 0 },
-      cenario: { minimo: 2_543_072, maximo: 3_814_608, matriculas: 1_094 },
+      cenario: { valor: 3_178_840, matriculas: 1_094, mecanismo: "cada matrícula-equivalente a mais vale R$ 6.377,30 no fundo de GO" },
     });
     const p = g.total;
 
     expect(p.parcelas?.map((x) => x.chave)).toEqual(["vaar", "matriculas"]);
+    // A regra da parcela diz o ritmo e o mecanismo, não só o total.
+    expect(p.parcelas?.[1].regra).toContain("no ritmo que uma em cada quatro redes do país alcançou");
+    expect(p.parcelas?.[1].regra).toContain("R$ 6.377,30 no fundo de GO");
     expect(p.totalGanho).toBe(17_755_530 + 3_178_840);
     // Uma ordem de grandeza abaixo dos +68% do multiplicador.
     expect(p.ganhoPercentual).toBeGreaterThan(5);
@@ -55,7 +58,7 @@ describe("ganho composto", () => {
   it("separa o que é apurado do que depende de ação da rede", () => {
     const g = comporGanho({
       receitas: canedo, vaar, lacunas: { total: 664_827.8 },
-      cenario: { minimo: 800_000, maximo: 1_200_000, matriculas: 300 },
+      cenario: { valor: 1_000_000, matriculas: 300 },
     });
 
     expect(g.recuperavel.totalGanho).toBe(664_827.8);
