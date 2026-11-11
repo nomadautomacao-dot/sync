@@ -272,9 +272,9 @@ describe("template do Levantamento FUNDEB", () => {
     expect(html).not.toContain("evidenciada");
     expect(html).not.toContain("sinalizado nas bases oficiais atuais");
 
-    expect(html).toContain("Hipótese por benchmark");
+    expect(html).toContain("Ganho apurado");
     expect(html).toContain("mediana nacional");
-    expect(html).toContain("não representa saldo bancário");
+    expect(html).toContain("Não é valor perdido comprovado");
   });
 
   it("distingue o cenário da apuração em vez de somá-los", () => {
@@ -287,16 +287,15 @@ describe("template do Levantamento FUNDEB", () => {
     // A nota de método passou a existir uma vez só, na Parte I: na página 2 ela
     // aparecia inteira de novo, e a peça gastava mais linha desmentindo o
     // próprio número de capa do que defendendo-o.
-    expect(html).toContain("Três naturezas, três usos");
-    expect(html).toContain("Viabilidade ainda não apurada");
-    expect(html).not.toContain("500 matrículas existentes");
-    expect(html.match(/Três naturezas, três usos/g)).toHaveLength(1);
+    expect(html).toContain("não têm a mesma natureza");
+    expect(html).toContain("é premissa, não apuração");
+    expect(html.match(/não têm a mesma natureza/g)).toHaveLength(1);
   });
 
   it("omite o ganho em vez de estimá-lo quando falta o dataset", () => {
     const html = gerar();
     expect(paginas(html)).toBe(LEVANTAMENTO_TOTAL_PAGINAS);
-    expect(html).toContain("Próximo exercício: não estimado");
+    expect(html).toContain("prefere omitir o número a estimá-lo");
   });
 
   it("não repete o percentual de ICMS que é tese local", () => {
@@ -380,8 +379,33 @@ describe("as páginas comerciais do Levantamento", () => {
 
     expect(html).toContain("O que acontece se nada for feito");
     expect(html).toContain("O custo de não decidir");
-    expect(html).toContain("23/10/2026");
+    // O fixture é emitido em 28/07/2026, com a janela de retificação aberta.
+    expect(html).toContain("até 23/10/2026");
     expect(html).toContain("O próximo passo");
+  });
+
+  /**
+   * "30 dias da publicação" estava certo como regra e errado como informação:
+   * emitido em novembro, o documento dizia "até quando ainda dá" sobre uma
+   * janela fechada em outubro.
+   */
+  it("não promete uma janela de retificação que já fechou", () => {
+    const r = relatorioMinimo();
+    r.geradoEm = "11/11/2026, 13:41";
+    const html = generateLevantamentoHtml({ relatorio: r });
+
+    expect(html).toContain("encerrada em 23/10/2026");
+    expect(html).toContain("já fechou");
+    expect(html).not.toContain("até 23/10/2026");
+    expect(html).not.toContain("30 dias da publicação");
+  });
+
+  it("volta à regra geral quando o calendário do exercício não é conhecido", () => {
+    const r = relatorioMinimo();
+    r.identificacao.exercicio = 2027;
+    const html = generateLevantamentoHtml({ relatorio: r });
+
+    expect(html).toContain("30 dias da publicação");
   });
 
   it("não fecha condição comercial que não é deste documento", () => {
@@ -453,5 +477,202 @@ describe("o destaque de ganho na capa", () => {
 
     expect(html).not.toContain(`+R$\u00a00,00`);
     expect(html).toContain("A projeção do próximo ciclo não foi apurada");
+  });
+});
+
+/**
+ * A camada da coleta — execução do RREO, indicadores do VAAR e triagem de
+ * escolas. Já esteve no PDF como quatro páginas de tabela no lugar do sumário,
+ * da receita, da projeção e do VAAR, mais três de URL e SHA-256 no fim. Hoje
+ * ela preenche a folha que sobrava nas páginas que já existiam.
+ */
+describe("a camada da coleta dentro das 17 páginas", () => {
+  function inteligencia(): NonNullable<LevantamentoTemplateInput["inteligencia"]> {
+    const sinal = (indicador: string, valor: number, referencia: number) => ({ indicador, valor, referencia, ano: 2024, acao: "" });
+    const escola = (codigo: string, nome: string, matriculas: number, distorcao: number) => {
+      const medidas = [sinal("Abandono no fundamental (%)", 0.4, 0), sinal("Distorção idade-série (%)", distorcao, 6.6)];
+      return { codigo, nome, matriculas, bases: { territorio: true, resultados: true, indicadores: true }, sinais: medidas, medidas, verificacaoCadastro: false };
+    };
+    return {
+      versao: 1,
+      financeiro: {
+        atual: {
+          ano: 2026, bimestre: 4, entregueEm: "2026-09-28T08:27:12Z", estado: "parcial",
+          receitaFundeb: 57_700_837.74, previsaoMunicipal: 86_356_450,
+          despesas: { empenhadas: null, liquidadas: null, pagas: null },
+          indicadores: [
+            { nome: "MDE", valor: 24.9, unidade: "%", origem: "RREO-Anexo 14", conta: "MinimoAnualDasReceitasDeImpostosNaManutencaoEDesenvolvimentoDoEnsino", coluna: "% Aplicado Até o Bimestre" },
+            { nome: "70%", valor: 57.03, unidade: "%", origem: "RREO-Anexo 14", conta: "MinimoAnualDoFUNDEBNaRemuneracaoDoMagisterio", coluna: "% Aplicado Até o Bimestre" },
+          ],
+          fontes: [{ url: "https://apidatalake.tesouro.gov.br/x", coletadoEm: "2026-11-11T16:00:00Z", sha256: "95288e0bb6ccc0db2e6ac90e30cc8d0b2e102f6522a56f1817d19ff731bcd7ce" }],
+          avisos: [],
+          transferenciasMensais: [{ mes: 1, valor: 11_186_369.83 }, { mes: 2, valor: 6_493_362.32 }],
+        },
+        anterior: null,
+        variacaoMesmoBimestre: 3.48, estimativaAnualFnde: 88_107_810.51, proporcaoDaEstimativa: 65.49,
+        saldoDisponivel: null, nota: "",
+      },
+      vaar: {
+        exercicio: 2026, pagina: "https://www.gov.br/inep",
+        componentes: [{
+          tipo: "condicionalidadeIII", estado: "disponivel", fonte: null, motivo: null, aviso: null,
+          campos: { Prop_adeq_PPI_2019: 0.206296, Prop_adeq_PPI_2023: 0.146035, Prop_adeq_baixo_2019: 0.17551, Prop_adeq_baixo_2023: 0.091463 },
+        }],
+      },
+      escolas: [
+        escola("29000001", "ESCOLA PEQUENA E DISTANTE", 45, 19.5),
+        escola("29000002", "ESCOLA GRANDE E DISTANTE", 600, 18.2),
+      ],
+      anosEscolas: {}, criteriosEscolas: "",
+      matriculas: [], sinaisMatricula: [],
+      variacaoReceita: [
+        { componente: "Redistribuição do fundo", anoBase: 2025, anoAtual: 2026, antes: 44_683_875.97, depois: 44_660_900.82, diferenca: -22_975.15 },
+        { componente: "Complementação VAAF", anoBase: 2025, anoAtual: 2026, antes: 14_609_901.92, depois: 17_405_251.39, diferenca: 2_795_349.47 },
+        { componente: "Complementação VAAT", anoBase: 2025, anoAtual: 2026, antes: 23_610_514.02, depois: 20_000_000, diferenca: -3_610_514.02 },
+      ],
+      monitoramento: { consultadoEm: "2026-11-11T16:00:00Z", anteriorEm: null, mudancas: [], observacoes: [], fontes: [], nota: "" },
+    };
+  }
+
+  it("não abre página nova nem devolve o anexo de hashes", () => {
+    const html = gerar({ inteligencia: inteligencia() });
+
+    expect(paginas(html)).toBe(LEVANTAMENTO_TOTAL_PAGINAS);
+    expect(html).not.toContain("SHA-256");
+    expect(html).not.toContain("95288e0bb6ccc0db");
+    expect(html).not.toContain("apidatalake.tesouro.gov.br");
+    // As páginas que a camada tinha substituído continuam no documento.
+    expect(html).toContain("Sumário executivo");
+    expect(html).toContain("Estimativa para o próximo ciclo");
+    expect(html).toContain("As parcelas do FUNDEB que se perdem inteiras");
+  });
+
+  it("mostra a execução do exercício contra o mesmo bimestre do ano anterior", () => {
+    const html = gerar({ inteligencia: inteligencia() });
+
+    expect(html).toContain("o que já entrou até o 4º bimestre");
+    expect(html).toContain(`R$\u00a057,70\u00a0mi`);
+    expect(html).toContain("65,5% da estimativa do ano já entrou");
+    expect(html).toContain("+3,5%");
+  });
+
+  it("separa vinculação abaixo do mínimo no meio do ano de descumprimento", () => {
+    const html = gerar({ inteligencia: inteligencia() });
+
+    expect(html).toContain("2 vinculações ainda abaixo do mínimo anual no 4º bimestre de 2026");
+    expect(html).toContain("57,03%");
+    expect(html).toContain("não é descumprimento");
+  });
+
+  it("omite as vinculações do VAAT para quem não recebe VAAT", () => {
+    const intel = inteligencia();
+    intel.financeiro.atual.indicadores.push({ nome: "capital", valor: 0, unidade: "%", origem: "RREO-Anexo 14", conta: "ComplementacaoDaUniaoAoFUNDEBEmDespesasDeCapital", coluna: "% Aplicado Até o Bimestre" });
+
+    expect(gerar({ inteligencia: intel })).not.toContain("Complementação VAAT em despesas de capital");
+  });
+
+  it("diz de quanto para quanto caiu o aprendizado que reprova na condicionalidade III", () => {
+    const html = gerar({
+      inteligencia: inteligencia(),
+      payload: { relatorio_dirigido_base: { vaar: getSituacaoVaar("2930154") } } as LevantamentoTemplateInput["payload"],
+    });
+
+    expect(html).toContain("de <b>20,6%</b> para <b>14,6%</b>");
+    expect(html).toContain("de <b>17,6%</b> para <b>9,1%</b>");
+  });
+
+  it("só chama de queda a parcela que perdeu mais de 1%", () => {
+    // O bloco mora na página da série, que só existe com série histórica.
+    const html = gerar({
+      inteligencia: inteligencia(),
+      payload: {
+        fiscal: {
+          historico_repasses: [
+            { ano: 2025, receita_total_prevista: 82_904_291.91 },
+            { ano: 2026, receita_total_prevista: 82_066_152.21 },
+          ],
+        },
+      } as LevantamentoTemplateInput["payload"],
+    });
+
+    expect(html).toContain("qual parcela mudou");
+    expect(html).toContain("<b>Complementação VAAT</b> caiu");
+    expect(html).not.toContain("<b>Redistribuição do fundo</b> caiu");
+  });
+
+  it("põe na frente a escola distante da mediana com mais alunos dentro", () => {
+    const html = gerar({ inteligencia: inteligencia() });
+
+    expect(html.indexOf("ESCOLA GRANDE E DISTANTE")).toBeGreaterThan(-1);
+    expect(html.indexOf("ESCOLA GRANDE E DISTANTE")).toBeLessThan(html.indexOf("ESCOLA PEQUENA E DISTANTE"));
+  });
+
+  it("recorre ao SIOPE quando o Anexo 14 do RREO vem sem as linhas da educação", () => {
+    const intel = inteligencia();
+    intel.financeiro.atual.indicadores = [
+      { nome: "MDE", valor: 30.05, unidade: "%", origem: "SIOPE - indicadores do período", conta: "1.1", coluna: "VAL_INDI" },
+      { nome: "70%", valor: 91.33, unidade: "%", origem: "SIOPE - indicadores do período", conta: "1.2", coluna: "VAL_INDI" },
+    ];
+    const html = gerar({ inteligencia: intel });
+
+    expect(html).toContain("As 2 vinculações já estão no mínimo anual ou acima");
+    expect(html).toContain("91,33%");
+    expect(html).toContain("o Anexo 14 do RREO deste ente veio sem as linhas da educação");
+    expect(html).not.toContain(">RREO</th>");
+  });
+
+  it("mostra a divergência entre o que o ente declarou ao Tesouro e ao FNDE", () => {
+    const intel = inteligencia();
+    intel.financeiro.atual.indicadores.push(
+      { nome: "70%", valor: 67.42, unidade: "%", origem: "SIOPE - indicadores do período", conta: "1.2", coluna: "VAL_INDI" },
+    );
+    const html = gerar({ inteligencia: intel });
+
+    expect(html).toContain("As duas declarações não batem");
+    expect(html).toContain("57,03% ao Tesouro, 67,42% ao FNDE");
+    // A sigla no início do nome não vira "fUNDEB" ao entrar no meio da frase.
+    expect(html).toContain("em FUNDEB em remuneração dos profissionais (57,03%");
+  });
+
+  it("sai igual a antes quando a coleta não traz a camada", () => {
+    const html = gerar();
+
+    expect(html).not.toContain("o que já entrou até o");
+    expect(html).not.toContain("Por onde começar");
+    expect(html).not.toContain("qual parcela mudou");
+  });
+});
+
+describe("números que precisam fechar", () => {
+  it("fecha a tabela da projeção com a linha da redistribuição", () => {
+    const r = relatorioMinimo();
+    // Senador Canedo/GO: sem complementação nenhuma, benchmark de 1,68×.
+    Object.assign(r.projecao, {
+      vaarProjetado: 2_656_536.89, vaarGanho: 2_656_536.89,
+      totalAtual: 200_722_290.59, totalProjetado: 337_213_448.19, totalGanho: 136_491_157.6, ganhoPercentual: 68,
+    });
+    const html = generateLevantamentoHtml({ relatorio: r });
+
+    // 337.213.448,19 − 2.656.536,89: sem esta linha as parcelas somavam R$ 2,7 mi
+    // e o total dizia R$ 136 mi.
+    expect(html).toContain("Redistribuição do fundo estadual</td><td class=\"r\">200.722.290,59</td><td class=\"r\">334.556.911,30</td><td class=\"r\">+133.834.620,71</td>");
+  });
+
+  it("diz quanto falta para entrar na faixa do VAAT a quem está fora dela", () => {
+    const html = gerar({
+      payload: {
+        relatorio_dirigido_base: {
+          vaat: {
+            exercicio: 2026, proprio: 10_511.38, minimo: 10_192.38, complementacao: 0,
+            distanciaPercentual: 0, folgaPercentual: 3.13, exercicioBaseReceita: 2024,
+            habilitacao: "Habilitado para o cálculo do VAAT", pendencia: null,
+          },
+        },
+      } as LevantamentoTemplateInput["payload"],
+    });
+
+    expect(html).toContain("R$ 10.192,38");
+    expect(html).toContain("Acima do mínimo");
+    expect(html).toContain("fora da faixa por 3,1%");
   });
 });

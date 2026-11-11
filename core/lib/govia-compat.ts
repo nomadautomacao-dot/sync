@@ -919,7 +919,9 @@ function buildRelatorioDirigidoBase({
     vaat: vaatContext
       ? (() => {
           const proprio = vaatContext.vaatAnterior;
-          const minimo = vaatContext.vaatComComplementacao;
+          // O mínimo é o nacional. A coluna "com complementação" só coincide com
+          // ele para quem recebe; para os demais repete o VAAT do próprio ente.
+          const minimo = vaatContext.vaatMinimo ?? vaatContext.vaatComComplementacao;
           const complementacao = vaatContext.complementacaoVAAT;
           return {
             exercicio,
@@ -929,7 +931,15 @@ function buildRelatorioDirigidoBase({
             minimo,
             complementacao,
             /** Quanto falta para o VAAT próprio alcançar o mínimo, em %. */
-            distanciaPercentual: minimo > 0 ? ((minimo - proprio) / minimo) * 100 : null,
+            // Zero para quem já está acima do mínimo: quem lê este campo pergunta
+            // "quanto falta", e a resposta de quem passou é nada — não um negativo.
+            distanciaPercentual: minimo > 0 ? Math.max(0, ((minimo - proprio) / minimo) * 100) : null,
+            /**
+             * Para quem está **fora** da faixa: quanto o VAAT próprio supera o
+             * mínimo. Folga pequena é rede prestes a entrar na complementação —
+             * e só entra quem estiver habilitado em 31 de agosto.
+             */
+            folgaPercentual: minimo > 0 && proprio > minimo ? (proprio / minimo - 1) * 100 : null,
             /**
              * Exercício cuja arrecadação define este VAAT (art. 15, II:
              * penúltimo exercício anterior).

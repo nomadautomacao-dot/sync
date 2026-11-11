@@ -1,9 +1,8 @@
-import type { InteligenciaRelatorio } from './relatorio-inteligencia';
-import { paginasInteligencia, paginasMemoria, CSS_INTELIGENCIA } from './relatorio-inteligencia-template';
-import { situacaoCalendario } from './calendario-educacional';
-import type { QualidadeRelatorio } from './relatorio-snapshot';
 import type { IDEBDado, RelatorioFundeb } from "@/modules/levantamento-fundeb/types";
 import { DESCRICAO_CONDICIONALIDADE, type Condicionalidade } from "@/core/lib/fundeb-vaar";
+import { CENSO_2026, situacaoCalendario } from "@/core/lib/calendario-educacional";
+import type { InteligenciaRelatorio } from "@/core/lib/relatorio-inteligencia";
+import type { QualidadeRelatorio } from "@/core/lib/relatorio-snapshot";
 
 /**
  * Template do Levantamento FUNDEB — "novo modelo".
@@ -154,7 +153,7 @@ export interface LevantamentoPayload {
         chave?: string;
         titulo?: string;
         valor?: number;
-        certeza?: "hipotese" | "referencia" | "apurado";
+        certeza?: "apurado" | "referencia";
         origem?: string;
         conferir?: string;
       }>;
@@ -162,7 +161,7 @@ export interface LevantamentoPayload {
         chave?: string;
         titulo?: string;
         valor?: number;
-        certeza?: "hipotese" | "referencia" | "apurado";
+        certeza?: "apurado" | "referencia";
         origem?: string;
         conferir?: string;
       }>;
@@ -229,6 +228,7 @@ export interface LevantamentoPayload {
       minimo?: number;
       complementacao?: number;
       distanciaPercentual?: number | null;
+      folgaPercentual?: number | null;
       exercicioBaseReceita?: number;
       habilitacao?: string;
       pendencia?: string | null;
@@ -252,6 +252,8 @@ export interface LevantamentoPayload {
       baseAtual?: Record<string, number> | null;
       metas?: Record<string, number> | null;
       ganhosMatriculas?: Record<string, number> | null;
+      /** A regra que gerou cada meta (`fundeb-cenario-metas.ts`). */
+      criterios?: Record<string, string> | null;
       impactoFinanceiroIndicativo?: {
         minimo?: number | null;
         maximo?: number | null;
@@ -264,8 +266,14 @@ export interface LevantamentoPayload {
 }
 
 export interface LevantamentoTemplateInput {
-  inteligencia?: InteligenciaRelatorio;
-  qualidade?: QualidadeRelatorio;
+  /**
+   * Execução do RREO, indicadores do VAAR e triagem de escolas — a camada que
+   * a coleta acrescenta ao levantamento. Opcional: sem ela as 17 páginas saem
+   * iguais, só sem os blocos que dependem desses dados.
+   */
+  inteligencia?: InteligenciaRelatorio | null;
+  /** Identidade da coleta (snapshot, versão da portaria). Vai só ao caderno técnico. */
+  qualidade?: QualidadeRelatorio | null;
   relatorio: RelatorioFundeb;
   payload?: LevantamentoPayload | null;
   /** Logo em data-URI. Ausente → a marca sai só como texto. */
@@ -369,7 +377,15 @@ function esc(value: unknown): string {
  * `perfil.faixa` é sentinela comparada em código (`=== "padrao"`), então o
  * acento entra só na exibição — renomear o valor quebraria a regra de negócio.
  */
-
+function rotuloFaixa(faixa: unknown): string {
+  const mapa: Record<string, string> = {
+    padrao: "padrão",
+    conservador: "conservador",
+    agressivo: "agressivo",
+  };
+  const chave = String(faixa ?? "").trim();
+  return esc(mapa[chave] ?? chave);
+}
 
 const ORDEM_CONDICIONALIDADES: Condicionalidade[] = ["I", "II", "III", "IV", "V"];
 
@@ -718,6 +734,394 @@ p+p{margin-top:.08in}
 .conf{display:inline-block;border:1px solid #e2c084;color:#a66a10;background:#fdf9ee;border-radius:4px;padding:.03in .09in;font-size:6.8pt;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
 `;
 
+// ── Camada da coleta: execução, calendário, VAAR e escolas ──────────────────
+//
+// Estes blocos entram nas páginas que tinham folha sobrando — receita, série,
+// qualidade e fiscal. O levantamento continua com 17 folhas: dado novo que só
+// cabe abrindo página nova empurra a decisão e o prazo para mais longe de quem
+// lê, e o documento existe para chegar lá.
+
+const MESES_CURTOS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"];
+
+/**
+ * Data da emissão. `geradoEm` chega em ISO nos testes e como
+ * "dd/mm/aaaa, hh:mm" na coleta — e `new Date("27/10/2026")` é data inválida.
+ */
+function dataEmissao(i: LevantamentoTemplateInput): Date {
+  const candidatos = [i.qualidade?.coletadoEm, i.relatorio.geradoEm];
+  for (const bruto of candidatos) {
+    if (!bruto) continue;
+    const br = bruto.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    const data = new Date(br ? `${br[3]}-${br[2]}-${br[1]}T12:00:00-03:00` : bruto);
+    if (!Number.isNaN(data.getTime())) return data;
+  }
+  return new Date();
+}
+
+/** `2026-10-23` → `23/10/2026`, sem passar por fuso. */
+function dataBr(iso: string | null | undefined): string {
+  const m = (iso ?? "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : "";
+}
+
+interface JanelaCenso {
+  /** Texto do prazo, pronto para a célula da tabela. */
+  prazo: string;
+  /** A retificação do exercício já fechou na data da emissão. */
+  encerrada: boolean;
+}
+
+/**
+ * A janela de retificação do Censo, com a data de verdade quando ela é
+ * conhecida.
+ *
+ * O texto fixo "30 dias da publicação" estava certo como regra e errado como
+ * informação: um levantamento emitido em novembro dizia "até quando ainda dá"
+ * sobre uma janela fechada em outubro. Na frente do secretário, é o tipo de
+ * frase que desmonta o resto da página.
+ */
+function janelaRetificacao(i: LevantamentoTemplateInput): JanelaCenso {
+  const exercicio = i.relatorio.identificacao.exercicio;
+  const situacao = situacaoCalendario(exercicio, dataEmissao(i)).situacao;
+  if (situacao === "a_confirmar") return { prazo: "30 dias da publicação", encerrada: false };
+  const fim = dataBr(CENSO_2026.retificacaoFim);
+  return situacao === "encerrada"
+    ? { prazo: `encerrada em ${fim}`, encerrada: true }
+    : { prazo: `até ${fim}`, encerrada: false };
+}
+
+/**
+ * Execução do exercício — o que já entrou, contra o que está previsto.
+ *
+ * A receita da página é a estimativa anual do FNDE. O RREO diz quanto dela o
+ * município já declarou ter recebido, e a comparação que vale é com o mesmo
+ * bimestre do ano anterior: o crédito não é linear (janeiro carrega o ajuste
+ * do exercício anterior), então medir contra "1/6 por bimestre" acusaria atraso
+ * onde não há.
+ */
+function blocoExecucao(i: LevantamentoTemplateInput): string {
+  const f = i.inteligencia?.financeiro;
+  const a = f?.atual;
+  if (!f || !a || a.receitaFundeb == null || !a.bimestre) return "";
+
+  const exercicio = a.ano;
+  const estimativa = num(f.estimativaAnualFnde) || i.relatorio.receitas.totalReceitas;
+  const proporcao = f.proporcaoDaEstimativa ?? share(a.receitaFundeb, estimativa);
+  const decorrido = (a.bimestre / 6) * 100;
+  const variacao = f.variacaoMesmoBimestre;
+  const anterior = f.anterior?.receitaFundeb ?? null;
+  const previsao = a.previsaoMunicipal;
+  const desvio = previsao != null && estimativa > 0 ? (previsao / estimativa - 1) * 100 : null;
+
+  const mensais = (a.transferenciasMensais ?? []).filter((m) => m.mes >= 1 && m.mes <= 12);
+  const maiorMes = Math.max(0, ...mensais.map((m) => m.valor));
+  const emMilhoes = maiorMes >= 1_000_000;
+  const rotuloMes = (valor: number) =>
+    (valor / (emMilhoes ? 1_000_000 : 1_000)).toLocaleString("pt-BR", {
+      minimumFractionDigits: emMilhoes ? 1 : 0,
+      maximumFractionDigits: emMilhoes ? 1 : 0,
+    });
+
+  const grafico = mensais.length
+    ? `<div class="card">
+        <h3>Crédito mês a mês &middot; R$ ${emMilhoes ? "milhões" : "mil"}</h3>
+        <div class="vchart" style="height:1.05in">
+          ${mensais
+            .map(
+              (m) => `<div class="vbar"><span class="vbar-val">${rotuloMes(m.valor)}</span><div class="vbar-fill" style="height:${((m.valor / maiorMes) * 88).toFixed(0)}%"></div></div>`,
+            )
+            .join("")}
+        </div>
+        <div class="vxlab">${mensais.map((m) => `<span>${MESES_CURTOS[m.mes - 1]}</span>`).join("")}</div>
+      </div>`
+    : "";
+
+  const leituraPrevisao =
+    desvio != null && Math.abs(desvio) >= 2
+      ? `<p style="font-size:7.9pt;line-height:1.42;color:#33454f;margin-top:.07in">O orçamento do município prevê
+         <b>${brlCompact(previsao)}</b>, ${pct(Math.abs(desvio))} ${desvio > 0 ? "acima" : "abaixo"} da estimativa do FNDE.
+         ${
+           desvio > 0
+             ? "Despesa empenhada contra receita que a portaria não confirma fica descoberta no fechamento."
+             : "A diferença é receita sem dotação: só é gasta com crédito adicional aberto a tempo."
+         }</p>`
+      : "";
+
+  const leitura = `<div class="card">
+        <h3>${pct(proporcao)} da estimativa do ano já entrou</h3>
+        <div style="position:relative;height:.17in;background:var(--wash);border-radius:3px;margin-top:.09in">
+          <div style="height:100%;width:${Math.min(100, proporcao).toFixed(1)}%;background:var(--data2);border-radius:3px"></div>
+          <div style="position:absolute;top:-.04in;bottom:-.04in;left:${decorrido.toFixed(1)}%;border-left:1.5px solid var(--navy)"></div>
+        </div>
+        <p class="micro" style="margin-top:.06in">A marca indica ${a.bimestre} de 6 bimestres decorridos
+        (${pct(decorrido)} do ano).</p>
+        <p style="font-size:7.9pt;line-height:1.42;color:#33454f;margin-top:.07in">O crédito não é linear &mdash;
+        janeiro carrega o ajuste do exercício anterior &mdash;, então a leitura que vale é contra o mesmo período
+        de ${exercicio - 1}${
+          variacao != null
+            ? `: <b>${variacao >= 0 ? "+" : "−"}${pct(Math.abs(variacao))}</b>${anterior != null ? `, sobre ${brlCompact(anterior)}` : ""}.`
+            : ", que não foi localizado no Siconfi."
+        }</p>
+        ${leituraPrevisao}
+      </div>`;
+
+  return `<div class="sec-label" style="margin-top:.2in">Execução de ${exercicio} &middot; o que já entrou até o ${a.bimestre}º bimestre</div>
+    <div class="grid-4">
+      ${kpi(`Recebido até o ${a.bimestre}º bimestre`, brlCompact(a.receitaFundeb), "transferências do FUNDEB &middot; RREO, Anexo 6", "up")}
+      ${kpi("Da estimativa anual", pct(proporcao), `de ${brlCompact(estimativa)} na portaria`)}
+      ${kpi(
+        `Sobre ${exercicio - 1}`,
+        variacao != null ? `${variacao >= 0 ? "+" : "−"}${pct(Math.abs(variacao))}` : "—",
+        "mesmo bimestre do ano anterior",
+        variacao != null && variacao >= 0 ? "up" : "",
+      )}
+      ${kpi("Previsão do município", previsao != null ? brlCompact(previsao) : "—", "orçamento atualizado no RREO")}
+    </div>
+    <div class="${grafico ? "grid-2" : ""} mt-1">
+      ${grafico}
+      ${leitura}
+    </div>
+    <p class="micro mt-1">Fonte: Tesouro Nacional/Siconfi &mdash; RREO do ${a.bimestre}º bimestre de ${exercicio}${
+      a.entregueEm ? `, entregue em ${dataBr(a.entregueEm)}` : ""
+    }. Valor acumulado declarado pelo próprio ente.</p>`;
+}
+
+/** "Aplicação em MDE" → "aplicação em MDE"; sigla no início ("FUNDEB em…") fica como está. */
+function minusculaInicial(texto: string): string {
+  return /^[A-ZÀ-Ý][a-zà-ÿ]/.test(texto) ? texto.charAt(0).toLowerCase() + texto.slice(1) : texto;
+}
+
+interface VinculacaoNoAno {
+  nome: string;
+  base: string;
+  /** Percentual no RREO, Anexo 14 (Tesouro). */
+  rreo: number | null;
+  /** Percentual no SIOPE do mesmo bimestre (FNDE). */
+  siope: number | null;
+  minimo: number | null;
+}
+
+/**
+ * As vinculações no exercício em curso, nas duas declarações do próprio ente.
+ *
+ * A página seguinte traz a declaração anual ao SIOPE, que é do exercício
+ * fechado. Esta é a mesma régua medida no meio do ano — e é a que ainda dá
+ * tempo de mexer: 57% em remuneração no 4º bimestre não é descumprimento, é
+ * quanto falta aplicar até dezembro.
+ *
+ * RREO e SIOPE saem lado a lado porque nem todo município preenche as linhas de
+ * educação do Anexo 14 (Senador Canedo/GO não preenche), e porque onde os dois
+ * existem eles nem sempre concordam: Serra do Ramalho/BA declara 57,03% em
+ * remuneração ao Tesouro e 67,42% ao FNDE, no mesmo bimestre. Escolher um em
+ * silêncio seria esconder a divergência que a conciliação existe para resolver.
+ */
+function blocoAplicacaoNoAno(i: LevantamentoTemplateInput): string {
+  const a = i.inteligencia?.financeiro?.atual;
+  if (!a || !a.bimestre) return "";
+  const recebeVaat = i.relatorio.receitas.complementacaoVAAT > 0;
+
+  const siopeDe = (conta: string) =>
+    a.indicadores.find((r) => r.unidade === "%" && r.origem.startsWith("SIOPE") && r.conta === conta)?.valor ?? null;
+  const rreoDe = (conta: RegExp) =>
+    a.indicadores.find((r) => r.unidade === "%" && r.origem === "RREO-Anexo 14" && conta.test(r.conta))?.valor ?? null;
+
+  const regua: Array<VinculacaoNoAno & { soVaat?: boolean }> = [
+    { nome: "Aplicação em MDE", base: "CF art. 212", minimo: 25, rreo: rreoDe(/^MinimoAnualDasReceitasDeImpostos/), siope: siopeDe("1.1") },
+    { nome: "FUNDEB em remuneração dos profissionais", base: "Lei 14.113/2020, art. 26", minimo: 70, rreo: rreoDe(/^MinimoAnualDoFUNDEBNaRemuneracao/), siope: siopeDe("1.2") },
+    { nome: "Complementação VAAT em educação infantil", base: "art. 28", minimo: a.ieiMinimoRreo ?? siopeDe("1.7"), rreo: rreoDe(/^ComplementacaoDaUniaoAoFUNDEBEducacaoInfantil/), siope: siopeDe("1.6"), soVaat: true },
+    { nome: "Complementação VAAT em despesas de capital", base: "art. 27", minimo: 15, rreo: rreoDe(/^ComplementacaoDaUniaoAoFUNDEBEmDespesasDeCapital/), siope: siopeDe("1.5"), soVaat: true },
+  ];
+  const linhas = regua.filter((l) => (!l.soVaat || recebeVaat) && (l.rreo != null || l.siope != null));
+  if (!linhas.length) return "";
+
+  // Vale a declaração ao Tesouro; o SIOPE entra quando o Anexo 14 veio sem a linha.
+  const aplicado = (l: VinculacaoNoAno) => (l.rreo ?? l.siope) as number;
+  const abaixo = linhas.filter((l) => l.minimo != null && aplicado(l) < l.minimo);
+  const comMinimo = linhas.filter((l) => l.minimo != null).length;
+  const temRreo = linhas.some((l) => l.rreo != null);
+  const temSiope = linhas.some((l) => l.siope != null);
+  const divergentes = linhas.filter((l) => l.rreo != null && l.siope != null && Math.abs(l.rreo - l.siope) >= 2);
+
+  const faixa = abaixo.length
+    ? `<div class="status bad"><span class="dot"></span> ${abaixo.length === 1 ? "1 vinculação ainda abaixo" : `${abaixo.length} vinculações ainda abaixo`} do mínimo anual no ${a.bimestre}º bimestre de ${a.ano}</div>`
+    : `<div class="status good"><span class="dot"></span> ${comMinimo === 1 ? "A vinculação já está" : `As ${comMinimo} vinculações já estão`} no mínimo anual ou acima no ${a.bimestre}º bimestre de ${a.ano}</div>`;
+
+  const siope = a.educacaoSiope;
+  const blocoSiope =
+    siope && siope.empenhadas != null && siope.liquidadas != null && siope.pagas != null
+      ? `<div class="grid-3 mt-1">
+          ${kpi("Educação empenhada", brlCompact(siope.empenhadas), "todas as fontes &middot; SIOPE")}
+          ${kpi("Liquidada", brlCompact(siope.liquidadas), `${pct(share(siope.liquidadas, siope.empenhadas), 0)} do empenhado`)}
+          ${kpi("Paga", brlCompact(siope.pagas), `${pct(share(siope.pagas, siope.empenhadas), 0)} do empenhado`)}
+        </div>`
+      : "";
+
+  const celula = (v: number | null) => (v != null ? pct(v, 2) : "&mdash;");
+
+  return `<div class="sec-label" style="margin-top:.2in">As vinculações em ${a.ano} &middot; acumulado até o ${a.bimestre}º bimestre</div>
+    ${faixa}
+    <table class="tb mt-1">
+      <tr><th>Vinculação</th>${temRreo ? '<th class="r">RREO</th>' : ""}${temSiope ? '<th class="r">SIOPE</th>' : ""}<th class="r">Mínimo anual</th><th class="r">Folga</th></tr>
+      ${linhas
+        .map((l) => {
+          const folga = l.minimo != null ? aplicado(l) - l.minimo : null;
+          const cor = folga == null ? "" : folga < 0 ? "color:var(--red)" : "color:var(--good)";
+          const destaque = (v: number | null, principal: boolean) => (principal && v != null ? `<b>${celula(v)}</b>` : celula(v));
+          return `<tr><td>${esc(l.nome)} <span class="micro">${esc(l.base)}</span></td>
+            ${temRreo ? `<td class="r">${destaque(l.rreo, true)}</td>` : ""}
+            ${temSiope ? `<td class="r">${destaque(l.siope, l.rreo == null)}</td>` : ""}
+            <td class="r">${l.minimo != null ? pct(l.minimo, 2) : "&mdash;"}</td>
+            <td class="r" style="${cor}">${folga == null ? "&mdash;" : `${folga >= 0 ? "+" : "−"}${pct(Math.abs(folga), 2)}`}</td></tr>`;
+        })
+        .join("")}
+    </table>
+    ${blocoSiope}
+    ${
+      divergentes.length
+        ? `<p class="small mt-1"><b>As duas declarações não batem</b> em ${divergentes
+            .map((l) => `${esc(minusculaInicial(l.nome))} (${pct(l.rreo as number, 2)} ao Tesouro, ${pct(l.siope as number, 2)} ao FNDE)`)
+            .join(" e ")}. Mesmo ente, mesmo bimestre: a diferença é o que a conciliação entre a contabilidade e a
+            secretaria de educação precisa explicar antes do fechamento.</p>`
+        : ""
+    }
+    <p class="small mt-1">O mínimo é <b>anual</b>: ficar abaixo dele no ${a.bimestre}º bimestre não é descumprimento,
+    é o que ainda precisa ser aplicado até dezembro &mdash; e é exatamente o que dá tempo de corrigir. A folga usa
+    ${temRreo ? "o RREO, Anexo 14 (Tesouro), e o SIOPE onde o anexo veio sem a linha" : "o SIOPE do bimestre, porque o Anexo 14 do RREO deste ente veio sem as linhas da educação"}.
+    A página seguinte traz a mesma régua na declaração anual, do exercício já fechado.</p>`;
+}
+
+/**
+ * De onde veio a diferença entre o exercício anterior e o atual.
+ *
+ * A série mostra que a receita subiu; não mostra qual parcela subiu. Um
+ * município pode crescer no total com o VAAT caindo, e é essa linha que avisa
+ * a saída da faixa antes de ela acontecer.
+ */
+function blocoVariacaoReceita(i: LevantamentoTemplateInput): string {
+  const linhas = i.inteligencia?.variacaoReceita ?? [];
+  if (!linhas.length) return "";
+  const { anoBase, anoAtual } = linhas[0];
+  const antes = linhas.reduce((s, l) => s + l.antes, 0);
+  const depois = linhas.reduce((s, l) => s + l.depois, 0);
+  const sinal = (v: number) => (Math.abs(v) < 0.005 ? "0,00" : `${v > 0 ? "+" : "−"}${brl(Math.abs(v))}`);
+  const variacao = (a: number, d: number) =>
+    a > 0 ? `${d >= a ? "+" : "−"}${pct(Math.abs((d / a - 1) * 100))}` : d > 0 ? "nova" : "&mdash;";
+
+  const maior = [...linhas].sort((x, y) => y.diferenca - x.diferenca)[0];
+  // Queda de 0,1% é arredondamento de portaria, não notícia: só entra na leitura
+  // a parcela que perdeu mais de 1% do que tinha.
+  const quedas = linhas.filter((l) => l.antes > 0 && l.diferenca / l.antes < -0.01);
+  const leitura =
+    maior && maior.diferenca > 0
+      ? `A maior parte da diferença veio de <b>${esc(maior.componente)}</b> (${sinal(maior.diferenca)}).${
+          quedas.length
+            ? ` Na contramão, <b>${quedas.map((q) => esc(q.componente)).join(" e ")}</b> ${quedas.length === 1 ? "caiu" : "caíram"} ${brlCompact(Math.abs(quedas.reduce((s, q) => s + q.diferenca, 0)))} &mdash; parcela que encolhe com a receita total subindo é a que merece acompanhamento.`
+            : ""
+        }`
+      : "";
+
+  return `<div class="sec-label" style="margin-top:.2in">De ${anoBase} para ${anoAtual} &middot; qual parcela mudou</div>
+    <table class="tb">
+      <tr><th>Componente</th><th class="r">${anoBase}</th><th class="r">${anoAtual}</th><th class="r">Diferença (R$)</th><th class="r">Variação</th></tr>
+      ${linhas
+        .map(
+          (l) => `<tr><td>${esc(l.componente)}</td><td class="r">${brl(l.antes)}</td><td class="r">${brl(l.depois)}</td>
+            <td class="r"${l.diferenca < 0 ? ' style="color:var(--red)"' : ""}><b>${sinal(l.diferenca)}</b></td>
+            <td class="r">${variacao(l.antes, l.depois)}</td></tr>`,
+        )
+        .join("")}
+      <tr class="total"><td>Receita total</td><td class="r">${brl(antes)}</td><td class="r">${brl(depois)}</td><td class="r">${sinal(depois - antes)}</td><td class="r">${variacao(antes, depois)}</td></tr>
+    </table>
+    ${leitura ? `<p class="small mt-1">${leitura}</p>` : ""}`;
+}
+
+/**
+ * O número que reprova na Condicionalidade III, tirado da planilha do Inep.
+ *
+ * "Atacar a desigualdade de aprendizagem" é providência que serve para
+ * qualquer município. O que muda a conversa é mostrar de quanto para quanto
+ * caiu o aprendizado adequado nos dois grupos que a condicionalidade mede.
+ */
+function detalheCondicionalidadeIII(i: LevantamentoTemplateInput): string {
+  const campos = i.inteligencia?.vaar?.componentes.find((c) => c.tipo === "condicionalidadeIII")?.campos;
+  if (!campos) return "";
+  const prop = (chave: string): number | null => {
+    const v = campos[chave];
+    return typeof v === "number" && Number.isFinite(v) ? v * 100 : null;
+  };
+  const grupos: Array<[string, number | null, number | null]> = [
+    ["estudantes pretos, pardos e indígenas", prop("Prop_adeq_PPI_2019"), prop("Prop_adeq_PPI_2023")],
+    ["estudantes de menor nível socioeconômico", prop("Prop_adeq_baixo_2019"), prop("Prop_adeq_baixo_2023")],
+  ];
+  const frases = grupos
+    .filter((g): g is [string, number, number] => g[1] != null && g[2] != null)
+    .map(([grupo, de, para]) => `entre ${grupo}, de <b>${pct(de)}</b> para <b>${pct(para)}</b>`);
+  if (!frases.length) return "";
+  return ` Na aferição do Inep, o aprendizado adequado foi, ${frases.join("; ")} (Saeb 2019 &rarr; 2023).`;
+}
+
+/**
+ * Por onde começar na rede.
+ *
+ * A triagem da coleta ordena por quantidade de sinais e desempata por
+ * matrícula — o que, numa rede grande, põe no topo escolas a 0,05 ponto da
+ * mediana. Aqui o desempate é a distância pesada pelo número de alunos: sobe
+ * quem está mais longe com mais gente dentro, que é quem justifica a primeira
+ * visita.
+ */
+function blocoEscolas(i: LevantamentoTemplateInput): string {
+  const escolas = i.inteligencia?.escolas ?? [];
+  const comSinal = escolas.filter((e) => e.sinais.length > 0);
+  if (!comSinal.length) return "";
+
+  // Distância à mediana pesada pela matrícula: 19% de distorção em 600 alunos
+  // pede visita antes de 19% em 45.
+  const distancia = (e: (typeof escolas)[number]) =>
+    e.sinais.reduce((s, x) => s + Math.abs(x.valor - x.referencia), 0) * Math.max(1, e.matriculas ?? 1);
+  const ordenadas = [...comSinal].sort(
+    (a, b) => b.sinais.length - a.sinais.length || distancia(b) - distancia(a),
+  );
+  const topo = ordenadas.slice(0, 6);
+
+  const colunas = [
+    { chave: "Abandono", titulo: "Abandono" },
+    { chave: "Distorção", titulo: "Distorção idade-série" },
+    { chave: "Adequação", titulo: "Adequação docente" },
+  ];
+  const referencia = (chave: string) => {
+    for (const e of escolas) {
+      const m = e.medidas.find((x) => x.indicador.startsWith(chave));
+      if (m) return m.referencia;
+    }
+    return null;
+  };
+  const celula = (e: (typeof escolas)[number], chave: string) => {
+    const medida = e.medidas.find((x) => x.indicador.startsWith(chave));
+    if (!medida) return `<td class="r">&mdash;</td>`;
+    const fora = e.sinais.some((x) => x.indicador.startsWith(chave));
+    return `<td class="r"${fora ? ' style="color:var(--red);font-weight:800"' : ""}>${pct(medida.valor)}</td>`;
+  };
+
+  return `<div class="sec-label" style="margin-top:.2in">Por onde começar &middot; escolas mais distantes da mediana da própria rede</div>
+    <table class="tb">
+      <tr><th>Escola</th><th class="r">Matrículas</th>${colunas
+        .map((c) => {
+          const ref = referencia(c.chave);
+          return `<th class="r">${c.titulo}${ref != null ? `<br><span style="font-weight:400;letter-spacing:0;text-transform:none">rede ${pct(ref)}</span>` : ""}</th>`;
+        })
+        .join("")}</tr>
+      ${topo
+        .map(
+          (e) => `<tr><td><b>${esc(e.nome)}</b> <span class="micro">INEP ${esc(e.codigo)}</span></td>
+            <td class="r">${e.matriculas != null ? int(e.matriculas) : "&mdash;"}</td>${colunas.map((c) => celula(e, c.chave)).join("")}</tr>`,
+        )
+        .join("")}
+    </table>
+    <p class="small mt-1">Em vermelho, o indicador pior que a mediana das escolas da rede &mdash; abandono e
+    distorção acima, adequação docente abaixo. <b>${int(comSinal.length)} das ${int(escolas.length)} escolas</b> têm
+    ao menos um; o Dossiê das Escolas abre todas, uma a uma.</p>`;
+}
+
 // ── Páginas ─────────────────────────────────────────────────────────────────
 
 function paginaCapa(i: LevantamentoTemplateInput): string {
@@ -761,7 +1165,7 @@ function paginaCapa(i: LevantamentoTemplateInput): string {
 
     ${
       temGanho
-        ? `<div class="cover-hero">
+        ? `<div class="cover-hero" data-capa-destaque>
       <em>Potencial de incremento &middot; exercício ${exercicio + 1}</em>
       <div class="val">
         <b>+${brlCompact(r.projecao.totalGanho)}</b>
@@ -829,13 +1233,13 @@ function paginaSumario(i: LevantamentoTemplateInput, pagina: number): string {
   const kpiGanho =
     ganho && ganhoTotal > 0
       ? kpi(
-          "Hipótese por benchmark",
+          "Ganho apurado",
           `+${brlCompact(ganhoTotal)}`,
-          "diferença estatística; exige validação",
+          "lacunas de declaração, com fonte",
           "up",
         )
       : ganho
-        ? kpi("Comparação cadastral", "sem sinal", "mediana não comprova integridade")
+        ? kpi("Base cadastral", "íntegra", "declara na mediana nacional ou acima")
         : kpi("Base cadastral", "—", "matrícula ponderada não disponível");
 
   // As duas frases abaixo eram fixas. "Vetores de trabalho: condicionalidades
@@ -861,12 +1265,13 @@ function paginaSumario(i: LevantamentoTemplateInput, pagina: number): string {
 
   const alavanca =
     ganhoTotal > 0 && maiorParcela
-      ? `Uma hipótese estatística está em <b>${esc(String(maiorParcela.titulo ?? ""))}</b>, que vale
-      <b>+${brlCompact(ganhoTotal)}</b> por ano se a declaração alcançar a mediana nacional &mdash; validar oferta real, registros elegíveis e custos antes de monetizar.`
+      ? `A maior parcela verificável está em <b>${esc(String(maiorParcela.titulo ?? ""))}</b>, que vale
+      <b>+${brlCompact(ganhoTotal)}</b> por ano se a declaração alcançar a mediana nacional &mdash; conferência
+      de Censo, não obra nem contratação.`
       : v && reprovadas.length && !v.condIVEstadual
-        ? `Com a declaração cadastral já na mediana nacional, uma frente de trabalho é a habilitação ao VAAR:
+        ? `Com a declaração cadastral já na mediana nacional, a alavanca que resta é a habilitação ao VAAR:
       ${reprovadas.length === 1 ? "a condicionalidade" : "as condicionalidades"} <b>${reprovadas.join(", ")}</b>.`
-        : "Sem sinal no benchmark e sem condicionalidade pendente identificada, ainda é necessária auditoria cadastral; o planejamento considera resultado educacional medido &mdash; expansão de jornada integral e de matrícula, que mudam a rede antes de mudar o repasse.";
+        : "Sem lacuna cadastral e sem condicionalidade pendente, o ganho passa a depender de resultado educacional medido &mdash; expansão de jornada integral e de matrícula, que mudam a rede antes de mudar o repasse.";
 
   return `<section class="page content-page">
   ${cabecalho(municipio, "Sumário executivo")}
@@ -876,12 +1281,12 @@ function paginaSumario(i: LevantamentoTemplateInput, pagina: number): string {
 
     <p class="lede">Gestor municipal de ${esc(municipio)}: ${ou(id.prefeito, "gestor não identificado na base")}.
     Este relatório organiza a leitura do FUNDEB de ${id.exercicio} em linguagem direta: quanto o município
-    tem previsto, quais hipóteses podem ser avaliadas para o próximo ciclo e o que precisa ser conferido nas bases oficiais
+    recebeu, qual a estimativa para o próximo ciclo e o que precisa ser conferido nas bases oficiais
     antes de qualquer decisão.</p>
 
     <div class="grid-4 mt-2">
       ${kpi(`Receita ${id.exercicio}`, brlCompact(rec.totalReceitas), "base oficial do ano")}
-      ${kpi(`Previsão ${id.exercicio + 1}`, "Não estimada", "depende de premissas validadas")}
+      ${kpi(`Estimativa ${id.exercicio + 1}`, brlCompact(r.projecao.totalProjetado), "cenário otimizado")}
       ${
         r.projecao.totalGanho > 0
           ? kpi("Ganho potencial", `+${brlCompact(r.projecao.totalGanho)}`, `+${pct(r.projecao.ganhoPercentual)} sobre o exercício atual`, "up")
@@ -908,18 +1313,19 @@ function paginaSumario(i: LevantamentoTemplateInput, pagina: number): string {
 
     <div class="insight mt-2">
       <h3>A alavanca em uma frase</h3>
-      <p style="font-size:8.6pt;line-height:1.42">${pct(share(rec.receitaContribuicaoMunicipal, total), 0)} da receita vem da redistribuição das contribuições estaduais e municipais ao fundo${vaarZerado ? ' &mdash; e a fatia que premia resultado (VAAR) está <span class="strong">zerada</span>' : ""}.
+      <p style="font-size:8.6pt;line-height:1.42">${pct(share(rec.receitaContribuicaoMunicipal, total), 0)} da receita vem da redistribuição do
+      fundo estadual, proporcional à matrícula ponderada${vaarZerado ? ' &mdash; e a fatia que premia resultado (VAAR) está <span class="strong">zerada</span>' : ""}.
       ${alavanca}</p>
     </div>
 
     <div class="sec-label" style="margin-top:.2in">Como este relatório está organizado</div>
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:.1in">
       ${[
-        ["I", "Receita e premissas", `composição ${id.exercicio} e cenário ${id.exercicio + 1}`],
+        ["I", "Receita e projeção", `composição ${id.exercicio} e cenário ${id.exercicio + 1}`],
         ["II", "Série histórica", "evolução por exercício"],
         ["III", "Rede e qualidade", "Censo, IDEB e infraestrutura"],
         ["IV", "Fiscal e sistemas", "LRF e situação MEC/FNDE"],
-        ["V", `Cenário ${id.exercicio + 1}`, "frentes, premissas e custos"],
+        ["V", `Cenário ${id.exercicio + 1}`, "frentes e faixa de ganho"],
       ]
         .map(
           ([n, t, s]) => `<div class="card" style="padding:.1in .11in"><b style="color:var(--teal);font-size:9pt">${n}</b>
@@ -952,7 +1358,7 @@ function paginaReceita(i: LevantamentoTemplateInput, pagina: number): string {
   const matriculasMunicipais = num(perfil?.matriculasMunicipais);
 
   const linhas: Array<[string, number, boolean]> = [
-    ["Redistribuição estadual e municipal", rec.receitaContribuicaoMunicipal, false],
+    ["Redistribuição do fundo estadual", rec.receitaContribuicaoMunicipal, false],
     ["Complementação da União — VAAF", rec.complementacaoVAAF, false],
     ["Complementação da União — VAAT", rec.complementacaoVAAT, false],
     ["Complementação da União — VAAR", rec.complementacaoVAAR, rec.complementacaoVAAR <= 0],
@@ -1018,27 +1424,123 @@ function paginaReceita(i: LevantamentoTemplateInput, pagina: number): string {
         ${kpi(
           "FUNDEB per capita",
           populacao > 0 ? `R$ ${brl(total / populacao)}` : "—",
-          `estimativa anual ${id.exercicio} &divide; população; não representa saldo disponível`,
+          `receita ${id.exercicio} &divide; população${perfil ? ` &middot; score de potencial ${perfil.score.toFixed(2)}` : ""}`,
           "mt-1",
         )}
       </div>
     </div>
+
+    ${blocoExecucao(i)}
   </div>
   ${rodape(pagina)}
 </section>`;
 }
 
 function paginaProjecao(i: LevantamentoTemplateInput, pagina: number): string {
-  const r=i.relatorio, id=r.identificacao, rec=r.receitas;
-  const parcelas=[['Redistribuição estadual e municipal',rec.receitaContribuicaoMunicipal],['Complementação VAAF',rec.complementacaoVAAF],['Complementação VAAT',rec.complementacaoVAAT],['Complementação VAAR',rec.complementacaoVAAR]] as const;
-  return `<section class="page content-page">${cabecalho(`${id.municipioNome} — ${id.uf}`, 'Parte I · Receita e limites da previsão')}
-  <div class="page-body"><div class="kicker">Parte I · Base financeira conciliada</div><h2>Quanto está previsto<br>e o que ainda depende de validação</h2>
-  <div class="kpi hero mt-2"><em>Receita anual prevista · ${id.exercicio}</em><b>R$ ${brl(rec.totalReceitas)}</b><span>Estimativa oficial do FNDE; não representa saldo bancário ou receita já recebida.</span></div>
-  <table class="tb mt-2"><tr><th>Componente</th><th class="r">Previsão anual</th><th class="r">Participação</th></tr>${parcelas.map(([nome,valor])=>`<tr><td>${nome}</td><td class="r">R$ ${brl(valor)}</td><td class="r">${pct(share(valor,rec.totalReceitas))}</td></tr>`).join('')}<tr class="total"><td>Total conciliado</td><td class="r">R$ ${brl(rec.totalReceitas)}</td><td class="r">100%</td></tr></table>
-  <p class="micro mt-1">${esc(i.qualidade?.versao??id.fonte)}. A redistribuição inclui contribuições estaduais e municipais ao fundo; não é a contribuição própria isolada de ${esc(id.municipioNome)}.</p>
-  <div class="grid-2 mt-2"><div class="card"><h3>Próximo exercício: não estimado</h3><p>O relatório não aplica multiplicador comercial à receita. Uma previsão exige ponderações, matrículas elegíveis, regras de rateio e valores oficiais do exercício, além de custos e capacidade de atendimento.</p></div><div class="card"><h3>Recebimentos e cronograma</h3><p>O desembolso mensal deve vir do cronograma oficial da mesma versão e ser conciliado aos créditos efetivos. A estimativa anual não sustenta uma distribuição mensal inventada de ganhos.</p></div></div>
-  <div class="note mt-2"><h3>Três naturezas, três usos</h3><p><b>Previsão oficial:</b> planejamento financeiro. <b>Execução:</b> valores efetivamente creditados e contabilizados. <b>Simulação:</b> teste de uma hipótese identificada, sujeito à validação da rede e às regras futuras.</p></div>
-  </div>${rodape(pagina)}</section>`;
+  const r = i.relatorio;
+  const id = r.identificacao;
+  const municipio = `${id.municipioNome} — ${id.uf}`;
+  const p = r.projecao;
+  const perfil = r.perfilComercial;
+  const ganho = i.payload?.relatorio_dirigido_base?.ganho ?? null;
+  const ganhoTotal = ganho?.total ?? 0;
+
+  // A redistribuição é a parcela que sobra do total depois das complementações.
+  // Sem a linha dela a tabela somava R$ 2,7 mi nas três parcelas e fechava em
+  // R$ 136 mi no total — conta que qualquer secretário de finanças refaz.
+  const redistribuicaoAtual = Math.max(0, p.totalAtual - p.vaafAtual - p.vaatAtual - p.vaarAtual);
+  const redistribuicaoProjetada = Math.max(0, p.totalProjetado - p.vaafProjetado - p.vaatProjetado - p.vaarProjetado);
+
+  const maiorPar = Math.max(p.vaafProjetado, p.vaatProjetado, p.vaarProjetado, p.vaafAtual, p.vaatAtual, p.vaarAtual, 1);
+  const par = (nome: string, atual: number, projetado: number) => `<div class="pair">
+        <div class="pair-name">${nome}</div>
+        <div class="pair-bars">
+          <div class="pair-row"><div class="pair-fill a" style="width:${barWidth(atual, maiorPar)}"></div><span class="pair-lab">${brlCompact(atual)}</span></div>
+          <div class="pair-row"><div class="pair-fill b" style="width:${barWidth(projetado, maiorPar)}"></div><span class="pair-lab"><b style="color:var(--navy)">${brlCompact(projetado)}</b></span></div>
+        </div>
+      </div>`;
+
+  const crono = r.cronogramaVAAF ?? [];
+  const metade = Math.ceil(crono.length / 2);
+  const tabelaCrono = (fatia: typeof crono) => `<table class="tb">
+        <tr><th>Mês</th><th class="r">Valor projetado (R$)</th><th class="r">Part.</th></tr>
+        ${fatia
+          .map(
+            (m) => `<tr><td>${esc(m.mes)}</td><td class="r">${brl(m.valorProjetado)}</td><td class="r">${pct(m.percentual * (m.percentual <= 1 ? 100 : 1))}</td></tr>`,
+          )
+          .join("")}
+      </table>`;
+
+  return `<section class="page content-page">
+  ${cabecalho(municipio, `Parte I · Projeção ${id.exercicio + 1}`)}
+  <div class="page-body">
+    <div class="kicker">Parte I &middot; Estimativa para o próximo ciclo</div>
+
+    <div class="sec-label">Complementações da União &mdash; atual vs. projetado</div>
+    <div class="card">
+      <div class="legend"><span><i style="background:var(--data1)"></i>Cenário atual</span><span><i style="background:var(--data2)"></i>Cenário projetado ${id.exercicio + 1}</span></div>
+      ${par("VAAF", p.vaafAtual, p.vaafProjetado)}
+      ${par("VAAT", p.vaatAtual, p.vaatProjetado)}
+      ${par("VAAR", p.vaarAtual, p.vaarProjetado)}
+    </div>
+
+    <div class="mt-1">
+      <table class="tb">
+        <tr><th>Componente</th><th class="r">Cenário atual</th><th class="r">Projetado</th><th class="r">Variação</th></tr>
+        <tr><td>Redistribuição do fundo estadual</td><td class="r">${brl(redistribuicaoAtual)}</td><td class="r">${brl(redistribuicaoProjetada)}</td><td class="r">+${brl(redistribuicaoProjetada - redistribuicaoAtual)}</td></tr>
+        <tr><td>VAAF (Valor Aluno Fundo)</td><td class="r">${brl(p.vaafAtual)}</td><td class="r">${brl(p.vaafProjetado)}</td><td class="r">+${brl(p.vaafGanho)}</td></tr>
+        <tr><td>VAAT (Valor Aluno Total)</td><td class="r">${brl(p.vaatAtual)}</td><td class="r">${brl(p.vaatProjetado)}</td><td class="r">+${brl(p.vaatGanho)}</td></tr>
+        <tr><td>VAAR (Vinculado a Resultados)</td><td class="r">${brl(p.vaarAtual)}</td><td class="r">${brl(p.vaarProjetado)}</td><td class="r">+${brl(p.vaarGanho)}</td></tr>
+        <tr class="total"><td>Receita total</td><td class="r">${brl(p.totalAtual)}</td><td class="r">${brl(p.totalProjetado)}</td><td class="r">+${brl(p.totalGanho)}</td></tr>
+      </table>
+    </div>
+
+    <div class="grid-2 mt-2">
+      <div class="kpi hero"><em>Receita total projetada &middot; cenário otimizado</em><b>${brlCompact(p.totalProjetado)}</b><span>${p.totalGanho > 0 ? `potencial de incremento: +${brlCompact(p.totalGanho)} (+${pct(p.ganhoPercentual)})` : "sem incremento apurado sobre o exercício atual"}</span></div>
+      ${
+        ganhoTotal > 0
+          ? `<div class="kpi up"><em>Ganho apurado &middot; lacunas de declaração</em><b>+${brlCompact(ganhoTotal)}</b><span>fatores do FUNDEB sobre a matrícula declarada pelo município</span></div>`
+          : `<div class="kpi"><em>Ganho apurado &middot; lacunas de declaração</em><b>${ganho ? "sem lacuna" : "—"}</b><span>${ganho ? "declaração na mediana nacional ou acima" : "matrícula ponderada não disponível"}</span></div>`
+      }
+    </div>
+
+    <div class="note mt-2">
+      <p style="font-size:7.9pt;line-height:1.4"><b>Os dois números acima não têm a mesma natureza.</b>
+      À esquerda, um <b>cenário</b>: uma leitura possível do próximo ciclo a partir da receita atual, do
+      histórico e do benchmark comercial${
+        perfil ? ` (${rotuloFaixa(perfil.faixa)}, score ${perfil.score.toFixed(2)})` : ""
+      } &mdash; é premissa, não apuração, e <b>não substitui a validação nas bases oficiais</b>.
+      À direita, uma <b>apuração</b>: ${
+        ganho && ganhoTotal > 0
+          ? `fator de ponderação legal &times; valor aluno/ano da UF (R$ ${brl(ganho.valorPorEquivalente ?? 0)}
+      por matrícula-equivalente) &times; matrícula que o próprio município declarou ao Censo. Mede o que o fundo
+      pagaria a mais se essa declaração alcançasse a <b>mediana nacional</b> das redes municipais &mdash; não o
+      teto teórico. <b>Não é valor perdido comprovado</b>: é o que está em jogo na conferência cadastral, e a
+      Parte III abre parcela por parcela, com o artigo de lei de cada uma.`
+          : ganho
+            ? `a mesma conta, mas aqui sem lacuna a monetizar &mdash; a rede já declara na <b>mediana nacional</b>
+      ou acima nos dois pontos verificáveis (jornada da creche e cobertura de AEE). É resultado bom, não falta de
+      dado, e significa que o ganho vem de crescer a rede, não de corrigir cadastro. <b>Não é valor perdido
+      comprovado</b> em lugar nenhum deste relatório.`
+            : `depende da planilha de matrículas ponderadas do FNDE, que não trouxe este município. Sem ela o
+      relatório <b>prefere omitir o número a estimá-lo</b>.`
+      }</p>
+    </div>
+
+    ${
+      crono.length
+        ? `<div class="sec-label" style="margin-top:.2in">Cronograma mensal projetado do incremento</div>
+    <div class="grid-2">
+      ${tabelaCrono(crono.slice(0, metade))}
+      ${tabelaCrono(crono.slice(metade))}
+    </div>
+    <p class="micro mt-1">Rampa mensal do potencial de incremento anual (R$ ${brl(p.totalGanho)}), crescente conforme
+    a maturação das frentes de trabalho ao longo do exercício.</p>`
+        : ""
+    }
+  </div>
+  ${rodape(pagina)}
+</section>`;
 }
 
 interface AnoSerie {
@@ -1120,7 +1622,7 @@ function paginaVaar(i: LevantamentoTemplateInput, pagina: number): string {
              (n) =>
                `<tr><td style="white-space:nowrap"><b>${n}</b> &middot; ${esc(
                  DESCRICAO_CONDICIONALIDADE[n].split("—")[0].trim(),
-               )}</td><td>${esc(AGENDA_CONDICIONALIDADE[n])}</td></tr>`,
+               )}</td><td>${esc(AGENDA_CONDICIONALIDADE[n])}${n === "III" ? detalheCondicionalidadeIII(i) : ""}</td></tr>`,
            )
            .join("")}
        </table>`
@@ -1146,6 +1648,11 @@ function paginaVaar(i: LevantamentoTemplateInput, pagina: number): string {
   const distancia = num(t?.distanciaPercentual);
   const recebeVaat = num(t?.complementacao) > 0;
   const proximoDoTeto = recebeVaat && distancia > 0 && distancia < 10;
+  // Quem não recebe também tem distância — para o outro lado. Rede a poucos
+  // pontos acima do mínimo entra na faixa assim que o patamar subir mais que a
+  // sua arrecadação por aluno.
+  const folga = num(t?.folgaPercentual);
+  const prestesAEntrar = !recebeVaat && folga > 0 && folga < 10;
 
   const blocoVaat = vaatConhecida
     ? `<div class="sec-label" style="margin-top:.16in">A outra parcela condicionada &middot; VAAT</div>
@@ -1156,12 +1663,16 @@ function paginaVaar(i: LevantamentoTemplateInput, pagina: number): string {
            ? `<div class="grid-3 mt-1">
                 ${kpi("VAAT próprio", `R$ ${brl(t.proprio)}`, "por aluno, antes da complementação")}
                 ${kpi("VAAT-MIN", `R$ ${brl(t.minimo)}`, `patamar garantido em ${ou(t.exercicio, "—")}`)}
-                ${kpi(
-                  "Distância até o mínimo",
-                  distancia > 0 ? pct(distancia) : "—",
-                  recebeVaat ? "quanto a arrecadação pode subir antes de zerar" : "não recebe complementação",
-                  proximoDoTeto ? "" : "up",
-                )}
+                ${
+                  recebeVaat || folga <= 0
+                    ? kpi(
+                        "Distância até o mínimo",
+                        distancia > 0 ? pct(distancia) : "—",
+                        recebeVaat ? "quanto a arrecadação pode subir antes de zerar" : "não recebe complementação",
+                        proximoDoTeto ? "" : "up",
+                      )
+                    : kpi("Acima do mínimo", pct(folga), "fora da faixa &middot; não recebe complementação")
+                }
               </div>`
            : ""
        }
@@ -1173,6 +1684,14 @@ function paginaVaar(i: LevantamentoTemplateInput, pagina: number): string {
        apurado: perde 100% da complementação no exercício.${
          pendenciaVaat ? ` Pendência registrada: <i>${esc(pendenciaVaat)}</i>.` : ""
        }</p>
+       ${
+         t && prestesAEntrar
+           ? `<p class="small">Este município está <b>fora da faixa por ${pct(folga)}</b>: o VAAT próprio supera o
+              mínimo nacional por essa margem. O patamar é recalculado a cada exercício &mdash; se subir mais que a
+              arrecadação por aluno da rede, o município passa a ter direito à complementação, e <b>só recebe quem
+              estiver habilitado</b> na data de corte. Com margem dessa ordem, a habilitação deixa de ser formalidade.</p>`
+           : ""
+       }
        ${
          t && recebeVaat
            ? `<p class="small">A complementação é <b>equalização por insuficiência</b>: a União completa a
@@ -1198,7 +1717,7 @@ function paginaVaar(i: LevantamentoTemplateInput, pagina: number): string {
 
     <div class="grid-4 mt-1">
       ${kpi(
-        "VAAR estimado na publicação",
+        "VAAR recebido",
         num(v?.complementacao) > 0 ? brlCompact(v?.complementacao) : "R$ 0",
         `exercício ${ou(v?.exercicio, "—")}`,
         habilitado ? "up" : "",
@@ -1310,6 +1829,8 @@ function paginaSerie(i: LevantamentoTemplateInput, pagina: number): string {
       e a distinção importa: reajuste do valor aluno/ano é conjuntural, matrícula recomposta permanece na base
       do exercício seguinte. A Parte III mostra a rede que sustenta este número.</p>
     </div>
+
+    ${blocoVariacaoReceita(i)}
   </div>
   ${rodape(pagina)}
 </section>`;
@@ -1493,8 +2014,8 @@ function paginaPonderacao(i: LevantamentoTemplateInput, pagina: number): string 
                    }.</p>
                    ${
                      parcela && num(parcela.valor) > 0
-                       ? `<p class="micro" style="margin-top:.04in">A hipótese estática dessa diferença corresponde a
-                          <b>+R$ ${brl(parcela.valor)}</b> por ano, sem garantia de repasse. Referência histórica: Portaria 14/2025. Teto teórico, se toda a condição
+                       ? `<p class="micro" style="margin-top:.04in">Fechar essa distância vale
+                          <b>+R$ ${brl(parcela.valor)}</b> por ano no fundo. Teto teórico, se toda a condição
                           mudasse: R$ ${brl(num(o.ganhoEquivalentes) * num(valorEquivalente))}.</p>`
                        : ""
                    }
@@ -1658,6 +2179,8 @@ function paginaIdeb(i: LevantamentoTemplateInput, pagina: number): string {
         : `<div class="sec-label">Infraestrutura da rede pública</div>
     <p class="small">O Censo Escolar não retornou o detalhamento de infraestrutura para esta rede no momento da emissão.</p>`
     }
+
+    ${blocoEscolas(i)}
   </div>
   ${rodape(pagina)}
 </section>`;
@@ -1777,6 +2300,8 @@ function paginaFiscal(i: LevantamentoTemplateInput, pagina: number): string {
     </table>
     <p class="small mt-1">Situação do PAR: ${ou(r.situacaoPAR)}. O acesso credenciado a SIMEC e Habilita é o
     primeiro passo operacional do plano de trabalho.</p>
+
+    ${blocoAplicacaoNoAno(i)}
   </div>
   ${rodape(pagina)}
 </section>`;
@@ -2054,13 +2579,13 @@ function paginaProgramas(i: LevantamentoTemplateInput, pagina: number): string {
         : `<div class="status mt-1"><span class="dot"></span> Estimativa do PNAE indisponível para este município</div>`
     }
 
-    <div class="sec-label" style="margin-top:.16in">Calendário do Censo ${id.exercicio} — referência da distribuição seguinte</div>
+    <div class="sec-label" style="margin-top:.16in">O calendário que decide o FUNDEB de ${id.exercicio + 1}</div>
     <table class="tb">
       <tr><th>Etapa</th><th>Prazo</th><th>Responsável</th></tr>
       <tr><td>Data de referência do Censo</td><td>última quarta-feira de maio</td><td>&mdash;</td></tr>
       <tr><td>Coleta e digitação no Educacenso</td><td>de maio a 31 de julho</td><td>Diretor e gestores</td></tr>
       <tr><td>Publicação dos dados preliminares no DOU</td><td>agosto</td><td>INEP</td></tr>
-      <tr><td><b>Conferência, ratificação e retificação</b></td><td><b>${id.exercicio===2026?"23/10/2026, último comunicado":"confirmar ato anual"}</b></td><td>Diretor e gestor municipal</td></tr>
+      <tr><td><b>Conferência, ratificação e retificação</b></td><td><b>${janelaRetificacao(i).prazo}</b></td><td>Diretor e gestor municipal</td></tr>
       <tr><td>Verificação dos dados processados</td><td>5 dias após</td><td>Gestor municipal</td></tr>
       <tr><td><b>Confirmação de matrículas duplicadas</b></td><td>10 dias, janela própria</td><td>Diretor e gestores</td></tr>
       <tr><td>Envio ao FNDE para cálculo dos coeficientes</td><td>dezembro</td><td>INEP</td></tr>
@@ -2198,15 +2723,109 @@ function paginaGovernanca(i: LevantamentoTemplateInput, pagina: number): string 
 }
 
 function paginaCenario(i: LevantamentoTemplateInput, pagina: number): string {
- const id=i.relatorio.identificacao;
- const base=i.payload?.relatorio_dirigido_base?.cenarioEstruturacao?.baseAtual??{};
- return `<section class="page content-page">${cabecalho(`${id.municipioNome} — ${id.uf}`,'Parte V · Cenários condicionais')}<div class="page-body"><div class="kicker">Parte V · Planejamento com premissas</div><h2>Transformar demanda comprovada<br>em metas viáveis</h2>
- <p class="lede">A base atual orienta o diagnóstico. As metas dependem de demanda, capacidade física, pessoal, elegibilidade e custo. EJA, tempo integral e educação especial podem se sobrepor e não representam alunos distintos quando somados.</p>
- <table class="tb mt-2"><tr><th>Frente</th><th class="r">Base informada</th><th>Meta seguinte</th><th>Evidência necessária</th></tr>${[['EJA','eja','Demanda por idade e território'],['Tempo integral','integral','Vagas, jornada e custo adicional'],['Educação especial','educacaoEspecial','Oferta de AEE e registros elegíveis']].map(([nome,k,doc])=>`<tr><td>${nome}</td><td class="r">${base[k]==null?'Não disponível':int(num(base[k]))}</td><td>A definir</td><td>${doc}</td></tr>`).join('')}</table>
- <div class="card mt-2"><h3>Viabilidade ainda não apurada</h3><p>Não há demanda elegível, capacidade disponível ou custo incremental comprovados para calcular receita adicional neste diagnóstico. Registrar a origem e a aprovação de cada premissa antes de dimensionar a expansão.</p><p class="mt-1">O simulador separado permite explorar hipóteses. Seus resultados não integram a receita do município nem representam contratação, repasse ou economia garantidos.</p></div>
- <div class="note mt-2"><b>Limites:</b> o rateio estadual, as ponderações futuras e o VAAT podem alterar o resultado. Uma simulação com valor por equivalente constante não equivale a repasse garantido. O modelo deve registrar fonte, ano e aprovação de cada premissa antes de ser usado em orçamento.</div>
- <div class="grid-2 mt-2"><div class="card"><h3>Antes de definir uma meta</h3><p>Deduplicar estudantes e identificar etapas, jornadas e modalidades. Conferir demanda e capacidade escola por escola.</p></div><div class="card"><h3>Antes de monetizar</h3><p>Validar fatores, exercício financeiro e custos. Comparar cenários conservador, central e de expansão sem somar efeitos sobrepostos.</p></div></div>
- </div>${rodape(pagina)}</section>`;
+  const r = i.relatorio;
+  const id = r.identificacao;
+  const municipio = `${id.municipioNome} — ${id.uf}`;
+  const rede = redeMunicipal(i);
+  const recursoAluno = rede.recursoAluno;
+
+  /**
+   * O cenário vem do motor (`cenarioEstruturacao`), não deste template.
+   *
+   * A versão anterior multiplicava a base por fatores fixos — EJA × 7,4,
+   * tempo integral × 5,1 — aplicados a qualquer município. Em Canindé de São
+   * Francisco isso projetava 6.237 matrículas em jornada integral, 90% de toda
+   * a rede municipal em um ano, e uma faixa de receita 3,4× maior que a
+   * calculada pelo backend. Número irreal em proposta comercial custa a
+   * credibilidade do documento inteiro.
+   */
+  const cenario = i.payload?.relatorio_dirigido_base?.cenarioEstruturacao;
+  const baseAtual = cenario?.baseAtual ?? {};
+  const metas = cenario?.metas ?? {};
+  const ganhos = cenario?.ganhosMatriculas ?? {};
+
+  const frentes = [
+    { nome: "EJA", chave: "eja" },
+    { nome: "Tempo integral", chave: "integral" },
+    { nome: "Educação especial", chave: "educacaoEspecial" },
+  ].map((f) => {
+    const base = num(baseAtual[f.chave]);
+    const meta = num(metas[f.chave]);
+    return {
+      ...f,
+      base,
+      meta,
+      ganho: num(ganhos[f.chave]) || Math.max(0, meta - base),
+      criterio: cenario?.criterios?.[f.chave] ?? "",
+    };
+  });
+
+  const temCenario = frentes.some((f) => f.meta > 0);
+  const totalGanho = num(ganhos.total) || frentes.reduce((s, f) => s + f.ganho, 0);
+  const variacao = (f: { base: number; ganho: number }) =>
+    f.ganho <= 0 ? "mantém" : f.base > 0 ? `+${pct((f.ganho / f.base) * 100, 0)}` : "nova";
+
+  const impacto = cenario?.impactoFinanceiroIndicativo;
+  const faixaBaixa = num(impacto?.minimo);
+  const faixaAlta = num(impacto?.maximo);
+  const basePorMatricula = num(impacto?.basePorMatricula) || recursoAluno;
+
+  return `<section class="page content-page">
+  ${cabecalho(municipio, `Parte V · Cenário ${id.exercicio + 1}`)}
+  <div class="page-body">
+    <div class="kicker">Parte V &middot; Cenário de estruturação ${id.exercicio + 1}</div>
+    <h2>Onde a rede pode crescer<br>&mdash; e quanto isso vale</h2>
+
+    <div class="mt-2">
+      <table class="tb">
+        <tr><th>Modalidade</th><th class="r">Base atual</th><th class="r">Meta ${id.exercicio + 1}</th><th class="r">Ganho</th><th class="r">Variação</th><th style="width:2.7in">Como a meta foi fixada</th></tr>
+        ${frentes
+          .map(
+            (f) => `<tr><td><b>${f.nome}</b></td><td class="r">${int(f.base)}</td><td class="r">${int(f.meta)}</td><td class="r"><b>${f.ganho > 0 ? `+${int(f.ganho)}` : "&mdash;"}</b></td><td class="r">${variacao(f)}</td><td class="micro" style="font-size:7.3pt;line-height:1.3">${esc(f.criterio)}</td></tr>`,
+          )
+          .join("")}
+        <tr class="total"><td>Matrículas a mais</td><td class="r">&mdash;</td><td class="r">&mdash;</td><td class="r">+${int(totalGanho)}</td><td class="r"></td><td></td></tr>
+      </table>
+      <p class="micro mt-1">As três modalidades se sobrepõem &mdash; um aluno de EJA pode estar em jornada integral &mdash;,
+      então base e meta não se somam entre linhas. Cada meta cabe em um exercício: é o que a rede consegue abrir
+      entre uma coleta do Censo e a seguinte, não o teto de longo prazo.</p>
+    </div>
+
+    <div class="card mt-1">
+      <h3>Ganho de matrículas por frente</h3>
+      ${barras(frentes.map((f) => ({ nome: f.nome, valor: f.ganho, rotulo: `+${int(f.ganho)}` })))}
+    </div>
+
+    <div class="kpi hero mt-2"><em>Faixa indicativa de receita adicional &middot; se a reestruturação for bem executada</em>
+      <b>${temCenario && faixaAlta > 0 ? `${brlCompact(faixaBaixa)} &ndash; ${brlCompact(faixaAlta)}` : "—"}</b>
+      <span>${
+        temCenario && faixaAlta > 0
+          ? `${int(totalGanho)} matrículas a mais, cada uma pelo acréscimo de fator da sua frente (EJA 0,55 &middot; integral 0,35 &middot;
+             especial 0,20), sobre R$ ${brl(basePorMatricula)} por matrícula &middot; faixa de &plusmn;20%, sujeita a validação documental`
+          : "Cenário não calculado para este município — as bases do Censo não permitiram projetar as frentes."
+      }</span>
+    </div>
+
+    <p class="micro mt-1">Esta faixa mede só o efeito de <b>mais matrícula</b> na rede. Ela não se soma nem
+    substitui a estimativa da Parte I, que projeta o efeito de <b>correção das complementações</b> da União
+    (VAAT e VAAR): são dois mecanismos distintos sobre a mesma receita, e cada um tem sua própria validação.</p>
+
+    <div class="sec-label">Frentes de atuação</div>
+    <div class="grid-2">
+      <div class="card">
+        <p style="font-size:8.2pt;line-height:1.45;color:#33454f">
+        <span class="strong">1. EJA:</span> busca ativa e reorganização da oferta com apoio territorial.<br>
+        <span class="strong">2. Jornada ampliada:</span> expansão de tempo integral e oficinas nas escolas com capacidade de absorção.</p>
+      </div>
+      <div class="card">
+        <p style="font-size:8.2pt;line-height:1.45;color:#33454f">
+        <span class="strong">3. Educação especial:</span> qualificação cadastral e pedagógica para permanência.<br>
+        <span class="strong">4. Consultoria Global Company:</span> monitoramento do Censo, sistemas FNDE e consistência da base.</p>
+      </div>
+    </div>
+  </div>
+  ${rodape(pagina)}
+</section>`;
 }
 
 /**
@@ -2242,6 +2861,7 @@ function paginaMetodo(i: LevantamentoTemplateInput, pagina: number): string {
   const rede = redeMunicipal(i);
   const v = i.payload?.relatorio_dirigido_base?.vaar ?? null;
   const reprovadas = (v?.reprovadas ?? []) as string[];
+  const janela = janelaRetificacao(i);
 
   // As quatro frentes não são catálogo de serviço: são as quatro portas por
   // onde a receita deste fundo entra ou deixa de entrar, cada uma com a janela
@@ -2250,7 +2870,9 @@ function paginaMetodo(i: LevantamentoTemplateInput, pagina: number): string {
   const frentes: Array<[string, string, string, string]> = [
     [
       "Conferência cadastral do Censo",
-      situacaoCalendario(id.exercicio,new Date(i.qualidade?.coletadoEm ?? (()=>{const m=r.geradoEm.match(/^(\d{2})\/(\d{2})\/(\d{4})/);return m?`${m[3]}-${m[2]}-${m[1]}T12:00:00-03:00`:r.geradoEm;})())).texto,
+      janela.encerrada
+        ? `retificação de ${id.exercicio} ${janela.prazo} · próxima coleta de maio a 31/07`
+        : `coleta de maio a 31/07 · retificação ${janela.prazo === "30 dias da publicação" ? "em 30 dias após a publicação preliminar" : janela.prazo}`,
       "Escola a escola: classificação de localização (campo, indígena, quilombola), jornada declarada (integral × parcial), AEE registrado como turma e matrícula em duplicidade com outra rede.",
       `O fator vai de 1,00 a 2,17 e a coleta de um ano define o repasse do seguinte. A rede municipal tem ${int(rede.escolas)} escolas e fator médio ${(i.payload?.relatorio_dirigido_base?.ponderacao?.fatorMedio ?? 0).toFixed(3).replace(".", ",")}.`,
     ],
@@ -2265,7 +2887,7 @@ function paginaMetodo(i: LevantamentoTemplateInput, pagina: number): string {
       "aferição anual, recomeça do zero a cada exercício",
       "Diagnóstico item a item das cinco condicionalidades do art. 14, §1º e plano de correção para cada uma que reprova, com a evidência que o FNDE exige.",
       vaarZerado && reprovadas.length
-        ? `Reprovar em uma zera a parcela inteira. Aqui a reprovação é ${reprovadas.length === 1 ? "na condicionalidade" : "nas condicionalidades"} <b>${reprovadas.join(", ")}</b>, e é necessário validar a norma anual e todas as evidências da próxima aferição.`
+        ? `Reprovar em uma zera a parcela inteira. Aqui a reprovação é ${reprovadas.length === 1 ? "na condicionalidade" : "nas condicionalidades"} <b>${reprovadas.join(", ")}</b>, e a habilitação depende de corrigir só isso.`
         : vaarZerado
           ? "Reprovar em uma zera a parcela inteira, e o município não captura a complementação de resultado neste exercício."
           : "A habilitação não se acumula: é reavaliada todo ano, e manter é rotina anual, não conquista definitiva.",
@@ -2280,11 +2902,11 @@ function paginaMetodo(i: LevantamentoTemplateInput, pagina: number): string {
 
   const linhas = frentes
     .map(
-      ([titulo, janela, oque, porque], n) => `<tr>
-      <td style="width:.3in"><b style="color:var(--teal)">${n + 1}</b></td>
-      <td><b style="color:var(--navy)">${titulo}</b><div class="micro" style="margin-top:.02in">${janela}</div></td>
-      <td style="font-size:7.5pt;line-height:1.32">${oque}</td>
-      <td style="font-size:7.5pt;line-height:1.32;color:#33454f">${porque}</td>
+      ([titulo, prazo, oque, porque], n) => `<tr>
+      <td style="width:.3in"><b style="color:var(--teal);font-size:11pt">${n + 1}</b></td>
+      <td><b style="color:var(--navy)">${titulo}</b><div class="micro" style="margin-top:.03in">${prazo}</div></td>
+      <td style="font-size:7.6pt;line-height:1.36">${oque}</td>
+      <td style="font-size:7.6pt;line-height:1.36">${porque}</td>
     </tr>`,
     )
     .join("");
@@ -2299,9 +2921,9 @@ function paginaMetodo(i: LevantamentoTemplateInput, pagina: number): string {
     que passam em silêncio. Cada frente abaixo tem a janela em que ainda tem efeito, o que é feito nela e por que
     ela vale dinheiro <b>neste município</b>.</p>
 
-    <table class="mt-2">
-      <thead><tr><th style="width:.3in"></th><th style="width:1.7in">Frente e janela legal</th><th>O que é feito</th><th style="width:2.1in">Por que vale, aqui</th></tr></thead>
-      <tbody>${linhas}</tbody>
+    <table class="tb mt-2">
+      <tr><th style="width:.3in"></th><th style="width:1.75in">Frente e janela legal</th><th>O que é feito</th><th style="width:2.15in">Por que vale, aqui</th></tr>
+      ${linhas}
     </table>
 
     <div class="grid-2 mt-2">
@@ -2312,7 +2934,7 @@ function paginaMetodo(i: LevantamentoTemplateInput, pagina: number): string {
         SICONFI, IBGE e os sistemas MEC/FNDE. Nada aqui foi digitado à mão nem estimado onde a fonte não respondeu:
         onde falta dado, o relatório diz que falta.</p>
         <p style="font-size:8pt;line-height:1.45;color:#33454f;margin-top:.06in">É o mesmo rigor que a conferência
-        cadastral exige. A diferença é que, na conferência, uma correção pode alterar o rateio futuro, conforme elegibilidade, prazo e regras do exercício.</p>
+        cadastral exige. A diferença é que, na conferência, o erro encontrado vira receita no exercício seguinte.</p>
       </div>
       <div class="card">
         <h3>O que a prefeitura precisa disponibilizar</h3>
@@ -2362,6 +2984,7 @@ function paginaDecisao(i: LevantamentoTemplateInput, pagina: number): string {
   const v = i.payload?.relatorio_dirigido_base?.vaar ?? null;
   const reprovadas = (v?.reprovadas ?? []) as string[];
   const vaarZerado = rec.complementacaoVAAR <= 0;
+  const medianaUf = num(v?.referencia?.medianaUf);
 
   const t = i.payload?.relatorio_dirigido_base?.vaat ?? null;
   const distancia = num(t?.distanciaPercentual);
@@ -2381,13 +3004,19 @@ function paginaDecisao(i: LevantamentoTemplateInput, pagina: number): string {
   const custos: string[] = [];
   if (vaarZerado) {
     custos.push(
-      `O VAAR está zerado na publicação deste exercício. Conferir o impedimento ${esc(reprovadas.join(', ') || 'informado')} e os indicadores do ciclo aplicável. A situação atual não determina, por si, a habilitação nem o valor do exercício seguinte.`,
+      `O <b>VAAR continua em R$ 0</b> no exercício seguinte se ${
+        reprovadas.length
+          ? `${reprovadas.length === 1 ? "a condicionalidade" : "as condicionalidades"} <b>${reprovadas.join(", ")}</b> não ${reprovadas.length === 1 ? "for atacada" : "forem atacadas"}`
+          : "as condicionalidades não forem atacadas"
+      }. A aferição é anual e recomeça do zero &mdash; não decidir é decidir por mais um ciclo zerado${
+        medianaUf > 0 ? `, enquanto a mediana dos habilitados do estado fica em <b>R$ ${brl(medianaUf)}</b>` : ""
+      }.`,
     );
   }
   if (recebeVaat && distancia > 0 && distancia < 15) {
     custos.push(
       `O <b>VAAT está a ${pct(distancia)} do mínimo</b>. Como o cálculo usa a arrecadação do penúltimo exercício,
-      a evolução das receitas merece acompanhamento. A distância atual não permite prever isoladamente a habilitação ou complementação futura.`,
+      a saída da faixa é visível com dois anos de antecedência &mdash; e chega sem aviso para quem não olha.`,
     );
   }
   if (fiscalConfiavel && limite > 0 && pessoal > limite) {
@@ -2396,8 +3025,14 @@ function paginaDecisao(i: LevantamentoTemplateInput, pagina: number): string {
       do fundo é a via que financia a folha da educação <b>dentro da própria vinculação</b>, sem pressionar a RCL.`,
     );
   }
+  const janela = janelaRetificacao(i);
   custos.push(
-    `A coleta do Censo de ${id.exercicio} define o repasse de ${id.exercicio + 1}. Erro de classificação, jornada
+    janela.encerrada
+      ? `A coleta do Censo de ${id.exercicio} <b>já fechou</b> &mdash; retificação ${janela.prazo} &mdash; e é ela que
+    define o repasse de ${id.exercicio + 1}. O que ficou declarado a menor <b>não volta</b>: o art. 8º, §7º veda a
+    alteração dos dados depois de publicada a coleta. A próxima porta é a coleta de ${id.exercicio + 1}, que define
+    ${id.exercicio + 2} &mdash; e ela se ganha na preparação, não na retificação.`
+      : `A coleta do Censo de ${id.exercicio} define o repasse de ${id.exercicio + 1}. Erro de classificação, jornada
     ou AEE não corrigido na janela de retificação <b>não volta</b>: o art. 8º, §7º veda a alteração dos dados
     depois de publicada a coleta, e recálculo posterior é exceção, não rotina de gestão.`,
   );
@@ -2412,7 +3047,8 @@ function paginaDecisao(i: LevantamentoTemplateInput, pagina: number): string {
     <div class="kicker">Decisão</div>
     <h2>O que acontece se nada for feito &mdash;<br>e até quando ainda dá</h2>
 
-    <p class="lede">Ações propostas a partir das bases consultadas. Os efeitos futuros dependem de validação documental, calendário e regras do exercício.</p>
+    <p class="lede">Tudo o que está abaixo já é verdade nas bases oficiais consultadas nesta emissão. Nenhuma linha
+    desta página projeta cenário: são consequências datadas de manter o quadro atual.</p>
 
     <div class="card mt-2">
       <h3>O custo de não decidir</h3>
@@ -2422,7 +3058,20 @@ function paginaDecisao(i: LevantamentoTemplateInput, pagina: number): string {
     <div class="grid-2 mt-2">
       <div class="card">
         <h3>O calendário que impõe a data</h3>
-        <p style="font-size:8.2pt;line-height:1.45">${esc(situacaoCalendario(id.exercicio,new Date(i.qualidade?.coletadoEm ?? (()=>{const m=r.geradoEm.match(/^(\d{2})\/(\d{2})\/(\d{4})/);return m?`${m[3]}-${m[2]}-${m[1]}T12:00:00-03:00`:r.geradoEm;})())).texto)}</p><p class="micro mt-1">Fonte: Inep, calendário anual e comunicados de retificação. As janelas do VAAT e do VAAR devem ser verificadas nos atos específicos do exercício de distribuição.</p>
+        <table class="tb" style="margin-top:.04in">
+          <tr><td>Data de referência do Censo</td><td class="r">última quarta de maio</td></tr>
+          <tr><td>Coleta e digitação no Educacenso</td><td class="r">maio a 31 de julho</td></tr>
+          <tr><td>Publicação preliminar no DOU</td><td class="r">agosto</td></tr>
+          <tr><td><b>Retificação &mdash; a janela que fecha</b></td><td class="r"><b>${janela.prazo}</b></td></tr>
+          <tr><td>Siconfi e SIOPE para habilitar ao VAAT</td><td class="r"><b>31 de agosto</b></td></tr>
+          <tr><td>Envio ao FNDE para cálculo dos coeficientes</td><td class="r">dezembro</td></tr>
+        </table>
+        <p class="micro" style="margin-top:.06in">${
+          janela.encerrada
+            ? `A janela de ${id.exercicio} fechou. A de ${id.exercicio + 1} abre em maio, e a mobilização das escolas
+        precisa começar <b>antes</b>`
+            : `Para agir dentro da coleta de ${id.exercicio}, a mobilização das escolas precisa começar <b>antes de maio</b>`
+        } &mdash; conferir ${int(redeMunicipal(i).escolas)} unidades da rede municipal não cabe em trinta dias de retificação.</p>
       </div>
       <div class="card">
         <h3>O próximo passo</h3>
@@ -2478,7 +3127,13 @@ function paginaCaderno(i: LevantamentoTemplateInput, pagina: number): string {
   return `<section class="page content-page">
   ${cabecalho(municipio, "Caderno técnico")}
   <div class="page-body">
-    <div class="kicker">Caderno técnico &middot; Recomendações e rastreabilidade</div><p class="micro">Snapshot ${esc(i.qualidade?.snapshotId??"não informado")} · ${esc(i.qualidade?.versao??id.fonte)} · coleta ${esc(i.qualidade?.coletadoEm??r.geradoEm)}</p>
+    <div class="kicker">Caderno técnico &middot; Recomendações e rastreabilidade</div>
+    ${
+      i.qualidade
+        ? `<p class="micro" style="margin:-.03in 0 .09in">Coleta ${esc(i.qualidade.snapshotId)} &middot; ${esc(i.qualidade.versao)} &middot;
+    as fontes, com endereço e data de cada consulta, ficam no arquivo de dados desta emissão.</p>`
+        : ""
+    }
 
     <div class="grid-2">
       <div class="card">
@@ -2522,11 +3177,13 @@ function paginaCaderno(i: LevantamentoTemplateInput, pagina: number): string {
       ${pares
         .map(
           ([a, b]) =>
-            `<tr><td>${esc(a)}</td><td>Base consultada</td><td>${b ? esc(b) : ""}</td><td>${b ? "Base consultada" : ""}</td></tr>`,
+            `<tr><td>${esc(a)}</td><td>Automático</td><td>${b ? esc(b) : ""}</td><td>${b ? "Automático" : ""}</td></tr>`,
         )
         .join("")}
     </table>
-    <p class="small mt-1">Fonte consultada não significa auditoria concluída. O arquivo de dados desta emissão registra versão, competência e avisos de qualidade. ${esc(i.qualidade?.achados.find(a=>a.codigo==="universo_escolas")?.mensagem??"")}</p>`
+    <p class="small mt-1">A camada de rastreabilidade mostra o que entrou automaticamente, o que depende de estimativa
+    e o que exige confirmação manual &mdash; ela explica a confiança operacional do relatório
+    antes da emissão final.</p>`
         : ""
     }
 
@@ -2547,7 +3204,7 @@ function paginaCaderno(i: LevantamentoTemplateInput, pagina: number): string {
 export function generateLevantamentoHtml(input: LevantamentoTemplateInput): string {
   const id = input.relatorio.identificacao;
 
-  const geradores = [
+  const paginas = [
     paginaCapa,
     paginaSumario,
     paginaReceita,
@@ -2565,21 +3222,12 @@ export function generateLevantamentoHtml(input: LevantamentoTemplateInput): stri
     paginaMetodo,
     paginaDecisao,
     paginaCaderno,
-  ];
-  const executivo = input.inteligencia ? paginasInteligencia(input.inteligencia) : [];
-  const memoria = input.inteligencia ? paginasMemoria(input.inteligencia) : [];
-  const renderIntel = (p: {titulo:string;html:string}, numero:number) => `<section class="page content-page">${cabecalho(id.municipioNome, p.titulo)}<div class="page-body">${p.html}</div>${rodape(numero)}</section>`;
-  const paginas = input.inteligencia
-    ? [paginaCapa(input), ...executivo.map((p,i)=>renderIntel(p,i+2)), ...geradores.filter(fn=>![paginaCapa,paginaSumario,paginaReceita,paginaProjecao,paginaVaar].includes(fn)).map((fn,i)=>fn(input,i+6))]
-    : geradores.map((fn,indice)=>fn(input,indice+1));
-  for(const p of memoria) paginas.push(renderIntel(p,paginas.length+1));
-  const total = paginas.length;
-
+  ].map((fn, indice) => fn(input, indice + 1));
 
   return `<!doctype html>
-<html lang="pt-BR" data-paginas-esperadas="${total}"><head><meta charset="utf-8">
+<html lang="pt-BR"><head><meta charset="utf-8">
 <title>Levantamento FUNDEB &mdash; ${esc(id.municipioNome)}/${esc(id.uf)} | Global Sync</title>
-<style>${CSS}${CSS_INTELIGENCIA}</style></head><body>
-${paginas.join("\n\n").replace(/(\d+) \/ 17/g, `$1 / ${total}`)}
+<style>${CSS}</style></head><body>
+${paginas.join("\n\n")}
 </body></html>`;
 }

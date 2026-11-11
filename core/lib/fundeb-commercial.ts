@@ -1,13 +1,13 @@
 import type { CensoEscolar, ReceitasFundeb } from "@/modules/levantamento-fundeb/types";
 import {
   calcularPerfilComercialFundeb,
+  calcularProjecaoPorMultiplicador,
   createEmptyCensoEscolar,
 } from "@/modules/levantamento-fundeb/utils/calculos";
 import type { PerfilComercialFundeb, ProjecaoFundeb } from "@/modules/levantamento-fundeb/types";
 import type { FndeVaatContext } from "@/core/lib/fundeb-fnde";
 import type { IbgeCidadeIndicators } from "@/core/lib/ibge-cidade-indicators";
 import type { InepCensoMunicipalRecord } from "@/core/lib/inep-censo";
-import { referenciaSemProjecao } from './fundeb-simulacao';
 
 export function buildCensoEscolarFromInep(record: InepCensoMunicipalRecord | null): CensoEscolar {
   if (!record) {
@@ -145,7 +145,12 @@ export function buildPerfilEProjecaoComercial(params: {
     ieiPercentual: params.vaatContext?.ieiPercentual ?? null,
   });
 
-  const projecao = referenciaSemProjecao(params.receitas);
+  const projecao = calcularProjecaoPorMultiplicador(
+    params.receitas,
+    perfil.multiplicador,
+    `Benchmark comercial Global Sync (${perfil.faixa}) baseado em score ${perfil.score.toFixed(2)}.`,
+    { perfilComercial: perfil },
+  );
 
   return { perfil, projecao };
 }

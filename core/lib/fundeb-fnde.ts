@@ -23,6 +23,15 @@ export interface FndeVaatContext {
   ente: string;
   vaatAnterior: number;
   vaatComComplementacao: number;
+  /**
+   * VAAT-MIN do exercício — um valor só para o país.
+   *
+   * Não é a coluna "VAAT com complementação": para quem não recebe, ela repete
+   * o VAAT do próprio ente. Usá-la como mínimo fazia Senador Canedo/GO sair com
+   * "VAAT-MIN R$ 10.511,38" quando o patamar de 2026 é R$ 10.192,38 — e escondia
+   * que a rede está a 3% de entrar na faixa.
+   */
+  vaatMinimo: number | null;
   complementacaoVAAT: number;
   ieiPercentual: number | null;
   habilitacao: string;
@@ -107,7 +116,7 @@ function invalidarSeAtualizado(ano:number){
  if(versoesCache.get(ano)!==versao){receitasCache.delete(ano);vaatCache.delete(ano);habilitacaoCache.delete(ano);versoesCache.set(ano,versao);}
 }
 const receitasCache = new Map<number, Promise<Map<string, FndeFundebReceitas>>>();
-const vaatCache = new Map<number, Promise<Map<string, Omit<FndeVaatContext, "habilitacao" | "pendencia">>>>();
+const vaatCache = new Map<number, Promise<Map<string, Omit<FndeVaatContext, "habilitacao" | "pendencia" | "vaatMinimo">>>>();
 const habilitacaoCache = new Map<number, Promise<Map<string, Pick<FndeVaatContext, "habilitacao" | "pendencia">>>>();
 
 function parseBrazilianNumber(value: string) {
@@ -390,7 +399,7 @@ function parseVaatCsv(csvText: string) {
     .map((line) => line.trim())
     .filter((line) => /^[A-Z]{2};.+;\d{7};/.test(line));
 
-  const map = new Map<string, Omit<FndeVaatContext, "habilitacao" | "pendencia">>();
+  const map = new Map<string, Omit<FndeVaatContext, "habilitacao" | "pendencia" | "vaatMinimo">>();
 
   for (const row of rows) {
     const columns = row.split(";").map((value) => value.trim());
@@ -412,6 +421,27 @@ function parseVaatCsv(csvText: string) {
   }
 
   return map;
+}
+
+type LinhaVaat = Omit<FndeVaatContext, "habilitacao" | "pendencia" | "vaatMinimo">;
+const minimoPorTabela = new WeakMap<Map<string, LinhaVaat>, number | null>();
+
+/**
+ * O VAAT-MIN sai da própria portaria: a União completa cada rede **até** ele,
+ * então todo ente que recebe complementação termina exatamente no mínimo. O
+ * valor mais frequente entre os que recebem é o patamar nacional.
+ */
+export function vaatMinimoNacional(tabela: Map<string, LinhaVaat>): number | null {
+  if (minimoPorTabela.has(tabela)) return minimoPorTabela.get(tabela) ?? null;
+  const contagem = new Map<number, number>();
+  for (const linha of tabela.values()) {
+    if (linha.complementacaoVAAT > 0 && linha.vaatComComplementacao > 0) {
+      contagem.set(linha.vaatComComplementacao, (contagem.get(linha.vaatComComplementacao) ?? 0) + 1);
+    }
+  }
+  const minimo = [...contagem.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null;
+  minimoPorTabela.set(tabela, minimo);
+  return minimo;
 }
 
 function parseHabilitacaoCsv(csvText: string) {
@@ -592,6 +622,7 @@ export async function getFundebVaatContext(
     ente: vaat?.ente ?? "",
     vaatAnterior: vaat?.vaatAnterior ?? 0,
     vaatComComplementacao: vaat?.vaatComComplementacao ?? 0,
+    vaatMinimo: vaatTable ? vaatMinimoNacional(vaatTable) : null,
     complementacaoVAAT: vaat?.complementacaoVAAT ?? 0,
     ieiPercentual: vaat?.ieiPercentual ?? null,
     habilitacao: habilitacao?.habilitacao ?? "Nao informado",

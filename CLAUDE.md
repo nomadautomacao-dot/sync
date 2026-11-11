@@ -1,7 +1,7 @@
 # CLAUDE.md — Sync
 
 > Fonte única de verdade para qualquer agente de IA trabalhando neste projeto.
-> Atualizado: 2026-09-04.
+> Atualizado: 2026-11-11.
 
 ---
 
@@ -445,6 +445,78 @@ saíram do projeto inteiro em 2026-08-01, com as dependências desinstaladas.
 | **Contrato FUNDEB** | `contrato-fundeb` | Kit de inexigibilidade: processo administrativo com 14 anexos + proposta à parte (Lei 14.133/21, Art. 74) |
 | **Contrato** | — | Proposta por dispensa (Art. 75) + acompanhamento do contrato na ficha da cidade (abaixo) |
 | **Propostas** | `propostas` | Propostas comerciais padronizadas |
+
+### Levantamento FUNDEB — 17 páginas, e o que não entra nelas
+
+| Onde | O quê |
+|---|---|
+| `core/lib/fundeb-levantamento-template.ts` | As 17 páginas. Contagem fixa: `LEVANTAMENTO_TOTAL_PAGINAS` |
+| `core/lib/relatorio-snapshot.ts` | A coleta única que alimenta o Levantamento e o Raio-X |
+| `core/lib/relatorio-inteligencia.ts` | A camada da coleta: execução do RREO, indicadores do VAAR, triagem de escolas |
+
+**A peça é comercial, e isso já foi desfeito uma vez.** Em 2026-10-27 uma
+revisão zerou o motor (`referenciaSemProjecao` no lugar da projeção, cenário de
+matrículas com meta igual à base, ganho rebaixado a "hipótese") e trocou o
+sumário, a receita, a projeção e o VAAR por quatro páginas de tabela, mais três
+de URL e SHA-256 no fim. O documento passou a gastar mais linha desmentindo o
+próprio número do que defendendo-o, e a ficha FUNDEB da cidade zerou junto,
+porque lê o mesmo JSON. Foi revertido em 2026-11-11, por decisão do dono.
+
+Três coisas para não quebrar:
+
+1. **A camada da coleta preenche folha que sobrava, não abre página.** A
+   execução do exercício entra na página da receita; a variação por componente,
+   na da série; as escolas, na de qualidade; as vinculações do ano em curso, na
+   fiscal. Página nova empurra a decisão e o prazo para mais longe de quem lê.
+2. **Hash e URL de fonte ficam no arquivo de dados, não no PDF.** O caderno
+   técnico leva uma linha com o identificador da coleta. Rastreabilidade é
+   prova, e prova é anexo — três folhas dela no fim de uma peça de venda são a
+   última coisa que o gestor lê.
+3. **A janela de retificação sai com a data de verdade** (`janelaRetificacao`,
+   sobre `calendario-educacional.ts`). O texto fixo "30 dias da publicação"
+   dizia "até quando ainda dá" sobre uma janela fechada um mês antes. O
+   calendário só conhece 2026: a cada exercício, atualizar `CENSO_2026` — fora
+   dele o documento volta à regra geral, que é verdadeira e não informa nada.
+
+**Três erros de dado que saíam impressos com cara de oficial**, achados em
+2026-11-11 conferindo Senador Canedo/GO contra Tesouro, FNDE e IBGE. Nenhum
+quebrava a emissão, e os três têm teste em `fundeb-vaat-minimo.test.ts`:
+
+| O que saía | O certo | Causa |
+|---|---|---|
+| "VAAT-MIN R$ 10.511,38" | R$ 10.192,38, um só para o país | A coluna "VAAT com complementação" só é o mínimo para quem recebe; para os demais repete o VAAT do próprio ente. `vaatMinimoNacional()` |
+| PIB per capita R$ 30.509 (2023) | R$ 35.307,32 | O caminho SIDRA dividia o PIB de 2023 pela população de 2026 — e só rodava quando a API principal do IBGE caía, então o erro era intermitente |
+| Capa sem mapa e sem UF em GO, DF e parte de MT | — | Boa Esperança do Norte/MT não tem microrregião no IBGE; ler `m.microrregiao.mesorregiao` lançava dentro do `find` e derrubava todo município de código maior. Vale para **todos** os relatórios, não só este |
+
+Ao conferir um relatório, o que **não** é dado e não deve ser tratado como tal:
+o ganho da capa, que é a receita × o multiplicador do perfil comercial. É
+premissa, com a ressalva impressa na Parte I.
+
+**As metas do cenário de matrículas cabem em um ano**
+(`core/lib/fundeb-cenario-metas.ts`, com teste). Já saíram do tamanho da rede
+pública inteira, com piso absoluto: EJA a 23% dela mandava Senador Canedo de 625
+para 7.800 matrículas, e o cenário valia R$ 37 a 56 milhões. Hoje cada frente
+tem uma regra de uma linha, impressa ao lado da meta — meta sem critério é
+palpite:
+
+| Frente | Regra |
+|---|---|
+| EJA | +25% sobre a base; ou volta ao pico dos quatro censos anteriores, limitada a +50% |
+| Tempo integral | um terço da distância até 25% da rede municipal (meta 6 do PNE), no máximo 5% da rede por ano; quem já passou, mantém |
+| Educação especial | +10% sobre a base |
+
+Sem oferta declarada, a meta é zero: abrir EJA onde não há turma é decisão de
+política, não meta de consultoria. Senador Canedo ficou em 780 / 4.615 / 1.425,
+com faixa de R$ 2,5 a 3,8 milhões.
+
+**A capa é clara, com os números numa placa escura no pé**
+(`report-visual-theme.ts`, que vale para todos os relatórios). Já foi verde-escura
+na folha inteira, e ali o ganho em verde-claro não destacava por maior que fosse.
+
+> **O multiplicador em capital dá número que não se defende.** Fortaleza sai
+> com 1,88× e +R$ 1,99 bilhão na capa. O regime "escala metropolitana" de
+> `calcularPerfilComercialFundeb` foi calibrado assim de propósito e voltou
+> como era; antes de emitir para município grande, vale decidir um teto.
 
 ### Case de Sucesso
 

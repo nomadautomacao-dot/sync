@@ -1,3 +1,4 @@
+import { calcularMetasCenario } from "@/core/lib/fundeb-cenario-metas";
 import type { RelatorioFundeb } from "@/modules/levantamento-fundeb/types";
 import { getFundebReceitasHistoricas } from "@/core/lib/fundeb-fnde";
 import {
@@ -23,7 +24,6 @@ function calcPercentDelta(base: number, current: number) {
 function calcAbsoluteDelta(base: number, current: number) {
   return current - base;
 }
-
 
 
 function getTempoIntegralTotal(record: InepCensoMunicipalRecord | null | undefined) {
@@ -126,7 +126,12 @@ function buildHistoricoCenso(history: InepCensoMunicipalRecord[]) {
 function buildCenarioEstruturacao(
   relatorio: RelatorioFundeb,
   censoAtual: InepCensoMunicipalRecord | null | undefined,
+  historico: InepCensoMunicipalRecord[] = [],
 ) {
+  const totalPublico =
+    censoAtual?.matriculasPublicasTotal ??
+    relatorio.censoEscolar?.totalMatriculas ??
+    0;
   const matriculasMunicipais =
     censoAtual?.matriculasMunicipaisTotal ??
     relatorio.perfilComercial?.matriculasMunicipais ??
@@ -148,18 +153,40 @@ function buildCenarioEstruturacao(
     relatorio.censoEscolar?.matriculasEtapa.educacaoEspecial ??
     0;
 
-  // Metas dependem de demanda, capacidade e decisão local; não derivam do porte público.
-  const metaEja = ejaAtual;
-  const metaIntegral = integralAtual;
-  const metaEspecial = especialAtual;
-  const deltaEja = 0, deltaIntegral = 0, deltaEspecial = 0;
-  const baseFinanceiraPorMatricula = matriculasMunicipais > 0 ? relatorio.receitas.totalReceitas / matriculasMunicipais : 0;
-  const impactoMin = 0, impactoMax = 0;
+  // As metas saem de `fundeb-cenario-metas.ts`: uma regra por frente, sobre a
+  // rede municipal, do tamanho que cabe em um ano. Ver o cabeçalho de lá.
+  const anoAtual = censoAtual?.anoReferencia ?? Number.POSITIVE_INFINITY;
+  const metasCenario = calcularMetasCenario({
+    matriculasMunicipais,
+    eja: ejaAtual,
+    integral: integralAtual,
+    educacaoEspecial: especialAtual,
+    ejaHistorico: historico
+      .filter((item) => item.anoReferencia < anoAtual)
+      .slice(-4)
+      .map((item) => item.ejaMunicipal ?? item.ejaPublica ?? item.ejaTotal ?? 0),
+  });
+  const metaEja = metasCenario.eja.meta;
+  const metaIntegral = metasCenario.integral.meta;
+  const metaEspecial = metasCenario.educacaoEspecial.meta;
+
+  const deltaEja = metasCenario.eja.ganho;
+  const deltaIntegral = metasCenario.integral.ganho;
+  const deltaEspecial = metasCenario.educacaoEspecial.ganho;
+
+  const baseFinanceiraPorMatricula =
+    matriculasMunicipais > 0
+      ? relatorio.receitas.totalReceitas / matriculasMunicipais
+      : totalPublico > 0
+        ? relatorio.receitas.totalReceitas / totalPublico
+        : 0;
+
+  const pesoTecnico = deltaEja * 0.55 + deltaIntegral * 0.35 + deltaEspecial * 0.2;
+  const impactoMin = pesoTecnico * baseFinanceiraPorMatricula * 0.8;
+  const impactoMax = pesoTecnico * baseFinanceiraPorMatricula * 1.2;
 
   return {
     anoAlvo: relatorio.identificacao.exercicio + 1,
-    estimado: false,
-    motivo: "Demanda, capacidade, custos e elegibilidade ainda precisam ser validados. Categorias não aditivas.",
     baseAtual: {
       eja: ejaAtual,
       integral: integralAtual,
@@ -176,13 +203,19 @@ function buildCenarioEstruturacao(
       educacaoEspecial: deltaEspecial,
       total: deltaEja + deltaIntegral + deltaEspecial,
     },
+    /** A regra que gerou cada meta — impressa ao lado dela no relatório. */
+    criterios: {
+      eja: metasCenario.eja.criterio,
+      integral: metasCenario.integral.criterio,
+      educacaoEspecial: metasCenario.educacaoEspecial.criterio,
+    },
     impactoFinanceiroIndicativo: {
       minimo: impactoMin,
       maximo: impactoMax,
       basePorMatricula: baseFinanceiraPorMatricula,
     },
     leituraExecutiva:
-      `Com agenda dirigida de EJA, tempo integral e educação especial, ${relatorio.identificacao.municipioNome} pode avaliar demanda, capacidade e custos para ${relatorio.identificacao.exercicio + 1} com uma rede mais favorável para financiamento e leitura técnica do FUNDEB.`,
+      `Com agenda dirigida de EJA, tempo integral e educação especial, ${relatorio.identificacao.municipioNome} pode reverter a estagnação recente da base e entrar em ${relatorio.identificacao.exercicio + 1} com uma rede mais favorável para financiamento e leitura técnica do FUNDEB.`,
     frentes: [
       "busca ativa e reorganização da oferta de EJA com apoio territorial",
       "expansão de jornada ampliada e oficinas em escolas com capacidade de absorção",
@@ -319,7 +352,7 @@ export async function buildFundebComparativeSnapshot(relatorio: RelatorioFundeb)
   const [censoAnoBase1, censoAnoBase2] = pickCensoComparisonYears(codigoIBGE, exercicio);
   const matriculasComparativas = buildMatriculasComparativas(censoAnoBase1 ?? null, censoAnoBase2 ?? null);
   const historicoCenso = buildHistoricoCenso(censoHistory);
-  const cenarioEstruturacao = buildCenarioEstruturacao(relatorio, censoAnoBase2);
+  const cenarioEstruturacao = buildCenarioEstruturacao(relatorio, censoAnoBase2, censoHistory);
   const deltaTotalPercent =
     receitaAnoBase1 && receitaAnoBase2
       ? calcPercentDelta(receitaAnoBase1.totalReceitas, receitaAnoBase2.totalReceitas)

@@ -78,9 +78,11 @@ async function fetchSidraValue(
   tableId: string,
   codigoIBGE: string,
   variableId: string,
+  /** Ano específico; sem ele, o último período publicado. */
+  periodo?: string,
 ): Promise<{ value: number; period: string } | null> {
   const url =
-    `https://apisidra.ibge.gov.br/values/t/${tableId}/n6/${codigoIBGE}/v/${variableId}/p/last%201`;
+    `https://apisidra.ibge.gov.br/values/t/${tableId}/n6/${codigoIBGE}/v/${variableId}/p/${periodo ?? "last%201"}`;
   const response = await fetch(url, {
     headers: { "User-Agent": "Mozilla/5.0" },
     signal: AbortSignal.timeout(10_000),
@@ -201,6 +203,40 @@ async function fetchIndicadoresApi(codigoIBGE: string): Promise<IbgeCidadeIndica
 }
 
 /**
+ * População do **mesmo ano** do PIB — o denominador que o IBGE usa.
+ *
+ * O PIB municipal sai com dois anos de atraso; a estimativa populacional, com
+ * meses. Dividir um pelo outro ("melhor população disponível") produzia PIB de
+ * 2023 sobre habitantes de 2026: Senador Canedo/GO saía com R$ 30.509 por
+ * habitante, rotulado 2023, contra R$ 35.307,32 no dado oficial — 14% a menos,
+ * e só quando a API principal do IBGE caía, o que tornava o erro intermitente.
+ *
+ * Até 2023 o IBGE divide pela população do Censo 2022; de 2024 em diante, pela
+ * estimativa do próprio ano. Sem a população certa, devolve `null`: PIB per
+ * capita ausente é melhor que PIB per capita errado com cara de oficial.
+ */
+async function populacaoDoAnoDoPib(
+  codigoIBGE: string,
+  anoPib: string,
+  populacaoCenso: number | null,
+): Promise<number | null> {
+  const ano = Number(anoPib);
+  if (!Number.isInteger(ano)) return null;
+  if (ano <= 2023) return populacaoCenso;
+  try {
+    return (await fetchSidraValue("6579", codigoIBGE, "9324", String(ano)))?.value ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/** PIB em mil reais ÷ habitantes, em reais com duas casas. */
+export function pibPorHabitante(pibMilReais: number, populacao: number | null): number | null {
+  if (!populacao || populacao <= 0 || !Number.isFinite(pibMilReais)) return null;
+  return Math.round(((pibMilReais * 1000) / populacao) * 100) / 100;
+}
+
+/**
  * Fetches indicators from the SIDRA API (individual table queries).
  * Used as a secondary API fallback if the indicadores API fails.
  *
@@ -211,7 +247,8 @@ async function fetchIndicadoresApi(codigoIBGE: string): Promise<IbgeCidadeIndica
  *  - 1301 (Área territorial): v/615 = Área em km²
  *
  * Note: SIDRA table 5938/v37 returns GDP total in "Mil Reais", NOT per capita.
- * We calculate per capita = (PIB_total * 1000) / população.
+ * We calculate per capita = (PIB_total * 1000) / população **do ano do PIB**
+ * (ver `populacaoDoAnoDoPib`).
  */
 async function fetchFromSidraApi(codigoIBGE: string): Promise<Partial<IbgeCidadeIndicators> | null> {
   const [populacao, popEstimada, pibTotal, area] = await Promise.allSettled([
@@ -229,10 +266,8 @@ async function fetchFromSidraApi(codigoIBGE: string): Promise<Partial<IbgeCidade
   // At least one population source must be present
   if (!pop && !popEst) return null;
 
-  // Calculate PIB per capita: PIB is in "Mil Reais", so multiply by 1000 first
-  const bestPop = popEst?.value ?? pop?.value ?? 0;
-  const pibPerCapita = pibVal && bestPop > 0
-    ? Math.round((pibVal.value * 1000) / bestPop * 100) / 100
+  const pibPerCapita = pibVal
+    ? pibPorHabitante(pibVal.value, await populacaoDoAnoDoPib(codigoIBGE, pibVal.period, pop?.value ?? null))
     : null;
 
   return {
