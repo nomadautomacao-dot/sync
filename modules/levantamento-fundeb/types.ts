@@ -37,6 +37,25 @@ export interface ParcelaGanhoFundeb {
   natureza: "apurado" | "referencia" | "cenario";
 }
 
+/** Um horizonte do cenário otimista: o total e as parcelas que o somam. */
+export interface HorizonteOtimistaFundeb {
+  total: number;
+  /** Sobre a receita atual, em %. */
+  percentual: number;
+  parcelas: ParcelaGanhoFundeb[];
+}
+
+/**
+ * Até onde este município pode ir — as mesmas alavancas do potencial, com as
+ * matrículas no ritmo que uma em cada dez redes do país alcançou.
+ */
+export interface CenarioOtimistaFundeb {
+  umAno: HorizonteOtimistaFundeb;
+  tresAnos: HorizonteOtimistaFundeb;
+  /** Em três anos a rede cruza o VAAT-MIN e passa a receber complementação. */
+  entraNoVaat: boolean;
+}
+
 export interface ProjecaoFundeb {
   vaafAtual: number;
   vaafProjetado: number;
@@ -57,6 +76,8 @@ export interface ProjecaoFundeb {
   natureza?: "recuperavel" | "benchmark" | "referencia" | "composta";
   /** As parcelas que somam `totalGanho`, quando a projeção é composta. */
   parcelas?: ParcelaGanhoFundeb[];
+  /** O teto individual do município. Ausente em relatório anterior à composição. */
+  otimista?: CenarioOtimistaFundeb | null;
   ressalva?: string | null;
 }
 

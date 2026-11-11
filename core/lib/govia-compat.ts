@@ -1282,6 +1282,15 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
           valor: cenarioMatriculas.impactoFinanceiroIndicativo.padrao,
           matriculas: cenarioMatriculas.ganhosMatriculas.total,
           mecanismo: cenarioMatriculas.impactoFinanceiroIndicativo.mecanismo,
+          acelerado: {
+            valor: cenarioMatriculas.impactoFinanceiroIndicativo.acelerado,
+            matriculas: cenarioMatriculas.ganhosAcelerados.total,
+          },
+          aceleradoTresAnos: {
+            valor: cenarioMatriculas.impactoFinanceiroIndicativo.aceleradoTresAnos,
+            matriculas: cenarioMatriculas.ganhosAceleradosTresAnos.total,
+            entraNoVaat: cenarioMatriculas.impactoFinanceiroIndicativo.viaAceleradoTresAnos === "entra",
+          },
         }
       : null,
   });

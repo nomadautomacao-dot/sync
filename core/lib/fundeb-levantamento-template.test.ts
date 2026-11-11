@@ -815,3 +815,61 @@ describe("o cenário de matrículas em três horizontes", () => {
     expect(paginas(html)).toBe(LEVANTAMENTO_TOTAL_PAGINAS);
   });
 });
+
+describe("o cenário otimista ao lado do potencial", () => {
+  function relatorioComOtimista() {
+    const r = relatorioMinimo();
+    const vaar = { chave: "vaar", titulo: "VAAR a recuperar — condicionalidades II e III", valor: 17_755_425.12, regra: "R$ 711,84 por matrícula × 24.943 matrículas da rede", pagina: 5, natureza: "referencia" } as const;
+    const mat = (valor: number, titulo = "Cenário de matrículas — EJA, tempo integral e educação especial") =>
+      ({ chave: "matriculas", titulo, valor, regra: "matrículas a mais", pagina: 14, natureza: "cenario" }) as const;
+    Object.assign(r.projecao, {
+      vaarProjetado: 17_755_425.12, vaarGanho: 17_755_425.12,
+      totalAtual: 200_722_290.59, totalProjetado: 222_869_117.6, totalGanho: 22_146_827.01, ganhoPercentual: 11.03,
+      natureza: "composta",
+      parcelas: [vaar, mat(4_391_401.89)],
+      otimista: {
+        umAno: { total: 27_248_659.01, percentual: 13.58, parcelas: [vaar, mat(9_493_233.89)] },
+        tresAnos: { total: 55_383_337.51, percentual: 27.59, parcelas: [vaar, mat(37_627_912.39)] },
+        entraNoVaat: true,
+      },
+    });
+    return r;
+  }
+
+  it("mostra potencial e otimista parcela por parcela, com o total de cada coluna", () => {
+    const html = generateLevantamentoHtml({ relatorio: relatorioComOtimista() });
+
+    expect(html).toContain("até onde este município pode ir");
+    expect(html).toContain("+4.391.401,89");
+    expect(html).toContain("+9.493.233,89");
+    expect(html).toContain("+37.627.912,39");
+    expect(html).toContain("+55.383.337,51");
+    expect(html).toContain("O otimista não é um multiplicador");
+    expect(html).toContain("cruza o VAAT-MIN e passa a receber complementação");
+  });
+
+  it("leva o teto do município à capa e ao sumário", () => {
+    const html = generateLevantamentoHtml({ relatorio: relatorioComOtimista() });
+
+    expect(html).toContain("Cenário otimista até 2029");
+    expect(html).toContain("Otimista até 2029");
+    expect(html.match(/\+R\$\u00a055,38\u00a0mi/g)?.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("não imprime mais a rampa mensal de percentuais fixos", () => {
+    const r = relatorioComOtimista();
+    r.cronogramaVAAF = [{ mes: "Janeiro", valorProjetado: 1_306_662.79, percentual: 5.9 }];
+
+    expect(generateLevantamentoHtml({ relatorio: r })).not.toContain("Cronograma mensal projetado");
+  });
+
+  it("continua lendo relatório composto sem o bloco otimista", () => {
+    const r = relatorioComOtimista();
+    r.projecao.otimista = null;
+    const html = generateLevantamentoHtml({ relatorio: r });
+
+    expect(html).toContain("De onde vem o potencial de 2027");
+    expect(html).not.toContain("até onde este município pode ir");
+    expect(paginas(html)).toBe(LEVANTAMENTO_TOTAL_PAGINAS);
+  });
+});

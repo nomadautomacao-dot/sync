@@ -1,6 +1,7 @@
 import {
   calcularMetasCenario,
   equivalentesDoCenario,
+  equivalentesParaEntrarNoVaat,
   matriculasDoCenario,
   valorDosEquivalentes,
   type Horizonte,
@@ -209,6 +210,8 @@ function buildCenarioEstruturacao(
   const padrao = valor("padrao");
   const acelerado = valor("acelerado");
   const tresAnos = valor("tresAnos");
+  const aceleradoTresAnos = valor("aceleradoTresAnos");
+  const paraEntrarNoVaat = mecanismo ? equivalentesParaEntrarNoVaat(mecanismo) : null;
 
   const moeda = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const textoMecanismo = !padrao || !mecanismo
@@ -219,7 +222,11 @@ function buildCenarioEstruturacao(
         ? `com mais matrícula ponderada a rede cruza o VAAT-MIN e passa a receber complementação — em média R$ ${moeda(padrao.porEquivalente)} por matrícula-equivalente`
         : `cada matrícula-equivalente a mais vale R$ ${moeda(mecanismo.valorPorEquivalente)} no fundo de ${relatorio.identificacao.uf}`;
 
-  const porFrente = <K extends "meta" | "metaAcelerada" | "metaTresAnos" | "ganho" | "ganhoAcelerado" | "ganhoTresAnos">(campo: K) => ({
+  const porFrente = <
+    K extends
+      | "meta" | "metaAcelerada" | "metaTresAnos" | "metaAceleradaTresAnos"
+      | "ganho" | "ganhoAcelerado" | "ganhoTresAnos" | "ganhoAceleradoTresAnos",
+  >(campo: K) => ({
     eja: metas.eja[campo],
     integral: metas.integral[campo],
     educacaoEspecial: metas.educacaoEspecial[campo],
@@ -238,9 +245,15 @@ function buildCenarioEstruturacao(
     metasAceleradas: porFrente("metaAcelerada"),
     /** Três anos seguidos no ritmo padrão. */
     metasTresAnos: porFrente("metaTresAnos"),
+    /** Três anos seguidos no ritmo acelerado — o cenário otimista. */
+    metasAceleradasTresAnos: porFrente("metaAceleradaTresAnos"),
     ganhosMatriculas: { ...porFrente("ganho"), total: matriculasDoCenario(metas, "padrao") },
     ganhosAcelerados: { ...porFrente("ganhoAcelerado"), total: matriculasDoCenario(metas, "acelerado") },
     ganhosTresAnos: { ...porFrente("ganhoTresAnos"), total: matriculasDoCenario(metas, "tresAnos") },
+    ganhosAceleradosTresAnos: {
+      ...porFrente("ganhoAceleradoTresAnos"),
+      total: matriculasDoCenario(metas, "aceleradoTresAnos"),
+    },
     /** A regra que gerou cada meta — impressa ao lado dela no relatório. */
     criterios: {
       eja: metas.eja.criterio,
@@ -255,8 +268,15 @@ function buildCenarioEstruturacao(
       padrao: padrao?.valor ?? 0,
       acelerado: acelerado?.valor ?? 0,
       tresAnos: tresAnos?.valor ?? 0,
+      aceleradoTresAnos: aceleradoTresAnos?.valor ?? 0,
       porEquivalente: padrao?.porEquivalente ?? 0,
       via: padrao?.via ?? null,
+      /** Por onde a receita entra em cada horizonte — `entra` é a rede cruzando o VAAT-MIN. */
+      viaAcelerado: acelerado?.via ?? null,
+      viaAceleradoTresAnos: aceleradoTresAnos?.via ?? null,
+      /** Matrículas-equivalentes que faltam para a rede entrar na faixa do VAAT. */
+      equivalentesParaEntrarNoVaat: paraEntrarNoVaat,
+      equivalentesAceleradoTresAnos: equivalentesDoCenario(metas, "aceleradoTresAnos"),
       mecanismo: textoMecanismo,
       basePorMatricula: baseFinanceiraPorMatricula,
     },

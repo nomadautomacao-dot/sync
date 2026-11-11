@@ -517,6 +517,30 @@ não quebrar:
    por componente precisa fechar com o total — já saiu somando R$ 2,7 mi nas
    parcelas e R$ 136 mi no total.
 
+**O cenário otimista é o teto de cada município, não um multiplicador**
+(`comporOtimista()`, no mesmo arquivo). São as mesmas três parcelas, com as
+matrículas no ritmo do decil de cima em vez do quartil, por um e por três anos.
+O VAAR e a lacuna de declaração não esticam: o VAAR já entra inteiro, e a lacuna
+continua medida até a mediana — pelo teto teórico o AEE de São Paulo sozinho
+dava R$ 174 milhões. A Parte I mostra potencial e otimista lado a lado, parcela
+por parcela; a capa e o sumário levam o otimista de três anos.
+
+| Município | Potencial | Otimista, um ano | Otimista, três anos | O que decide |
+|---|---|---|---|---|
+| Senador Canedo/GO | R$ 22,1 mi (11%) | R$ 27,2 mi (14%) | R$ 55,4 mi (28%) | VAAR, e cruzar o VAAT-MIN em três anos |
+| Serra do Ramalho/BA | R$ 7,9 mi (9%) | R$ 10,9 mi (12%) | R$ 24,2 mi (28%) | cada matrícula já vale o VAAT-MIN |
+| Fortaleza/CE | R$ 241 mi (11%) | R$ 311 mi (14%) | R$ 648 mi (29%) | VAAR e tempo integral |
+| Senhor do Bonfim/BA | R$ 4,6 mi (2%) | R$ 13,6 mi (6%) | R$ 44,8 mi (20%) | só matrícula: já recebe VAAR |
+
+A estrutura decide o teto, e é por isso que ele difere. Para quem está logo
+acima do VAAT-MIN, `equivalentesParaEntrarNoVaat()` diz quantas
+matrículas-equivalentes faltam para cruzá-lo (2.658 em Senador Canedo): antes
+desse ponto a matrícula vale o fundo estadual, depois vale o mínimo inteiro.
+
+O "cronograma mensal projetado" saiu da Parte I: era o ganho repartido por doze
+percentuais fixos, os mesmos para todo município. `cronogramaVAAF` continua no
+JSON para quem ainda o lê.
+
 `perfilComercial` (score, faixa, multiplicador) continua no JSON descrevendo o
 município, mas o multiplicador não gera mais número nenhum no levantamento.
 **`core/lib/propostas-prefill.ts` ainda o usa** para pré-preencher proposta: é o

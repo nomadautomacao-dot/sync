@@ -105,3 +105,56 @@ describe("referência do VAAR por matrícula", () => {
     expect(parcelaVaar("5220454", 2026, 0)).toBeNull();
   });
 });
+
+/**
+ * "Qual é o cenário mais otimista deste município?" tinha uma resposta só,
+ * igual para todos: receita × multiplicador. Hoje a resposta sai da estrutura
+ * de cada um.
+ */
+describe("cenário otimista individual", () => {
+  const receitas: ReceitasFundeb = {
+    receitaContribuicaoMunicipal: 200_722_290.59,
+    complementacaoVAAF: 0, complementacaoVAAT: 0, complementacaoVAAR: 0,
+    totalReceitas: 200_722_290.59,
+  };
+  const vaar: ParcelaGanhoFundeb = { chave: "vaar", titulo: "VAAR a recuperar", valor: 17_755_425.12, regra: "", pagina: 5, natureza: "referencia" };
+  const cenario = {
+    valor: 4_391_401.89, matriculas: 1_639,
+    acelerado: { valor: 9_493_233.89, matriculas: 3_399 },
+    aceleradoTresAnos: { valor: 37_627_912.39, matriculas: 10_719, entraNoVaat: true },
+  };
+
+  it("usa as mesmas parcelas, trocando só o ritmo das matrículas", () => {
+    const o = comporGanho({ receitas, vaar, lacunas: { total: 0 }, cenario }).total.otimista!;
+
+    expect(o.umAno.parcelas.map((p) => p.chave)).toEqual(["vaar", "matriculas"]);
+    // O VAAR não estica: entra igual nas três colunas.
+    expect(o.umAno.parcelas[0].valor).toBe(17_755_425.12);
+    expect(o.tresAnos.parcelas[0].valor).toBe(17_755_425.12);
+    expect(o.umAno.total).toBeCloseTo(17_755_425.12 + 9_493_233.89, 2);
+    expect(o.tresAnos.total).toBeCloseTo(17_755_425.12 + 37_627_912.39, 2);
+  });
+
+  it("fica muito abaixo do que o multiplicador prometia para o mesmo município", () => {
+    const g = comporGanho({ receitas, vaar, lacunas: { total: 0 }, cenario }).total;
+
+    // Senador Canedo: o multiplicador dava +68% em um ano.
+    expect(g.ganhoPercentual).toBeLessThan(g.otimista!.umAno.percentual);
+    expect(g.otimista!.umAno.percentual).toBeLessThan(g.otimista!.tresAnos.percentual);
+    expect(g.otimista!.tresAnos.percentual).toBeLessThan(30);
+  });
+
+  it("diz quando o salto vem de a rede cruzar o VAAT-MIN", () => {
+    const o = comporGanho({ receitas, vaar, lacunas: { total: 0 }, cenario }).total.otimista!;
+
+    expect(o.entraNoVaat).toBe(true);
+    expect(o.tresAnos.parcelas.at(-1)?.regra).toContain("cruza o VAAT-MIN");
+    expect(o.umAno.parcelas.at(-1)?.regra).not.toContain("cruza o VAAT-MIN");
+  });
+
+  it("não inventa otimista sem os horizontes acelerados", () => {
+    const g = comporGanho({ receitas, vaar, lacunas: null, cenario: { valor: 1_000_000, matriculas: 300 } });
+
+    expect(g.total.otimista).toBeNull();
+  });
+});

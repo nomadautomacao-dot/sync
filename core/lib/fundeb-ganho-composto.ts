@@ -1,4 +1,6 @@
 import type {
+  CenarioOtimistaFundeb,
+  HorizonteOtimistaFundeb,
   ParcelaGanhoFundeb,
   ProjecaoFundeb,
   ReceitasFundeb,
@@ -97,7 +99,14 @@ export interface EntradaGanhoComposto {
   /** Total de `getGanhoApurado` — lacunas de declaração monetizadas. */
   lacunas: { total: number; maiorTitulo?: string | null } | null;
   /** Cenário de matrículas no ritmo padrão (Parte V): valor de um ano e como foi apurado. */
-  cenario: { valor: number; matriculas: number; mecanismo?: string | null } | null;
+  cenario: {
+    valor: number;
+    matriculas: number;
+    mecanismo?: string | null;
+    /** Os dois horizontes do ritmo acelerado, para o cenário otimista. */
+    acelerado?: { valor: number; matriculas: number } | null;
+    aceleradoTresAnos?: { valor: number; matriculas: number; entraNoVaat?: boolean } | null;
+  } | null;
 }
 
 export interface GanhoComposto {
@@ -154,6 +163,52 @@ function projecaoDasParcelas(receitas: ReceitasFundeb, parcelas: ParcelaGanhoFun
   };
 }
 
+/**
+ * O cenário otimista — o teto **deste** município, não um multiplicador.
+ *
+ * As alavancas são as mesmas do potencial; muda só o ritmo das matrículas, que
+ * passa do quartil para o decil de cima, em um e em três anos. O VAAR e as
+ * lacunas de declaração não esticam: o VAAR já entra inteiro (o otimismo está
+ * em supor a habilitação), e a lacuna continua medida até a mediana nacional —
+ * pelo teto teórico o AEE de São Paulo sozinho daria R$ 174 milhões.
+ *
+ * O resultado é diferente em cada cidade porque a estrutura é diferente: onde
+ * a União já completa a rede, cada matrícula vale o VAAT-MIN; onde a rede está
+ * logo acima do piso, três anos de crescimento a fazem cruzá-lo; onde não há
+ * VAAR a recuperar nem base para crescer, o teto fica perto do potencial.
+ */
+function comporOtimista(e: EntradaGanhoComposto, parcelas: ParcelaGanhoFundeb[]): CenarioOtimistaFundeb | null {
+  const c = e.cenario;
+  if (!c?.acelerado || !c.aceleradoTresAnos) return null;
+  const fixas = parcelas.filter((p) => p.chave !== "matriculas");
+  const horizonte = (valor: number, matriculas: number, quando: string, sufixo = ""): HorizonteOtimistaFundeb => {
+    const lista: ParcelaGanhoFundeb[] = [...fixas];
+    if (valor > 0) {
+      lista.push({
+        chave: "matriculas",
+        titulo: "Cenário de matrículas — ritmo acelerado",
+        valor: round2(valor),
+        regra: `${inteiro(matriculas)} matrículas a mais ${quando}, no ritmo que uma em cada dez redes do país alcançou${sufixo}`,
+        pagina: 14,
+        natureza: "cenario",
+      });
+    }
+    const total = round2(lista.reduce((s, p) => s + p.valor, 0));
+    return { total, percentual: e.receitas.totalReceitas > 0 ? (total / e.receitas.totalReceitas) * 100 : 0, parcelas: lista };
+  };
+  const entraNoVaat = c.aceleradoTresAnos.entraNoVaat === true;
+  return {
+    umAno: horizonte(c.acelerado.valor, c.acelerado.matriculas, "em um ano"),
+    tresAnos: horizonte(
+      c.aceleradoTresAnos.valor,
+      c.aceleradoTresAnos.matriculas,
+      "em três anos",
+      entraNoVaat ? "; com isso a rede cruza o VAAT-MIN e passa a receber complementação" : "",
+    ),
+    entraNoVaat,
+  };
+}
+
 export function comporGanho(e: EntradaGanhoComposto): GanhoComposto {
   const parcelas: ParcelaGanhoFundeb[] = [];
   if (e.vaar && e.vaar.valor > 0) parcelas.push(e.vaar);
@@ -185,6 +240,7 @@ export function comporGanho(e: EntradaGanhoComposto): GanhoComposto {
   }
 
   const total = projecaoDasParcelas(e.receitas, parcelas, "composta");
+  total.otimista = comporOtimista(e, parcelas);
   const recuperavel = projecaoDasParcelas(e.receitas, lacunas ? [lacunas] : [], "recuperavel");
   const ganhoAdicional = round2(total.totalGanho - recuperavel.totalGanho);
 

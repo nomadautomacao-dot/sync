@@ -8,6 +8,7 @@ import {
   RITMO_INTEGRAL,
   calcularMetasCenario,
   equivalentesDoCenario,
+  equivalentesParaEntrarNoVaat,
   matriculasDoCenario,
   valorDosEquivalentes,
 } from "./fundeb-cenario-metas";
@@ -219,5 +220,60 @@ describe("valor de uma matrícula-equivalente a mais", () => {
 
   it("devolve zero para cenário sem matrícula a mais", () => {
     expect(valorDosEquivalentes(0, { valorPorEquivalente: 5_962.79 }).valor).toBe(0);
+  });
+});
+
+/**
+ * O cenário otimista é o teto de cada município, e não um multiplicador: sai
+ * das mesmas regras, com o ritmo do decil de cima por três anos.
+ */
+describe("o horizonte otimista: três anos no ritmo acelerado", () => {
+  it("é sempre o maior dos quatro horizontes", () => {
+    for (const base of [
+      { matriculasMunicipais: 24_943, eja: 625, integral: 3_807, educacaoEspecial: 1_294 },
+      { matriculasMunicipais: 7_344, eja: 331, integral: 554, educacaoEspecial: 627 },
+      { matriculasMunicipais: 224_060, eja: 4_618, integral: 148_087, educacaoEspecial: 27_185 },
+    ]) {
+      const m = calcularMetasCenario(base);
+      const total = (h: Parameters<typeof matriculasDoCenario>[1]) => matriculasDoCenario(m, h);
+
+      expect(total("aceleradoTresAnos")).toBeGreaterThanOrEqual(total("acelerado"));
+      expect(total("aceleradoTresAnos")).toBeGreaterThanOrEqual(total("tresAnos"));
+    }
+  });
+
+  it("desacelera quando a base muda de faixa, em vez de repetir o primeiro ritmo", () => {
+    // 150 de EJA: +65% no primeiro ano leva a 248, e daí em diante vale a faixa
+    // seguinte (+34%). Repetir +65% três vezes daria 674.
+    const m = calcularMetasCenario({ matriculasMunicipais: 5_000, eja: 150, integral: 0, educacaoEspecial: 0 });
+
+    expect(m.eja.metaAceleradaTresAnos).toBe(445);
+    expect(m.eja.metaAceleradaTresAnos).toBeLessThan(150 * 1.65 ** 3);
+  });
+
+  it("não deixa o tempo integral passar do tamanho da rede nem no otimista", () => {
+    const m = calcularMetasCenario({ matriculasMunicipais: 1_000, eja: 0, integral: 800, educacaoEspecial: 0 });
+
+    expect(m.integral.metaAceleradaTresAnos).toBe(1_000);
+  });
+});
+
+describe("distância até a faixa do VAAT", () => {
+  const canedo = { valorPorEquivalente: 6_377.29, vaat: { proprio: 10_511.38, minimo: 10_192.38, equivalentes: 31_785.88, habilitado: true } };
+
+  it("diz quantas matrículas-equivalentes faltam a quem está logo acima do mínimo", () => {
+    // Senador Canedo/GO, 2026: 3,1% acima do piso.
+    const faltam = equivalentesParaEntrarNoVaat(canedo)!;
+
+    expect(Math.round(faltam)).toBe(2_658);
+    // E é o ponto exato em que a conta do valor muda de regime.
+    expect(valorDosEquivalentes(faltam - 1, canedo).via).toBe("fundo");
+    expect(valorDosEquivalentes(faltam + 1, canedo).via).toBe("entra");
+  });
+
+  it("não se aplica a quem já recebe, nem a quem está inabilitado", () => {
+    expect(equivalentesParaEntrarNoVaat({ valorPorEquivalente: 5_962.79, vaat: { proprio: 5_611.77, minimo: 10_192.38, equivalentes: 19_878.31, habilitado: true } })).toBeNull();
+    expect(equivalentesParaEntrarNoVaat({ ...canedo, vaat: { ...canedo.vaat, habilitado: false } })).toBeNull();
+    expect(equivalentesParaEntrarNoVaat({ valorPorEquivalente: 6_377.29 })).toBeNull();
   });
 });

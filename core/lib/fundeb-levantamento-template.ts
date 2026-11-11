@@ -255,9 +255,12 @@ export interface LevantamentoPayload {
       metasAceleradas?: Record<string, number> | null;
       /** Três anos seguidos no ritmo padrão. */
       metasTresAnos?: Record<string, number> | null;
+      /** Três anos seguidos no ritmo acelerado — o cenário otimista. */
+      metasAceleradasTresAnos?: Record<string, number> | null;
       ganhosMatriculas?: Record<string, number> | null;
       ganhosAcelerados?: Record<string, number> | null;
       ganhosTresAnos?: Record<string, number> | null;
+      ganhosAceleradosTresAnos?: Record<string, number> | null;
       /** A regra que gerou cada meta (`fundeb-cenario-metas.ts`). */
       criterios?: Record<string, string> | null;
       impactoFinanceiroIndicativo?: {
@@ -266,8 +269,13 @@ export interface LevantamentoPayload {
         padrao?: number | null;
         acelerado?: number | null;
         tresAnos?: number | null;
+        aceleradoTresAnos?: number | null;
         porEquivalente?: number | null;
         via?: "vaat" | "fundo" | "entra" | null;
+        viaAcelerado?: "vaat" | "fundo" | "entra" | null;
+        viaAceleradoTresAnos?: "vaat" | "fundo" | "entra" | null;
+        equivalentesParaEntrarNoVaat?: number | null;
+        equivalentesAceleradoTresAnos?: number | null;
         mecanismo?: string | null;
         basePorMatricula?: number | null;
       } | null;
@@ -1205,7 +1213,11 @@ function paginaCapa(i: LevantamentoTemplateInput): string {
 
     <div class="cover-kpis">
       <div class="ckpi"><em>Receita FUNDEB ${exercicio}</em><b>${brlCompact(r.receitas.totalReceitas)}</b><span>base oficial do exercício</span></div>
-      <div class="ckpi"><em>Estimativa ${exercicio + 1}</em><b>${brlCompact(r.projecao.totalProjetado)}</b><span>receita total no cenário</span></div>
+      ${
+        r.projecao.otimista && r.projecao.otimista.tresAnos.total > r.projecao.totalGanho
+          ? `<div class="ckpi"><em>Cenário otimista até ${exercicio + 3}</em><b>+${brlCompact(r.projecao.otimista.tresAnos.total)}</b><span>teto deste município em três anos</span></div>`
+          : `<div class="ckpi"><em>Estimativa ${exercicio + 1}</em><b>${brlCompact(r.projecao.totalProjetado)}</b><span>receita total no cenário</span></div>`
+      }
     </div>`
         : `<div class="cover-hero">
       <em>Receita FUNDEB &middot; exercício ${exercicio}</em>
@@ -1327,6 +1339,7 @@ function achadosDoMunicipio(i: LevantamentoTemplateInput): Achado[] {
   const recebeVaat = num(t?.complementacao) > 0;
   const distancia = num(t?.distanciaPercentual);
   const folga = num(t?.folgaPercentual);
+  const paraEntrarNoVaat = num(base?.cenarioEstruturacao?.impactoFinanceiroIndicativo?.equivalentesParaEntrarNoVaat);
   if (/inabilit|n[aã]o habilit/i.test(habilitacao)) {
     achados.push({
       valor: "Inabilitado",
@@ -1347,7 +1360,10 @@ function achadosDoMunicipio(i: LevantamentoTemplateInput): Achado[] {
     achados.push({
       valor: pct(folga, 1),
       titulo: "acima do VAAT-MIN — fora da faixa por pouco",
-      texto: "Se o mínimo nacional subir mais que a arrecadação por aluno da rede, o município passa a ter direito à complementação — e só recebe quem estiver habilitado.",
+      texto:
+        paraEntrarNoVaat > 0
+          ? `Faltam ${int(paraEntrarNoVaat)} matrículas-equivalentes para a rede entrar na faixa. Cruzado esse ponto, cada matrícula nova passa a valer o VAAT-MIN inteiro.`
+          : "Se o mínimo nacional subir mais que a arrecadação por aluno da rede, o município passa a ter direito à complementação — e só recebe quem estiver habilitado.",
       pagina: 5,
       tom: "oportunidade",
     });
@@ -1500,11 +1516,15 @@ function paginaSumario(i: LevantamentoTemplateInput, pagina: number): string {
 
     <div class="grid-4 mt-2">
       ${kpi(`Receita ${id.exercicio}`, brlCompact(rec.totalReceitas), "base oficial do ano")}
-      ${kpi(`Estimativa ${id.exercicio + 1}`, brlCompact(r.projecao.totalProjetado), "receita com o potencial identificado")}
       ${
         r.projecao.totalGanho > 0
           ? kpi("Ganho potencial", `+${brlCompact(r.projecao.totalGanho)}`, `+${pct(r.projecao.ganhoPercentual)} sobre o exercício atual`, "up")
           : kpi("Ganho potencial", "—", "projeção não apurada nesta emissão")
+      }
+      ${
+        r.projecao.otimista && r.projecao.otimista.tresAnos.total > r.projecao.totalGanho
+          ? kpi(`Otimista até ${id.exercicio + 3}`, `+${brlCompact(r.projecao.otimista.tresAnos.total)}`, `+${pct(r.projecao.otimista.tresAnos.percentual)} &middot; teto deste município`)
+          : kpi(`Estimativa ${id.exercicio + 1}`, brlCompact(r.projecao.totalProjetado), "receita com o potencial identificado")
       }
       ${kpiGanho}
     </div>
@@ -1663,34 +1683,63 @@ function paginaProjecao(i: LevantamentoTemplateInput, pagina: number): string {
   const redistribuicaoAtual = Math.max(0, p.totalAtual - p.vaafAtual - p.vaatAtual - p.vaarAtual);
   const redistribuicaoProjetada = Math.max(0, p.totalProjetado - p.vaafProjetado - p.vaatProjetado - p.vaarProjetado);
 
-  const crono = r.cronogramaVAAF ?? [];
-  const metade = Math.ceil(crono.length / 2);
-  const tabelaCrono = (fatia: typeof crono) => `<table class="tb">
-        <tr><th>Mês</th><th class="r">Valor projetado (R$)</th><th class="r">Part.</th></tr>
-        ${fatia
-          .map(
-            (m) => `<tr><td>${esc(m.mes)}</td><td class="r">${brl(m.valorProjetado)}</td><td class="r">${pct(m.percentual * (m.percentual <= 1 ? 100 : 1))}</td></tr>`,
-          )
-          .join("")}
-      </table>`;
+  // A página já teve um "cronograma mensal projetado": doze linhas com o ganho
+  // repartido por percentuais fixos, os mesmos para todo município. Saiu para
+  // dar lugar ao cenário otimista, que é calculado na estrutura de cada um — uma
+  // rampa igual para todos não diz nada sobre este.
 
   // As parcelas do potencial — `fundeb-ganho-composto.ts`. JSON arquivado antes
   // da composição não as traz; a página cai então para a leitura por componente.
   const parcelas = p.parcelas ?? [];
   const rotuloNatureza: Record<string, string> = { apurado: "apurado", referencia: "referência", cenario: "cenário" };
+  // O cenário otimista usa as mesmas alavancas, com as matrículas no ritmo de
+  // uma em cada dez redes. Sai ao lado do potencial, parcela por parcela, para
+  // ficar à vista de onde vem a diferença — e que ela é deste município.
+  const otimista = p.otimista ?? null;
+  const valorEm = (lista: typeof parcelas | undefined, chave: string) => lista?.find((x) => x.chave === chave)?.valor ?? 0;
+  const celula = (v: number) => (v > 0 ? `+${brl(v)}` : "&mdash;");
   const tabelaParcelas = parcelas.length
-    ? `<div class="sec-label" style="margin-top:.16in">De onde vem o potencial de ${id.exercicio + 1}</div>
+    ? `<div class="sec-label" style="margin-top:.16in">De onde vem o potencial de ${id.exercicio + 1}${otimista ? " &mdash; e até onde este município pode ir" : ""}</div>
     <table class="tb">
-      <tr><th>Parcela</th><th class="r" style="width:1.15in">Valor (R$)</th><th class="r" style="width:.5in">Part.</th><th style="width:2.75in">Como foi calculada</th><th class="r" style="width:.55in">Página</th></tr>
+      <tr><th>Parcela</th><th class="r" style="width:1.02in">Potencial<br><span style="font-weight:400;letter-spacing:0;text-transform:none">${id.exercicio + 1}</span></th>${
+        otimista
+          ? `<th class="r" style="width:1.02in">Otimista<br><span style="font-weight:400;letter-spacing:0;text-transform:none">${id.exercicio + 1}</span></th><th class="r" style="width:1.02in">Otimista<br><span style="font-weight:400;letter-spacing:0;text-transform:none">até ${id.exercicio + 3}</span></th>`
+          : `<th class="r" style="width:.5in">Part.</th>`
+      }<th style="width:${otimista ? "2.05in" : "2.75in"}">Como foi calculada</th><th class="r" style="width:.5in">Página</th></tr>
       ${parcelas
         .map(
           (x) => `<tr><td><b>${esc(x.titulo)}</b><div class="micro" style="margin-top:.02in;text-transform:uppercase;letter-spacing:.06em">${rotuloNatureza[x.natureza] ?? ""}</div></td>
-        <td class="r"><b>+${brl(x.valor)}</b></td><td class="r">${pct(share(x.valor, p.totalGanho), 0)}</td>
+        <td class="r"><b>+${brl(x.valor)}</b></td>${
+          otimista
+            ? `<td class="r">${celula(valorEm(otimista.umAno.parcelas, x.chave))}</td><td class="r">${celula(valorEm(otimista.tresAnos.parcelas, x.chave))}</td>`
+            : `<td class="r">${pct(share(x.valor, p.totalGanho), 0)}</td>`
+        }
         <td class="micro" style="font-size:7.3pt;line-height:1.3">${esc(x.regra)}</td><td class="r">${x.pagina}</td></tr>`,
         )
         .join("")}
-      <tr class="total"><td>Potencial identificado</td><td class="r">+${brl(p.totalGanho)}</td><td class="r">100%</td><td></td><td></td></tr>
-    </table>`
+      <tr class="total"><td>Total</td><td class="r">+${brl(p.totalGanho)}</td>${
+        otimista
+          ? `<td class="r">+${brl(otimista.umAno.total)}</td><td class="r">+${brl(otimista.tresAnos.total)}</td>`
+          : `<td class="r">100%</td>`
+      }<td></td><td></td></tr>
+      ${
+        otimista
+          ? `<tr><td class="micro">sobre a receita de ${id.exercicio}</td><td class="r micro">+${pct(p.ganhoPercentual)}</td><td class="r micro">+${pct(otimista.umAno.percentual)}</td><td class="r micro">+${pct(otimista.tresAnos.percentual)}</td><td></td><td></td></tr>`
+          : ""
+      }
+    </table>
+    ${
+      otimista
+        ? `<p class="micro mt-1"><b>O otimista não é um multiplicador:</b> são as mesmas parcelas, com as matrículas no
+    ritmo que uma em cada dez redes do país alcançou (o potencial usa o de uma em cada quatro), por um e por três
+    anos. O VAAR e a lacuna de declaração não esticam.${
+      otimista.entraNoVaat
+        ? ` <b>Em três anos nesse ritmo a rede cruza o VAAT-MIN e passa a receber complementação da União</b> &mdash; é
+    de onde vem a maior parte do salto entre as duas colunas.`
+        : ""
+    }</p>`
+        : ""
+    }`
     : "";
 
   const notaNatureza = parcelas.length
@@ -1717,11 +1766,16 @@ function paginaProjecao(i: LevantamentoTemplateInput, pagina: number): string {
   <div class="page-body">
     <div class="kicker">Parte I &middot; Estimativa para o próximo ciclo</div>
 
-    <div class="grid-2">
-      <div class="kpi hero"><em>Potencial identificado &middot; exercício ${id.exercicio + 1}</em><b>${
+    <div class="${otimista ? "grid-3" : "grid-2"}">
+      <div class="kpi hero"><em>Potencial identificado &middot; ${id.exercicio + 1}</em><b>${
         p.totalGanho > 0 ? `+${brlCompact(p.totalGanho)}` : "—"
       }</b><span>${p.totalGanho > 0 ? `+${pct(p.ganhoPercentual)} sobre a receita de ${id.exercicio}` : "sem incremento apurado sobre o exercício atual"}</span></div>
-      ${kpi(`Receita ${id.exercicio + 1} com o potencial`, brlCompact(p.totalProjetado), `sobre ${brlCompact(p.totalAtual)} em ${id.exercicio}`)}
+      ${
+        otimista
+          ? `${kpi(`Otimista · ${id.exercicio + 1}`, `+${brlCompact(otimista.umAno.total)}`, `+${pct(otimista.umAno.percentual)} &middot; um ano no ritmo acelerado`)}
+      ${kpi(`Otimista · até ${id.exercicio + 3}`, `+${brlCompact(otimista.tresAnos.total)}`, `+${pct(otimista.tresAnos.percentual)} &middot; teto deste município`, "up")}`
+          : kpi(`Receita ${id.exercicio + 1} com o potencial`, brlCompact(p.totalProjetado), `sobre ${brlCompact(p.totalAtual)} em ${id.exercicio}`)
+      }
     </div>
 
     ${tabelaParcelas}
@@ -1747,17 +1801,6 @@ function paginaProjecao(i: LevantamentoTemplateInput, pagina: number): string {
       }
     </div>
 
-    ${
-      crono.length
-        ? `<div class="sec-label" style="margin-top:.16in">Cronograma mensal projetado do incremento</div>
-    <div class="grid-2">
-      ${tabelaCrono(crono.slice(0, metade))}
-      ${tabelaCrono(crono.slice(metade))}
-    </div>
-    <p class="micro mt-1">Rampa mensal do potencial de incremento anual (R$ ${brl(p.totalGanho)}), crescente conforme
-    a maturação das frentes de trabalho ao longo do exercício.</p>`
-        : ""
-    }
   </div>
   ${rodape(pagina)}
 </section>`;
@@ -3003,6 +3046,9 @@ function paginaCenario(i: LevantamentoTemplateInput, pagina: number): string {
   const valorPadrao = num(impacto?.padrao) || num(impacto?.minimo);
   const valorAcelerado = num(impacto?.acelerado) || num(impacto?.maximo);
   const valorTresAnos = num(impacto?.tresAnos);
+  const valorAceleradoTresAnos = num(impacto?.aceleradoTresAnos);
+  const totalAceleradoTresAnos = num(cenario?.ganhosAceleradosTresAnos?.total);
+  const paraEntrar = num(impacto?.equivalentesParaEntrarNoVaat);
   const basePorMatricula = num(impacto?.basePorMatricula) || recursoAluno;
 
   return `<section class="page content-page">
@@ -3031,13 +3077,32 @@ function paginaCenario(i: LevantamentoTemplateInput, pagina: number): string {
     </div>
 
     <div class="sec-label" style="margin-top:.18in">Receita anual a mais &middot; a valores de ${id.exercicio}</div>
-    <div class="grid-3">
+    <div class="${valorAceleradoTresAnos > 0 ? "grid-4" : "grid-3"}">
       <div class="kpi hero"><em>Ritmo padrão &middot; um ano</em><b>${temCenario && valorPadrao > 0 ? `+${brlCompact(valorPadrao)}` : "—"}</b><span>${
         temCenario && valorPadrao > 0 ? `${int(totalGanho)} matrículas a mais &middot; é a parcela que entra no potencial da Parte I` : "sem ganho de matrícula no ritmo padrão"
       }</span></div>
       ${kpi("Ritmo acelerado · um ano", valorAcelerado > 0 ? `+${brlCompact(valorAcelerado)}` : "—", totalAcelerado > 0 ? `${int(totalAcelerado)} matrículas a mais &middot; o que uma em cada dez redes fez` : "não calculado")}
       ${kpi(`Ritmo padrão · até ${id.exercicio + 3}`, valorTresAnos > 0 ? `+${brlCompact(valorTresAnos)}` : "—", totalTresAnos > 0 ? `${int(totalTresAnos)} matrículas a mais ao fim de três anos` : "não calculado")}
+      ${
+        valorAceleradoTresAnos > 0
+          ? kpi(`Acelerado · até ${id.exercicio + 3}`, `+${brlCompact(valorAceleradoTresAnos)}`, `${int(totalAceleradoTresAnos)} matrículas a mais &middot; é o que entra no cenário otimista`, "up")
+          : ""
+      }
     </div>
+    ${
+      paraEntrar > 0
+        ? `<div class="note mt-1"><p style="font-size:7.9pt;line-height:1.4"><b>Faltam ${int(paraEntrar)} matrículas-equivalentes
+      para esta rede entrar na faixa do VAAT.</b> Hoje ela está acima do mínimo nacional e não recebe a complementação.
+      Cruzado esse ponto, cada matrícula-equivalente a mais deixa de valer o fundo estadual e passa a valer o VAAT-MIN
+      inteiro${
+        impacto?.viaAceleradoTresAnos === "entra"
+          ? ` &mdash; e três anos no ritmo acelerado somam ${int(impacto?.equivalentesAceleradoTresAnos)}, o bastante para cruzar`
+          : impacto?.equivalentesAceleradoTresAnos
+            ? `. Três anos no ritmo acelerado somam ${int(impacto.equivalentesAceleradoTresAnos)}: ainda não cruza`
+            : ""
+      }.</p></div>`
+        : ""
+    }
 
     <div class="insight mt-1">
       <p style="font-size:8pt;line-height:1.42"><span class="strong">Como cada matrícula vira receita:</span>

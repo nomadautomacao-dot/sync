@@ -94,6 +94,9 @@ export interface FrenteCenario {
   /** Três anos seguidos no ritmo padrão. */
   metaTresAnos: number;
   ganhoTresAnos: number;
+  /** Três anos seguidos no ritmo acelerado — o teto do cenário otimista. */
+  metaAceleradaTresAnos: number;
+  ganhoAceleradoTresAnos: number;
   /** A regra que gerou a meta, pronta para impressão. */
   criterio: string;
 }
@@ -104,7 +107,7 @@ export interface MetasCenario {
   educacaoEspecial: FrenteCenario;
 }
 
-export type Horizonte = "padrao" | "acelerado" | "tresAnos";
+export type Horizonte = "padrao" | "acelerado" | "tresAnos" | "aceleradoTresAnos";
 
 /** Meta em múltiplo de 5 — precisão de unidade numa projeção é falsa precisão. */
 function arredondar(valor: number): number {
@@ -117,14 +120,25 @@ function faixaDe(base: number): number {
   return FAIXAS_DE_PORTE.findIndex((f) => base < f.ate);
 }
 
-/** Aplica o ritmo padrão `anos` vezes, trocando de faixa à medida que a base cresce. */
-function compor(base: number, tabela: readonly Ritmo[], anos: number): number {
+/**
+ * Aplica um ritmo `anos` vezes, trocando de faixa à medida que a base cresce.
+ * É o que impede o otimista de explodir: uma rede que triplica a EJA sai da
+ * faixa pequena, e na faixa seguinte o mesmo decil cresce bem menos.
+ */
+function compor(base: number, tabela: readonly Ritmo[], anos: number, qual: keyof Ritmo = "padrao"): number {
   let atual = base;
-  for (let i = 0; i < anos; i++) atual *= 1 + tabela[faixaDe(atual)].padrao;
+  for (let i = 0; i < anos; i++) atual *= 1 + tabela[faixaDe(atual)][qual];
   return atual;
 }
 
-function montar(base: number, padrao: number, acelerado: number, tresAnos: number, criterio: string): FrenteCenario {
+function montar(
+  base: number,
+  padrao: number,
+  acelerado: number,
+  tresAnos: number,
+  aceleradoTresAnos: number,
+  criterio: string,
+): FrenteCenario {
   const b = Math.max(0, Math.round(base));
   // Meta nunca fica abaixo da base: o cenário é de estruturação, não de corte.
   // E ritmo zero é meta igual à base, ao pé da letra — arredondar 4.618 para
@@ -133,6 +147,7 @@ function montar(base: number, padrao: number, acelerado: number, tresAnos: numbe
   const meta = alvo(padrao, b);
   const metaAcelerada = alvo(acelerado, meta);
   const metaTresAnos = alvo(tresAnos, meta);
+  const metaAceleradaTresAnos = alvo(aceleradoTresAnos, Math.max(metaAcelerada, metaTresAnos));
   return {
     base: b,
     meta,
@@ -141,6 +156,8 @@ function montar(base: number, padrao: number, acelerado: number, tresAnos: numbe
     ganhoAcelerado: metaAcelerada - b,
     metaTresAnos,
     ganhoTresAnos: metaTresAnos - b,
+    metaAceleradaTresAnos,
+    ganhoAceleradoTresAnos: metaAceleradaTresAnos - b,
     criterio,
   };
 }
@@ -148,14 +165,21 @@ function montar(base: number, padrao: number, acelerado: number, tresAnos: numbe
 function porPorte(base: number, tabela: readonly Ritmo[], nome: string, semBase: string): FrenteCenario {
   // Sem base medida não há ritmo a aplicar, e abrir oferta do zero é decisão de
   // política da rede, não meta de consultoria.
-  if (base < BASE_MINIMA) return montar(base, base, base, base, semBase);
+  if (base < BASE_MINIMA) return montar(base, base, base, base, base, semBase);
   const faixa = faixaDe(base);
   const ritmo = tabela[faixa];
   const criterio =
     ritmo.padrao > 0
       ? `+${pct(ritmo.padrao)} no ano: o que uma em cada quatro redes com ${nome} deste porte (${FAIXAS_DE_PORTE[faixa].rotulo}) fez de um Censo para o outro`
       : `redes com ${nome} deste porte (${FAIXAS_DE_PORTE[faixa].rotulo}) não cresceram nem no quartil de cima; uma em cada dez fez +${pct(ritmo.acelerado)}`;
-  return montar(base, base * (1 + ritmo.padrao), base * (1 + ritmo.acelerado), compor(base, tabela, 3), criterio);
+  return montar(
+    base,
+    base * (1 + ritmo.padrao),
+    base * (1 + ritmo.acelerado),
+    compor(base, tabela, 3),
+    compor(base, tabela, 3, "acelerado"),
+    criterio,
+  );
 }
 
 export function calcularMetasCenario(b: BaseCenario): MetasCenario {
@@ -166,12 +190,13 @@ export function calcularMetasCenario(b: BaseCenario): MetasCenario {
     eja: porPorte(b.eja, RITMO_EJA, "EJA", "sem oferta de EJA relevante declarada na rede municipal"),
     integral:
       rede <= 0
-        ? montar(b.integral, b.integral, b.integral, b.integral, "rede municipal não dimensionada no Censo")
+        ? montar(b.integral, b.integral, b.integral, b.integral, b.integral, "rede municipal não dimensionada no Censo")
         : montar(
             b.integral,
             teto(b.integral + RITMO_INTEGRAL.padrao * rede),
             teto(b.integral + RITMO_INTEGRAL.acelerado * rede),
             teto(b.integral + 3 * RITMO_INTEGRAL.padrao * rede),
+            teto(b.integral + 3 * RITMO_INTEGRAL.acelerado * rede),
             `+${pct(RITMO_INTEGRAL.padrao)} da rede no ano: o que uma em cada quatro redes municipais ganhou em jornada integral`,
           ),
     educacaoEspecial: porPorte(
@@ -183,10 +208,11 @@ export function calcularMetasCenario(b: BaseCenario): MetasCenario {
   };
 }
 
-const CAMPO_DO_GANHO: Record<Horizonte, "ganho" | "ganhoAcelerado" | "ganhoTresAnos"> = {
+const CAMPO_DO_GANHO: Record<Horizonte, "ganho" | "ganhoAcelerado" | "ganhoTresAnos" | "ganhoAceleradoTresAnos"> = {
   padrao: "ganho",
   acelerado: "ganhoAcelerado",
   tresAnos: "ganhoTresAnos",
+  aceleradoTresAnos: "ganhoAceleradoTresAnos",
 };
 
 export function matriculasDoCenario(m: MetasCenario, horizonte: Horizonte): number {
@@ -262,4 +288,21 @@ export function valorDosEquivalentes(deltaEquivalentes: number, m: MecanismoDoFu
     porEquivalente: valor / delta,
     via: antes > 0 ? "vaat" : depois > 0 ? "entra" : "fundo",
   };
+}
+
+/**
+ * Quantas matrículas-equivalentes a mais levam a rede a cruzar o VAAT-MIN.
+ *
+ * Para quem está logo acima do mínimo, este é o número que organiza a conversa:
+ * antes dele cada matrícula vale o fundo estadual; depois, o mínimo inteiro. Em
+ * Senador Canedo/GO (3,1% acima do piso em 2026) são cerca de 2.660 — 9% da
+ * matrícula ponderada da rede. `null` para quem já recebe, para quem não está
+ * habilitado e onde o fundo estadual já paga mais que o mínimo.
+ */
+export function equivalentesParaEntrarNoVaat(m: MecanismoDoFundo): number | null {
+  const v = m.vaat;
+  if (!v || !v.habilitado || !(v.equivalentes > 0) || !(v.proprio > v.minimo) || !(v.minimo > m.valorPorEquivalente)) {
+    return null;
+  }
+  return (v.equivalentes * (v.proprio - v.minimo)) / (v.minimo - m.valorPorEquivalente);
 }
