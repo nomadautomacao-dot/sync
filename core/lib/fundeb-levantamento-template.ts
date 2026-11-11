@@ -915,9 +915,9 @@ interface VinculacaoNoAno {
  * remuneração ao Tesouro e 67,42% ao FNDE, no mesmo bimestre. Escolher um em
  * silêncio seria esconder a divergência que a conciliação existe para resolver.
  */
-function blocoAplicacaoNoAno(i: LevantamentoTemplateInput): string {
+function apurarVinculacoesNoAno(i: LevantamentoTemplateInput) {
   const a = i.inteligencia?.financeiro?.atual;
-  if (!a || !a.bimestre) return "";
+  if (!a || !a.bimestre) return null;
   const recebeVaat = i.relatorio.receitas.complementacaoVAAT > 0;
 
   const siopeDe = (conta: string) =>
@@ -932,15 +932,26 @@ function blocoAplicacaoNoAno(i: LevantamentoTemplateInput): string {
     { nome: "Complementação VAAT em despesas de capital", base: "art. 27", minimo: 15, rreo: rreoDe(/^ComplementacaoDaUniaoAoFUNDEBEmDespesasDeCapital/), siope: siopeDe("1.5"), soVaat: true },
   ];
   const linhas = regua.filter((l) => (!l.soVaat || recebeVaat) && (l.rreo != null || l.siope != null));
-  if (!linhas.length) return "";
+  if (!linhas.length) return null;
 
   // Vale a declaração ao Tesouro; o SIOPE entra quando o Anexo 14 veio sem a linha.
   const aplicado = (l: VinculacaoNoAno) => (l.rreo ?? l.siope) as number;
-  const abaixo = linhas.filter((l) => l.minimo != null && aplicado(l) < l.minimo);
-  const comMinimo = linhas.filter((l) => l.minimo != null).length;
-  const temRreo = linhas.some((l) => l.rreo != null);
-  const temSiope = linhas.some((l) => l.siope != null);
-  const divergentes = linhas.filter((l) => l.rreo != null && l.siope != null && Math.abs(l.rreo - l.siope) >= 2);
+  return {
+    a,
+    linhas,
+    aplicado,
+    abaixo: linhas.filter((l) => l.minimo != null && aplicado(l) < l.minimo),
+    comMinimo: linhas.filter((l) => l.minimo != null).length,
+    temRreo: linhas.some((l) => l.rreo != null),
+    temSiope: linhas.some((l) => l.siope != null),
+    divergentes: linhas.filter((l) => l.rreo != null && l.siope != null && Math.abs(l.rreo - l.siope) >= 2),
+  };
+}
+
+function blocoAplicacaoNoAno(i: LevantamentoTemplateInput): string {
+  const apurado = apurarVinculacoesNoAno(i);
+  if (!apurado) return "";
+  const { a, linhas, aplicado, abaixo, comMinimo, temRreo, temSiope, divergentes } = apurado;
 
   const faixa = abaixo.length
     ? `<div class="status bad"><span class="dot"></span> ${abaixo.length === 1 ? "1 vinculação ainda abaixo" : `${abaixo.length} vinculações ainda abaixo`} do mínimo anual no ${a.bimestre}º bimestre de ${a.ano}</div>`
@@ -1201,6 +1212,177 @@ function paginaCapa(i: LevantamentoTemplateInput): string {
 </section>`;
 }
 
+interface Achado {
+  valor: string;
+  titulo: string;
+  texto: string;
+  pagina: number;
+  tom: "risco" | "oportunidade";
+}
+
+/**
+ * O que este levantamento encontrou — os achados do município, no sumário.
+ *
+ * O sumário dizia quanto o município recebe e como o documento se organiza,
+ * mas quem só lê a segunda página saía sem saber o que há de específico ali.
+ * Cada achado é um número que já está no relatório, com a página onde ele se
+ * abre: nada aqui é calculado de novo, e nada é projeção. A ordem é a de quanto
+ * custa não olhar — parcela perdida inteira, obrigação a vencer no ano, e só
+ * depois o que é oportunidade.
+ */
+function achadosDoMunicipio(i: LevantamentoTemplateInput): Achado[] {
+  const r = i.relatorio;
+  const id = r.identificacao;
+  const base = i.payload?.relatorio_dirigido_base;
+  const achados: Achado[] = [];
+
+  // 1. VAAR zerado: a parcela que se perde inteira.
+  const v = base?.vaar;
+  const reprovadas = (v?.reprovadas ?? []) as string[];
+  if (r.receitas.complementacaoVAAR <= 0 && v && reprovadas.length) {
+    const mediana = num(v.referencia?.medianaUf);
+    achados.push({
+      valor: "R$ 0",
+      titulo: `de VAAR em ${id.exercicio}`,
+      texto: `Reprovado ${reprovadas.length === 1 ? "na condicionalidade" : "nas condicionalidades"} ${reprovadas.join(" e ")}${
+        mediana > 0 ? `; os habilitados do estado receberam, na mediana, ${brlCompact(mediana)}` : ""
+      }.`,
+      pagina: 5,
+      tom: "risco",
+    });
+  }
+
+  // 2. Vinculação abaixo do mínimo no ano em curso — ainda dá tempo.
+  const vinc = apurarVinculacoesNoAno(i);
+  if (vinc?.abaixo.length) {
+    const pior = [...vinc.abaixo].sort((x, y) => vinc.aplicado(x) - (x.minimo ?? 0) - (vinc.aplicado(y) - (y.minimo ?? 0)))[0];
+    achados.push({
+      valor: pct(vinc.aplicado(pior), 1),
+      titulo: `${minusculaInicial(pior.nome)}, até o ${vinc.a.bimestre}º bimestre`,
+      texto: `O mínimo anual é ${pct(pior.minimo ?? 0, 0)}: faltam ${pct((pior.minimo ?? 0) - vinc.aplicado(pior), 1).replace("%", "")} pontos a aplicar até dezembro.`,
+      pagina: 10,
+      tom: "risco",
+    });
+  } else if (vinc?.divergentes.length) {
+    const d = vinc.divergentes[0];
+    achados.push({
+      valor: `${pct(Math.abs((d.rreo as number) - (d.siope as number)), 1).replace("%", "")} p.p.`,
+      titulo: "entre o que foi declarado ao Tesouro e ao FNDE",
+      texto: `${d.nome}: ${pct(d.rreo as number, 2)} no RREO e ${pct(d.siope as number, 2)} no SIOPE, no mesmo bimestre.`,
+      pagina: 10,
+      tom: "risco",
+    });
+  }
+
+  // 3. Despesa de pessoal: só entra a partir do limite de alerta (90% do máximo).
+  const siconfi = i.payload?.fiscal?.siconfi;
+  const pessoal = num(siconfi?.percentual_despesa_pessoal);
+  const limite = num(siconfi?.limite_maximo_pessoal) || 54;
+  if (pessoal > limite * 0.9 && pessoal <= 100) {
+    const faixa = pessoal > limite ? `acima do limite máximo de ${pct(limite, 0)}` : pessoal > limite * 0.95 ? `acima do limite prudencial de ${pct(limite * 0.95, 1)}` : `acima do limite de alerta de ${pct(limite * 0.9, 1)}`;
+    achados.push({
+      valor: pct(pessoal, 1),
+      titulo: "da receita corrente líquida em pessoal",
+      texto: `Está ${faixa} da LRF. Receita nova do fundo financia a folha da educação sem pressionar esse limite.`,
+      pagina: 10,
+      tom: "risco",
+    });
+  }
+
+  // 4. VAAT: quem está perto da borda, de um lado ou de outro.
+  const t = base?.vaat;
+  const habilitacao = (t?.habilitacao ?? r.perfilComercial?.habilitacaoVaat ?? "").trim();
+  const recebeVaat = num(t?.complementacao) > 0;
+  const distancia = num(t?.distanciaPercentual);
+  const folga = num(t?.folgaPercentual);
+  if (/inabilit|n[aã]o habilit/i.test(habilitacao)) {
+    achados.push({
+      valor: "Inabilitado",
+      titulo: `ao VAAT de ${id.exercicio}`,
+      texto: "Sem os dados no Siconfi e no SIOPE em 31 de agosto o VAAT não é apurado, e a complementação se perde inteira no exercício.",
+      pagina: 5,
+      tom: "risco",
+    });
+  } else if (recebeVaat && distancia > 0 && distancia < 10) {
+    achados.push({
+      valor: pct(distancia, 1),
+      titulo: "de distância até o VAAT-MIN",
+      texto: `Alta de arrecadação por aluno dessa ordem zera a complementação de ${brlCompact(t?.complementacao)} — visível com dois anos de antecedência.`,
+      pagina: 5,
+      tom: "risco",
+    });
+  } else if (!recebeVaat && folga > 0 && folga < 10) {
+    achados.push({
+      valor: pct(folga, 1),
+      titulo: "acima do VAAT-MIN — fora da faixa por pouco",
+      texto: "Se o mínimo nacional subir mais que a arrecadação por aluno da rede, o município passa a ter direito à complementação — e só recebe quem estiver habilitado.",
+      pagina: 5,
+      tom: "oportunidade",
+    });
+  }
+
+  // 5. Lacuna de declaração com valor apurado.
+  const ganho = base?.ganho;
+  if (ganho && num(ganho.total) > 0) {
+    const maior = [...(ganho.componentes ?? [])].sort((a, b) => num(b.valor) - num(a.valor))[0];
+    achados.push({
+      valor: `+${brlCompact(ganho.total)}`,
+      titulo: "por ano em lacuna de declaração ao Censo",
+      texto: `${maior?.titulo ? `${maior.titulo}: é` : "É"} o que o fundo pagaria a mais se a declaração alcançasse a mediana nacional.`,
+      pagina: 8,
+      tom: "oportunidade",
+    });
+  }
+
+  // 6. Piso do magistério.
+  const rem = base?.remuneracao;
+  if (rem && rem.confiavel !== false && num(rem.abaixoDoPisoPct) >= 10) {
+    achados.push({
+      valor: pct(rem.abaixoDoPisoPct, 1),
+      titulo: "do magistério abaixo do piso nacional",
+      texto: `${int(rem.abaixoDoPiso)} de ${int(rem.magisterio)} profissionais, na declaração de ${ou(rem.ano, "—")} ao SIOPE, com o salário proporcionalizado à jornada.`,
+      pagina: 11,
+      tom: "risco",
+    });
+  }
+
+  // 7. Escolas fora da mediana da própria rede.
+  const escolas = i.inteligencia?.escolas ?? [];
+  const comSinal = escolas.filter((e) => e.sinais.length > 0).length;
+  if (escolas.length >= 4 && comSinal > 0) {
+    achados.push({
+      valor: `${int(comSinal)} de ${int(escolas.length)}`,
+      titulo: "escolas com indicador pior que a mediana da rede",
+      texto: "Abandono, distorção idade-série ou adequação docente. A lista das mais distantes diz por onde começar.",
+      pagina: 9,
+      tom: "oportunidade",
+    });
+  }
+
+  return achados.slice(0, 4);
+}
+
+function blocoAchados(i: LevantamentoTemplateInput): string {
+  const achados = achadosDoMunicipio(i);
+  // Um achado sozinho não sustenta um bloco: fica parecendo que só havia aquilo.
+  if (achados.length < 2) return "";
+  return `<div class="sec-label" style="margin-top:.2in">O que este levantamento encontrou em ${esc(i.relatorio.identificacao.municipioNome)}</div>
+    <div class="grid-2" style="gap:.1in">
+      ${achados
+        .map(
+          (a) => `<div class="card" style="padding:.1in .13in;border-left:.045in solid ${a.tom === "risco" ? "var(--red)" : "var(--teal)"}">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:.1in">
+          <b style="font-size:14pt;letter-spacing:-.02em;line-height:1;color:${a.tom === "risco" ? "var(--red)" : "var(--good)"};white-space:nowrap">${a.valor}</b>
+          <span class="micro" style="white-space:nowrap">pág. ${a.pagina}</span>
+        </div>
+        <div style="margin-top:.035in;font-size:8pt;font-weight:800;color:var(--navy);line-height:1.2">${esc(a.titulo)}</div>
+        <p style="margin-top:.03in;font-size:7.4pt;line-height:1.36;color:#48585f">${esc(a.texto)}</p>
+      </div>`,
+        )
+        .join("")}
+    </div>`;
+}
+
 function paginaSumario(i: LevantamentoTemplateInput, pagina: number): string {
   const r = i.relatorio;
   const id = r.identificacao;
@@ -1317,6 +1499,8 @@ function paginaSumario(i: LevantamentoTemplateInput, pagina: number): string {
       fundo estadual, proporcional à matrícula ponderada${vaarZerado ? ' &mdash; e a fatia que premia resultado (VAAR) está <span class="strong">zerada</span>' : ""}.
       ${alavanca}</p>
     </div>
+
+    ${blocoAchados(i)}
 
     <div class="sec-label" style="margin-top:.2in">Como este relatório está organizado</div>
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:.1in">
@@ -1451,7 +1635,7 @@ function paginaProjecao(i: LevantamentoTemplateInput, pagina: number): string {
   const redistribuicaoAtual = Math.max(0, p.totalAtual - p.vaafAtual - p.vaatAtual - p.vaarAtual);
   const redistribuicaoProjetada = Math.max(0, p.totalProjetado - p.vaafProjetado - p.vaatProjetado - p.vaarProjetado);
 
-  const maiorPar = Math.max(p.vaafProjetado, p.vaatProjetado, p.vaarProjetado, p.vaafAtual, p.vaatAtual, p.vaarAtual, 1);
+  const maiorPar = Math.max(redistribuicaoProjetada, redistribuicaoAtual, p.vaafProjetado, p.vaatProjetado, p.vaarProjetado, p.vaafAtual, p.vaatAtual, p.vaarAtual, 1);
   const par = (nome: string, atual: number, projetado: number) => `<div class="pair">
         <div class="pair-name">${nome}</div>
         <div class="pair-bars">
@@ -1476,9 +1660,10 @@ function paginaProjecao(i: LevantamentoTemplateInput, pagina: number): string {
   <div class="page-body">
     <div class="kicker">Parte I &middot; Estimativa para o próximo ciclo</div>
 
-    <div class="sec-label">Complementações da União &mdash; atual vs. projetado</div>
+    <div class="sec-label">Receita por componente &mdash; atual vs. projetado</div>
     <div class="card">
       <div class="legend"><span><i style="background:var(--data1)"></i>Cenário atual</span><span><i style="background:var(--data2)"></i>Cenário projetado ${id.exercicio + 1}</span></div>
+      ${par("Redistribuição", redistribuicaoAtual, redistribuicaoProjetada)}
       ${par("VAAF", p.vaafAtual, p.vaafProjetado)}
       ${par("VAAT", p.vaatAtual, p.vaatProjetado)}
       ${par("VAAR", p.vaarAtual, p.vaarProjetado)}
@@ -2125,8 +2310,8 @@ function paginaIdeb(i: LevantamentoTemplateInput, pagina: number): string {
       ${cartaoIdeb("Anos iniciais", ultimoVerificado(r.idebAnosIniciais))}
       ${cartaoIdeb("Anos finais", ultimoVerificado(r.idebAnosFinais))}
     </div>
-    <p class="small mt-1">O IDEB abaixo da meta pesa duas vezes: na aprendizagem e no acesso ao VAAR, cuja
-    condicionalidade de desempenho premia evolução de indicador. Ensino Médio (rede estadual) é
+    <p class="small mt-1">O IDEB pesa duas vezes: na aprendizagem e no acesso ao VAAR, cujo rateio premia a
+    evolução do indicador &mdash; rede que não avança deixa de receber mesmo habilitada. Ensino Médio (rede estadual) é
     informativo e não compõe o FUNDEB municipal.</p>
 
     <div class="divider"></div>

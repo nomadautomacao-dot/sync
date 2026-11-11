@@ -423,7 +423,7 @@ describe("guarda de plausibilidade do RGF", () => {
             despesa_pessoal_total: 46_095_572.33,
             percentual_despesa_pessoal: percentual,
           },
-          situacao_lrf: "Acima do limite maximo",
+          situacao_lrf: "Acima do limite máximo",
         },
       } as LevantamentoTemplateInput["payload"],
     });
@@ -439,7 +439,7 @@ describe("guarda de plausibilidade do RGF", () => {
     const html = comPessoal(253.87);
 
     expect(html).toContain("entrega do RGF inconsistente");
-    expect(html).not.toContain("Status LRF: Acima do limite maximo");
+    expect(html).not.toContain("Status LRF: Acima do limite máximo");
     // E o número não vira custo de não decidir na folha de fechamento.
     expect(html).not.toContain("da RCL, acima do limite");
   });
@@ -447,7 +447,7 @@ describe("guarda de plausibilidade do RGF", () => {
   it("mantém a leitura normal quando a razão é plausível", () => {
     const html = comPessoal(55.75);
 
-    expect(html).toContain("Status LRF: Acima do limite maximo");
+    expect(html).toContain("Status LRF: Acima do limite máximo");
     expect(html).not.toContain("entrega do RGF inconsistente");
   });
 });
@@ -674,5 +674,56 @@ describe("números que precisam fechar", () => {
     expect(html).toContain("R$ 10.192,38");
     expect(html).toContain("Acima do mínimo");
     expect(html).toContain("fora da faixa por 3,1%");
+  });
+});
+
+/**
+ * O sumário dizia quanto o município recebe e como o documento se organiza.
+ * Quem só lê a segunda página saía sem saber o que há de específico ali.
+ */
+describe("os achados do município no sumário", () => {
+  const payload = {
+    relatorio_dirigido_base: {
+      vaar: getSituacaoVaar("5220454"),
+      vaat: {
+        exercicio: 2026, proprio: 10_511.38, minimo: 10_192.38, complementacao: 0,
+        distanciaPercentual: 0, folgaPercentual: 3.13, exercicioBaseReceita: 2024,
+        habilitacao: "Habilitado para o cálculo do VAAT", pendencia: null,
+      },
+    },
+    fiscal: { siconfi: { percentual_despesa_pessoal: 50.27, limite_maximo_pessoal: 54 } },
+  } as LevantamentoTemplateInput["payload"];
+
+  it("lista o que é específico do município, com a página de cada achado", () => {
+    const html = gerar({ payload });
+
+    expect(html).toContain("O que este levantamento encontrou em Município de Teste");
+    expect(html).toContain("de VAAR em 2026");
+    expect(html).toContain("Reprovado nas condicionalidades II e III");
+    expect(html).toContain("acima do limite de alerta de 48,6%");
+    expect(html).toContain("fora da faixa por pouco");
+    expect(html).toContain("pág. 5");
+    expect(html).toContain("pág. 10");
+  });
+
+  it("põe a parcela perdida antes da oportunidade", () => {
+    const html = gerar({ payload });
+
+    expect(html.indexOf("de VAAR em 2026")).toBeLessThan(html.indexOf("fora da faixa por pouco"));
+  });
+
+  it("não acusa despesa de pessoal abaixo do limite de alerta", () => {
+    const tranquilo = structuredClone(payload)!;
+    tranquilo.fiscal!.siconfi!.percentual_despesa_pessoal = 44;
+
+    expect(gerar({ payload: tranquilo })).not.toContain("da receita corrente líquida em pessoal");
+  });
+
+  it("some quando não há pelo menos dois achados", () => {
+    expect(gerar()).not.toContain("O que este levantamento encontrou");
+  });
+
+  it("continua em 17 páginas", () => {
+    expect(paginas(gerar({ payload }))).toBe(LEVANTAMENTO_TOTAL_PAGINAS);
   });
 });

@@ -267,7 +267,7 @@ function deriveSituacaoLrf(params: {
   }
 
   if (params.limiteMaximoPessoal !== null && percentual > params.limiteMaximoPessoal) {
-    return "Acima do limite maximo";
+    return "Acima do limite máximo";
   }
   if (params.limitePrudencialPessoal !== null && percentual >= params.limitePrudencialPessoal) {
     return "Acima do limite prudencial";
