@@ -532,6 +532,22 @@ function round2(value: number) {
   return Math.round(value * 100) / 100;
 }
 
+/**
+ * Rampa mensal do potencial de incremento do exercício.
+ *
+ * A tabela impressa se chama "cronograma mensal projetado do incremento", mas
+ * distribuía o **VAAF projetado** inteiro, não o incremento — e sumia para
+ * todo município sem VAAF. Aqui a rampa é do ganho, que é o que a legenda diz.
+ */
+export function calcularCronogramaIncremento(totalGanho: number): CronogramaVAAF[] {
+  if (!(totalGanho > 0)) return [];
+  return PERCENTUAIS_MENSAIS.map((item) => ({
+    mes: item.mes,
+    valorProjetado: totalGanho * item.pct,
+    percentual: item.pct * 100,
+  }));
+}
+
 function calcularCronogramaVAAF(vaafProjetado: number, totalFundeb: number): CronogramaVAAF[] {
   if (vaafProjetado <= 0 || totalFundeb <= 0) {
     return [];

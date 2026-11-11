@@ -372,21 +372,6 @@ function esc(value: unknown): string {
     .replace(/'/g, "&#39;");
 }
 
-/** Texto ausente vira travessão — nunca um zero que finge ser dado. */
-/**
- * `perfil.faixa` é sentinela comparada em código (`=== "padrao"`), então o
- * acento entra só na exibição — renomear o valor quebraria a regra de negócio.
- */
-function rotuloFaixa(faixa: unknown): string {
-  const mapa: Record<string, string> = {
-    padrao: "padrão",
-    conservador: "conservador",
-    agressivo: "agressivo",
-  };
-  const chave = String(faixa ?? "").trim();
-  return esc(mapa[chave] ?? chave);
-}
-
 const ORDEM_CONDICIONALIDADES: Condicionalidade[] = ["I", "II", "III", "IV", "V"];
 
 /**
@@ -450,7 +435,12 @@ function blocoVaar(i: LevantamentoTemplateInput): string {
           medianaUf > 0
             ? `Os ${int(ref?.ufBeneficiadas)} municípios habilitados do estado receberam, na mediana,
                <b>${brlCompact(medianaUf)}</b> em ${ou(v.exercicio, "—")} &mdash; referência de ordem de
-               grandeza, não previsão: o rateio é proporcional à evolução dos indicadores.`
+               grandeza, não previsão: o rateio é proporcional à evolução dos indicadores.${
+                 parcelaDoVaar(i)
+                   ? ` Esse é o valor de um município de porte mediano; para uma rede deste tamanho, a mesma
+               mediana <b>por matrícula</b> dá <b>${brlCompact(parcelaDoVaar(i)?.valor)}</b>.`
+                   : ""
+               }`
             : ""
         }
         ${
@@ -1135,6 +1125,22 @@ function blocoEscolas(i: LevantamentoTemplateInput): string {
 
 // ── Páginas ─────────────────────────────────────────────────────────────────
 
+/**
+ * A frase da capa diz de que o número é feito. "Cenário otimizado" não dizia
+ * nada — e era a frase que acompanhava o maior número do documento.
+ */
+function descricaoDoPotencial(parcelas: RelatorioFundeb["projecao"]["parcelas"]): string {
+  const nomes: Record<string, string> = {
+    vaar: "VAAR a recuperar",
+    lacunas: "lacunas de declaração ao Censo",
+    matriculas: "cenário de matrículas de um ano",
+  };
+  const lista = (parcelas ?? []).map((p) => nomes[p.chave]).filter(Boolean);
+  if (!lista.length) return "Potencial sobre a receita atual do município. A conta está aberta na Parte I.";
+  const juntas = lista.length === 1 ? lista[0] : `${lista.slice(0, -1).join(", ")} e ${lista[lista.length - 1]}`;
+  return `${lista.length === 1 ? "Vem de" : "Soma de"} ${juntas}. A conta de cada parcela está aberta na Parte I.`;
+}
+
 function paginaCapa(i: LevantamentoTemplateInput): string {
   const { relatorio: r, logoDataUri } = i;
   const id = r.identificacao;
@@ -1182,8 +1188,7 @@ function paginaCapa(i: LevantamentoTemplateInput): string {
         <b>+${brlCompact(r.projecao.totalGanho)}</b>
         <i>+${pct(r.projecao.ganhoPercentual)} sobre ${exercicio}</i>
       </div>
-      <p>Cenário otimizado sobre a receita atual, o histórico do município e as complementações da
-      União. A metodologia está aberta na Parte I.</p>
+      <p>${descricaoDoPotencial(r.projecao.parcelas)}</p>
     </div>
 
     <div class="cover-kpis">
@@ -1210,6 +1215,16 @@ function paginaCapa(i: LevantamentoTemplateInput): string {
     </div>
   </div>
 </section>`;
+}
+
+/**
+ * A parcela do VAAR no potencial — o que esta rede receberia pela mediana por
+ * matrícula dos habilitados do estado. A mediana **em reais** continua impressa
+ * como dado do estado, mas é o valor de um município de porte mediano: citar só
+ * ela fazia a página do VAAR dizer R$ 528 mil e a Parte I dizer R$ 17,8 milhões.
+ */
+function parcelaDoVaar(i: LevantamentoTemplateInput) {
+  return i.relatorio.projecao.parcelas?.find((p) => p.chave === "vaar" && p.valor > 0) ?? null;
 }
 
 interface Achado {
@@ -1241,11 +1256,16 @@ function achadosDoMunicipio(i: LevantamentoTemplateInput): Achado[] {
   const reprovadas = (v?.reprovadas ?? []) as string[];
   if (r.receitas.complementacaoVAAR <= 0 && v && reprovadas.length) {
     const mediana = num(v.referencia?.medianaUf);
+    const emJogo = parcelaDoVaar(i);
     achados.push({
       valor: "R$ 0",
       titulo: `de VAAR em ${id.exercicio}`,
       texto: `Reprovado ${reprovadas.length === 1 ? "na condicionalidade" : "nas condicionalidades"} ${reprovadas.join(" e ")}${
-        mediana > 0 ? `; os habilitados do estado receberam, na mediana, ${brlCompact(mediana)}` : ""
+        emJogo
+          ? `; pela mediana por matrícula dos habilitados do estado, são ${brlCompact(emJogo.valor)} por ano em jogo`
+          : mediana > 0
+            ? `; os habilitados do estado receberam, na mediana, ${brlCompact(mediana)}`
+            : ""
       }.`,
       pagina: 5,
       tom: "risco",
@@ -1468,7 +1488,7 @@ function paginaSumario(i: LevantamentoTemplateInput, pagina: number): string {
 
     <div class="grid-4 mt-2">
       ${kpi(`Receita ${id.exercicio}`, brlCompact(rec.totalReceitas), "base oficial do ano")}
-      ${kpi(`Estimativa ${id.exercicio + 1}`, brlCompact(r.projecao.totalProjetado), "cenário otimizado")}
+      ${kpi(`Estimativa ${id.exercicio + 1}`, brlCompact(r.projecao.totalProjetado), "receita com o potencial identificado")}
       ${
         r.projecao.totalGanho > 0
           ? kpi("Ganho potencial", `+${brlCompact(r.projecao.totalGanho)}`, `+${pct(r.projecao.ganhoPercentual)} sobre o exercício atual`, "up")
@@ -1625,24 +1645,11 @@ function paginaProjecao(i: LevantamentoTemplateInput, pagina: number): string {
   const id = r.identificacao;
   const municipio = `${id.municipioNome} — ${id.uf}`;
   const p = r.projecao;
-  const perfil = r.perfilComercial;
-  const ganho = i.payload?.relatorio_dirigido_base?.ganho ?? null;
-  const ganhoTotal = ganho?.total ?? 0;
-
   // A redistribuição é a parcela que sobra do total depois das complementações.
   // Sem a linha dela a tabela somava R$ 2,7 mi nas três parcelas e fechava em
   // R$ 136 mi no total — conta que qualquer secretário de finanças refaz.
   const redistribuicaoAtual = Math.max(0, p.totalAtual - p.vaafAtual - p.vaatAtual - p.vaarAtual);
   const redistribuicaoProjetada = Math.max(0, p.totalProjetado - p.vaafProjetado - p.vaatProjetado - p.vaarProjetado);
-
-  const maiorPar = Math.max(redistribuicaoProjetada, redistribuicaoAtual, p.vaafProjetado, p.vaatProjetado, p.vaarProjetado, p.vaafAtual, p.vaatAtual, p.vaarAtual, 1);
-  const par = (nome: string, atual: number, projetado: number) => `<div class="pair">
-        <div class="pair-name">${nome}</div>
-        <div class="pair-bars">
-          <div class="pair-row"><div class="pair-fill a" style="width:${barWidth(atual, maiorPar)}"></div><span class="pair-lab">${brlCompact(atual)}</span></div>
-          <div class="pair-row"><div class="pair-fill b" style="width:${barWidth(projetado, maiorPar)}"></div><span class="pair-lab"><b style="color:var(--navy)">${brlCompact(projetado)}</b></span></div>
-        </div>
-      </div>`;
 
   const crono = r.cronogramaVAAF ?? [];
   const metade = Math.ceil(crono.length / 2);
@@ -1655,21 +1662,62 @@ function paginaProjecao(i: LevantamentoTemplateInput, pagina: number): string {
           .join("")}
       </table>`;
 
+  // As parcelas do potencial — `fundeb-ganho-composto.ts`. JSON arquivado antes
+  // da composição não as traz; a página cai então para a leitura por componente.
+  const parcelas = p.parcelas ?? [];
+  const rotuloNatureza: Record<string, string> = { apurado: "apurado", referencia: "referência", cenario: "cenário" };
+  const tabelaParcelas = parcelas.length
+    ? `<div class="sec-label" style="margin-top:.16in">De onde vem o potencial de ${id.exercicio + 1}</div>
+    <table class="tb">
+      <tr><th>Parcela</th><th class="r" style="width:1.15in">Valor (R$)</th><th class="r" style="width:.5in">Part.</th><th style="width:2.75in">Como foi calculada</th><th class="r" style="width:.55in">Página</th></tr>
+      ${parcelas
+        .map(
+          (x) => `<tr><td><b>${esc(x.titulo)}</b><div class="micro" style="margin-top:.02in;text-transform:uppercase;letter-spacing:.06em">${rotuloNatureza[x.natureza] ?? ""}</div></td>
+        <td class="r"><b>+${brl(x.valor)}</b></td><td class="r">${pct(share(x.valor, p.totalGanho), 0)}</td>
+        <td class="micro" style="font-size:7.3pt;line-height:1.3">${esc(x.regra)}</td><td class="r">${x.pagina}</td></tr>`,
+        )
+        .join("")}
+      <tr class="total"><td>Potencial identificado</td><td class="r">+${brl(p.totalGanho)}</td><td class="r">100%</td><td></td><td></td></tr>
+    </table>`
+    : "";
+
+  const notaNatureza = parcelas.length
+    ? `<div class="note mt-1">
+      <p style="font-size:7.9pt;line-height:1.4"><b>As parcelas não têm a mesma natureza</b>, e por isso saem
+      separadas. <b>Apurado</b> é conta fechada: fator de ponderação legal &times; valor aluno/ano da UF &times; matrícula
+      que o próprio município declarou &mdash; mede o que o fundo pagaria a mais se a declaração alcançasse a
+      mediana nacional, e <b>não é valor perdido comprovado</b>. <b>Referência</b> é o que os habilitados do estado
+      receberam por matrícula: dá a ordem de grandeza do VAAR, mas o rateio depende da evolução dos indicadores de
+      cada rede. <b>Cenário</b> é meta de um ano, com o critério impresso na Parte V. Nenhuma das três é receita
+      garantida; as três têm conta que se refaz.</p>
+    </div>`
+    : `<div class="note mt-1">
+      <p style="font-size:7.9pt;line-height:1.4">${
+        p.totalGanho > 0
+          ? "A projeção desta emissão não veio decomposta em parcelas; a leitura abaixo é por componente da receita."
+          : `A projeção do próximo ciclo não foi apurada nesta emissão: sem as bases que sustentam cada parcela, o
+      relatório <b>prefere omitir o número a estimá-lo</b>.`
+      }</p>
+    </div>`;
+
   return `<section class="page content-page">
   ${cabecalho(municipio, `Parte I · Projeção ${id.exercicio + 1}`)}
   <div class="page-body">
     <div class="kicker">Parte I &middot; Estimativa para o próximo ciclo</div>
 
-    <div class="sec-label">Receita por componente &mdash; atual vs. projetado</div>
-    <div class="card">
-      <div class="legend"><span><i style="background:var(--data1)"></i>Cenário atual</span><span><i style="background:var(--data2)"></i>Cenário projetado ${id.exercicio + 1}</span></div>
-      ${par("Redistribuição", redistribuicaoAtual, redistribuicaoProjetada)}
-      ${par("VAAF", p.vaafAtual, p.vaafProjetado)}
-      ${par("VAAT", p.vaatAtual, p.vaatProjetado)}
-      ${par("VAAR", p.vaarAtual, p.vaarProjetado)}
+    <div class="grid-2">
+      <div class="kpi hero"><em>Potencial identificado &middot; exercício ${id.exercicio + 1}</em><b>${
+        p.totalGanho > 0 ? `+${brlCompact(p.totalGanho)}` : "—"
+      }</b><span>${p.totalGanho > 0 ? `+${pct(p.ganhoPercentual)} sobre a receita de ${id.exercicio}` : "sem incremento apurado sobre o exercício atual"}</span></div>
+      ${kpi(`Receita ${id.exercicio + 1} com o potencial`, brlCompact(p.totalProjetado), `sobre ${brlCompact(p.totalAtual)} em ${id.exercicio}`)}
     </div>
 
-    <div class="mt-1">
+    ${tabelaParcelas}
+
+    ${notaNatureza}
+
+    <div class="sec-label" style="margin-top:.16in">Receita por componente &mdash; atual vs. projetado</div>
+    <div>
       <table class="tb">
         <tr><th>Componente</th><th class="r">Cenário atual</th><th class="r">Projetado</th><th class="r">Variação</th></tr>
         <tr><td>Redistribuição do fundo estadual</td><td class="r">${brl(redistribuicaoAtual)}</td><td class="r">${brl(redistribuicaoProjetada)}</td><td class="r">+${brl(redistribuicaoProjetada - redistribuicaoAtual)}</td></tr>
@@ -1678,43 +1726,18 @@ function paginaProjecao(i: LevantamentoTemplateInput, pagina: number): string {
         <tr><td>VAAR (Vinculado a Resultados)</td><td class="r">${brl(p.vaarAtual)}</td><td class="r">${brl(p.vaarProjetado)}</td><td class="r">+${brl(p.vaarGanho)}</td></tr>
         <tr class="total"><td>Receita total</td><td class="r">${brl(p.totalAtual)}</td><td class="r">${brl(p.totalProjetado)}</td><td class="r">+${brl(p.totalGanho)}</td></tr>
       </table>
-    </div>
-
-    <div class="grid-2 mt-2">
-      <div class="kpi hero"><em>Receita total projetada &middot; cenário otimizado</em><b>${brlCompact(p.totalProjetado)}</b><span>${p.totalGanho > 0 ? `potencial de incremento: +${brlCompact(p.totalGanho)} (+${pct(p.ganhoPercentual)})` : "sem incremento apurado sobre o exercício atual"}</span></div>
       ${
-        ganhoTotal > 0
-          ? `<div class="kpi up"><em>Ganho apurado &middot; lacunas de declaração</em><b>+${brlCompact(ganhoTotal)}</b><span>fatores do FUNDEB sobre a matrícula declarada pelo município</span></div>`
-          : `<div class="kpi"><em>Ganho apurado &middot; lacunas de declaração</em><b>${ganho ? "sem lacuna" : "—"}</b><span>${ganho ? "declaração na mediana nacional ou acima" : "matrícula ponderada não disponível"}</span></div>`
+        parcelas.some((x) => x.chave !== "vaar")
+          ? `<p class="micro mt-1">Lacunas e cenário de matrículas mexem na matrícula ponderada, que é o denominador da
+      redistribuição, do VAAF e do VAAT ao mesmo tempo: o ganho entra em cada componente na proporção do que o
+      município já recebe por ele.</p>`
+          : ""
       }
-    </div>
-
-    <div class="note mt-2">
-      <p style="font-size:7.9pt;line-height:1.4"><b>Os dois números acima não têm a mesma natureza.</b>
-      À esquerda, um <b>cenário</b>: uma leitura possível do próximo ciclo a partir da receita atual, do
-      histórico e do benchmark comercial${
-        perfil ? ` (${rotuloFaixa(perfil.faixa)}, score ${perfil.score.toFixed(2)})` : ""
-      } &mdash; é premissa, não apuração, e <b>não substitui a validação nas bases oficiais</b>.
-      À direita, uma <b>apuração</b>: ${
-        ganho && ganhoTotal > 0
-          ? `fator de ponderação legal &times; valor aluno/ano da UF (R$ ${brl(ganho.valorPorEquivalente ?? 0)}
-      por matrícula-equivalente) &times; matrícula que o próprio município declarou ao Censo. Mede o que o fundo
-      pagaria a mais se essa declaração alcançasse a <b>mediana nacional</b> das redes municipais &mdash; não o
-      teto teórico. <b>Não é valor perdido comprovado</b>: é o que está em jogo na conferência cadastral, e a
-      Parte III abre parcela por parcela, com o artigo de lei de cada uma.`
-          : ganho
-            ? `a mesma conta, mas aqui sem lacuna a monetizar &mdash; a rede já declara na <b>mediana nacional</b>
-      ou acima nos dois pontos verificáveis (jornada da creche e cobertura de AEE). É resultado bom, não falta de
-      dado, e significa que o ganho vem de crescer a rede, não de corrigir cadastro. <b>Não é valor perdido
-      comprovado</b> em lugar nenhum deste relatório.`
-            : `depende da planilha de matrículas ponderadas do FNDE, que não trouxe este município. Sem ela o
-      relatório <b>prefere omitir o número a estimá-lo</b>.`
-      }</p>
     </div>
 
     ${
       crono.length
-        ? `<div class="sec-label" style="margin-top:.2in">Cronograma mensal projetado do incremento</div>
+        ? `<div class="sec-label" style="margin-top:.16in">Cronograma mensal projetado do incremento</div>
     <div class="grid-2">
       ${tabelaCrono(crono.slice(0, metade))}
       ${tabelaCrono(crono.slice(metade))}
@@ -1912,7 +1935,11 @@ function paginaVaar(i: LevantamentoTemplateInput, pagina: number): string {
         num(ref?.medianaUf) > 0 ? brlCompact(ref?.medianaUf) : "—",
         `${int(ref?.ufBeneficiadas)} de ${int(ref?.ufAvaliadas)} municípios habilitados`,
       )}
-      ${kpi("Mediana nacional", num(ref?.medianaNacional) > 0 ? brlCompact(ref?.medianaNacional) : "—", "entre os beneficiados do país")}
+      ${
+        parcelaDoVaar(i)
+          ? kpi("Referência para esta rede", brlCompact(parcelaDoVaar(i)?.valor), "mediana por matrícula dos habilitados do estado", "up")
+          : kpi("Mediana nacional", num(ref?.medianaNacional) > 0 ? brlCompact(ref?.medianaNacional) : "—", "entre os beneficiados do país")
+      }
       ${kpi(
         "Coeficiente de rateio",
         num(v?.coeficiente) > 0 ? v!.coeficiente!.toFixed(8).replace(".", ",") : "—",
@@ -2991,9 +3018,9 @@ function paginaCenario(i: LevantamentoTemplateInput, pagina: number): string {
       }</span>
     </div>
 
-    <p class="micro mt-1">Esta faixa mede só o efeito de <b>mais matrícula</b> na rede. Ela não se soma nem
-    substitui a estimativa da Parte I, que projeta o efeito de <b>correção das complementações</b> da União
-    (VAAT e VAAR): são dois mecanismos distintos sobre a mesma receita, e cada um tem sua própria validação.</p>
+    <p class="micro mt-1">Esta faixa mede só o efeito de <b>mais matrícula</b> na rede. O <b>valor central</b> dela
+    é uma das parcelas do potencial da Parte I, ao lado do VAAR a recuperar e das lacunas de declaração &mdash;
+    três mecanismos distintos sobre a mesma receita, cada um com a sua validação.</p>
 
     <div class="sec-label">Frentes de atuação</div>
     <div class="grid-2">
@@ -3194,7 +3221,11 @@ function paginaDecisao(i: LevantamentoTemplateInput, pagina: number): string {
           ? `${reprovadas.length === 1 ? "a condicionalidade" : "as condicionalidades"} <b>${reprovadas.join(", ")}</b> não ${reprovadas.length === 1 ? "for atacada" : "forem atacadas"}`
           : "as condicionalidades não forem atacadas"
       }. A aferição é anual e recomeça do zero &mdash; não decidir é decidir por mais um ciclo zerado${
-        medianaUf > 0 ? `, enquanto a mediana dos habilitados do estado fica em <b>R$ ${brl(medianaUf)}</b>` : ""
+        parcelaDoVaar(i)
+          ? `: pela mediana por matrícula dos habilitados do estado, são <b>${brlCompact(parcelaDoVaar(i)?.valor)}</b> por ano que a rede deixa de receber`
+          : medianaUf > 0
+            ? `, enquanto a mediana dos habilitados do estado fica em <b>R$ ${brl(medianaUf)}</b>`
+            : ""
       }.`,
     );
   }

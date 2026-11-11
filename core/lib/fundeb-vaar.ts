@@ -170,6 +170,15 @@ function calcularAgregados(arquivo: ArquivoVaar): Agregados {
   return { medianaNacional: mediana(nacional), porUf };
 }
 
+/** Quem recebeu VAAR numa UF, com o valor — a base de qualquer referência por matrícula. */
+export function listarBeneficiariosVaar(uf: string, exercicio: number): Array<{ codigoIBGE: string; complementacao: number }> {
+  const arquivo = carregar(exercicio);
+  if (!arquivo) return [];
+  return Object.entries(arquivo.municipios ?? {})
+    .filter(([, r]) => r.uf === uf && r.beneficiario === true && (r.complementacao ?? 0) > 0)
+    .map(([codigoIBGE, r]) => ({ codigoIBGE, complementacao: r.complementacao ?? 0 }));
+}
+
 export function getSituacaoVaar(codigoIBGE: string, exercicio = new Date().getFullYear()): SituacaoVaar | null {
   const arquivo = carregar(exercicio);
   if (!arquivo) return null;

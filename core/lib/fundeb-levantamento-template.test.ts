@@ -274,21 +274,40 @@ describe("template do Levantamento FUNDEB", () => {
 
     expect(html).toContain("Ganho apurado");
     expect(html).toContain("mediana nacional");
-    expect(html).toContain("Não é valor perdido comprovado");
   });
 
-  it("distingue o cenário da apuração em vez de somá-los", () => {
-    const html = gerar({
-      payload: {
-        relatorio_dirigido_base: { ganho: getGanhoApurado("2930154", "BA", 37_000_000) },
-      } as LevantamentoTemplateInput["payload"],
+  /**
+   * O ganho da capa já foi `receita × multiplicador` do perfil comercial. Hoje
+   * é a soma de parcelas, e a Parte I abre a conta de cada uma — com a natureza
+   * dita uma vez só, em vez de uma ressalva por número.
+   */
+  it("abre o potencial em parcelas, cada uma com a conta e a página", () => {
+    const r = relatorioMinimo();
+    Object.assign(r.projecao, {
+      vaarProjetado: 17_755_530, vaarGanho: 17_755_530,
+      totalAtual: 200_722_290.59, totalProjetado: 221_656_660.59, totalGanho: 20_934_370, ganhoPercentual: 10.43,
+      natureza: "composta",
+      parcelas: [
+        { chave: "vaar", titulo: "VAAR a recuperar — condicionalidades II e III", valor: 17_755_530, regra: "R$ 711,84 por matrícula × 24.943 matrículas da rede", pagina: 5, natureza: "referencia" },
+        { chave: "matriculas", titulo: "Cenário de matrículas — EJA, tempo integral e educação especial", valor: 3_178_840, regra: "1.094 matrículas a mais em um ano", pagina: 14, natureza: "cenario" },
+      ],
     });
+    const html = generateLevantamentoHtml({ relatorio: r });
 
-    // A nota de método passou a existir uma vez só, na Parte I: na página 2 ela
-    // aparecia inteira de novo, e a peça gastava mais linha desmentindo o
-    // próprio número de capa do que defendendo-o.
+    expect(html).toContain("De onde vem o potencial de 2027");
+    expect(html).toContain("VAAR a recuperar — condicionalidades II e III");
+    expect(html).toContain("R$ 711,84 por matrícula × 24.943 matrículas da rede");
+    expect(html).toContain("+17.755.530,00");
+    expect(html).toContain("+20.934.370,00");
+    // A coluna "Página" leva ao lugar onde cada parcela se abre.
+    expect(html).toContain('<td class="r">14</td>');
+    // A frase da capa diz de que o número é feito.
+    expect(html).toContain("Soma de VAAR a recuperar e cenário de matrículas de um ano.");
+    expect(html).not.toContain("Cenário otimizado");
+    expect(html).not.toContain("benchmark comercial");
+
     expect(html).toContain("não têm a mesma natureza");
-    expect(html).toContain("é premissa, não apuração");
+    expect(html).toContain("não é valor perdido comprovado");
     expect(html.match(/não têm a mesma natureza/g)).toHaveLength(1);
   });
 

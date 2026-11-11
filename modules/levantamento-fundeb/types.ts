@@ -21,6 +21,22 @@ export interface ReceitasFundeb {
   totalReceitas: number;
 }
 
+/** Uma parcela do potencial, com a regra que a gerou. */
+export interface ParcelaGanhoFundeb {
+  chave: "vaar" | "lacunas" | "matriculas";
+  titulo: string;
+  valor: number;
+  /** A conta em uma linha, pronta para impressão. */
+  regra: string;
+  /** Página do Levantamento onde a parcela se abre. */
+  pagina: number;
+  /**
+   * `apurado`: sai de fator e valor oficiais sobre a matrícula do próprio
+   * município. `referencia`: mediana de outros entes. `cenario`: meta de um ano.
+   */
+  natureza: "apurado" | "referencia" | "cenario";
+}
+
 export interface ProjecaoFundeb {
   vaafAtual: number;
   vaafProjetado: number;
@@ -38,7 +54,9 @@ export interface ProjecaoFundeb {
   possuiComplementacao: boolean;
   metodologia?: string;
   multiplicadorAplicado?: number | null;
-  natureza?: "recuperavel" | "benchmark" | "referencia";
+  natureza?: "recuperavel" | "benchmark" | "referencia" | "composta";
+  /** As parcelas que somam `totalGanho`, quando a projeção é composta. */
+  parcelas?: ParcelaGanhoFundeb[];
   ressalva?: string | null;
 }
 

@@ -1,8 +1,10 @@
 import { lerJsonDeDados } from "@/core/lib/dados-arquivo";
 import {
+  calcularCronogramaIncremento,
   formatDateTime,
   hydrateRelatorioFundeb,
 } from "@/modules/levantamento-fundeb/utils/calculos";
+import { comporGanho, parcelaVaar } from "@/core/lib/fundeb-ganho-composto";
 import type { FundebRelatorioParametros, RelatorioFundeb } from "@/modules/levantamento-fundeb/types";
 import {
   getFundebReceitasOficiais,
@@ -389,7 +391,7 @@ function buildGoviaOportunidades(relatorio: RelatorioFundeb) {
       score_prioridade: projection.ganhoPercentual > 25 ? 88 : 62,
       estimativa_sucesso: projection.totalGanho > 0 ? 74 : 45,
       subtipo: "FUNDEB",
-      justificativa: "Potencial estimado a partir das fórmulas validadas no documento técnico.",
+      justificativa: "Soma do VAAR a recuperar, das lacunas de declaração ao Censo e do cenário de matrículas de um ano.",
       fonte_recurso: "FUNDEB",
       programa_adequado: "Otimização de VAAF, VAAT e VAAR",
       prioridade_numerica: projection.totalGanho > 0 ? 8 : 5,
@@ -459,10 +461,10 @@ function buildAnaliseExecutiva(relatorio: RelatorioFundeb) {
   const complement = projection.possuiComplementacao ? "com complementacao da Uniao" : "sem complementacao declarada da Uniao";
   const recuperavelText =
     relatorio.projecaoComercial && recuperavel.totalGanho > 0
-      ? ` A camada recuperável já evidenciada nas bases atuais soma ${recuperavel.totalGanho.toLocaleString("pt-BR", {
+      ? ` Dentro dele, a lacuna de declaração apurada sobre a matrícula do próprio município soma ${recuperavel.totalGanho.toLocaleString("pt-BR", {
           style: "currency",
           currency: "BRL",
-        })}, dependente de validacao documental, regularizacao sistêmica e eventual recálculo oficial.`
+        })}.`
       : "";
 
   return `O município de ${municipality} foi carregado automaticamente a partir do IBGE e apresenta um cenário inicial ${complement}. A linha de base considerada soma ${current.toLocaleString("pt-BR", {
@@ -474,7 +476,7 @@ function buildAnaliseExecutiva(relatorio: RelatorioFundeb) {
   })}. O ganho potencial estimado nesta fase e de ${gain.toLocaleString("pt-BR", {
     style: "currency",
     currency: "BRL",
-  })}, com base na metodologia comercial histórica do levantamento Global Company Consultorias e sujeito à validação documental das bases do FUNDEB e dos sistemas MEC/FNDE.${recuperavelText}`;
+  })}, soma do VAAR a recuperar, das lacunas de declaração ao Censo e do cenário de matrículas, sujeito à validação documental das bases do FUNDEB e dos sistemas MEC/FNDE.${recuperavelText}`;
 }
 
 function buildScoreViabilidade(relatorio: RelatorioFundeb) {
@@ -1100,8 +1102,10 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
   const relatorio = buildRelatorioBase(municipio, exercicio, receitasBase, {
     ...(parametros ? { parametros } : {}),
     censoEscolar,
+    // O perfil comercial continua descrevendo o município (score, faixa). A
+    // projeção por multiplicador que saía dele não é mais usada: o ganho é
+    // composto adiante, parcela por parcela — ver `fundeb-ganho-composto.ts`.
     perfilComercial: comercial.perfil,
-    projecaoComercial: comercial.projecao,
     sistemas: fndePublic?.sistemas,
     obrasPAC2: fndePublic?.obrasPAC2,
     situacaoPAR: fndePublic?.situacaoPAR,
@@ -1259,9 +1263,36 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
   ] as const) {
     if (serie?.length) relatorio[campo] = serie.map(item => ({ano:item.ano, idebVerificado:item.ideb, metaProjetada:null}));
   }
+  // O cenário de matrículas vem antes: ele é uma das parcelas do ganho, e as
+  // oportunidades e a análise executiva abaixo leem a projeção já composta.
+  const comparativo = await buildFundebComparativeSnapshot(relatorio);
+  const cenarioMatriculas = comparativo.comparativaPdfInput.cenarioEstruturacao;
+  const lacunasApuradas = getGanhoApurado(String(municipio.id), municipioUf, relatorio.receitas.totalReceitas);
+  const ganhoComposto = comporGanho({
+    receitas: relatorio.receitas,
+    vaar: parcelaVaar(String(municipio.id), exercicio, inepRecord?.matriculasMunicipaisTotal ?? 0),
+    lacunas: lacunasApuradas
+      ? {
+          total: lacunasApuradas.total,
+          maiorTitulo: [...lacunasApuradas.componentes].sort((a, b) => b.valor - a.valor)[0]?.titulo ?? null,
+        }
+      : null,
+    cenario: cenarioMatriculas
+      ? {
+          minimo: cenarioMatriculas.impactoFinanceiroIndicativo.minimo,
+          maximo: cenarioMatriculas.impactoFinanceiroIndicativo.maximo,
+          matriculas: cenarioMatriculas.ganhosMatriculas.total,
+        }
+      : null,
+  });
+  relatorio.projecao = ganhoComposto.total;
+  relatorio.projecaoComercial = ganhoComposto.total;
+  relatorio.projecaoRecuperavel = ganhoComposto.recuperavel;
+  relatorio.upsideCondicionado = ganhoComposto.upside;
+  relatorio.cronogramaVAAF = calcularCronogramaIncremento(ganhoComposto.total.totalGanho);
+
   const oportunidades = buildGoviaOportunidades(relatorio);
   const analiseExecutiva = buildAnaliseExecutiva(relatorio);
-  const comparativo = await buildFundebComparativeSnapshot(relatorio);
   const fontes = [
     "IBGE Localidades",
     "Sync Next API",

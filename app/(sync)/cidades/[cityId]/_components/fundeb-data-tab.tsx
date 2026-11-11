@@ -207,6 +207,13 @@ export function FundebDataTab({
    * benchmark não é decorativa: ela diz para não tratá-lo como ganho
    * recuperável sem validação documental, e é justamente esse número que vai
    * para conversa de proposta.
+   *
+   * Desde 2026-11-11 o levantamento não usa mais multiplicador: a projeção é
+   * **composta** (`natureza: "composta"`), soma de parcelas com conta própria
+   * — VAAR a recuperar, lacunas de declaração e cenário de matrículas. Nesses
+   * relatórios a "recuperável" é só a lacuna apurada e a "comercial" é a soma
+   * das parcelas; os rótulos abaixo mudam com a natureza, porque os relatórios
+   * arquivados antes disso continuam sendo benchmark e precisam dizer que são.
    */
   const projection =
     active.snapshot.projecaoRecuperavel ??
@@ -220,6 +227,7 @@ export function FundebDataTab({
     (recordField(reportData, "projecao") !== projection
       ? recordField(reportData, "projecao")
       : undefined);
+  const projecaoComposta = firstText(comercial?.natureza) === "composta";
   const ressalvaRecuperavel = firstText(projection?.ressalva);
   const ressalvaComercial = firstText(comercial?.ressalva);
   const ganhoComercial = firstNumber(comercial?.totalGanho);
@@ -431,7 +439,9 @@ export function FundebDataTab({
                   fontWeight: 600,
                 }}
               >
-                Potencial recuperável identificado
+                {projecaoComposta
+                  ? "Lacuna de declaração apurada"
+                  : "Potencial recuperável identificado"}
               </Text>
               <div
                 style={{
@@ -498,7 +508,9 @@ export function FundebDataTab({
             <Row gutter={[16, 12]} align="middle">
               <Col xs={24} md={9}>
                 <Text type="secondary" style={{ fontSize: 10, fontWeight: 600 }}>
-                  Teto comercial (benchmark interno)
+                  {projecaoComposta
+                    ? "Potencial identificado (soma das parcelas)"
+                    : "Teto comercial (benchmark interno)"}
                 </Text>
                 <div
                   style={{

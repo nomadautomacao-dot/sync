@@ -488,9 +488,37 @@ quebrava a emissão, e os três têm teste em `fundeb-vaat-minimo.test.ts`:
 | PIB per capita R$ 30.509 (2023) | R$ 35.307,32 | O caminho SIDRA dividia o PIB de 2023 pela população de 2026 — e só rodava quando a API principal do IBGE caía, então o erro era intermitente |
 | Capa sem mapa e sem UF em GO, DF e parte de MT | — | Boa Esperança do Norte/MT não tem microrregião no IBGE; ler `m.microrregiao.mesorregiao` lançava dentro do `find` e derrubava todo município de código maior. Vale para **todos** os relatórios, não só este |
 
-Ao conferir um relatório, o que **não** é dado e não deve ser tratado como tal:
-o ganho da capa, que é a receita × o multiplicador do perfil comercial. É
-premissa, com a ressalva impressa na Parte I.
+**O ganho da capa é soma de parcelas, cada uma com a sua conta**
+(`core/lib/fundeb-ganho-composto.ts`, com teste). Já foi `receita ×
+multiplicador` do perfil comercial: +R$ 136 milhões (+68%) em Senador Canedo,
+que não recebe complementação nenhuma da União, e +R$ 1,99 bilhão em Fortaleza.
+Não havia de onde o número sair, e a mesma peça dizia R$ 2,5 a 3,8 milhões no
+cenário da página 14. Hoje a Parte I abre a conta:
+
+| Parcela | Natureza | Regra |
+|---|---|---|
+| VAAR a recuperar | referência | mediana **por matrícula** dos habilitados do estado × matrículas da rede |
+| Lacunas de declaração | apurado | `fundeb-ganho-apurado.ts` — fator legal sobre a matrícula declarada |
+| Cenário de matrículas | cenário | valor central da faixa da Parte V |
+
+Senador Canedo ficou em +R$ 20,9 mi (10,4%), Serra do Ramalho em +R$ 8,2 mi
+(9,3%) e Fortaleza em +R$ 179 mi (7,9%). Três coisas para não quebrar:
+
+1. **A referência do VAAR é por matrícula, não em reais.** A mediana em reais
+   dos habilitados é o valor de um município de porte mediano — R$ 528 mil em
+   Goiás, para uma rede de 25 mil alunos. Por matrícula a distribuição é
+   estreita (o intervalo entre quartis fica a ±9% da mediana em GO, BA e CE).
+2. **Quem já recebe VAAR não ganha parcela**, e reprovação do estado na
+   condicionalidade IV também não: não se resolve no município.
+3. **O ganho de matrícula entra em redistribuição, VAAF e VAAT na proporção do
+   que o município já recebe**, porque os três têm o mesmo denominador. A tabela
+   por componente precisa fechar com o total — já saiu somando R$ 2,7 mi nas
+   parcelas e R$ 136 mi no total.
+
+`perfilComercial` (score, faixa, multiplicador) continua no JSON descrevendo o
+município, mas o multiplicador não gera mais número nenhum no levantamento.
+**`core/lib/propostas-prefill.ts` ainda o usa** para pré-preencher proposta: é o
+único lugar onde o número antigo sobrevive, e vai divergir do levantamento.
 
 **As metas do cenário de matrículas cabem em um ano**
 (`core/lib/fundeb-cenario-metas.ts`, com teste). Já saíram do tamanho da rede
@@ -512,11 +540,6 @@ com faixa de R$ 2,5 a 3,8 milhões.
 **A capa é clara, com os números numa placa escura no pé**
 (`report-visual-theme.ts`, que vale para todos os relatórios). Já foi verde-escura
 na folha inteira, e ali o ganho em verde-claro não destacava por maior que fosse.
-
-> **O multiplicador em capital dá número que não se defende.** Fortaleza sai
-> com 1,88× e +R$ 1,99 bilhão na capa. O regime "escala metropolitana" de
-> `calcularPerfilComercialFundeb` foi calibrado assim de propósito e voltou
-> como era; antes de emitir para município grande, vale decidir um teto.
 
 ### Case de Sucesso
 
@@ -1552,6 +1575,12 @@ Senhora do Livramento (5106109, exercício 2026):
 Não é divergência de cálculo: são perguntas diferentes. A ficha mostrava só a
 recuperável, **sem dizer qual era**, enquanto o relatório e a proposta lideram
 pela comercial — daí a impressão de número errado.
+
+> **A tabela acima é de relatório arquivado antes de 2026-11-11.** Desde então
+> a projeção é composta (`natureza: "composta"`, seção 5): `projecaoRecuperavel`
+> é só a lacuna de declaração apurada, `projecaoComercial` é a soma das
+> parcelas e `upsideCondicionado` é a diferença. A ficha troca os rótulos pela
+> natureza, porque os dois tipos convivem no arquivo.
 
 Hoje as duas aparecem, cada uma com a `ressalva` que o próprio JSON carrega. A
 do benchmark não é decorativa: *"não deve ser tratado como ganho recuperável sem
