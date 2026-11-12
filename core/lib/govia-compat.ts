@@ -9,6 +9,7 @@ import type { FundebRelatorioParametros, RelatorioFundeb } from "@/modules/levan
 import {
   getFundebReceitasOficiais,
   getFundebVaatContext,
+  vaatInabilitado,
   type FndeVaatContext,
 } from "@/core/lib/fundeb-fnde";
 import { getInepCensoMunicipalRecord, getInepCensoMunicipalHistory } from "@/core/lib/inep-censo";
@@ -564,6 +565,11 @@ function uniqueOperationalNotes(items: Array<string | null | undefined>) {
  * Build a complete relatorio_dirigido_base from existing data sources.
  * This feeds the Flutter Parte IV (annual comparison) and executive summary.
  */
+/** O VAAT-MIN, se a rede recebe a complementação; `null` no caso contrário. */
+function vaatNaFaixa(ctx: FndeVaatContext | null): number | null {
+  return ctx && ctx.complementacaoVAAT > 0 && !vaatInabilitado(ctx.habilitacao) ? ctx.vaatMinimo : null;
+}
+
 function buildRelatorioDirigidoBase({
   relatorio,
   comparativo,
@@ -891,7 +897,9 @@ function buildRelatorioDirigidoBase({
      * para todo município do país. "Evidenciado" significa comprovado, então o
      * gestor lia "esse dinheiro já existe e estou perdendo" — e era premissa.
      */
-    ganho: getGanhoApurado(ident.codigoIBGE, ident.uf, relatorio.receitas.totalReceitas),
+    ganho: getGanhoApurado(ident.codigoIBGE, ident.uf, relatorio.receitas.totalReceitas, {
+      vaatMinimoNaFaixa: vaatNaFaixa(vaatContext),
+    }),
     /**
      * Vinculações da educação como o SIOPE as apura — 25% MDE, 70%
      * remuneração, 15% capital do VAAT, IEI, teto de 10% não aplicado.
@@ -1267,7 +1275,9 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
   // oportunidades e a análise executiva abaixo leem a projeção já composta.
   const comparativo = await buildFundebComparativeSnapshot(relatorio);
   const cenarioMatriculas = comparativo.comparativaPdfInput.cenarioEstruturacao;
-  const lacunasApuradas = getGanhoApurado(String(municipio.id), municipioUf, relatorio.receitas.totalReceitas);
+  const lacunasApuradas = getGanhoApurado(String(municipio.id), municipioUf, relatorio.receitas.totalReceitas, {
+    vaatMinimoNaFaixa: vaatNaFaixa(vaatContext),
+  });
   const ganhoComposto = comporGanho({
     receitas: relatorio.receitas,
     vaar: parcelaVaar(String(municipio.id), exercicio, inepRecord?.matriculasMunicipaisTotal ?? 0),
@@ -1275,6 +1285,7 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
       ? {
           total: lacunasApuradas.total,
           maiorTitulo: [...lacunasApuradas.componentes].sort((a, b) => b.valor - a.valor)[0]?.titulo ?? null,
+          noVaat: vaatNaFaixa(vaatContext) !== null,
         }
       : null,
     cenario: cenarioMatriculas

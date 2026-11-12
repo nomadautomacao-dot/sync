@@ -97,7 +97,7 @@ export interface EntradaGanhoComposto {
   receitas: ReceitasFundeb;
   vaar: ParcelaGanhoFundeb | null;
   /** Total de `getGanhoApurado` — lacunas de declaração monetizadas. */
-  lacunas: { total: number; maiorTitulo?: string | null } | null;
+  lacunas: { total: number; maiorTitulo?: string | null; noVaat?: boolean } | null;
   /** Cenário de matrículas no ritmo padrão (Parte V): valor de um ano e como foi apurado. */
   cenario: {
     valor: number;
@@ -270,7 +270,9 @@ export function comporGanho(e: EntradaGanhoComposto): GanhoComposto {
           chave: "lacunas",
           titulo: `Lacunas de declaração ao Censo${e.lacunas.maiorTitulo ? ` — ${e.lacunas.maiorTitulo.charAt(0).toLowerCase()}${e.lacunas.maiorTitulo.slice(1)}` : ""}`,
           valor: round2(e.lacunas.total),
-          regra: "fator de ponderação legal × valor aluno/ano da UF × matrículas que faltam para a declaração alcançar a mediana nacional",
+          regra: e.lacunas.noVaat
+            ? "fator de ponderação legal × VAAT-MIN (a rede está na faixa do VAAT) × matrículas que faltam para a declaração alcançar a mediana nacional"
+            : "fator de ponderação legal × valor aluno/ano da UF × matrículas que faltam para a declaração alcançar a mediana nacional",
           pagina: 8,
           natureza: "apurado",
         }

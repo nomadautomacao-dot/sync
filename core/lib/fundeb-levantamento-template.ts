@@ -1197,6 +1197,14 @@ function paginaCapa(i: LevantamentoTemplateInput): string {
   const exercicio = id.exercicio;
   const responsavel = r.parametros?.responsavelTecnico ?? "Adriel Tavares";
 
+  // Com o Padrão Global calculado, a capa lidera por ele: o conservador de um
+  // ciclo (ritmo nacional, proporcional ao tempo até o Censo) é o piso da
+  // conversa, não a manchete — e segue aberto na Parte I.
+  const global =
+    r.projecao.otimista?.base === "global" && r.projecao.otimista.tresAnos.total > r.projecao.totalGanho
+      ? r.projecao.otimista
+      : null;
+
   // "+R$ 0,00 mi" como cereja da capa é pior que não ter cereja: o município
   // sem projeção apurada recebe a receita do exercício como âncora, e o texto
   // diz por que o outro número não está ali.
@@ -1230,7 +1238,22 @@ function paginaCapa(i: LevantamentoTemplateInput): string {
     </div>
 
     ${
-      temGanho
+      global
+        ? `<div class="cover-hero" data-capa-destaque>
+      <em>Potencial de incremento &middot; até ${global.exercicioTerceiro ?? exercicio + 3}</em>
+      <div class="val">
+        <b>+${brlCompact(global.tresAnos.total)}</b>
+        <i>+${pct(global.tresAnos.percentual)} sobre ${exercicio}</i>
+      </div>
+      <p>Em três Censos, com a matrícula crescendo no ritmo das redes atendidas pela Global, somada ao VAAR e às
+      lacunas de declaração. A conta de cada parcela está aberta na Parte I.</p>
+    </div>
+
+    <div class="cover-kpis">
+      <div class="ckpi"><em>Receita FUNDEB ${exercicio}</em><b>${brlCompact(r.receitas.totalReceitas)}</b><span>base oficial do exercício</span></div>
+      <div class="ckpi"><em>Primeiro ciclo &middot; ${global.exercicioPrimeiro ?? exercicio + 1}</em><b>+${brlCompact(global.umAno.total)}</b><span>o que entra com o próximo Censo</span></div>
+    </div>`
+        : temGanho
         ? `<div class="cover-hero" data-capa-destaque>
       <em>Potencial de incremento &middot; ${r.projecao.exercicioDoGanho ? `a partir de ${r.projecao.exercicioDoGanho}` : `exercício ${exercicio + 1}`}</em>
       <div class="val">
@@ -1325,26 +1348,6 @@ function dataBrDoIso(iso: string | undefined): string {
 /** "Padrão Global" quando o otimista vem dos casos; "Otimista" no caso contrário. */
 function rotuloDoOtimista(o: RelatorioFundeb["projecao"]["otimista"]): string {
   return o?.base === "global" ? "Padrão Global" : "Otimista";
-}
-
-/** Os casos que sustentam o Padrão Global, em uma fileira. */
-function blocoCasosGlobal(i: LevantamentoTemplateInput): string {
-  const g = i.payload?.relatorio_dirigido_base?.cenarioEstruturacao?.padraoGlobal;
-  const casos = g?.casos ?? [];
-  if (casos.length < 3 || !(num(g?.porAno) > 0)) return "";
-  return `<div class="sec-label" style="margin-top:.14in">De onde vem o Padrão Global &mdash; matrícula ponderada ganha nos municípios atendidos</div>
-    <div style="display:grid;grid-template-columns:repeat(${casos.length + 1},1fr);gap:.07in">
-      ${casos
-        .map(
-          (c) => `<div class="card" style="padding:.07in .09in"><div class="micro" style="font-weight:800;color:var(--navy)">${esc(c.nome)}/${esc(c.uf)}</div>
-        <b style="display:block;font-size:12pt;color:${c.ganhoAcumulado > 0 ? "var(--good)" : "var(--muted)"};margin-top:.02in">${c.ganhoAcumulado >= 0 ? "+" : "−"}${pct(Math.abs(c.ganhoAcumulado) * 100)}</b>
-        <span class="micro">em ${c.transicoes} Censos &middot; melhor ano ${pct(c.melhorAno * 100)}</span></div>`,
-        )
-        .join("")}
-      <div class="card" style="padding:.07in .09in;background:#f2f8f7;border-color:#cde4e0"><div class="micro" style="font-weight:800;color:#1d6a58">Padrão Global</div>
-        <b style="display:block;font-size:12pt;color:var(--navy);margin-top:.02in">+${pct(num(g?.porAno) * 100)} ao ano</b>
-        <span class="micro">mediana dos casos &middot; rede mediana do país: cerca de 1%</span></div>
-    </div>`;
 }
 
 interface Achado {
@@ -1631,6 +1634,19 @@ function paginaSumario(i: LevantamentoTemplateInput, pagina: number): string {
     <div class="grid-4 mt-2">
       ${kpi(`Receita ${id.exercicio}`, brlCompact(rec.totalReceitas), "base oficial do ano")}
       ${
+        r.projecao.otimista?.base === "global" && r.projecao.otimista.tresAnos.total > r.projecao.totalGanho
+          ? `${kpi(
+              `Potencial até ${r.projecao.otimista.exercicioTerceiro ?? id.exercicio + 3}`,
+              `+${brlCompact(r.projecao.otimista.tresAnos.total)}`,
+              `+${pct(r.projecao.otimista.tresAnos.percentual)} sobre ${id.exercicio} &middot; três ciclos`,
+              "up",
+            )}
+      ${kpi(
+        `Primeiro ciclo · ${r.projecao.otimista.exercicioPrimeiro ?? id.exercicio + 1}`,
+        `+${brlCompact(r.projecao.otimista.umAno.total)}`,
+        `+${pct(r.projecao.otimista.umAno.percentual)} &middot; com o próximo Censo`,
+      )}`
+          : `${
         r.projecao.totalGanho > 0
           ? kpi("Ganho potencial", `+${brlCompact(r.projecao.totalGanho)}`, `+${pct(r.projecao.ganhoPercentual)} sobre o exercício atual`, "up")
           : kpi("Ganho potencial", "—", "projeção não apurada nesta emissão")
@@ -1643,6 +1659,7 @@ function paginaSumario(i: LevantamentoTemplateInput, pagina: number): string {
               `+${pct(r.projecao.otimista.tresAnos.percentual)} &middot; ${r.projecao.otimista.base === "global" ? "ritmo dos casos da Global" : "teto deste município"}`,
             )
           : kpi(`Estimativa ${id.exercicio + 1}`, brlCompact(r.projecao.totalProjetado), "receita com o potencial identificado")
+      }`
       }
       ${kpiGanho}
     </div>
@@ -1825,7 +1842,7 @@ function paginaProjecao(i: LevantamentoTemplateInput, pagina: number): string {
   const tabelaParcelas = parcelas.length
     ? `<div class="sec-label" style="margin-top:.16in">De onde vem o potencial${otimista ? " &mdash; e até onde este município pode ir" : ""}</div>
     <table class="tb">
-      <tr><th>Parcela</th><th class="r" style="width:1.02in">Potencial<br><span style="font-weight:400;letter-spacing:0;text-transform:none">${anoPotencial}</span></th>${
+      <tr><th>Parcela</th><th class="r" style="width:1.02in">${global ? "Conservador" : "Potencial"}<br><span style="font-weight:400;letter-spacing:0;text-transform:none">${anoPotencial}</span></th>${
         otimista
           ? `<th class="r" style="width:1.02in">${nomeOtimista}<br><span style="font-weight:400;letter-spacing:0;text-transform:none">${ano1}</span></th><th class="r" style="width:1.02in">${nomeOtimista}<br><span style="font-weight:400;letter-spacing:0;text-transform:none">até ${ano3}</span></th>`
           : `<th class="r" style="width:.5in">Part.</th>`
@@ -1896,13 +1913,17 @@ function paginaProjecao(i: LevantamentoTemplateInput, pagina: number): string {
     <div class="kicker">Parte I &middot; Estimativa para o próximo ciclo</div>
 
     <div class="${otimista ? "grid-3" : "grid-2"}">
-      <div class="kpi hero"><em>Potencial identificado &middot; ${anoPotencial}</em><b>${
+      <div class="kpi${global ? "" : " hero"}"><em>${global ? "Conservador" : "Potencial identificado"} &middot; ${anoPotencial}</em><b>${
         p.totalGanho > 0 ? `+${brlCompact(p.totalGanho)}` : "—"
       }</b><span>${p.totalGanho > 0 ? `+${pct(p.ganhoPercentual)} sobre a receita de ${id.exercicio}` : "sem incremento apurado sobre o exercício atual"}</span></div>
       ${
         otimista
           ? `${kpi(`${nomeOtimista} · ${ano1}`, `+${brlCompact(otimista.umAno.total)}`, `+${pct(otimista.umAno.percentual)} &middot; ${global ? "primeiro ciclo" : "um ano no ritmo acelerado"}`)}
-      ${kpi(`${nomeOtimista} · até ${ano3}`, `+${brlCompact(otimista.tresAnos.total)}`, `+${pct(otimista.tresAnos.percentual)} &middot; ${global ? "três ciclos" : "teto deste município"}`, "up")}`
+      ${
+        global
+          ? `<div class="kpi hero"><em>${nomeOtimista} &middot; até ${ano3}</em><b>+${brlCompact(otimista.tresAnos.total)}</b><span>+${pct(otimista.tresAnos.percentual)} &middot; três ciclos</span></div>`
+          : kpi(`${nomeOtimista} · até ${ano3}`, `+${brlCompact(otimista.tresAnos.total)}`, `+${pct(otimista.tresAnos.percentual)} &middot; teto deste município`, "up")
+      }`
           : kpi(`Receita ${id.exercicio + 1} com o potencial`, brlCompact(p.totalProjetado), `sobre ${brlCompact(p.totalAtual)} em ${id.exercicio}`)
       }
     </div>
@@ -1914,8 +1935,6 @@ function paginaProjecao(i: LevantamentoTemplateInput, pagina: number): string {
     }
 
     ${tabelaParcelas}
-
-    ${blocoCasosGlobal(i)}
 
     ${notaNatureza}
 

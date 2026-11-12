@@ -856,6 +856,33 @@ describe("o cenário otimista ao lado do potencial", () => {
     expect(html.match(/\+R\$\u00a055,38\u00a0mi/g)?.length).toBeGreaterThanOrEqual(3);
   });
 
+  /**
+   * Com o Padrão Global calculado, a capa e o sumário lideram por ele. O
+   * conservador de um ciclo — R$ 6,76 mi em Serra do Ramalho — já foi a manchete
+   * e escondia os R$ 26,9 mi que o mesmo relatório calculava até 2030.
+   */
+  it("lidera pelo Padrão Global quando ele existe, e chama o resto de conservador", () => {
+    const r = relatorioComOtimista();
+    Object.assign(r.projecao.otimista!, { base: "global", exercicioPrimeiro: 2028, exercicioTerceiro: 2030 });
+    const html = generateLevantamentoHtml({ relatorio: r });
+
+    expect(html).toContain("Potencial de incremento &middot; até 2030");
+    expect(html).toContain("Primeiro ciclo &middot; 2028");
+    expect(html).toContain("Potencial até 2030");
+    expect(html).toContain("Conservador");
+    // O número principal da capa é o do Padrão Global, não o conservador.
+    const capa = html.slice(0, html.indexOf("Sumário executivo"));
+    expect(capa).toContain(`+R$\u00a055,38\u00a0mi`);
+    expect(capa).not.toContain(`+R$\u00a022,15\u00a0mi`);
+  });
+
+  it("não mostra o quadro dos municípios atendidos", () => {
+    const r = relatorioComOtimista();
+    Object.assign(r.projecao.otimista!, { base: "global" });
+
+    expect(generateLevantamentoHtml({ relatorio: r })).not.toContain("De onde vem o Padrão Global");
+  });
+
   it("não imprime mais a rampa mensal de percentuais fixos", () => {
     const r = relatorioComOtimista();
     r.cronogramaVAAF = [{ mes: "Janeiro", valorProjetado: 1_306_662.79, percentual: 5.9 }];

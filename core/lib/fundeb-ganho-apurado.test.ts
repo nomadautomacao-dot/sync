@@ -161,3 +161,20 @@ describe("percentual sobre a receita", () => {
     expect(g.percentualSobreReceita).toBeCloseTo((g.total / 37_000_000) * 100, 6);
   });
 });
+
+describe("lacuna em rede que já recebe VAAT", () => {
+  it("vale o VAAT-MIN por matrícula-equivalente, e não só o fundo do estado", () => {
+    // Serra do Ramalho/BA recebe VAAT: a União completa cada matrícula até o mínimo.
+    const pelo_fundo = getGanhoApurado("2930154", "BA", 88_107_810.51)!;
+    const na_faixa = getGanhoApurado("2930154", "BA", 88_107_810.51, { vaatMinimoNaFaixa: 10_192.38 })!;
+
+    expect(na_faixa.valorPorEquivalente).toBe(10_192.38);
+    expect(na_faixa.total / pelo_fundo.total).toBeCloseTo(10_192.38 / pelo_fundo.valorPorEquivalente, 6);
+    expect(na_faixa.componentes[0].origem).toContain("o VAAT-MIN, porque a rede está na faixa do VAAT");
+  });
+
+  it("ignora um mínimo abaixo do que o fundo já paga", () => {
+    const g = getGanhoApurado("2930154", "BA", 88_107_810.51, { vaatMinimoNaFaixa: 1_000 })!;
+    expect(g.valorPorEquivalente).toBeLessThan(10_000);
+  });
+});

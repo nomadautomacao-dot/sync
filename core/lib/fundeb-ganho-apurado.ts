@@ -83,6 +83,15 @@ export function getGanhoApurado(
   codigoIBGE: string,
   uf: string,
   receitaAtual?: number,
+  opcoes?: {
+    /**
+     * VAAT-MIN, quando a rede **já recebe** a complementação VAAT. Nessa rede a
+     * União completa cada matrícula-equivalente até o mínimo, então a lacuna vale
+     * o mínimo inteiro — e não só o que o fundo do estado paga. Sem isso a lacuna
+     * da creche de Serra do Ramalho/BA saía por R$ 664,8 mil em vez de R$ 1,14 mi.
+     */
+    vaatMinimoNaFaixa?: number | null;
+  },
 ): GanhoApurado | null {
   const ponderacao = getPonderacaoMunicipal(codigoIBGE);
   const valores = getValorAlunoAno(uf);
@@ -91,7 +100,11 @@ export function getGanhoApurado(
   // null tira o bloco do relatório, que é melhor do que estimar o preço.
   if (!valores || valores.fundamentalParcialAnosIniciais <= 0) return null;
 
-  const valorPorEquivalente = valores.fundamentalParcialAnosIniciais;
+  const naFaixaDoVaat = (opcoes?.vaatMinimoNaFaixa ?? 0) > valores.fundamentalParcialAnosIniciais;
+  const valorPorEquivalente = naFaixaDoVaat ? (opcoes!.vaatMinimoNaFaixa as number) : valores.fundamentalParcialAnosIniciais;
+  const precoDoEquivalente = naFaixaDoVaat
+    ? `R$ ${moeda(valorPorEquivalente)} por matrícula-equivalente — o VAAT-MIN, porque a rede está na faixa do VAAT e a União completa cada matrícula até ele`
+    : `R$ ${moeda(valorPorEquivalente)} por matrícula-equivalente na sua UF`;
   const componentes: ComponenteGanho[] = [];
   const referencias: ComponenteGanho[] = [];
 
@@ -118,7 +131,7 @@ export function getGanhoApurado(
         origem:
           `${contexto} Fechar essa distância são ${Math.round(oportunidade.matriculasAteMediana).toLocaleString("pt-BR")} ` +
           `matrículas saindo do fator 1,25 para 1,55 (art. 7º, §1º da Lei 14.113/2020), a ` +
-          `R$ ${moeda(valorPorEquivalente)} por matrícula-equivalente na sua UF.`,
+          `${precoDoEquivalente}.`,
         conferir:
           "Tempo integral exige 35h semanais ou média de 7h diárias (Decreto 10.656/2021, art. 11), " +
           "somando os tempos por turma. Escola que já pratica a jornada mas declara turno fixo perde o " +
@@ -136,7 +149,7 @@ export function getGanhoApurado(
         certeza: "apurado",
         origem:
           `${contexto} Fechar essa distância são ${Math.round(oportunidade.matriculasAteMediana).toLocaleString("pt-BR")} ` +
-          `matrículas de AEE, que gera dupla matrícula (art. 8º, §3º, I) e pondera 1,40.`,
+          `matrículas de AEE, que gera dupla matrícula (art. 8º, §3º, I) e pondera 1,40, a ${precoDoEquivalente}.`,
         conferir:
           "O AEE só conta quando registrado como turma específica no Censo, e nem todo aluno de educação " +
           `especial tem AEE devido. Cobertura integral valeria R$ ${moeda(teto)}, mas só 17% das redes ` +

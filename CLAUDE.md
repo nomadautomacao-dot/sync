@@ -528,8 +528,8 @@ cresceram a matrícula ponderada em mediana **+11,4% da rede ao ano**, contra
 cerca de 1% da rede mediana do país; três deles ficaram entre os 1–2% do país no
 melhor ano. São as mesmas três parcelas do potencial, com a matrícula nesse
 ritmo: primeiro ciclo proporcional ao tempo até o Censo, os dois seguintes anos
-cheios. A Parte I mostra os cinco casos, inclusive Serra do Ramalho, que não
-cresceu matrícula na janela.
+cheios. Os cinco casos, inclusive Serra do Ramalho, que não cresceu matrícula na
+janela, ficam no código e no teste — não no relatório.
 
 > **O padrão usa matrícula, e não receita, de propósito.** A receita dos casos
 > disparou de 2023 para 2026 (Senhor do Bonfim +287%), mas a maior parte veio da
@@ -544,12 +544,26 @@ cresceu matrícula na janela.
 > Censo de cada uma **precisam ser confirmados** pela equipe. Caso novo entra na
 > lista e o padrão se recalcula sozinho.
 
-| Município | Potencial (a partir de 2028) | Padrão Global, 1º ciclo | Padrão Global, 3 ciclos (até 2030) |
+**A capa e o sumário lideram pelo Padrão Global até o terceiro ciclo**; o
+cenário de um ciclo no ritmo nacional aparece na Parte I com o nome de
+**conservador**. Já foi o contrário, e Serra do Ramalho abria com R$ 6,76 mi
+escondendo os R$ 26,9 mi que o mesmo relatório calculava até 2030. O relatório
+**não mostra os municípios atendidos um a um**: o quadro já existiu na Parte I e
+saiu por decisão do dono — com Serra do Ramalho em −0,4% e Cocos em +12,9%,
+tirava confiança, e no relatório da própria Serra do Ramalho era pior. O ritmo
+continua citado, sem nomes.
+
+**Em rede que já recebe VAAT, a lacuna de declaração vale o VAAT-MIN**
+(`getGanhoApurado(..., { vaatMinimoNaFaixa })`): a União completa cada
+matrícula-equivalente até o mínimo. Valorizada pelo fundo do estado, a lacuna da
+creche de Serra do Ramalho saía por R$ 664,8 mil em vez de R$ 1,14 mi.
+
+| Município | Conservador (a partir de 2028) | Padrão Global, 1º ciclo | Padrão Global, 3 ciclos (até 2030) |
 |---|---|---|---|
 | Senador Canedo/GO | R$ 20,1 mi (10%) | R$ 27,3 mi | R$ 80,7 mi (40%) — cruza o VAAT-MIN |
-| Serra do Ramalho/BA | R$ 6,8 mi (8%) | R$ 9,9 mi | R$ 26,9 mi (31%) |
+| Serra do Ramalho/BA | R$ 7,2 mi (8%) | R$ 10,4 mi | R$ 27,4 mi (31%) |
 | Fortaleza/CE | R$ 205,9 mi (9%) | R$ 303,7 mi | R$ 822,7 mi (36%) |
-| Senhor do Bonfim/BA | R$ 2,6 mi (1%) | R$ 8,1 mi | R$ 37,1 mi (17%) |
+| Senhor do Bonfim/BA | R$ 2,9 mi (1%) | R$ 8,3 mi | R$ 37,3 mi (17%) |
 
 (Emitidos em 12/11/2026, com 53% de um ano até o Censo de 2027.) Para quem está
 logo acima do VAAT-MIN, `equivalentesParaEntrarNoVaat()` diz quantas
