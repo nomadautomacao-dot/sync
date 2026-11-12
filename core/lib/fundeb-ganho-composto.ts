@@ -106,6 +106,14 @@ export interface EntradaGanhoComposto {
     /** Os dois horizontes do ritmo acelerado, para o cenário otimista. */
     acelerado?: { valor: number; matriculas: number } | null;
     aceleradoTresAnos?: { valor: number; matriculas: number; entraNoVaat?: boolean } | null;
+    /** Calendário: o primeiro ciclo é proporcional aos meses até o Censo. */
+    calendario?: { fracao: number; meses: number; censo: number; receita: number } | null;
+    /** O Padrão Global aplicado a esta rede, em um e em três ciclos. */
+    global?: {
+      porAno: number;
+      ciclo1: { valor: number; equivalentes: number; via: string; exercicio: number };
+      tresCiclos: { valor: number; equivalentes: number; via: string; exercicio: number };
+    } | null;
   } | null;
 }
 
@@ -179,8 +187,9 @@ function projecaoDasParcelas(receitas: ReceitasFundeb, parcelas: ParcelaGanhoFun
  */
 function comporOtimista(e: EntradaGanhoComposto, parcelas: ParcelaGanhoFundeb[]): CenarioOtimistaFundeb | null {
   const c = e.cenario;
-  if (!c?.acelerado || !c.aceleradoTresAnos) return null;
   const fixas = parcelas.filter((p) => p.chave !== "matriculas");
+  if (c?.global) return comporPadraoGlobal(e, fixas, c.global);
+  if (!c?.acelerado || !c.aceleradoTresAnos) return null;
   const horizonte = (valor: number, matriculas: number, quando: string, sufixo = ""): HorizonteOtimistaFundeb => {
     const lista: ParcelaGanhoFundeb[] = [...fixas];
     if (valor > 0) {
@@ -198,6 +207,7 @@ function comporOtimista(e: EntradaGanhoComposto, parcelas: ParcelaGanhoFundeb[])
   };
   const entraNoVaat = c.aceleradoTresAnos.entraNoVaat === true;
   return {
+    base: "nacional",
     umAno: horizonte(c.acelerado.valor, c.acelerado.matriculas, "em um ano"),
     tresAnos: horizonte(
       c.aceleradoTresAnos.valor,
@@ -206,6 +216,47 @@ function comporOtimista(e: EntradaGanhoComposto, parcelas: ParcelaGanhoFundeb[])
       entraNoVaat ? "; com isso a rede cruza o VAAT-MIN e passa a receber complementação" : "",
     ),
     entraNoVaat,
+  };
+}
+
+/**
+ * O Padrão Global aplicado a este município: o ritmo de matrícula que a mediana
+ * dos municípios atendidos alcançou, valorizado pelo mecanismo do fundo. O
+ * primeiro ciclo é proporcional ao tempo que sobra até o Censo; os dois
+ * seguintes são anos cheios. VAAR e lacunas entram iguais ao potencial.
+ */
+function comporPadraoGlobal(
+  e: EntradaGanhoComposto,
+  fixas: ParcelaGanhoFundeb[],
+  g: NonNullable<NonNullable<EntradaGanhoComposto["cenario"]>["global"]>,
+): CenarioOtimistaFundeb {
+  const pct = (v: number) => `${(v * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}%`;
+  const horizonte = (valor: number, equivalentes: number, quando: string, entra: boolean): HorizonteOtimistaFundeb => {
+    const lista: ParcelaGanhoFundeb[] = [...fixas];
+    if (valor > 0) {
+      lista.push({
+        chave: "matriculas",
+        titulo: "Matrículas no Padrão Global",
+        valor: round2(valor),
+        regra:
+          `${inteiro(equivalentes)} matrículas-equivalentes ${quando}, no ritmo dos municípios atendidos pela Global ` +
+          `(+${pct(g.porAno)} da rede ao ano)` +
+          (entra ? "; com isso a rede cruza o VAAT-MIN e passa a receber complementação" : ""),
+        pagina: 4,
+        natureza: "cenario",
+      });
+    }
+    const total = round2(lista.reduce((s, p) => s + p.valor, 0));
+    return { total, percentual: e.receitas.totalReceitas > 0 ? (total / e.receitas.totalReceitas) * 100 : 0, parcelas: lista };
+  };
+  const entraNoVaat = g.tresCiclos.via === "entra";
+  return {
+    base: "global",
+    umAno: horizonte(g.ciclo1.valor, g.ciclo1.equivalentes, `até o primeiro Censo (receita em ${g.ciclo1.exercicio})`, g.ciclo1.via === "entra"),
+    tresAnos: horizonte(g.tresCiclos.valor, g.tresCiclos.equivalentes, `em três Censos (receita até ${g.tresCiclos.exercicio})`, entraNoVaat),
+    entraNoVaat,
+    exercicioPrimeiro: g.ciclo1.exercicio,
+    exercicioTerceiro: g.tresCiclos.exercicio,
   };
 }
 
@@ -227,12 +278,17 @@ export function comporGanho(e: EntradaGanhoComposto): GanhoComposto {
   if (lacunas) parcelas.push(lacunas);
 
   if (e.cenario && e.cenario.valor > 0) {
+    const cal = e.cenario.calendario;
+    const parcial = cal && cal.fracao < 1;
     parcelas.push({
       chave: "matriculas",
       titulo: "Cenário de matrículas — EJA, tempo integral e educação especial",
       valor: round2(e.cenario.valor),
       regra:
-        `${inteiro(e.cenario.matriculas)} matrículas a mais em um ano, no ritmo que uma em cada quatro redes do país alcançou` +
+        `ritmo que uma em cada quatro redes do país alcançou` +
+        (parcial
+          ? `, proporcional aos ${cal.meses.toLocaleString("pt-BR", { maximumFractionDigits: 1 })} meses até o Censo ${cal.censo} (${Math.round(cal.fracao * 100)}% de um ano); receita em ${cal.receita}`
+          : ` em um ano (${inteiro(e.cenario.matriculas)} matrículas)`) +
         (e.cenario.mecanismo ? `; ${e.cenario.mecanismo}` : ""),
       pagina: 14,
       natureza: "cenario",
@@ -241,6 +297,7 @@ export function comporGanho(e: EntradaGanhoComposto): GanhoComposto {
 
   const total = projecaoDasParcelas(e.receitas, parcelas, "composta");
   total.otimista = comporOtimista(e, parcelas);
+  total.exercicioDoGanho = e.cenario?.calendario?.receita;
   const recuperavel = projecaoDasParcelas(e.receitas, lacunas ? [lacunas] : [], "recuperavel");
   const ganhoAdicional = round2(total.totalGanho - recuperavel.totalGanho);
 

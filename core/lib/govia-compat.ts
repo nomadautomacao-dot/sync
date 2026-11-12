@@ -1279,8 +1279,16 @@ export async function buildGoviaMunicipioCompleto(params: GoviaBuscarMunicipioPa
       : null,
     cenario: cenarioMatriculas
       ? {
-          valor: cenarioMatriculas.impactoFinanceiroIndicativo.padrao,
+          // O primeiro ciclo é proporcional ao tempo até o Censo — ver `calendario-fundeb.ts`.
+          valor: cenarioMatriculas.impactoFinanceiroIndicativo.padraoPrimeiroCiclo,
           matriculas: cenarioMatriculas.ganhosMatriculas.total,
+          calendario: {
+            fracao: cenarioMatriculas.calendario.fracaoDoPrimeiroCiclo,
+            meses: cenarioMatriculas.calendario.mesesAteReferencia,
+            censo: cenarioMatriculas.calendario.censoDaMatricula,
+            receita: cenarioMatriculas.calendario.receitaDaMatricula,
+          },
+          global: cenarioMatriculas.padraoGlobal,
           mecanismo: cenarioMatriculas.impactoFinanceiroIndicativo.mecanismo,
           acelerado: {
             valor: cenarioMatriculas.impactoFinanceiroIndicativo.acelerado,

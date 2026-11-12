@@ -8,6 +8,8 @@ import {
   type MecanismoDoFundo,
 } from "@/core/lib/fundeb-cenario-metas";
 import { getFundebVaatContext } from "@/core/lib/fundeb-fnde";
+import { janelaDoCenso } from "@/core/lib/calendario-fundeb";
+import { padraoGlobal } from "@/core/lib/fundeb-padrao-global";
 import { getPonderacaoMunicipal } from "@/core/lib/fundeb-ponderacao";
 import { getValorAlunoAno } from "@/core/lib/fundeb-valor-aluno";
 import type { RelatorioFundeb } from "@/modules/levantamento-fundeb/types";
@@ -213,6 +215,36 @@ function buildCenarioEstruturacao(
   const aceleradoTresAnos = valor("aceleradoTresAnos");
   const paraEntrarNoVaat = mecanismo ? equivalentesParaEntrarNoVaat(mecanismo) : null;
 
+  // Quando a matrícula vira receita depende do mês da emissão: o Censo fotografa
+  // a rede na última quarta-feira de maio. Emitido depois disso, o primeiro ciclo
+  // é o Censo do ano seguinte, com só a parte do ano que sobra até ele.
+  const calendario = janelaDoCenso(new Date());
+  const fracao = calendario.fracaoDoPrimeiroCiclo;
+  const padraoPrimeiroCiclo =
+    mecanismo && fracao > 0 ? valorDosEquivalentes(equivalentesDoCenario(metas, "padrao") * fracao, mecanismo) : null;
+
+  // O Padrão Global: o ritmo de matrícula que os municípios atendidos alcançaram,
+  // aplicado a esta rede — primeiro ciclo proporcional ao tempo, depois anos cheios.
+  const casosGlobal = padraoGlobal();
+  const global =
+    casosGlobal && mecanismo && matriculasMunicipais > 0
+      ? (() => {
+          const porCiclo = casosGlobal.porAno * matriculasMunicipais;
+          const ciclo1 = porCiclo * fracao;
+          const tresCiclos = porCiclo * (fracao + 2);
+          const v1 = valorDosEquivalentes(ciclo1, mecanismo);
+          const v3 = valorDosEquivalentes(tresCiclos, mecanismo);
+          return {
+            porAno: casosGlobal.porAno,
+            melhorAno: casosGlobal.melhorAno,
+            acumulado: casosGlobal.acumulado,
+            casos: casosGlobal.casos.map((c) => ({ nome: c.nome, uf: c.uf, ganhoAcumulado: c.ganhoAcumulado, melhorAno: c.melhorAno, transicoes: c.transicoes })),
+            ciclo1: { equivalentes: ciclo1, valor: v1.valor, via: v1.via, exercicio: calendario.receitaDaMatricula },
+            tresCiclos: { equivalentes: tresCiclos, valor: v3.valor, via: v3.via, exercicio: calendario.receitaDaMatricula + 2 },
+          };
+        })()
+      : null;
+
   const moeda = (v: number) => v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   const textoMecanismo = !padrao || !mecanismo
     ? "valor aluno/ano da UF não disponível nesta emissão"
@@ -254,6 +286,10 @@ function buildCenarioEstruturacao(
       ...porFrente("ganhoAceleradoTresAnos"),
       total: matriculasDoCenario(metas, "aceleradoTresAnos"),
     },
+    /** Em que ponto do ano do Censo a emissão cai, e o que ainda dá tempo de fazer. */
+    calendario,
+    /** O ritmo dos municípios atendidos, aplicado a esta rede. */
+    padraoGlobal: global,
     /** A regra que gerou cada meta — impressa ao lado dela no relatório. */
     criterios: {
       eja: metas.eja.criterio,
@@ -276,6 +312,8 @@ function buildCenarioEstruturacao(
       viaAceleradoTresAnos: aceleradoTresAnos?.via ?? null,
       /** Matrículas-equivalentes que faltam para a rede entrar na faixa do VAAT. */
       equivalentesParaEntrarNoVaat: paraEntrarNoVaat,
+      /** Ritmo padrão no primeiro ciclo, proporcional aos meses até o Censo. */
+      padraoPrimeiroCiclo: padraoPrimeiroCiclo?.valor ?? 0,
       equivalentesAceleradoTresAnos: equivalentesDoCenario(metas, "aceleradoTresAnos"),
       mecanismo: textoMecanismo,
       basePorMatricula: baseFinanceiraPorMatricula,

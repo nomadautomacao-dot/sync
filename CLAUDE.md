@@ -517,25 +517,55 @@ não quebrar:
    por componente precisa fechar com o total — já saiu somando R$ 2,7 mi nas
    parcelas e R$ 136 mi no total.
 
-**O cenário otimista é o teto de cada município, não um multiplicador**
-(`comporOtimista()`, no mesmo arquivo). São as mesmas três parcelas, com as
-matrículas no ritmo do decil de cima em vez do quartil, por um e por três anos.
-O VAAR e a lacuna de declaração não esticam: o VAAR já entra inteiro, e a lacuna
-continua medida até a mediana — pelo teto teórico o AEE de São Paulo sozinho
-dava R$ 174 milhões. A Parte I mostra potencial e otimista lado a lado, parcela
-por parcela; a capa e o sumário levam o otimista de três anos.
+**O cenário otimista é o Padrão Global: o ritmo de matrícula dos municípios
+atendidos** (`core/lib/fundeb-padrao-global.ts`, com teste). Já foi o decil de
+cima do país (o que uma em cada dez redes faz sozinha), e ficava baixo demais
+para vender consultoria — não é o que a consultoria entrega. Os casos (Senhor do
+Bonfim, Coribe, Sítio do Mato, Cocos e Serra do Ramalho, todos na Bahia)
+cresceram a matrícula ponderada em mediana **+11,4% da rede ao ano**, contra
+cerca de 1% da rede mediana do país; três deles ficaram entre os 1–2% do país no
+melhor ano. São as mesmas três parcelas do potencial, com a matrícula nesse
+ritmo: primeiro ciclo proporcional ao tempo até o Censo, os dois seguintes anos
+cheios. A Parte I mostra os cinco casos, inclusive Serra do Ramalho, que não
+cresceu matrícula na janela.
 
-| Município | Potencial | Otimista, um ano | Otimista, três anos | O que decide |
-|---|---|---|---|---|
-| Senador Canedo/GO | R$ 22,1 mi (11%) | R$ 27,2 mi (14%) | R$ 55,4 mi (28%) | VAAR, e cruzar o VAAT-MIN em três anos |
-| Serra do Ramalho/BA | R$ 7,9 mi (9%) | R$ 10,9 mi (12%) | R$ 24,2 mi (28%) | cada matrícula já vale o VAAT-MIN |
-| Fortaleza/CE | R$ 241 mi (11%) | R$ 311 mi (14%) | R$ 648 mi (29%) | VAAR e tempo integral |
-| Senhor do Bonfim/BA | R$ 4,6 mi (2%) | R$ 13,6 mi (6%) | R$ 44,8 mi (20%) | só matrícula: já recebe VAAR |
+> **O padrão usa matrícula, e não receita, de propósito.** A receita dos casos
+> disparou de 2023 para 2026 (Senhor do Bonfim +287%), mas a maior parte veio da
+> entrada no VAAT em 2024 — e **92% dos municípios da Bahia entraram no VAAT
+> naquele ano**, porque o mínimo nacional subiu. Contra os pares da Bahia que
+> também entraram, Senhor do Bonfim, Coribe e Sítio do Mato ficam no decil de
+> cima; Cocos e Serra do Ramalho, abaixo da mediana. Um padrão de receita
+> venderia como resultado o que aconteceu com o estado inteiro. **O deck do Case
+> de Sucesso** compara a receita com o país inteiro e herda esse viés.
+>
+> As janelas de atuação em `CASOS_GLOBAL` são as do Case de Sucesso; os anos de
+> Censo de cada uma **precisam ser confirmados** pela equipe. Caso novo entra na
+> lista e o padrão se recalcula sozinho.
 
-A estrutura decide o teto, e é por isso que ele difere. Para quem está logo
-acima do VAAT-MIN, `equivalentesParaEntrarNoVaat()` diz quantas
+| Município | Potencial (a partir de 2028) | Padrão Global, 1º ciclo | Padrão Global, 3 ciclos (até 2030) |
+|---|---|---|---|
+| Senador Canedo/GO | R$ 20,1 mi (10%) | R$ 27,3 mi | R$ 80,7 mi (40%) — cruza o VAAT-MIN |
+| Serra do Ramalho/BA | R$ 6,8 mi (8%) | R$ 9,9 mi | R$ 26,9 mi (31%) |
+| Fortaleza/CE | R$ 205,9 mi (9%) | R$ 303,7 mi | R$ 822,7 mi (36%) |
+| Senhor do Bonfim/BA | R$ 2,6 mi (1%) | R$ 8,1 mi | R$ 37,1 mi (17%) |
+
+(Emitidos em 12/11/2026, com 53% de um ano até o Censo de 2027.) Para quem está
+logo acima do VAAT-MIN, `equivalentesParaEntrarNoVaat()` diz quantas
 matrículas-equivalentes faltam para cruzá-lo (2.658 em Senador Canedo): antes
 desse ponto a matrícula vale o fundo estadual, depois vale o mínimo inteiro.
+
+**O mês da emissão muda o ano em que a matrícula vira receita**
+(`core/lib/calendario-fundeb.ts`, com teste). O Censo fotografa a rede na última
+quarta-feira de maio, e matrícula aberta depois dela só conta no ano seguinte.
+`janelaDoCenso()` diz a fase (preparação, reta final, coleta, retificação,
+encerrado), o Censo em que a matrícula ainda entra, o exercício em que vira
+receita e quanto de um ano de trabalho cabe até lá. Emitido em novembro de 2026,
+o Censo de 2026 fechou: o primeiro ciclo é o de 2027 (26/05/2027), com 53% de um
+ano, e a receita entra em 2028. A parcela de matrícula do potencial é
+proporcional a essa fração; a capa diz "a partir de 2028", a Parte I abre com a
+frase da fase, o sumário traz os meses que sobram como achado e a página de
+decisão lista o que ainda dá tempo de fazer. O fim da retificação só é oficial
+para 2026 (`CENSO_2026`); nos outros anos sai estimado e marcado assim.
 
 O "cronograma mensal projetado" saiu da Parte I: era o ganho repartido por doze
 percentuais fixos, os mesmos para todo município. `cronogramaVAAF` continua no

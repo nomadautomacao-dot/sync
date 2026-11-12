@@ -263,6 +263,29 @@ export interface LevantamentoPayload {
       ganhosAceleradosTresAnos?: Record<string, number> | null;
       /** A regra que gerou cada meta (`fundeb-cenario-metas.ts`). */
       criterios?: Record<string, string> | null;
+      /** Ponto do ano do Censo em que a emissão cai (`calendario-fundeb.ts`). */
+      calendario?: {
+        fase?: string;
+        emitidoEm?: string;
+        censoDaMatricula?: number;
+        receitaDaMatricula?: number;
+        dataDeReferencia?: string;
+        mesesAteReferencia?: number;
+        fracaoDoPrimeiroCiclo?: number;
+        censoDaDeclaracao?: number;
+        receitaDaDeclaracao?: number;
+        fimDaRetificacao?: string;
+        retificacaoEstimada?: boolean;
+        titulo?: string;
+        acoes?: string[];
+      } | null;
+      /** O ritmo dos municípios atendidos (`fundeb-padrao-global.ts`). */
+      padraoGlobal?: {
+        porAno?: number;
+        melhorAno?: number;
+        acumulado?: number;
+        casos?: Array<{ nome: string; uf: string; ganhoAcumulado: number; melhorAno: number; transicoes: number }>;
+      } | null;
       impactoFinanceiroIndicativo?: {
         minimo?: number | null;
         maximo?: number | null;
@@ -276,6 +299,7 @@ export interface LevantamentoPayload {
         viaAceleradoTresAnos?: "vaat" | "fundo" | "entra" | null;
         equivalentesParaEntrarNoVaat?: number | null;
         equivalentesAceleradoTresAnos?: number | null;
+        padraoPrimeiroCiclo?: number | null;
         mecanismo?: string | null;
         basePorMatricula?: number | null;
       } | null;
@@ -584,6 +608,10 @@ function ou(value: unknown, fallback = "—"): string {
 
 function dataCurta(iso: string | undefined): string {
   if (!iso) return new Date().toLocaleDateString("pt-BR");
+  // `geradoEm` chega como "12/11/2026, 14:30" da coleta. `new Date()` lê isso como
+  // mês/dia americano e imprime 11/12 — só não aparecia quando dia e mês coincidiam.
+  const br = iso.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (br) return `${br[1]}/${br[2]}/${br[3]}`;
   const d = new Date(iso);
   return Number.isNaN(d.getTime())
     ? esc(iso)
@@ -1203,7 +1231,7 @@ function paginaCapa(i: LevantamentoTemplateInput): string {
     ${
       temGanho
         ? `<div class="cover-hero" data-capa-destaque>
-      <em>Potencial de incremento &middot; exercício ${exercicio + 1}</em>
+      <em>Potencial de incremento &middot; ${r.projecao.exercicioDoGanho ? `a partir de ${r.projecao.exercicioDoGanho}` : `exercício ${exercicio + 1}`}</em>
       <div class="val">
         <b>+${brlCompact(r.projecao.totalGanho)}</b>
         <i>+${pct(r.projecao.ganhoPercentual)} sobre ${exercicio}</i>
@@ -1215,7 +1243,13 @@ function paginaCapa(i: LevantamentoTemplateInput): string {
       <div class="ckpi"><em>Receita FUNDEB ${exercicio}</em><b>${brlCompact(r.receitas.totalReceitas)}</b><span>base oficial do exercício</span></div>
       ${
         r.projecao.otimista && r.projecao.otimista.tresAnos.total > r.projecao.totalGanho
-          ? `<div class="ckpi"><em>Cenário otimista até ${exercicio + 3}</em><b>+${brlCompact(r.projecao.otimista.tresAnos.total)}</b><span>teto deste município em três anos</span></div>`
+          ? `<div class="ckpi"><em>${
+              r.projecao.otimista.base === "global"
+                ? `Padrão Global até ${r.projecao.otimista.exercicioTerceiro ?? exercicio + 3}`
+                : `Cenário otimista até ${exercicio + 3}`
+            }</em><b>+${brlCompact(r.projecao.otimista.tresAnos.total)}</b><span>${
+              r.projecao.otimista.base === "global" ? "no ritmo dos municípios atendidos pela Global" : "teto deste município em três anos"
+            }</span></div>`
           : `<div class="ckpi"><em>Estimativa ${exercicio + 1}</em><b>${brlCompact(r.projecao.totalProjetado)}</b><span>receita total no cenário</span></div>`
       }
     </div>`
@@ -1249,6 +1283,67 @@ function paginaCapa(i: LevantamentoTemplateInput): string {
  */
 function parcelaDoVaar(i: LevantamentoTemplateInput) {
   return i.relatorio.projecao.parcelas?.find((p) => p.chave === "vaar" && p.valor > 0) ?? null;
+}
+
+function calendarioDoCenso(i: LevantamentoTemplateInput) {
+  const c = i.payload?.relatorio_dirigido_base?.cenarioEstruturacao?.calendario;
+  return c?.titulo && c.censoDaMatricula ? c : null;
+}
+
+const MESES_EXTENSO = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"];
+
+/** "6,5 meses" — uma casa basta, e "6,4516 meses" seria falsa precisão. */
+function meses(v: unknown): string {
+  return `${num(v).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} ${num(v) === 1 ? "mês" : "meses"}`;
+}
+
+/**
+ * Quando a matrícula vira receita, numa frase — o mesmo levantamento diz coisas
+ * diferentes em março e em novembro, e o leitor precisa saber em qual dos dois
+ * está antes de olhar qualquer número de matrícula.
+ */
+function fraseDoCalendario(i: LevantamentoTemplateInput): string {
+  const c = calendarioDoCenso(i);
+  if (!c) return "";
+  const mes = MESES_EXTENSO[Number(c.emitidoEm?.slice(5, 7)) - 1] ?? "";
+  const ref = dataBrDoIso(c.dataDeReferencia);
+  const fracao = num(c.fracaoDoPrimeiroCiclo);
+  const base = `Emitido em ${mes} &mdash; ${esc(c.titulo ?? "")}.`;
+  return fracao >= 1
+    ? `${base} Até a data de referência (${ref}) cabe um ano inteiro de trabalho, e a matrícula vira receita em ${c.receitaDaMatricula}.`
+    : `${base} Até a data de referência do Censo ${c.censoDaMatricula} (${ref}) sobram <b>${meses(c.mesesAteReferencia)}</b> &mdash;
+      ${pct(fracao * 100, 0)} de um ano de trabalho &mdash;, e a matrícula desse ciclo vira receita em <b>${c.receitaDaMatricula}</b>.
+      Por isso a parcela de matrícula do primeiro ciclo é proporcional ao tempo.`;
+}
+
+function dataBrDoIso(iso: string | undefined): string {
+  const m = (iso ?? "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : "";
+}
+
+/** "Padrão Global" quando o otimista vem dos casos; "Otimista" no caso contrário. */
+function rotuloDoOtimista(o: RelatorioFundeb["projecao"]["otimista"]): string {
+  return o?.base === "global" ? "Padrão Global" : "Otimista";
+}
+
+/** Os casos que sustentam o Padrão Global, em uma fileira. */
+function blocoCasosGlobal(i: LevantamentoTemplateInput): string {
+  const g = i.payload?.relatorio_dirigido_base?.cenarioEstruturacao?.padraoGlobal;
+  const casos = g?.casos ?? [];
+  if (casos.length < 3 || !(num(g?.porAno) > 0)) return "";
+  return `<div class="sec-label" style="margin-top:.14in">De onde vem o Padrão Global &mdash; matrícula ponderada ganha nos municípios atendidos</div>
+    <div style="display:grid;grid-template-columns:repeat(${casos.length + 1},1fr);gap:.07in">
+      ${casos
+        .map(
+          (c) => `<div class="card" style="padding:.07in .09in"><div class="micro" style="font-weight:800;color:var(--navy)">${esc(c.nome)}/${esc(c.uf)}</div>
+        <b style="display:block;font-size:12pt;color:${c.ganhoAcumulado > 0 ? "var(--good)" : "var(--muted)"};margin-top:.02in">${c.ganhoAcumulado >= 0 ? "+" : "−"}${pct(Math.abs(c.ganhoAcumulado) * 100)}</b>
+        <span class="micro">em ${c.transicoes} Censos &middot; melhor ano ${pct(c.melhorAno * 100)}</span></div>`,
+        )
+        .join("")}
+      <div class="card" style="padding:.07in .09in;background:#f2f8f7;border-color:#cde4e0"><div class="micro" style="font-weight:800;color:#1d6a58">Padrão Global</div>
+        <b style="display:block;font-size:12pt;color:var(--navy);margin-top:.02in">+${pct(num(g?.porAno) * 100)} ao ano</b>
+        <span class="micro">mediana dos casos &middot; rede mediana do país: cerca de 1%</span></div>
+    </div>`;
 }
 
 interface Achado {
@@ -1296,7 +1391,25 @@ function achadosDoMunicipio(i: LevantamentoTemplateInput): Achado[] {
     });
   }
 
-  // 2. Vinculação abaixo do mínimo no ano em curso — ainda dá tempo.
+  // 2. Quanto tempo sobra até o Censo — é o que decide se o ganho é deste ciclo.
+  const cal = calendarioDoCenso(i);
+  if (cal) {
+    const fracao = num(cal.fracaoDoPrimeiroCiclo);
+    achados.push({
+      valor: meses(cal.mesesAteReferencia),
+      titulo: `até o Censo ${cal.censoDaMatricula} — a matrícula vira receita em ${cal.receitaDaMatricula}`,
+      texto:
+        cal.fase === "preparacao"
+          ? `Ainda há tempo para crescer a rede antes da data de referência (${dataBrDoIso(cal.dataDeReferencia)}).`
+          : cal.fase === "reta-final"
+            ? "Só cabe o que é rápido: EJA, AEE e jornada integral já praticada."
+            : `O Censo ${num(cal.censoDaMatricula) - 1} já não muda o FUNDEB de ${cal.censoDaMatricula}. Começando agora, cabem ${pct(fracao * 100, 0)} de um ano de trabalho até o próximo.`,
+      pagina: 16,
+      tom: "risco",
+    });
+  }
+
+  // 3. Vinculação abaixo do mínimo no ano em curso — ainda dá tempo.
   const vinc = apurarVinculacoesNoAno(i);
   if (vinc?.abaixo.length) {
     const pior = [...vinc.abaixo].sort((x, y) => vinc.aplicado(x) - (x.minimo ?? 0) - (vinc.aplicado(y) - (y.minimo ?? 0)))[0];
@@ -1523,7 +1636,11 @@ function paginaSumario(i: LevantamentoTemplateInput, pagina: number): string {
       }
       ${
         r.projecao.otimista && r.projecao.otimista.tresAnos.total > r.projecao.totalGanho
-          ? kpi(`Otimista até ${id.exercicio + 3}`, `+${brlCompact(r.projecao.otimista.tresAnos.total)}`, `+${pct(r.projecao.otimista.tresAnos.percentual)} &middot; teto deste município`)
+          ? kpi(
+              `${rotuloDoOtimista(r.projecao.otimista)} até ${r.projecao.otimista.exercicioTerceiro ?? id.exercicio + 3}`,
+              `+${brlCompact(r.projecao.otimista.tresAnos.total)}`,
+              `+${pct(r.projecao.otimista.tresAnos.percentual)} &middot; ${r.projecao.otimista.base === "global" ? "ritmo dos casos da Global" : "teto deste município"}`,
+            )
           : kpi(`Estimativa ${id.exercicio + 1}`, brlCompact(r.projecao.totalProjetado), "receita com o potencial identificado")
       }
       ${kpiGanho}
@@ -1696,14 +1813,20 @@ function paginaProjecao(i: LevantamentoTemplateInput, pagina: number): string {
   // uma em cada dez redes. Sai ao lado do potencial, parcela por parcela, para
   // ficar à vista de onde vem a diferença — e que ela é deste município.
   const otimista = p.otimista ?? null;
+  const global = otimista?.base === "global";
+  const anoPotencial = p.exercicioDoGanho ?? id.exercicio + 1;
+  const ano1 = otimista?.exercicioPrimeiro ?? id.exercicio + 1;
+  const ano3 = otimista?.exercicioTerceiro ?? id.exercicio + 3;
+  const nomeOtimista = rotuloDoOtimista(otimista);
+  const porAnoGlobal = num(i.payload?.relatorio_dirigido_base?.cenarioEstruturacao?.padraoGlobal?.porAno);
   const valorEm = (lista: typeof parcelas | undefined, chave: string) => lista?.find((x) => x.chave === chave)?.valor ?? 0;
   const celula = (v: number) => (v > 0 ? `+${brl(v)}` : "&mdash;");
   const tabelaParcelas = parcelas.length
-    ? `<div class="sec-label" style="margin-top:.16in">De onde vem o potencial de ${id.exercicio + 1}${otimista ? " &mdash; e até onde este município pode ir" : ""}</div>
+    ? `<div class="sec-label" style="margin-top:.16in">De onde vem o potencial${otimista ? " &mdash; e até onde este município pode ir" : ""}</div>
     <table class="tb">
-      <tr><th>Parcela</th><th class="r" style="width:1.02in">Potencial<br><span style="font-weight:400;letter-spacing:0;text-transform:none">${id.exercicio + 1}</span></th>${
+      <tr><th>Parcela</th><th class="r" style="width:1.02in">Potencial<br><span style="font-weight:400;letter-spacing:0;text-transform:none">${anoPotencial}</span></th>${
         otimista
-          ? `<th class="r" style="width:1.02in">Otimista<br><span style="font-weight:400;letter-spacing:0;text-transform:none">${id.exercicio + 1}</span></th><th class="r" style="width:1.02in">Otimista<br><span style="font-weight:400;letter-spacing:0;text-transform:none">até ${id.exercicio + 3}</span></th>`
+          ? `<th class="r" style="width:1.02in">${nomeOtimista}<br><span style="font-weight:400;letter-spacing:0;text-transform:none">${ano1}</span></th><th class="r" style="width:1.02in">${nomeOtimista}<br><span style="font-weight:400;letter-spacing:0;text-transform:none">até ${ano3}</span></th>`
           : `<th class="r" style="width:.5in">Part.</th>`
       }<th style="width:${otimista ? "2.05in" : "2.75in"}">Como foi calculada</th><th class="r" style="width:.5in">Página</th></tr>
       ${parcelas
@@ -1730,9 +1853,16 @@ function paginaProjecao(i: LevantamentoTemplateInput, pagina: number): string {
     </table>
     ${
       otimista
-        ? `<p class="micro mt-1"><b>O otimista não é um multiplicador:</b> são as mesmas parcelas, com as matrículas no
+        ? `<p class="micro mt-1">${
+            global
+              ? `<b>O Padrão Global não é um multiplicador:</b> são as mesmas parcelas, com a matrícula ponderada
+    crescendo no ritmo que a mediana dos municípios atendidos pela Global alcançou &mdash; +${pct(porAnoGlobal * 100)} da
+    rede ao ano, contra cerca de 1% da rede mediana do país. O primeiro ciclo é proporcional ao tempo até o Censo; os
+    dois seguintes são anos cheios. O VAAR e a lacuna de declaração não esticam.`
+              : `<b>O otimista não é um multiplicador:</b> são as mesmas parcelas, com as matrículas no
     ritmo que uma em cada dez redes do país alcançou (o potencial usa o de uma em cada quatro), por um e por três
-    anos. O VAAR e a lacuna de declaração não esticam.${
+    anos. O VAAR e a lacuna de declaração não esticam.`
+          }${
       otimista.entraNoVaat
         ? ` <b>Em três anos nesse ritmo a rede cruza o VAAT-MIN e passa a receber complementação da União</b> &mdash; é
     de onde vem a maior parte do salto entre as duas colunas.`
@@ -1745,12 +1875,10 @@ function paginaProjecao(i: LevantamentoTemplateInput, pagina: number): string {
   const notaNatureza = parcelas.length
     ? `<div class="note mt-1">
       <p style="font-size:7.9pt;line-height:1.4"><b>As parcelas não têm a mesma natureza</b>, e por isso saem
-      separadas. <b>Apurado</b> é conta fechada: fator de ponderação legal &times; valor aluno/ano da UF &times; matrícula
-      que o próprio município declarou &mdash; mede o que o fundo pagaria a mais se a declaração alcançasse a
-      mediana nacional, e <b>não é valor perdido comprovado</b>. <b>Referência</b> é o que os habilitados do estado
-      receberam por matrícula: dá a ordem de grandeza do VAAR, mas o rateio depende da evolução dos indicadores de
-      cada rede. <b>Cenário</b> é meta de um ano, com o critério impresso na Parte V. Nenhuma das três é receita
-      garantida; as três têm conta que se refaz.</p>
+      separadas. <b>Apurado</b> é conta fechada sobre a matrícula que o próprio município declarou &mdash; e
+      <b>não é valor perdido comprovado</b>. <b>Referência</b> é o que os habilitados do estado receberam por
+      matrícula; o rateio depende da evolução de cada rede. <b>Cenário</b> é meta, com o critério impresso na Parte V.
+      Nenhuma é receita garantida; todas têm conta que se refaz.</p>
     </div>`
     : `<div class="note mt-1">
       <p style="font-size:7.9pt;line-height:1.4">${
@@ -1767,18 +1895,26 @@ function paginaProjecao(i: LevantamentoTemplateInput, pagina: number): string {
     <div class="kicker">Parte I &middot; Estimativa para o próximo ciclo</div>
 
     <div class="${otimista ? "grid-3" : "grid-2"}">
-      <div class="kpi hero"><em>Potencial identificado &middot; ${id.exercicio + 1}</em><b>${
+      <div class="kpi hero"><em>Potencial identificado &middot; ${anoPotencial}</em><b>${
         p.totalGanho > 0 ? `+${brlCompact(p.totalGanho)}` : "—"
       }</b><span>${p.totalGanho > 0 ? `+${pct(p.ganhoPercentual)} sobre a receita de ${id.exercicio}` : "sem incremento apurado sobre o exercício atual"}</span></div>
       ${
         otimista
-          ? `${kpi(`Otimista · ${id.exercicio + 1}`, `+${brlCompact(otimista.umAno.total)}`, `+${pct(otimista.umAno.percentual)} &middot; um ano no ritmo acelerado`)}
-      ${kpi(`Otimista · até ${id.exercicio + 3}`, `+${brlCompact(otimista.tresAnos.total)}`, `+${pct(otimista.tresAnos.percentual)} &middot; teto deste município`, "up")}`
+          ? `${kpi(`${nomeOtimista} · ${ano1}`, `+${brlCompact(otimista.umAno.total)}`, `+${pct(otimista.umAno.percentual)} &middot; ${global ? "primeiro ciclo" : "um ano no ritmo acelerado"}`)}
+      ${kpi(`${nomeOtimista} · até ${ano3}`, `+${brlCompact(otimista.tresAnos.total)}`, `+${pct(otimista.tresAnos.percentual)} &middot; ${global ? "três ciclos" : "teto deste município"}`, "up")}`
           : kpi(`Receita ${id.exercicio + 1} com o potencial`, brlCompact(p.totalProjetado), `sobre ${brlCompact(p.totalAtual)} em ${id.exercicio}`)
       }
     </div>
 
+    ${
+      fraseDoCalendario(i)
+        ? `<div class="status mt-1" style="background:#fdf9ee;border:1px solid #eddfb8;color:#584416;font-weight:400;font-size:8pt;line-height:1.4;align-items:flex-start"><span class="dot" style="background:var(--gold);margin-top:.03in"></span><span>${fraseDoCalendario(i)}</span></div>`
+        : ""
+    }
+
     ${tabelaParcelas}
+
+    ${blocoCasosGlobal(i)}
 
     ${notaNatureza}
 
@@ -3372,6 +3508,22 @@ function paginaDecisao(i: LevantamentoTemplateInput, pagina: number): string {
     <div class="grid-2 mt-2">
       <div class="card">
         <h3>O calendário que impõe a data</h3>
+        ${
+          calendarioDoCenso(i)
+            ? (() => {
+                const c = calendarioDoCenso(i)!;
+                return `<p style="font-size:8.2pt;line-height:1.4;color:#33454f;margin-top:.03in"><b>${esc(c.titulo ?? "")}.</b>
+        Data de referência do Censo ${c.censoDaMatricula}: <b>${dataBrDoIso(c.dataDeReferencia)}</b> &mdash; faltam
+        ${meses(c.mesesAteReferencia)}, e a matrícula desse Censo vira receita em ${c.receitaDaMatricula}.</p>
+        <ul style="font-size:7.9pt;line-height:1.4;color:#33454f;margin:.05in 0 0;padding-left:.16in">${(c.acoes ?? [])
+          .map((a) => `<li style="margin-bottom:.03in">${esc(a)}</li>`)
+          .join("")}</ul>
+        <p class="micro" style="margin-top:.05in">Siconfi e SIOPE para habilitar ao VAAT: 31 de agosto. Conferir ${int(redeMunicipal(i).escolas)}
+        unidades da rede municipal não cabe nos trinta dias da retificação &mdash; o trabalho é feito antes da coleta.</p>
+      </div>
+`;
+              })()
+            : `
         <table class="tb" style="margin-top:.04in">
           <tr><td>Data de referência do Censo</td><td class="r">última quarta de maio</td></tr>
           <tr><td>Coleta e digitação no Educacenso</td><td class="r">maio a 31 de julho</td></tr>
@@ -3387,6 +3539,8 @@ function paginaDecisao(i: LevantamentoTemplateInput, pagina: number): string {
             : `Para agir dentro da coleta de ${id.exercicio}, a mobilização das escolas precisa começar <b>antes de maio</b>`
         } &mdash; conferir ${int(redeMunicipal(i).escolas)} unidades da rede municipal não cabe em trinta dias de retificação.</p>
       </div>
+`
+        }
       <div class="card">
         <h3>O próximo passo</h3>
         <p style="font-size:8.2pt;line-height:1.45;color:#33454f">

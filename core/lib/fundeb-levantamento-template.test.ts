@@ -294,7 +294,7 @@ describe("template do Levantamento FUNDEB", () => {
     });
     const html = generateLevantamentoHtml({ relatorio: r });
 
-    expect(html).toContain("De onde vem o potencial de 2027");
+    expect(html).toContain("De onde vem o potencial");
     expect(html).toContain("VAAR a recuperar — condicionalidades II e III");
     expect(html).toContain("R$ 711,84 por matrícula × 24.943 matrículas da rede");
     expect(html).toContain("+17.755.530,00");
@@ -868,8 +868,19 @@ describe("o cenário otimista ao lado do potencial", () => {
     r.projecao.otimista = null;
     const html = generateLevantamentoHtml({ relatorio: r });
 
-    expect(html).toContain("De onde vem o potencial de 2027");
+    expect(html).toContain("De onde vem o potencial");
     expect(html).not.toContain("até onde este município pode ir");
     expect(paginas(html)).toBe(LEVANTAMENTO_TOTAL_PAGINAS);
+  });
+});
+
+describe("datas impressas", () => {
+  it("lê a data da coleta no formato brasileiro, sem trocar dia e mês", () => {
+    const r = relatorioMinimo();
+    r.geradoEm = "12/11/2026, 14:30";
+    const html = generateLevantamentoHtml({ relatorio: r });
+
+    expect(html).toContain("Emitido em 12/11/2026");
+    expect(html).not.toContain("Emitido em 11/12/2026");
   });
 });

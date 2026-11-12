@@ -54,6 +54,14 @@ export interface CenarioOtimistaFundeb {
   tresAnos: HorizonteOtimistaFundeb;
   /** Em três anos a rede cruza o VAAT-MIN e passa a receber complementação. */
   entraNoVaat: boolean;
+  /**
+   * `global`: ritmo dos municípios atendidos pela Global. `nacional`: decil de
+   * cima do país — usado quando o padrão dos casos não pôde ser medido.
+   */
+  base?: "global" | "nacional";
+  /** Exercícios em que o primeiro e o terceiro ciclo viram receita. */
+  exercicioPrimeiro?: number;
+  exercicioTerceiro?: number;
 }
 
 export interface ProjecaoFundeb {
@@ -78,6 +86,8 @@ export interface ProjecaoFundeb {
   parcelas?: ParcelaGanhoFundeb[];
   /** O teto individual do município. Ausente em relatório anterior à composição. */
   otimista?: CenarioOtimistaFundeb | null;
+  /** Exercício em que a parcela de matrícula começa a virar receita (depende do mês da emissão). */
+  exercicioDoGanho?: number;
   ressalva?: string | null;
 }
 

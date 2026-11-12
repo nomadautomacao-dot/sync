@@ -27,7 +27,7 @@ describe("ganho composto", () => {
 
     expect(p.parcelas?.map((x) => x.chave)).toEqual(["vaar", "matriculas"]);
     // A regra da parcela diz o ritmo e o mecanismo, não só o total.
-    expect(p.parcelas?.[1].regra).toContain("no ritmo que uma em cada quatro redes do país alcançou");
+    expect(p.parcelas?.[1].regra).toContain("ritmo que uma em cada quatro redes do país alcançou");
     expect(p.parcelas?.[1].regra).toContain("R$ 6.377,30 no fundo de GO");
     expect(p.totalGanho).toBe(17_755_530 + 3_178_840);
     // Uma ordem de grandeza abaixo dos +68% do multiplicador.
