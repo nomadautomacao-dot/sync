@@ -857,23 +857,42 @@ describe("o cenário otimista ao lado do potencial", () => {
   });
 
   /**
-   * Com o Padrão Global calculado, a capa e o sumário lideram por ele. O
-   * conservador de um ciclo — R$ 6,76 mi em Serra do Ramalho — já foi a manchete
-   * e escondia os R$ 26,9 mi que o mesmo relatório calculava até 2030.
+   * Com o Padrão Global calculado, a capa e o sumário lideram pela **receita
+   * projetada do próximo ciclo**: a de hoje, mais a evolução do fundo, mais o
+   * trabalho. A prefeitura contrata por um ano e, no ano seguinte, compara a
+   * receita inteira — não a fatia do trabalho. A composição fica na Parte I.
    */
-  it("lidera pelo Padrão Global quando ele existe, e chama o resto de conservador", () => {
+  it("lidera pela receita projetada do próximo ciclo, com a evolução do fundo aberta na Parte I", () => {
     const r = relatorioComOtimista();
     Object.assign(r.projecao.otimista!, { base: "global", exercicioPrimeiro: 2028, exercicioTerceiro: 2030 });
+    r.receitas.totalReceitas = 200_722_290.59;
+    // Redistribuição de Senador Canedo, FNDE: +8,8% ao ano de 2023 a 2026.
+    const historico_repasses = [
+      [2023, 155_972_931], [2024, 167_112_993], [2025, 195_771_701], [2026, 200_722_291],
+    ].map(([ano, v]) => ({ ano, receita_total_prevista: v, contribuicao_estados_municipios: v }));
+    const html = generateLevantamentoHtml({ relatorio: r, payload: { fiscal: { historico_repasses } } as never });
+
+    expect(html).toContain("Receita FUNDEB projetada &middot; 2028");
+    expect(html).toContain("Otimista &middot; 2030");
+    expect(html).toContain("Receita projetada 2028");
+    expect(html).toContain("Conservador");
+    // 200,72 + evolução de dois anos (~36,9) + 27,25 do primeiro ciclo.
+    const capa = html.slice(0, html.indexOf("Sumário executivo"));
+    expect(capa).toMatch(/R\$\u00a0264,\d\d\u00a0mi/);
+    expect(capa).not.toContain(`+R$\u00a022,15\u00a0mi`);
+    // A Parte I abre a conta: a evolução do fundo é linha própria, com a taxa.
+    expect(html).toContain("Evolução do fundo");
+    expect(html).toContain("+8,8% ao ano, média de 2023 a 2026");
+  });
+
+  it("sem série de receita, a projeção é a receita de hoje mais o trabalho", () => {
+    const r = relatorioComOtimista();
+    Object.assign(r.projecao.otimista!, { base: "global", exercicioPrimeiro: 2028, exercicioTerceiro: 2030 });
+    r.receitas.totalReceitas = 200_722_290.59;
     const html = generateLevantamentoHtml({ relatorio: r });
 
-    expect(html).toContain("Potencial de incremento &middot; até 2030");
-    expect(html).toContain("Primeiro ciclo &middot; 2028");
-    expect(html).toContain("Potencial até 2030");
-    expect(html).toContain("Conservador");
-    // O número principal da capa é o do Padrão Global, não o conservador.
-    const capa = html.slice(0, html.indexOf("Sumário executivo"));
-    expect(capa).toContain(`+R$\u00a055,38\u00a0mi`);
-    expect(capa).not.toContain(`+R$\u00a022,15\u00a0mi`);
+    expect(html.slice(0, html.indexOf("Sumário executivo"))).toContain(`R$\u00a0227,97\u00a0mi`);
+    expect(html).not.toContain("Evolução do fundo");
   });
 
   it("não mostra o quadro dos municípios atendidos", () => {

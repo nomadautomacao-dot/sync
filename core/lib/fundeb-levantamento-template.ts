@@ -4,6 +4,7 @@ import { DESCRICAO_CONDICIONALIDADE, type Condicionalidade } from "@/core/lib/fu
 import { CENSO_2026, situacaoCalendario } from "@/core/lib/calendario-educacional";
 import type { InteligenciaRelatorio } from "@/core/lib/relatorio-inteligencia";
 import type { QualidadeRelatorio } from "@/core/lib/relatorio-snapshot";
+import { evolucaoDoFundo, evolucaoEm, type EvolucaoDoFundo } from "@/core/lib/fundeb-evolucao-do-fundo";
 
 /**
  * Template do Levantamento FUNDEB — "novo modelo".
@@ -1190,6 +1191,20 @@ function descricaoDoPotencial(parcelas: RelatorioFundeb["projecao"]["parcelas"])
   return `${lista.length === 1 ? "Vem de" : "Soma de"} ${juntas}. A conta de cada parcela está aberta na Parte I.`;
 }
 
+/**
+ * A receita projetada de um exercício: a de hoje, mais a evolução do fundo até
+ * lá (`fundeb-evolucao-do-fundo.ts`), mais o ganho do trabalho. É o número que a
+ * prefeitura vai comparar no ano seguinte — e a composição fica aberta na Parte I.
+ */
+function evolucaoDoMunicipio(i: LevantamentoTemplateInput): EvolucaoDoFundo | null {
+  return evolucaoDoFundo(serieHistorica(i).map((a) => ({ ano: a.ano, contribuicao: a.contribuicao })));
+}
+
+function receitaProjetada(i: LevantamentoTemplateInput, ano: number, ganho: number): number {
+  const exercicio = i.relatorio.identificacao.exercicio;
+  return i.relatorio.receitas.totalReceitas + evolucaoEm(evolucaoDoMunicipio(i), ano - exercicio) + ganho;
+}
+
 function paginaCapa(i: LevantamentoTemplateInput): string {
   const { relatorio: r, logoDataUri } = i;
   const id = r.identificacao;
@@ -1197,9 +1212,10 @@ function paginaCapa(i: LevantamentoTemplateInput): string {
   const exercicio = id.exercicio;
   const responsavel = r.parametros?.responsavelTecnico ?? "Adriel Tavares";
 
-  // Com o Padrão Global calculado, a capa lidera por ele: o conservador de um
-  // ciclo (ritmo nacional, proporcional ao tempo até o Censo) é o piso da
-  // conversa, não a manchete — e segue aberto na Parte I.
+  // Com o Padrão Global calculado, a capa lidera pelo **próximo ciclo** dele:
+  // prefeitura contrata por um ano, e o número que decide a contratação é o que
+  // entra com o próximo Censo. Os três ciclos vêm ao lado, como otimista. O
+  // conservador (ritmo nacional) é o piso da conversa e segue aberto na Parte I.
   const global =
     r.projecao.otimista?.base === "global" && r.projecao.otimista.tresAnos.total > r.projecao.totalGanho
       ? r.projecao.otimista
@@ -1209,6 +1225,10 @@ function paginaCapa(i: LevantamentoTemplateInput): string {
   // sem projeção apurada recebe a receita do exercício como âncora, e o texto
   // diz por que o outro número não está ali.
   const temGanho = r.projecao.totalGanho > 0;
+  const ano1 = global?.exercicioPrimeiro ?? exercicio + 2;
+  const ano3 = global?.exercicioTerceiro ?? exercicio + 4;
+  const projetada1 = global ? receitaProjetada(i, ano1, global.umAno.total) : 0;
+  const projetada3 = global ? receitaProjetada(i, ano3, global.tresAnos.total) : 0;
 
   const marca = logoDataUri
     ? `<img src="${logoDataUri}" alt="" style="width:.42in;height:.42in;border-radius:8px">`
@@ -1240,18 +1260,18 @@ function paginaCapa(i: LevantamentoTemplateInput): string {
     ${
       global
         ? `<div class="cover-hero" data-capa-destaque>
-      <em>Potencial de incremento &middot; até ${global.exercicioTerceiro ?? exercicio + 3}</em>
+      <em>Receita FUNDEB projetada &middot; ${ano1}</em>
       <div class="val">
-        <b>+${brlCompact(global.tresAnos.total)}</b>
-        <i>+${pct(global.tresAnos.percentual)} sobre ${exercicio}</i>
+        <b>${brlCompact(projetada1)}</b>
+        <i>+${pct(share(projetada1 - r.receitas.totalReceitas, r.receitas.totalReceitas))} sobre ${exercicio}</i>
       </div>
-      <p>Em três Censos, com a matrícula crescendo no ritmo das redes atendidas pela Global, somada ao VAAR e às
-      lacunas de declaração. A conta de cada parcela está aberta na Parte I.</p>
+      <p>A receita do exercício de ${ano1}, com a evolução do fundo, a matrícula crescendo no ritmo das redes
+      atendidas pela Global, o VAAR e as lacunas de declaração. A conta de cada parcela está aberta na Parte I.</p>
     </div>
 
     <div class="cover-kpis">
       <div class="ckpi"><em>Receita FUNDEB ${exercicio}</em><b>${brlCompact(r.receitas.totalReceitas)}</b><span>base oficial do exercício</span></div>
-      <div class="ckpi"><em>Primeiro ciclo &middot; ${global.exercicioPrimeiro ?? exercicio + 1}</em><b>+${brlCompact(global.umAno.total)}</b><span>o que entra com o próximo Censo</span></div>
+      <div class="ckpi"><em>Otimista &middot; ${ano3}</em><b>${brlCompact(projetada3)}</b><span>receita projetada, três Censos no ritmo</span></div>
     </div>`
         : temGanho
         ? `<div class="cover-hero" data-capa-destaque>
@@ -1635,17 +1655,15 @@ function paginaSumario(i: LevantamentoTemplateInput, pagina: number): string {
       ${kpi(`Receita ${id.exercicio}`, brlCompact(rec.totalReceitas), "base oficial do ano")}
       ${
         r.projecao.otimista?.base === "global" && r.projecao.otimista.tresAnos.total > r.projecao.totalGanho
-          ? `${kpi(
-              `Potencial até ${r.projecao.otimista.exercicioTerceiro ?? id.exercicio + 3}`,
-              `+${brlCompact(r.projecao.otimista.tresAnos.total)}`,
-              `+${pct(r.projecao.otimista.tresAnos.percentual)} sobre ${id.exercicio} &middot; três ciclos`,
-              "up",
-            )}
-      ${kpi(
-        `Primeiro ciclo · ${r.projecao.otimista.exercicioPrimeiro ?? id.exercicio + 1}`,
-        `+${brlCompact(r.projecao.otimista.umAno.total)}`,
-        `+${pct(r.projecao.otimista.umAno.percentual)} &middot; com o próximo Censo`,
-      )}`
+          ? (() => {
+              const o = r.projecao.otimista!;
+              const a1 = o.exercicioPrimeiro ?? id.exercicio + 2;
+              const a3 = o.exercicioTerceiro ?? id.exercicio + 4;
+              const v1 = receitaProjetada(i, a1, o.umAno.total);
+              const v3 = receitaProjetada(i, a3, o.tresAnos.total);
+              return `${kpi(`Receita projetada ${a1}`, brlCompact(v1), `+${pct(share(v1 - rec.totalReceitas, rec.totalReceitas))} sobre ${id.exercicio}`, "up")}
+      ${kpi(`Otimista ${a3}`, brlCompact(v3), `+${pct(share(v3 - rec.totalReceitas, rec.totalReceitas))} &middot; três Censos no ritmo`)}`;
+            })()
           : `${
         r.projecao.totalGanho > 0
           ? kpi("Ganho potencial", `+${brlCompact(r.projecao.totalGanho)}`, `+${pct(r.projecao.ganhoPercentual)} sobre o exercício atual`, "up")
@@ -1839,6 +1857,10 @@ function paginaProjecao(i: LevantamentoTemplateInput, pagina: number): string {
   const porAnoGlobal = num(i.payload?.relatorio_dirigido_base?.cenarioEstruturacao?.padraoGlobal?.porAno);
   const valorEm = (lista: typeof parcelas | undefined, chave: string) => lista?.find((x) => x.chave === chave)?.valor ?? 0;
   const celula = (v: number) => (v > 0 ? `+${brl(v)}` : "&mdash;");
+  // A evolução do fundo só entra ao lado do otimista — o relatório sem ele lê o
+  // potencial por participação, e a linha quebraria a soma de 100%.
+  const evolucao = otimista ? evolucaoDoMunicipio(i) : null;
+  const evol = (ano: number) => evolucaoEm(evolucao, ano - id.exercicio);
   const tabelaParcelas = parcelas.length
     ? `<div class="sec-label" style="margin-top:.16in">De onde vem o potencial${otimista ? " &mdash; e até onde este município pode ir" : ""}</div>
     <table class="tb">
@@ -1858,14 +1880,21 @@ function paginaProjecao(i: LevantamentoTemplateInput, pagina: number): string {
         <td class="micro" style="font-size:7.3pt;line-height:1.3">${esc(x.regra)}</td><td class="r">${x.pagina}</td></tr>`,
         )
         .join("")}
-      <tr class="total"><td>Total</td><td class="r">+${brl(p.totalGanho)}</td>${
+      ${
+        evolucao && otimista
+          ? `<tr><td><b>Evolução do fundo</b><div class="micro" style="margin-top:.02in;text-transform:uppercase;letter-spacing:.06em">média do município</div></td>
+        <td class="r"><b>+${brl(evol(anoPotencial))}</b></td><td class="r">+${brl(evol(ano1))}</td><td class="r">+${brl(evol(ano3))}</td>
+        <td class="micro" style="font-size:7.3pt;line-height:1.3">redistribuição do fundo estadual: +${pct(evolucao.taxa * 100)} ao ano, média de ${evolucao.de} a ${evolucao.ate}, sobre a contribuição de ${evolucao.ate}</td><td class="r">6</td></tr>`
+          : ""
+      }
+      <tr class="total"><td>Total</td><td class="r">+${brl(p.totalGanho + evol(anoPotencial))}</td>${
         otimista
-          ? `<td class="r">+${brl(otimista.umAno.total)}</td><td class="r">+${brl(otimista.tresAnos.total)}</td>`
+          ? `<td class="r">+${brl(otimista.umAno.total + evol(ano1))}</td><td class="r">+${brl(otimista.tresAnos.total + evol(ano3))}</td>`
           : `<td class="r">100%</td>`
       }<td></td><td></td></tr>
       ${
         otimista
-          ? `<tr><td class="micro">sobre a receita de ${id.exercicio}</td><td class="r micro">+${pct(p.ganhoPercentual)}</td><td class="r micro">+${pct(otimista.umAno.percentual)}</td><td class="r micro">+${pct(otimista.tresAnos.percentual)}</td><td></td><td></td></tr>`
+          ? `<tr><td class="micro">receita projetada</td><td class="r micro">${brl(p.totalAtual + p.totalGanho + evol(anoPotencial))}</td><td class="r micro">${brl(p.totalAtual + otimista.umAno.total + evol(ano1))}</td><td class="r micro">${brl(p.totalAtual + otimista.tresAnos.total + evol(ano3))}</td><td></td><td></td></tr>`
           : ""
       }
     </table>
@@ -1908,7 +1937,7 @@ function paginaProjecao(i: LevantamentoTemplateInput, pagina: number): string {
     </div>`;
 
   return `<section class="page content-page">
-  ${cabecalho(municipio, `Parte I · Projeção ${id.exercicio + 1}`)}
+  ${cabecalho(municipio, `Parte I · Projeção ${anoPotencial}`)}
   <div class="page-body">
     <div class="kicker">Parte I &middot; Estimativa para o próximo ciclo</div>
 
@@ -1918,12 +1947,12 @@ function paginaProjecao(i: LevantamentoTemplateInput, pagina: number): string {
       }</b><span>${p.totalGanho > 0 ? `+${pct(p.ganhoPercentual)} sobre a receita de ${id.exercicio}` : "sem incremento apurado sobre o exercício atual"}</span></div>
       ${
         otimista
-          ? `${kpi(`${nomeOtimista} · ${ano1}`, `+${brlCompact(otimista.umAno.total)}`, `+${pct(otimista.umAno.percentual)} &middot; ${global ? "primeiro ciclo" : "um ano no ritmo acelerado"}`)}
-      ${
+          ? `${
         global
-          ? `<div class="kpi hero"><em>${nomeOtimista} &middot; até ${ano3}</em><b>+${brlCompact(otimista.tresAnos.total)}</b><span>+${pct(otimista.tresAnos.percentual)} &middot; três ciclos</span></div>`
-          : kpi(`${nomeOtimista} · até ${ano3}`, `+${brlCompact(otimista.tresAnos.total)}`, `+${pct(otimista.tresAnos.percentual)} &middot; teto deste município`, "up")
-      }`
+          ? `<div class="kpi hero"><em>${nomeOtimista} &middot; ${ano1}</em><b>+${brlCompact(otimista.umAno.total)}</b><span>+${pct(otimista.umAno.percentual)} &middot; próximo Censo</span></div>`
+          : kpi(`${nomeOtimista} · ${ano1}`, `+${brlCompact(otimista.umAno.total)}`, `+${pct(otimista.umAno.percentual)} &middot; um ano no ritmo acelerado`)
+      }
+      ${kpi(`${global ? "Otimista" : nomeOtimista} · até ${ano3}`, `+${brlCompact(otimista.tresAnos.total)}`, `+${pct(otimista.tresAnos.percentual)} &middot; ${global ? "três ciclos no mesmo ritmo" : "teto deste município"}`, global ? undefined : "up")}`
           : kpi(`Receita ${id.exercicio + 1} com o potencial`, brlCompact(p.totalProjetado), `sobre ${brlCompact(p.totalAtual)} em ${id.exercicio}`)
       }
     </div>
@@ -1942,11 +1971,11 @@ function paginaProjecao(i: LevantamentoTemplateInput, pagina: number): string {
     <div>
       <table class="tb">
         <tr><th>Componente</th><th class="r">Cenário atual</th><th class="r">Projetado</th><th class="r">Variação</th></tr>
-        <tr><td>Redistribuição do fundo estadual</td><td class="r">${brl(redistribuicaoAtual)}</td><td class="r">${brl(redistribuicaoProjetada)}</td><td class="r">+${brl(redistribuicaoProjetada - redistribuicaoAtual)}</td></tr>
+        <tr><td>Redistribuição do fundo estadual</td><td class="r">${brl(redistribuicaoAtual)}</td><td class="r">${brl(redistribuicaoProjetada + evol(anoPotencial))}</td><td class="r">+${brl(redistribuicaoProjetada + evol(anoPotencial) - redistribuicaoAtual)}</td></tr>
         <tr><td>VAAF (Valor Aluno Fundo)</td><td class="r">${brl(p.vaafAtual)}</td><td class="r">${brl(p.vaafProjetado)}</td><td class="r">+${brl(p.vaafGanho)}</td></tr>
         <tr><td>VAAT (Valor Aluno Total)</td><td class="r">${brl(p.vaatAtual)}</td><td class="r">${brl(p.vaatProjetado)}</td><td class="r">+${brl(p.vaatGanho)}</td></tr>
         <tr><td>VAAR (Vinculado a Resultados)</td><td class="r">${brl(p.vaarAtual)}</td><td class="r">${brl(p.vaarProjetado)}</td><td class="r">+${brl(p.vaarGanho)}</td></tr>
-        <tr class="total"><td>Receita total</td><td class="r">${brl(p.totalAtual)}</td><td class="r">${brl(p.totalProjetado)}</td><td class="r">+${brl(p.totalGanho)}</td></tr>
+        <tr class="total"><td>Receita total</td><td class="r">${brl(p.totalAtual)}</td><td class="r">${brl(p.totalProjetado + evol(anoPotencial))}</td><td class="r">+${brl(p.totalGanho + evol(anoPotencial))}</td></tr>
       </table>
       ${
         parcelas.some((x) => x.chave !== "vaar")
