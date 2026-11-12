@@ -10,7 +10,7 @@ describe("Padrão Global", () => {
   it("mede todos os casos e tira a mediana", () => {
     const p = padraoGlobal()!;
 
-    expect(p.casos).toHaveLength(CASOS_GLOBAL.length);
+    expect(p.casos).toHaveLength(CASOS_GLOBAL.filter((c) => medirCaso(c) !== null).length);
     // Mediana dos casos: cerca de 11% da rede ao ano em matrícula ponderada,
     // contra cerca de 1% da rede mediana do país.
     expect(p.porAno).toBeGreaterThan(0.09);
@@ -28,6 +28,19 @@ describe("Padrão Global", () => {
     expect(serra.transicoes).toBe(2);
     expect(bonfim.ganhoAcumulado).toBeGreaterThan(0.45);
     expect(bonfim.transicoes).toBe(3);
+  });
+
+  it("caso em curso só entra quando há dois Censos na janela", () => {
+    const juvenilia = CASOS_GLOBAL.find((c) => c.nome === "Juvenília")!;
+
+    // Cliente desde 2026: sem o Censo de 2026 na base, ainda não há o que medir.
+    // Quando o Censo de 2026 entrar, este teste falha de propósito: é a hora de
+    // conferir quanto Juvenília cresceu e o que isso faz com a mediana — entre
+    // 2022 e 2025 a rede cresceu 1% ao ano, e nesse ritmo o padrão cairia de
+    // 11,4% para cerca de 7,9%. Confirmado o caso, apague estas três linhas.
+    expect(juvenilia.censoFim).toBeUndefined();
+    expect(medirCaso(juvenilia)).toBeNull();
+    expect(padraoGlobal()!.casos.map((c) => c.nome)).not.toContain("Juvenília");
   });
 
   it("usa matrícula, não receita: a entrada no VAAT em 2024 foi do estado inteiro", () => {

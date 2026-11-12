@@ -33,9 +33,10 @@ export interface CasoGlobal {
   codigoIbge: string;
   nome: string;
   uf: string;
-  /** Primeiro e último Censo da janela de atuação. */
+  /** Primeiro Censo da janela — a fotografia da rede antes do trabalho. */
   censoInicio: number;
-  censoFim: number;
+  /** Último Censo da janela. Sem ele, o caso está em curso e conta todo Censo que entrar na base. */
+  censoFim?: number;
 }
 
 export const CASOS_GLOBAL: readonly CasoGlobal[] = [
@@ -45,6 +46,11 @@ export const CASOS_GLOBAL: readonly CasoGlobal[] = [
   { codigoIbge: "2908101", nome: "Cocos", uf: "BA", censoInicio: 2022, censoFim: 2025 },
   // O Case de Sucesso fecha Serra do Ramalho no exercício de 2025 — Censo de 2024.
   { codigoIbge: "2930154", nome: "Serra do Ramalho", uf: "BA", censoInicio: 2022, censoFim: 2024 },
+  // Cliente desde 2026. A base é o Censo de 2025; o caso só entra na mediana
+  // quando o Censo de 2026 chegar à base — até lá `medirCaso` devolve null.
+  // Se o contrato começou depois de 27/05/2026, a data de referência daquele
+  // Censo, a base passa a ser 2026.
+  { codigoIbge: "3136959", nome: "Juvenília", uf: "MG", censoInicio: 2025 },
 ];
 
 /** Acréscimo de fator por matrícula — o mesmo de `fundeb-cenario-metas.ts`. */
@@ -91,7 +97,7 @@ function mediana(valores: number[]): number {
 
 export function medirCaso(caso: CasoGlobal): CasoMedido | null {
   const serie = getInepCensoMunicipalHistory(caso.codigoIbge)
-    .filter((r) => r.anoReferencia >= caso.censoInicio && r.anoReferencia <= caso.censoFim)
+    .filter((r) => r.anoReferencia >= caso.censoInicio && r.anoReferencia <= (caso.censoFim ?? Infinity))
     .sort((a, b) => a.anoReferencia - b.anoReferencia);
   const inicio = serie[0];
   if (serie.length < 2 || !inicio || !((inicio.matriculasMunicipaisTotal ?? 0) > 0)) return null;
