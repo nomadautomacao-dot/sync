@@ -15,7 +15,11 @@ describe("distância até o VAAT-MIN", () => {
   });
 });
 
-describe("prospecção de 2026", () => {
+// A primeira chamada monta a prospecção inteira: lê a base do Censo, a ponderação
+// e as tabelas do VAAT dos 5.569 municípios. Aqui leva menos de meio segundo; no
+// gate do Cloud Build, com quatro processos de teste em dois núcleos carregando os
+// mesmos arquivos, passou dos 5 s padrão e barrou o deploy de 2026-11-12.
+describe("prospecção de 2026", { timeout: 60_000 }, () => {
   it("separa quem recebe, quem está inabilitado e quem está acima do piso", async () => {
     const p = (await listarProspeccaoVaat(2026))!;
     const r = p.resumo;
