@@ -1,4 +1,5 @@
 import type { MunicipalXrayModel } from "./municipal-xray-template";
+import { vaatInabilitado } from "@/core/lib/fundeb-fnde";
 
 /**
  * A camada de síntese do Raio-X: o que este município está perdendo, em ordem.
@@ -115,7 +116,7 @@ export function levantarAchados(model: MunicipalXrayModel): Achado[] {
   }
 
   const t = model.vaat;
-  if (t && /inabilit|n[aã]o habilit/i.test(t.status)) {
+  if (t && vaatInabilitado(t.status)) {
     add({
       tier: TIERS.perdido,
       titulo: "VAAT inabilitado — 100% da complementação do exercício",
@@ -323,7 +324,7 @@ export function varreduraLimpa(model: MunicipalXrayModel): string[] {
   if (v?.qualified) limpos.push("VAAR habilitado nas cinco condicionalidades");
 
   const t = model.vaat;
-  if (t && t.status && !/inabilit|n[aã]o habilit/i.test(t.status)) {
+  if (t && t.status && !vaatInabilitado(t.status)) {
     limpos.push("VAAT habilitado no exercício");
   }
 

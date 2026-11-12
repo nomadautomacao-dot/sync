@@ -587,6 +587,23 @@ export async function getFundebReceitasOficiais(
   return null;
 }
 
+/**
+ * O ente está inabilitado ao VAAT?
+ *
+ * A lista do FNDE não usa a palavra "inabilitado": quem não cumpriu a condição
+ * aparece como "Inobservância do art. 38 da Lei nº 14.113/20" ou "do art. 163-A
+ * da Constituição Federal". Os testes de texto espalhados pelo projeto procuravam
+ * "inabilit" e deixavam passar os 23 inabilitados de 2026 — que saíam no
+ * relatório com a habilitação pintada de verde. Habilitado é o que começa com
+ * "Habilitado" (inclusive por decisão judicial); o resto, com texto, é pendência.
+ */
+export function vaatInabilitado(situacao: string | null | undefined): boolean {
+  const texto = (situacao ?? "").replace(/^["\s]+/, "").trim();
+  if (!texto || /^n[aã]o informad/i.test(texto)) return false;
+  if (/^habilitad/i.test(texto)) return false;
+  return /inabilit|n[aã]o habilit|inobserv[aâ]ncia|pend[eê]ncia/i.test(texto);
+}
+
 export async function getFundebVaatContext(
   codigoIBGE: string,
   exercicio: number,

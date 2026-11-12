@@ -1,4 +1,5 @@
 import type { InteligenciaRelatorio } from './relatorio-inteligencia';
+import { vaatInabilitado } from "@/core/lib/fundeb-fnde";
 import { paginasInteligencia, paginasMemoria, CSS_INTELIGENCIA } from './relatorio-inteligencia-template';
 import type { QualidadeRelatorio } from './relatorio-snapshot';
 import { percentualCompativel, ROTULO_EVIDENCIA } from './qualidade-dados';
@@ -2483,7 +2484,7 @@ function paginaComplementacoes(model: MunicipalXrayModel, pagina: number): strin
           ? `${compactMoney(v.amount)} recebidos`
           : "Habilitado, sem repasse (sem evolução)";
 
-  const vaatInabilitado = /inabilit|n[aã]o habilit/i.test(t?.status ?? "");
+  const inabilitadoVaat = vaatInabilitado(t?.status);
   const statusVaat = t ? t.status : "Sem dado nas bases consultadas";
 
   const cardPendencia = v?.pendency
@@ -2497,7 +2498,7 @@ function paginaComplementacoes(model: MunicipalXrayModel, pagina: number): strin
       )}</div><p class="small mt-1">O cálculo usa a arrecadação do <b>penúltimo exercício</b> (art. 15, II)${t.revenueBaseYear ? ` — a base atual é ${t.revenueBaseYear}` : ""}, então a saída da faixa é previsível com dois anos de antecedência.</p>`
     : "";
 
-  return `<section class="page content-page">${header("Complementações da União")}<main class="page-body"><div class="kicker">FUNDEB · onde a receita se perde</div><h2>Cada complementação se perde por um motivo diferente</h2><p class="lede">VAAF é fórmula e não se perde. VAAT se perde por <b>habilitação fiscal</b>. VAAR se perde por <b>condicionalidade de resultado</b>. Diagnosticar a parcela errada é corrigir o que não está quebrado — e deixar quebrado o que trava.</p><div class="grid-3 mt-3"><div class="card accent"><h3>VAAF</h3><p class="small">Equalização por fórmula dentro da UF. Todo ente abaixo do VAAF-MIN recebe automaticamente (art. 21). <b>Não existe perda por pendência</b> — o valor só muda com matrícula ponderada e arrecadação.</p></div><div class="card ${vaatInabilitado ? "bad" : "accent"}"><h3>VAAT</h3><div class="metric-value" style="font-size:11pt">${esc(statusVaat)}</div><p class="small">Condição única e <b>fiscal</b> (art. 13, §4º): dados no Siconfi e no SIOPE até <b>31 de agosto</b>. Inabilitado perde <b>100%</b> da complementação do exercício.${
+  return `<section class="page content-page">${header("Complementações da União")}<main class="page-body"><div class="kicker">FUNDEB · onde a receita se perde</div><h2>Cada complementação se perde por um motivo diferente</h2><p class="lede">VAAF é fórmula e não se perde. VAAT se perde por <b>habilitação fiscal</b>. VAAR se perde por <b>condicionalidade de resultado</b>. Diagnosticar a parcela errada é corrigir o que não está quebrado — e deixar quebrado o que trava.</p><div class="grid-3 mt-3"><div class="card accent"><h3>VAAF</h3><p class="small">Equalização por fórmula dentro da UF. Todo ente abaixo do VAAF-MIN recebe automaticamente (art. 21). <b>Não existe perda por pendência</b> — o valor só muda com matrícula ponderada e arrecadação.</p></div><div class="card ${inabilitadoVaat ? "bad" : "accent"}"><h3>VAAT</h3><div class="metric-value" style="font-size:11pt">${esc(statusVaat)}</div><p class="small">Condição única e <b>fiscal</b> (art. 13, §4º): dados no Siconfi e no SIOPE até <b>31 de agosto</b>. Inabilitado perde <b>100%</b> da complementação do exercício.${
     t?.pendency ? ` <b>Pendência registrada:</b> <i>${esc(t.pendency)}</i>.` : ""
   }</p></div><div class="card ${v && !v.qualified ? "bad" : "accent"}"><h3>VAAR</h3><div class="metric-value" style="font-size:11pt">${esc(statusVaar)}</div><p class="small">Cinco condicionalidades de resultado (art. 14, §1º), aferidas todo ano. Reprovar em <b>uma</b> zera a parcela inteira. Rateio proporcional à evolução dos indicadores.</p></div></div>${cardPendencia}<div class="insight mt-3"><b>&ldquo;Perdemos o VAAR por questão fiscal&rdquo; — essa frase mistura duas parcelas.</b> Pendência fiscal nunca derruba o VAAR: as causas são só as cinco condicionalidades acima${v?.pendency ? ", e a deste município está impressa ao lado" : ""}. O que ela derruba é a <b>habilitação VAAT</b> do exercício seguinte, os <b>convênios</b> via CAUC e a aprovação das <b>contas</b> no tribunal. O repasse do FUNDEB em si é automático (art. 21).</div>${numerosVaat}</main>${footer(pagina, "FNDE e Tesouro Nacional — habilitação VAAR/VAAT")}</section>`;
 }

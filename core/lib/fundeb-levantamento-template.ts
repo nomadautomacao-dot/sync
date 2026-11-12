@@ -1,4 +1,5 @@
 import type { IDEBDado, RelatorioFundeb } from "@/modules/levantamento-fundeb/types";
+import { vaatInabilitado } from "@/core/lib/fundeb-fnde";
 import { DESCRICAO_CONDICIONALIDADE, type Condicionalidade } from "@/core/lib/fundeb-vaar";
 import { CENSO_2026, situacaoCalendario } from "@/core/lib/calendario-educacional";
 import type { InteligenciaRelatorio } from "@/core/lib/relatorio-inteligencia";
@@ -1453,7 +1454,7 @@ function achadosDoMunicipio(i: LevantamentoTemplateInput): Achado[] {
   const distancia = num(t?.distanciaPercentual);
   const folga = num(t?.folgaPercentual);
   const paraEntrarNoVaat = num(base?.cenarioEstruturacao?.impactoFinanceiroIndicativo?.equivalentesParaEntrarNoVaat);
-  if (/inabilit|n[aã]o habilit/i.test(habilitacao)) {
+  if (vaatInabilitado(habilitacao)) {
     achados.push({
       valor: "Inabilitado",
       titulo: `ao VAAT de ${id.exercicio}`,
@@ -2038,7 +2039,7 @@ function paginaVaar(i: LevantamentoTemplateInput, pagina: number): string {
   const t = i.payload?.relatorio_dirigido_base?.vaat;
   const habilitacaoVaat = (t?.habilitacao ?? perfil?.habilitacaoVaat ?? "").trim();
   const vaatConhecida = habilitacaoVaat && !/^n[aã]o informado$/i.test(habilitacaoVaat);
-  const vaatInabilitado = /inabilit|n[aã]o habilit/i.test(habilitacaoVaat);
+  const inabilitadoVaat = vaatInabilitado(habilitacaoVaat);
   const pendenciaVaat = t?.pendencia ?? perfil?.pendenciaVaat ?? null;
 
   // Quem já encostou no VAAT-MIN perde a complementação assim que a
@@ -2055,7 +2056,7 @@ function paginaVaar(i: LevantamentoTemplateInput, pagina: number): string {
 
   const blocoVaat = vaatConhecida
     ? `<div class="sec-label" style="margin-top:.16in">A outra parcela condicionada &middot; VAAT</div>
-       <div class="status ${vaatInabilitado ? "bad" : "good"}"><span class="dot"></span>
+       <div class="status ${inabilitadoVaat ? "bad" : "good"}"><span class="dot"></span>
        Habilitação VAAT ${ou(t?.exercicio ?? id.exercicio, "")}: ${esc(habilitacaoVaat)}</div>
        ${
          t && num(t.minimo) > 0

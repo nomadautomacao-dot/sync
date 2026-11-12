@@ -1,4 +1,5 @@
 import type { InteligenciaRelatorio } from './relatorio-inteligencia';
+import { vaatInabilitado } from "@/core/lib/fundeb-fnde";
 import type { RegistroAcao } from '@/modules/levantamento-fundeb/acompanhamento';
 import type { RelatorioSnapshot } from './relatorio-snapshot';
 import { mapMunicipalXrayModel } from './municipal-xray-template';
@@ -97,7 +98,7 @@ export function montarRaioXAtuacao(snapshot: RelatorioSnapshot, geradoEm = new D
   } else manutencao.push(`VAAR ${v.year}: base registra rede habilitada e beneficiária. Monitorar requisitos e indicadores do próximo ciclo.`);
 
   if (!m.vaat || m.vaat.year !== exercicio) lacunas.push('VAAT: situação do exercício não confirmada na base.');
-  else if (/inabilit|n[aã]o habilit/i.test(m.vaat.status)) add({ id: 'VAAT-01', titulo: 'Apurar a pendência de habilitação ao VAAT', area: 'Contábil e financeiro', prioridade: 'P1',
+  else if (vaatInabilitado(m.vaat.status)) add({ id: 'VAAT-01', titulo: 'Apurar a pendência de habilitação ao VAAT', area: 'Contábil e financeiro', prioridade: 'P1',
     evidencia: ev(`${m.vaat.status}. ${m.vaat.pendency ?? 'Motivo detalhado a confirmar.'}`, 'FNDE - habilitação VAAT', fundebUrl, ano(m.vaat.year)), limite: 'Regularizar uma pendência não garante complementação nem crédito retroativo.',
     passos: ['Conferir a lista vigente e o exercício contábil exigido.', 'Identificar a obrigação pendente e os recibos de transmissão.', 'Planejar saneamento com a contabilidade dentro do ciclo permitido.'], equipe: 'Contábil e apoio jurídico', contraparte: 'Contabilidade municipal e SME', documentos: ['Recibos SIOPE e Siconfi', 'Lista oficial de habilitação VAAT'], entrega: 'Mapa da pendência e providências documentadas.', aceite: 'Protocolo válido e situação conferida na fonte competente.', indicador: 'Situação de habilitação oficial, sem presumir receita.' });
   else if (/^habilitad/i.test(m.vaat.status)) manutencao.push(`VAAT ${m.vaat.year}: habilitação registrada; manter entregas e conferir a publicação seguinte.`);

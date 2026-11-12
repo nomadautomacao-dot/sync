@@ -7,7 +7,7 @@ import {
   type Horizonte,
   type MecanismoDoFundo,
 } from "@/core/lib/fundeb-cenario-metas";
-import { getFundebVaatContext } from "@/core/lib/fundeb-fnde";
+import { getFundebVaatContext, vaatInabilitado } from "@/core/lib/fundeb-fnde";
 import { janelaDoCenso } from "@/core/lib/calendario-fundeb";
 import { padraoGlobal } from "@/core/lib/fundeb-padrao-global";
 import { getPonderacaoMunicipal } from "@/core/lib/fundeb-ponderacao";
@@ -152,7 +152,7 @@ async function mecanismoDoFundo(codigoIBGE: string, uf: string, exercicio: numbe
             proprio: vaat.vaatAnterior,
             minimo: vaat.vaatMinimo,
             equivalentes: ponderacao?.ponderadaVaat ?? 0,
-            habilitado: !/inabilit|n[aã]o habilit/i.test(vaat.habilitacao),
+            habilitado: !vaatInabilitado(vaat.habilitacao),
           }
         : null,
   };

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getFundebVaatContext, vaatMinimoNacional } from "./fundeb-fnde";
+import { getFundebVaatContext, vaatInabilitado, vaatMinimoNacional } from "./fundeb-fnde";
 import { pibPorHabitante } from "./ibge-cidade-indicators";
 import { lerJsonDeDados } from "./dados-arquivo";
 import { ufDe, type Municipality } from "./report-visual-theme";
@@ -77,5 +77,26 @@ describe("UF do município no catálogo do IBGE", () => {
 
     expect(ufs.every((uf) => /^[A-Z]{2}$/.test(uf))).toBe(true);
     expect(ufDe(municipios.find((m) => m.id === 5220454)!)).toBe("GO");
+  });
+});
+
+/**
+ * A lista do FNDE não escreve "inabilitado": escreve o motivo. Os 23
+ * inabilitados de 2026 saíam no relatório com a habilitação pintada de verde.
+ */
+describe("habilitação ao VAAT pelo texto do FNDE", () => {
+  it("reconhece os motivos de inabilitação como o FNDE os escreve", () => {
+    expect(vaatInabilitado("Inobservância do art. 38 da Lei nº 14.113/20")).toBe(true);
+    expect(vaatInabilitado("Inobservância do art. 163-A da Constituição Federal")).toBe(true);
+    expect(vaatInabilitado("Inobservância do art. 163-A da CF e do art. 38 da Lei 14.113/20")).toBe(true);
+    expect(vaatInabilitado("Inabilitado")).toBe(true);
+  });
+
+  it("não acusa quem está habilitado, inclusive por decisão judicial, nem quem não tem dado", () => {
+    expect(vaatInabilitado("Habilitado para o cálculo do VAAT")).toBe(false);
+    expect(vaatInabilitado('"Habilitado mediante Decisão judicial')).toBe(false);
+    expect(vaatInabilitado("Nao informado")).toBe(false);
+    expect(vaatInabilitado("")).toBe(false);
+    expect(vaatInabilitado(null)).toBe(false);
   });
 });
