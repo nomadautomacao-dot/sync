@@ -527,7 +527,7 @@ service cloud.firestore {
                     // e `modules/cidades/regras-relatorios.test.ts`, que le este
                     // arquivo e compara com o codigo.
                     && request.resource.data.type in [
-                         'raio_x', 'raio_x_visual', 'raio_x_atuacao', 'diagnostico_fundeb', 'dever_de_casa',
+                         'raio_x', 'raio_x_visual', 'raio_x_atuacao', 'diagnostico_fundeb', 'plano_evolucao', 'dever_de_casa',
                          'historico_censo', 'oficio_documentos',
                          'dossie_escolas', 'dossie_conformidade',
                          'dossie_matricula', 'dossie_dinheiro',

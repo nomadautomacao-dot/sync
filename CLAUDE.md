@@ -195,6 +195,7 @@ tiveram consumidor e foram removidas.
 | `/api/modulos/levantamento-fundeb/raio-x` | POST | Raio-X municipal em PDF (42 páginas) |
 | `/api/modulos/levantamento-fundeb/dever-de-casa` | GET/POST | Dever de Casa — veredito interno item a item, com nota de 0 a 10 (GET é a prévia) |
 | `/api/modulos/levantamento-fundeb/oficio-documentos` | POST | Ofício à prefeitura + questionário (4 páginas) |
+| `/api/modulos/levantamento-fundeb/plano-evolucao` | POST | Plano de evolução FUNDEB (2 páginas) — receita projetada do próximo ano, frente a frente (`preview` devolve o modelo) |
 | `/api/modulos/dossies/escolas` | GET/POST | Dossiê das Escolas — um bloco por unidade da rede |
 | `/api/modulos/dossies/conformidade` | GET/POST | Dossiê da Conformidade — CAUC, SIOPE, DCA, VAAR, piso |
 | `/api/modulos/dossies/matricula` | GET/POST | Dossiê da Matrícula Ponderada — segmento a segmento |
@@ -543,11 +544,37 @@ janela, ficam no código e no teste — não no relatório.
 > As janelas de atuação em `CASOS_GLOBAL` são as do Case de Sucesso; os anos de
 > Censo de cada uma **precisam ser confirmados** pela equipe. Caso novo entra na
 > lista e o padrão se recalcula sozinho.
+>
+> **Caso em curso não tem `censoFim`** e conta todo Censo que chegar à base.
+> Juvenília/MG (cliente desde 2026) está assim, com base no Censo de 2025, e
+> só entra na mediana quando o Censo de 2026 chegar. Entre 2022 e 2025 a rede
+> cresceu 1% ao ano: se seguir nesse ritmo, o padrão cai de 11,4% para cerca de
+> 7,9%. Por isso `fundeb-padrao-global.test.ts` falha de propósito no dia em que
+> o Censo de 2026 entrar — é a hora de olhar o número antes de ele ir para a
+> capa de todo mundo.
 
-**A capa e o sumário lideram pelo Padrão Global até o terceiro ciclo**; o
+**A capa e o sumário lideram pelo próximo ciclo do Padrão Global** — o que
+entra com o próximo Censo —, com os três ciclos ao lado como **otimista**; o
 cenário de um ciclo no ritmo nacional aparece na Parte I com o nome de
-**conservador**. Já foi o contrário, e Serra do Ramalho abria com R$ 6,76 mi
-escondendo os R$ 26,9 mi que o mesmo relatório calculava até 2030. O relatório
+**conservador**. A manchete passou por três versões: o conservador (Serra do
+Ramalho abria com R$ 6,76 mi, baixo demais para vender), os três ciclos (R$ 27,4
+mi até 2030) e, por decisão do dono em 2026-11-12, o próximo ciclo (R$ 10,4 mi
+em 2028): **a prefeitura contrata por um ano**, e o número que decide a
+contratação é o do ano do contrato. O plano de evolução segue a mesma ordem —
+próximo Censo em destaque, frente a frente, e os dois seguintes como otimista.
+
+**A manchete é a receita projetada, não o ganho** (`fundeb-evolucao-do-fundo.ts`,
+com teste): receita de hoje + evolução do fundo até o exercício + ganho do
+trabalho. No ano seguinte a prefeitura compara a receita inteira, não a fatia do
+trabalho. A evolução é a média do próprio município nos três últimos exercícios,
+**sobre a redistribuição e não sobre o total** — o total carrega a entrada no
+VAAT de 2024, e Serra do Ramalho projetaria 22,5% ao ano em vez de 7,3%. Ela
+aparece como linha própria ("Evolução do fundo") na tabela da Parte I, com a
+taxa e os anos: a conta fica aberta para quem conferir. Juvenília/MG, emitido em
+12/11/2026: R$ 5,32 mi → R$ 6,58 mi em 2028 (+R$ 0,94 mi de evolução e +R$ 0,33 mi
+de trabalho). Cliente da carteira (Senhor do Bonfim) tem a redistribuição
+inflada pela própria matrícula que a Global fez crescer — ali a média conta o
+trabalho duas vezes. O relatório
 **não mostra os municípios atendidos um a um**: o quadro já existiu na Parte I e
 saiu por decisão do dono — com Serra do Ramalho em −0,4% e Cocos em +12,9%,
 tirava confiança, e no relatório da própria Serra do Ramalho era pior. O ritmo
@@ -666,6 +693,41 @@ padrão. A capa usa o padrão de um ano. Quatro coisas para não quebrar:
 **A capa é clara, com os números numa placa escura no pé**
 (`report-visual-theme.ts`, que vale para todos os relatórios). Já foi verde-escura
 na folha inteira, e ali o ganho em verde-claro não destacava por maior que fosse.
+
+### Plano de evolução
+
+| Onde | O quê |
+|---|---|
+| `core/lib/plano-evolucao.ts` | `montarPlanoEvolucao()` — o modelo, puro, com teste |
+| `core/lib/plano-evolucao-{template,pdf}.ts` | As duas folhas e o Chromium → PDF |
+| `/api/modulos/levantamento-fundeb/plano-evolucao` | `preview` (modelo), `bundle` (PDF + arquivo `plano_evolucao`) |
+
+O diagnóstico virado proposta de trabalho. Entra no catálogo logo depois do
+Diagnóstico FUNDEB, então aparece na tela do módulo, na ficha da cidade e na
+fila ao cadastrar um município. Nasceu como script avulso, testado contra
+Senador Canedo, Serra do Ramalho e Juvenília, e veio para o sistema porque a
+consultora em campo não tinha como emitir.
+
+Três coisas para não quebrar:
+
+1. **O plano e o levantamento dizem os mesmos números.** Mesma coleta
+   (`buildRelatorioSnapshot`, com cache — o plano sai em menos de um segundo
+   depois do levantamento), mesmo Padrão Global, mesmo `valorDosEquivalentes`,
+   VAAR e lacunas lidos das parcelas do próprio levantamento. O teste confere
+   os totais do otimista contra os que o levantamento imprimiu: se um dos dois
+   mudar de regra sozinho, ele falha.
+2. **A EJA fecha a conta**, e por isso é a meta mais puxada (Canedo de 625 para
+   3.681). As outras frentes (crescimento da rede, AEE, tempo integral até 35%,
+   creche) saem do que a base mostra; a EJA recebe o que falta para o ritmo. A
+   creche só entra quando o levantamento não a contou como lacuna de
+   declaração — senão conta duas vezes.
+3. **Contrato de caber, como o Case de Sucesso**: duas folhas fixas, medidas
+   antes de imprimir. Conteúdo que invade o rodapé derruba a emissão com o
+   excesso em pixels; frente que não chegou ao PDF também.
+
+> **Tipo novo exige `npm run firebase:regras`.** `plano_evolucao` está na lista
+> de `firestore.rules`, mas enquanto a regra não é publicada o PDF é gerado e o
+> JSON de arquivamento é recusado com "Missing or insufficient permissions".
 
 ### Case de Sucesso
 
@@ -1607,7 +1669,7 @@ instante seguinte ao de serem escritos.
 
 ### Cadastrar um município enfileira o acervo inteiro
 
-`ensureCity` cria a cidade e a tela enfileira os **treze** documentos do
+`ensureCity` cria a cidade e a tela enfileira os **dezesseis** documentos do
 catálogo. A fila é sequencial e sobrevive a fechar a janela, então acontece por
 trás: quem cadastrou já cai na ficha e os PDFs vão chegando.
 
@@ -1738,7 +1800,7 @@ blocos que só existiam no PDF) e *se o painel FUNDEB aparece* (só
 ### Acervo: emitir, arquivar e comentar no mesmo lugar
 
 A aba "Levantamento FUNDEB" virou **"FUNDEB e documentos"** e ganhou a mesa de
-emissão (`_components/documentos-da-cidade.tsx`): os treze documentos do
+emissão (`_components/documentos-da-cidade.tsx`): os dezesseis documentos do
 catálogo, com a data da última emissão de cada um para aquele município e o
 botão para emitir. A ficha do último levantamento continua abaixo.
 

@@ -45,6 +45,7 @@ type Documento =
   | "raio-x"
   | "raio-x-visual"
   | "levantamento"
+  | "plano-evolucao"
   | "dever-de-casa"
   | "raio-x-atuacao"
   | "historico-censo"

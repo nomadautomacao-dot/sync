@@ -32,6 +32,14 @@ describe("catálogo de documentos da tela de emissão", () => {
       endpoint: '/api/modulos/levantamento-fundeb/raio-x-atuacao',
     });
   });
+  it("expõe o plano de evolução como documento de duas folhas, logo depois do diagnóstico", () => {
+    const i = DOCUMENTOS.findIndex(d => d.id === 'plano-evolucao');
+    expect(DOCUMENTOS[i]).toMatchObject({
+      reportType: 'plano_evolucao', paginas: 2,
+      endpoint: '/api/modulos/levantamento-fundeb/plano-evolucao',
+    });
+    expect(DOCUMENTOS[i - 1].id).toBe('levantamento');
+  });
   it("tem um card para cada dossiê e para os quatro relatórios originais", () => {
     expect(DOCUMENTOS.length).toBeGreaterThanOrEqual(12);
   });
