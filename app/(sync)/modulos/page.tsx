@@ -1,12 +1,13 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { FileDoneOutlined, ReadOutlined, TrophyOutlined } from "@ant-design/icons";
+import { AimOutlined, FileDoneOutlined, ReadOutlined, TrophyOutlined } from "@ant-design/icons";
 import { Col, Flex, Row, Skeleton, Typography } from "antd";
 import { ProCard } from "@ant-design/pro-components";
 
 import { getFirebaseDb } from "@/core/lib/firebase-client";
 import { listCities } from "@/core/lib/cities-firestore";
+import { podeVer, type AreaKey } from "@/core/domain/rbac";
 import { useAuth } from "@/core/providers/auth-provider";
 
 import { ModuleCard, type DocumentoDoModulo } from "./_components/module-card";
@@ -19,6 +20,8 @@ interface ModuloDisponivel {
   descricao: string;
   fontes: string;
   documentos: DocumentoDoModulo[];
+  /** Área exigida além de Módulos. O cartão some para quem não a tem. */
+  exige?: AreaKey;
 }
 
 /**
@@ -51,6 +54,17 @@ const MODULOS: ModuloDisponivel[] = [
     fontes: "FNDE · portarias de complementação do FUNDEB",
     // Sem contagem fixa: o deck cresce com o número de municípios do case.
     documentos: [{ nome: "Case de Sucesso (deck 16:9)" }],
+  },
+  {
+    href: "/modulos/prospeccao-vaat",
+    icone: AimOutlined,
+    nome: "Prospecção pelo VAAT",
+    descricao:
+      "Os municípios habilitados que estão perto de entrar na faixa do VAAT — onde cada matrícula nova passa a valer o mínimo nacional inteiro —, ordenados pelo tempo até lá no ritmo das redes atendidas.",
+    fontes: "FNDE · portaria do VAAT · matrícula ponderada · Censo Escolar",
+    documentos: [{ nome: "Lista de prospecção (CSV)" }],
+    // Lista comercial: a mesma régua do bloco comercial da ficha da cidade.
+    exige: "pipeline",
   },
   {
     href: "/modulos/contratos",
@@ -87,7 +101,7 @@ export default function ModulosPage() {
       </div>
 
       <Row gutter={[14, 14]}>
-        {MODULOS.map((modulo) => (
+        {MODULOS.filter((m) => !m.exige || (user && podeVer(user.permissoes, m.exige))).map((modulo) => (
           <Col key={modulo.href} xs={24} lg={12}>
             <ModuleCard {...modulo} />
           </Col>

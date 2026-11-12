@@ -604,6 +604,21 @@ export function vaatInabilitado(situacao: string | null | undefined): boolean {
   return /inabilit|n[aã]o habilit|inobserv[aâ]ncia|pend[eê]ncia/i.test(texto);
 }
 
+/**
+ * As duas tabelas do VAAT do exercício inteiras — valores e habilitação — e o
+ * VAAT-MIN nacional. Para quem precisa do universo (a prospecção percorre os
+ * 5.569 municípios), em vez de uma consulta por município.
+ */
+export async function getTabelasVaat(exercicio: number): Promise<{
+  valores: Map<string, Omit<FndeVaatContext, "habilitacao" | "pendencia" | "vaatMinimo">>;
+  habilitacao: Map<string, Pick<FndeVaatContext, "habilitacao" | "pendencia">>;
+  minimo: number | null;
+} | null> {
+  const [valores, habilitacao] = await Promise.all([loadVaatByYear(exercicio), loadHabilitacaoByYear(exercicio)]);
+  if (!valores) return null;
+  return { valores, habilitacao: habilitacao ?? new Map(), minimo: vaatMinimoNacional(valores) };
+}
+
 export async function getFundebVaatContext(
   codigoIBGE: string,
   exercicio: number,

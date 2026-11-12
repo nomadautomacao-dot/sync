@@ -211,6 +211,7 @@ tiveram consumidor e foram removidas.
 | `/api/modulos/contrato-fundeb/gerar-kit` | POST | Kit documental parcial |
 | `/api/modulos/contrato-fundeb/gerar-kit-completo` | POST | Kit completo (14 anexos; a proposta sai à parte — seção 5) |
 | `/api/modulos/contrato-fundeb/gerar-proposta` | POST | Proposta comercial (inexigibilidade) |
+| `/api/modulos/prospeccao-vaat` | GET | Municípios habilitados acima do VAAT-MIN e o tempo até entrar na faixa (exige Pipeline) |
 | `/api/modulos/contratos/proposta-dispensa` | POST | Proposta Comercial por dispensa (Art. 75) — DOCX gerado por código, sem template (seção 5) |
 
 > **As rotas `dossies/*` são de outra família.** Nos demais PDFs a contagem de
@@ -401,6 +402,7 @@ a regra correspondente em `firestore.rules` — sem regra, o acesso é negado.
 | `/pessoas` | `app/(sync)/pessoas/page.tsx` | Colaboradores cross-empresa |
 | `/modulos` | `app/(sync)/modulos/page.tsx` | Catálogo de módulos |
 | `/modulos/levantamento-fundeb` | `app/(sync)/modulos/levantamento-fundeb/page.tsx` | Os três relatórios (seção 5) |
+| `/modulos/prospeccao-vaat` | `app/(sync)/modulos/prospeccao-vaat/page.tsx` | Prospecção pelo VAAT — perfil técnico/comercial, exige Pipeline (seção 5) |
 | `/modulos/contratos` | `app/(sync)/modulos/contratos/page.tsx` | Porta do módulo Contrato: escolhe a cidade e leva à aba da ficha (seção 5) |
 | `/documentos` | `app/(sync)/documentos/page.tsx` | Kit documental |
 | `/caixa` | `app/(sync)/caixa/page.tsx` | Inbox / auditoria |
@@ -566,6 +568,18 @@ proporcional a essa fração; a capa diz "a partir de 2028", a Parte I abre com 
 frase da fase, o sumário traz os meses que sobram como achado e a página de
 decisão lista o que ainda dá tempo de fazer. O fim da retificação só é oficial
 para 2026 (`CENSO_2026`); nos outros anos sai estimado e marcado assim.
+
+**Prospecção pelo VAAT** (`core/lib/fundeb-prospeccao-vaat.ts`, rota e tela em
+`/modulos/prospeccao-vaat`). A mesma conta da distância ao piso, para os 5.569
+municípios: quem está habilitado acima do VAAT-MIN, quantas
+matrículas-equivalentes faltam para cruzá-lo e quantos anos isso leva no Padrão
+Global. Em 2026: 2.993 acima do piso, 735 entram em até três anos e 235 em até
+um. É lista comercial — receita do FUNDEB de outros municípios, tempo até a
+alavanca —, por isso a tela e a rota exigem a área de Pipeline e o cartão some
+do catálogo para quem não a tem. A conta erra para baixo onde a alavanca é
+creche (o VAAT pondera a educação infantil mais que o fundo comum) e é retrato
+do exercício: arrecadação própria crescendo mais que a matrícula afasta a rede
+do piso.
 
 O "cronograma mensal projetado" saiu da Parte I: era o ganho repartido por doze
 percentuais fixos, os mesmos para todo município. `cronogramaVAAF` continua no
