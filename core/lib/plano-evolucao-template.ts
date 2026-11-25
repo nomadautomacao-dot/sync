@@ -138,10 +138,12 @@ ${linhaTempo.map((l) => `<tr><td><b>${l[0]}</b></td><td><b>${l[1]}</b></td><td>$
 ${p.serie.map((x) => `<tr><td><b>${x.ano}</b></td><td class="r mono">${n0(x.rede)}</td><td class="r mono">${n0(x.eja)}</td><td class="r mono">${n0(x.especial)}</td><td class="r mono">${n0(x.integral)}</td><td class="r mono">${pc((x.integral / x.rede) * 100)}</td></tr>`).join("")}</table>
 ${textoVaar ? `<div class="card" style="margin-top:.12in"><h3>VAAR: em paralelo ao Censo</h3><p style="margin:0;font-size:8pt">${textoVaar}</p></div>` : ""}
 <h2>O que precisa estar em dia para o dinheiro chegar</h2>
-<div class="g2"><div class="card"><h3>${naFaixa ? "Para não perder o VAAT" : "Para entrar e ficar no VAAT"}</h3><ul style="font-size:8pt">
-<li><b>Siconfi e SIOPE até 31 de agosto</b>, todo ano. Inabilitado não tem o VAAT apurado${naFaixa ? ` e perde ${mi(p.vaat.complementacao)} no exercício` : " — e não entra na faixa mesmo cruzando o piso"}.</li>
-<li>Do VAAT, pelo menos 15% em despesa de capital e a parcela da educação infantil.</li>
-<li>${naFaixa ? `Com o VAAT próprio ${pc((1 - p.vaat.proprio / p.vaat.minimo) * 100)} abaixo do mínimo, a rede não corre risco de sair da faixa.` : "O VAAT usa a arrecadação de dois anos antes: se os impostos próprios crescerem mais que a matrícula, a rede se afasta do piso."}</li></ul></div>
+<div class="g2"><div class="card"><h3>${naFaixa ? "Para não perder o VAAT" : p.posicao === "perto" ? "Para entrar e ficar no VAAT" : "Prestação de contas em dia"}</h3><ul style="font-size:8pt">
+<li><b>Siconfi e SIOPE até 31 de agosto</b>, todo ano. ${naFaixa ? `Inabilitado não tem o VAAT apurado e perde ${mi(p.vaat.complementacao)} no exercício` : p.posicao === "perto" ? "Inabilitado não tem o VAAT apurado — e não entra na faixa mesmo cruzando o piso" : "Sem as duas declarações a rede fica inabilitada ao VAAT e com pendência no CAUC"}.</li>
+${p.posicao === "fundo" && p.vaat.minimo > 0 && p.vaat.proprio > p.vaat.minimo
+  ? `<li>O VAAT próprio da rede é de R$ ${brl(p.vaat.proprio)} por aluno, ${pc((p.vaat.proprio / p.vaat.minimo - 1) * 100)} acima do mínimo nacional: a complementação VAAT não está ao alcance destes três Censos, e o plano conta só com o fundo do estado.</li>`
+  : "<li>Do VAAT, pelo menos 15% em despesa de capital e a parcela da educação infantil.</li>"}
+<li>${naFaixa ? `Com o VAAT próprio ${pc((1 - p.vaat.proprio / p.vaat.minimo) * 100)} abaixo do mínimo, a rede não corre risco de sair da faixa.` : p.posicao === "perto" ? "O VAAT usa a arrecadação de dois anos antes: se os impostos próprios crescerem mais que a matrícula, a rede se afasta do piso." : "O VAAR exige as cinco condicionalidades a cada aferição; reprovar em uma zera o VAAR do exercício que ela define."}</li></ul></div>
 <div class="card"><h3>Riscos que o plano precisa tratar</h3><ul style="font-size:8pt">${p.riscos.map((x) => `<li>${x}</li>`).join("")}</ul></div></div>
 <div class="ins"><b>Próximo passo:</b> reunião com a secretaria de educação e a contabilidade para validar as metas escola a escola e fechar o calendário até ${ref}. O levantamento completo do município acompanha este plano.</div>
 <div class="foot"><span>Global Sync · Global Company Consultorias · Confidencial</span><span>2 / 2</span></div></section>`;

@@ -1293,9 +1293,9 @@
       "uf": "CE",
       "regiao": "Nordeste",
       "created_at": "2026-06-18T17:17:51.283Z",
-      "updated_at": "2026-07-31T18:43:41.541Z",
-      "ultimo_acesso": "2026-07-31T18:43:41.541Z",
-      "acessos": 6,
+      "updated_at": "2026-10-27T17:37:29.453Z",
+      "ultimo_acesso": "2026-10-27T17:37:29.453Z",
+      "acessos": 37,
       "in_carteira": false
     },
     {
@@ -3195,9 +3195,9 @@
       "uf": "BA",
       "regiao": "Nordeste",
       "created_at": "2026-07-30T21:43:26.129Z",
-      "updated_at": "2026-07-31T17:39:42.307Z",
-      "ultimo_acesso": "2026-07-31T17:39:42.307Z",
-      "acessos": 3,
+      "updated_at": "2026-10-27T17:37:00.198Z",
+      "ultimo_acesso": "2026-10-27T17:37:00.198Z",
+      "acessos": 4,
       "in_carteira": false
     },
     {
@@ -3296,6 +3296,28 @@
       "created_at": "2026-08-17T22:40:07.341Z",
       "updated_at": "2026-08-17T22:40:07.341Z",
       "ultimo_acesso": "2026-08-17T22:40:07.341Z",
+      "acessos": 1,
+      "in_carteira": false
+    },
+    {
+      "codigo_ibge": "2508505",
+      "nome": "Livramento",
+      "uf": "PB",
+      "regiao": "Nordeste",
+      "created_at": "2026-10-15T11:24:07.881Z",
+      "updated_at": "2026-10-15T11:32:39.863Z",
+      "ultimo_acesso": "2026-10-15T11:32:39.863Z",
+      "acessos": 3,
+      "in_carteira": false
+    },
+    {
+      "codigo_ibge": "2919504",
+      "nome": "Livramento de Nossa Senhora",
+      "uf": "BA",
+      "regiao": "Nordeste",
+      "created_at": "2026-10-15T11:33:34.677Z",
+      "updated_at": "2026-10-15T11:33:34.677Z",
+      "ultimo_acesso": "2026-10-15T11:33:34.677Z",
       "acessos": 1,
       "in_carteira": false
     }

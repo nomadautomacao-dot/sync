@@ -185,6 +185,10 @@ export function montarPlanoEvolucao(snapshot: RelatorioSnapshot): PlanoEvolucao 
   const ejaPico = Math.max(...serie.map((x) => x.ejaMunicipal ?? 0));
   const anoPico = serie.find((x) => (x.ejaMunicipal ?? 0) === ejaPico)?.anoReferencia ?? atual.anoReferencia;
   const creche = (pond.oportunidades ?? []).find((o: any) => o.chave === "creche-integral");
+  // A lacuna de declaração do levantamento já conta o AEE até a mediana nacional
+  // (`getGanhoApurado`); a frente de AEE do plano fica com o que passa dela.
+  const aeeNaLacuna = lacunas > 0 ? num((pond.oportunidades ?? []).find((o: any) => o.chave === "aee")?.matriculasAteMediana) : 0;
+  const aeeLivre = Math.max(0, semAee - aeeNaLacuna);
   const anos = Math.max(1, atual.anoReferencia - primeiro.anoReferencia);
   const crescimentoAno = Math.max(0, (rede - primeiro.matriculasMunicipaisTotal!) / anos);
   // Vinte matrículas são nada em Fortaleza e 3,5% da rede em Juvenília.
@@ -194,8 +198,15 @@ export function montarPlanoEvolucao(snapshot: RelatorioSnapshot): PlanoEvolucao 
   const nova = (f: Omit<FrenteDoPlano, "noProximoCenso">) => frentes.push({ ...f, noProximoCenso: 0 });
   if (crescimentoAno * 3 >= limiar)
     nova({ chave: "crescimento", nome: "Crescimento da rede", hoje: `+${n0(crescimentoAno)} matrículas por ano de ${primeiro.anoReferencia} a ${atual.anoReferencia}`, meta: `manter o ritmo: +${n0(crescimentoAno * 3)}`, conta: "matrícula regular, peso 1,00 em média", equivalentes: crescimentoAno * 3 });
-  if (semAee >= limiar)
-    nova({ chave: "aee", nome: "AEE registrado", hoje: `${n0(semAee)} alunos de educação especial sem AEE`, meta: `registrar os ${n0(semAee)}`, conta: "segunda matrícula, peso 1,40", equivalentes: semAee * 1.4 });
+  if (aeeLivre >= limiar)
+    nova({
+      chave: "aee",
+      nome: "AEE registrado",
+      hoje: `${n0(semAee)} alunos de educação especial sem AEE`,
+      meta: aeeNaLacuna > 0 ? `registrar os ${n0(semAee)} (${n0(aeeNaLacuna)} já contados na declaração)` : `registrar os ${n0(semAee)}`,
+      conta: "segunda matrícula, peso 1,40",
+      equivalentes: aeeLivre * 1.4,
+    });
   if (intMeta - intHoje >= limiar)
     nova({ chave: "integral", nome: "Tempo integral", hoje: `${n0(intHoje)} (${pc((intHoje / rede) * 100)} da rede)`, meta: `${n0(intMeta)} — 35% da rede`, conta: "+0,40 sobre a jornada parcial", equivalentes: (intMeta - intHoje) * 0.4 });
   // A creche parcial já é a lacuna de declaração do levantamento: não conta duas vezes.

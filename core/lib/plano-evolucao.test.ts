@@ -20,7 +20,7 @@ interface Fixture {
   receita: number;
   parcelas: Array<{ chave: string; valor: number }>;
   vaat: { proprio: number; minimo: number; complementacao: number; habilitacao: string };
-  pond: { matriculas: number; ponderadaVaat: number; especial: number; aee: number; creche?: object };
+  pond: { matriculas: number; ponderadaVaat: number; especial: number; aee: number; creche?: object; aeeOportunidade?: object };
   reprovadas: string[];
   contribuicao: Array<[number, number]>;
 }
@@ -46,7 +46,7 @@ function snapshot(f: Fixture, semCalendario = false): RelatorioSnapshot {
               { nome: "Educação Especial - Demais segmentos Urbano", matriculas: f.pond.especial },
               { nome: "Atendimento Educacional Especializado Urbano", matriculas: f.pond.aee },
             ],
-            oportunidades: f.pond.creche ? [f.pond.creche] : [],
+            oportunidades: [f.pond.creche, f.pond.aeeOportunidade].filter(Boolean),
           },
           vaar: { reprovadas: f.reprovadas },
         },
@@ -129,6 +129,30 @@ describe("plano de evolução", () => {
       // A EJA fecha a conta e é sempre a última frente.
       expect(p.frentes[p.frentes.length - 1].chave).toBe("eja");
     }
+  });
+
+  it("o AEE que a lacuna de declaração já conta não volta como frente de matrícula", () => {
+    // Camaçari/BA: 1.040 alunos sem AEE; 428 deles fecham a lacuna até a mediana nacional.
+    const camacari: Fixture = {
+      ident: { municipioNome: "Camaçari", uf: "BA", codigoIBGE: "2905701", exercicio: 2026 },
+      receita: 253_693_569.35,
+      parcelas: [{ chave: "vaar", valor: 21_633_321.92 }, { chave: "lacunas", valor: 4_230_424.8 }],
+      vaat: { proprio: 13_600.62, minimo: 10_192.38, complementacao: 0, habilitacao: "Habilitado para o cálculo do VAAT" },
+      pond: {
+        matriculas: 35_901, ponderadaVaat: 42_583.85, especial: 1_338, aee: 298,
+        aeeOportunidade: { chave: "aee", matriculasAteMediana: 428.34 },
+      },
+      reprovadas: ["III"],
+      contribuicao: [[2023, 160_497_727], [2024, 168_809_488], [2025, 182_134_375], [2026, 182_550_117]],
+    };
+    const p = montarPlanoEvolucao(snapshot(camacari));
+    const aee = p.frentes.find((f) => f.chave === "aee")!;
+
+    expect(p.posicao).toBe("fundo");
+    expect(aee.equivalentes).toBeCloseTo((1_040 - 428.34) * 1.4, 1);
+    expect(aee.meta).toContain("428 já contados na declaração");
+    // O total não muda: a EJA absorve o que o AEE deixou de contar.
+    expect(p.frentes.reduce((s, f) => s + f.equivalentes, 0)).toBeCloseTo(p.ciclos[2].equivalentes, 6);
   });
 
   it("sem calendário do Censo, recusa em vez de datar metas no escuro", () => {
